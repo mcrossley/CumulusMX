@@ -411,8 +411,10 @@ namespace CumulusMX
 
 		public string Datapath;
 
-		public string ListSeparator;
+		public char ListSeparator;
+		public char UserListSeparator;
 		public char DirectorySeparator;
+		public char DateSeparator;
 
 		public bool ImportData;
 		public string CumulusIniPath;
@@ -843,6 +845,10 @@ namespace CumulusMX
 
 		public string[] APRSstationtype = { "DsVP", "DsVP", "WMR928", "WM918", "EW", "FO", "WS2300", "FOs", "WMR100", "WMR200", "Instromet", "DsVP", "Ecowitt" };
 
+		public CultureInfo cmxCulture = new CultureInfo(CultureInfo.InvariantCulture.Name, true);
+		public CultureInfo userCulture;
+
+
 		/*
 		CryptoLicense lic = new CryptoLicense();
 
@@ -1014,6 +1020,16 @@ namespace CumulusMX
 						}
 			*/
 
+			cmxCulture.DateTimeFormat.ShortDatePattern = "yyyy-MM-dd";
+			cmxCulture.DateTimeFormat.LongDatePattern = "yyyy-MM-dd HH:mm";
+			cmxCulture.DateTimeFormat.DateSeparator = "-";
+			cmxCulture.NumberFormat.NumberGroupSeparator = "";
+
+			// switch MX to using the common culture, and save the user culuture
+			userCulture = CultureInfo.DefaultThreadCurrentCulture;
+			CultureInfo.DefaultThreadCurrentCulture = cmxCulture;
+			CultureInfo.DefaultThreadCurrentUICulture = cmxCulture;
+
 			DirectorySeparator = Path.DirectorySeparatorChar;
 
 			AppDir = Directory.GetCurrentDirectory() + DirectorySeparator;
@@ -1071,13 +1087,18 @@ namespace CumulusMX
 					LogMessage("Mono version: "+displayName.Invoke(null, null));
 			}
 
-			LogMessage("Current culture: " + CultureInfo.CurrentCulture.DisplayName);
-			ListSeparator = CultureInfo.CurrentCulture.TextInfo.ListSeparator;
+			LogMessage("User culture: " + userCulture.DisplayName);
+			LogConsoleMessage("User culture: " + userCulture.DisplayName);
 
-			DecimalSeparator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
+			UserListSeparator = userCulture.TextInfo.ListSeparator[0];
+			UserDecimalSeparator = userCulture.NumberFormat.NumberDecimalSeparator;
 
-			LogMessage("Directory separator=[" + DirectorySeparator + "] Decimal separator=[" + DecimalSeparator + "] List separator=[" + ListSeparator + "]");
-			LogMessage("Date separator=[" + CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator + "] Time separator=[" + CultureInfo.CurrentCulture.DateTimeFormat.TimeSeparator + "]");
+			ListSeparator = cmxCulture.TextInfo.ListSeparator[0];
+			DecimalSeparator = cmxCulture.NumberFormat.NumberDecimalSeparator;
+			DateSeparator = cmxCulture.DateTimeFormat.DateSeparator[0];
+
+			//LogMessage("Directory separator=[" + DirectorySeparator + "] Decimal separator=[" + UserDecimalSeparator + "] List separator=[" + UserListSeparator + "]");
+			//LogMessage("Date separator=[" + CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator + "] Time separator=[" + CultureInfo.CurrentCulture.DateTimeFormat.TimeSeparator + "]");
 
 			TimeZone localZone = TimeZone.CurrentTimeZone;
 			DateTime now = DateTime.Now;
@@ -2659,6 +2680,10 @@ namespace CumulusMX
 		}
 
 		public string DecimalSeparator { get; set; }
+		public string UserDecimalSeparator { get; set; }
+
+//		public CultureInfo commonCulture { get; set; }
+
 
 		[DllImport("libc")]
 		private static extern int uname(IntPtr buf);
@@ -3430,7 +3455,7 @@ namespace CumulusMX
 			DavisConsoleHighGust = ini.GetValue("Station", "DavisConsoleHighGust", false);
 			VPrainGaugeType = ini.GetValue("Station", "VPrainGaugeType", -1);
 
-			RecordsBeganDate = ini.GetValue("Station", "StartDate", DateTime.Now.ToLongDateString());
+			RecordsBeganDate = ini.GetValue("Station", "StartDate", DateTime.Now.ToString(userCulture.DateTimeFormat.LongDatePattern, userCulture));
 
 			LogMessage("Cumulus start date: " + RecordsBeganDate);
 
@@ -3570,7 +3595,7 @@ namespace CumulusMX
 			WebAutoUpdate = ini.GetValue("FTP site", "AutoUpdate", false);
 			ActiveFTPMode = ini.GetValue("FTP site", "ActiveFTP", false);
 			Sslftp = (FtpProtocols)ini.GetValue("FTP site", "Sslftp", 0);
-			// BUILD 3082 - added alternate SFTP authenication options, but currently only "password" is functional
+			// BUILD 3092 - added alternate SFTP authenication options
 			SshftpAuthentication = ini.GetValue("FTP site", "SshFtpAuthentication", "password"); // valid options: password, psk, password_psk
 			if (!SshAuthenticationVals.Any(SshftpAuthentication.Contains))
 			{
@@ -4191,11 +4216,9 @@ namespace CumulusMX
 			ini.SetValue("FTP site", "AutoUpdate", WebAutoUpdate);
 			ini.SetValue("FTP site", "ActiveFTP", ActiveFTPMode);
 			ini.SetValue("FTP site", "Sslftp", (int)Sslftp);
-			// BUILD 3082 - added alternate SFTP authenication options, but currently only "password" is functional
-			/*
+			// BUILD 3092 - added alternate SFTP authenication options
 			ini.SetValue("FTP site", "SshFtpAuthentication", SshftpAuthentication);
 			ini.SetValue("FTP site", "SshFtpPskFile", SshftpPskFile);
-			*/
 
 			ini.SetValue("FTP site", "FTPlogging", FTPlogging);
 			ini.SetValue("FTP site", "UTF8encode", UTF8encode);
@@ -5447,9 +5470,9 @@ namespace CumulusMX
 				}
 			}
 
-			var datestring = logfiledate.ToString("MMMyy").Replace(".", "");
+			var datestring = logfiledate.ToString("yyyy-MM");
 
-			return Datapath + datestring + "log.txt";
+			return Datapath + datestring + "-log.txt";
 		}
 
 		public string GetExtraLogFileName(DateTime thedate)
@@ -5480,7 +5503,6 @@ namespace CumulusMX
 			}
 
 			var datestring = logfiledate.ToString("yyyyMM");
-			datestring = datestring.Replace(".", "");
 
 			return Datapath + "ExtraLog" + datestring + ".txt";
 		}
@@ -5488,7 +5510,7 @@ namespace CumulusMX
 		public const int NumLogFileFields = 29;
 
 		public void DoLogFile(DateTime timestamp, bool live) // Writes an entry to the n-minute logfile. Fields are comma-separated:
-															 // 0  Date in the form dd/mm/yy (the slash may be replaced by a dash in some cases)
+															 // 0  Date in the form dd-mm-yy
 															 // 1  Current time - hh:mm
 															 // 2  Current temperature
 															 // 3  Current humidity
@@ -5527,31 +5549,31 @@ namespace CumulusMX
 			using (FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read))
 			using (StreamWriter file = new StreamWriter(fs))
 			{
-				file.Write(timestamp.ToString("dd/MM/yy") + ListSeparator);
+				file.Write(timestamp.ToString("dd-MM-yy") + ListSeparator);
 				file.Write(timestamp.ToString("HH:mm") + ListSeparator);
 				file.Write(station.OutdoorTemperature.ToString(TempFormat) + ListSeparator);
-				file.Write(station.OutdoorHumidity + ListSeparator);
+				file.Write(station.OutdoorHumidity.ToString() + ListSeparator);
 				file.Write(station.OutdoorDewpoint.ToString(TempFormat) + ListSeparator);
 				file.Write(station.WindAverage.ToString(WindFormat) + ListSeparator);
 				file.Write(station.RecentMaxGust.ToString(WindFormat) + ListSeparator);
-				file.Write(station.AvgBearing + ListSeparator);
+				file.Write(station.AvgBearing.ToString() + ListSeparator);
 				file.Write(station.RainRate.ToString(RainFormat) + ListSeparator);
 				file.Write(station.RainToday.ToString(RainFormat) + ListSeparator);
 				file.Write(station.Pressure.ToString(PressFormat) + ListSeparator);
 				file.Write(station.Raincounter.ToString(RainFormat) + ListSeparator);
 				file.Write(station.IndoorTemperature.ToString(TempFormat) + ListSeparator);
-				file.Write(station.IndoorHumidity + ListSeparator);
+				file.Write(station.IndoorHumidity.ToString() + ListSeparator);
 				file.Write(station.WindLatest.ToString(WindFormat) + ListSeparator);
 				file.Write(station.WindChill.ToString(TempFormat) + ListSeparator);
 				file.Write(station.HeatIndex.ToString(TempFormat) + ListSeparator);
 				file.Write(station.UV.ToString(UVFormat) + ListSeparator);
-				file.Write(station.SolarRad + ListSeparator);
+				file.Write(station.SolarRad.ToString() + ListSeparator);
 				file.Write(station.ET.ToString(ETFormat) + ListSeparator);
 				file.Write(station.AnnualETTotal.ToString(ETFormat) + ListSeparator);
 				file.Write(station.ApparentTemperature.ToString(TempFormat) + ListSeparator);
-				file.Write((Math.Round(station.CurrentSolarMax)) + ListSeparator);
+				file.Write((Math.Round(station.CurrentSolarMax)).ToString() + ListSeparator);
 				file.Write(station.SunshineHours.ToString(SunFormat) + ListSeparator);
-				file.Write(station.Bearing + ListSeparator);
+				file.Write(station.Bearing.ToString() + ListSeparator);
 				file.Write(station.RG11RainToday.ToString(RainFormat) + ListSeparator);
 				file.Write(station.RainSinceMidnight.ToString(RainFormat) + ListSeparator);
 				file.Write(station.FeelsLike.ToString(TempFormat) + ListSeparator);
@@ -5571,40 +5593,38 @@ namespace CumulusMX
 
 			if (MonthlyMySqlEnabled)
 			{
-				var InvC = new CultureInfo("");
-
 				StringBuilder values = new StringBuilder(StartOfMonthlyInsertSQL, 600);
 				values.Append(" Values('");
 				values.Append(timestamp.ToString("yy-MM-dd HH:mm") + "',");
-				values.Append(station.OutdoorTemperature.ToString(TempFormat, InvC) + ",");
+				values.Append(station.OutdoorTemperature.ToString(TempFormat) + ",");
 				values.Append(station.OutdoorHumidity + ",");
-				values.Append(station.OutdoorDewpoint.ToString(TempFormat, InvC) + ",");
-				values.Append(station.WindAverage.ToString(WindFormat, InvC) + ",");
-				values.Append(station.RecentMaxGust.ToString(WindFormat, InvC) + ",");
+				values.Append(station.OutdoorDewpoint.ToString(TempFormat) + ",");
+				values.Append(station.WindAverage.ToString(WindFormat) + ",");
+				values.Append(station.RecentMaxGust.ToString(WindFormat) + ",");
 				values.Append(station.AvgBearing + ",");
-				values.Append(station.RainRate.ToString(RainFormat, InvC) + ",");
-				values.Append(station.RainToday.ToString(RainFormat, InvC) + ",");
-				values.Append(station.Pressure.ToString(PressFormat, InvC) + ",");
-				values.Append(station.Raincounter.ToString(RainFormat, InvC) + ",");
-				values.Append(station.IndoorTemperature.ToString(TempFormat, InvC) + ",");
+				values.Append(station.RainRate.ToString(RainFormat) + ",");
+				values.Append(station.RainToday.ToString(RainFormat) + ",");
+				values.Append(station.Pressure.ToString(PressFormat) + ",");
+				values.Append(station.Raincounter.ToString(RainFormat) + ",");
+				values.Append(station.IndoorTemperature.ToString(TempFormat) + ",");
 				values.Append(station.IndoorHumidity + ",");
-				values.Append(station.WindLatest.ToString(WindFormat, InvC) + ",");
-				values.Append(station.WindChill.ToString(TempFormat, InvC) + ",");
-				values.Append(station.HeatIndex.ToString(TempFormat, InvC) + ",");
-				values.Append(station.UV.ToString(UVFormat, InvC) + ",");
+				values.Append(station.WindLatest.ToString(WindFormat) + ",");
+				values.Append(station.WindChill.ToString(TempFormat) + ",");
+				values.Append(station.HeatIndex.ToString(TempFormat) + ",");
+				values.Append(station.UV.ToString(UVFormat) + ",");
 				values.Append(station.SolarRad + ",");
-				values.Append(station.ET.ToString(ETFormat, InvC) + ",");
-				values.Append(station.AnnualETTotal.ToString(ETFormat, InvC) + ",");
-				values.Append(station.ApparentTemperature.ToString(TempFormat, InvC) + ",");
+				values.Append(station.ET.ToString(ETFormat) + ",");
+				values.Append(station.AnnualETTotal.ToString(ETFormat) + ",");
+				values.Append(station.ApparentTemperature.ToString(TempFormat) + ",");
 				values.Append((Math.Round(station.CurrentSolarMax)) + ",");
-				values.Append(station.SunshineHours.ToString(SunFormat, InvC) + ",");
+				values.Append(station.SunshineHours.ToString(SunFormat) + ",");
 				values.Append(station.Bearing + ",");
-				values.Append(station.RG11RainToday.ToString(RainFormat, InvC) + ",");
-				values.Append(station.RainSinceMidnight.ToString(RainFormat, InvC) + ",'");
+				values.Append(station.RG11RainToday.ToString(RainFormat) + ",");
+				values.Append(station.RainSinceMidnight.ToString(RainFormat) + ",'");
 				values.Append(station.CompassPoint(station.AvgBearing) + "','");
 				values.Append(station.CompassPoint(station.Bearing) + "',");
-				values.Append(station.FeelsLike.ToString(TempFormat, InvC) + ",");
-				values.Append(station.Humidex.ToString(TempFormat, InvC));
+				values.Append(station.FeelsLike.ToString(TempFormat) + ",");
+				values.Append(station.Humidex.ToString(TempFormat));
 				values.Append(")");
 
 				string queryString = values.ToString();
@@ -5651,7 +5671,7 @@ namespace CumulusMX
 			using (FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read))
 			using (StreamWriter file = new StreamWriter(fs))
 			{
-				file.Write(timestamp.ToString("dd/MM/yy") + ListSeparator);
+				file.Write(timestamp.ToString("dd-MM-yy") + ListSeparator);
 				file.Write(timestamp.ToString("HH:mm") + ListSeparator);
 
 				for (int i = 1; i < 11; i++)
@@ -5672,16 +5692,16 @@ namespace CumulusMX
 				file.Write(station.SoilTemp3.ToString(TempFormat) + ListSeparator);
 				file.Write(station.SoilTemp4.ToString(TempFormat) + ListSeparator);
 
-				file.Write(station.SoilMoisture1 + ListSeparator);
-				file.Write(station.SoilMoisture2 + ListSeparator);
-				file.Write(station.SoilMoisture3 + ListSeparator);
-				file.Write(station.SoilMoisture4 + ListSeparator);
+				file.Write(station.SoilMoisture1.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture2.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture3.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture4.ToString() + ListSeparator);
 
 				file.Write(station.LeafTemp1.ToString(TempFormat) + ListSeparator);
 				file.Write(station.LeafTemp2.ToString(TempFormat) + ListSeparator);
 
-				file.Write(station.LeafWetness1 + ListSeparator);
-				file.Write(station.LeafWetness2 + ListSeparator);
+				file.Write(station.LeafWetness1.ToString() + ListSeparator);
+				file.Write(station.LeafWetness2.ToString() + ListSeparator);
 
 				file.Write(station.SoilTemp5.ToString(TempFormat) + ListSeparator);
 				file.Write(station.SoilTemp6.ToString(TempFormat) + ListSeparator);
@@ -5696,18 +5716,18 @@ namespace CumulusMX
 				file.Write(station.SoilTemp15.ToString(TempFormat) + ListSeparator);
 				file.Write(station.SoilTemp16.ToString(TempFormat) + ListSeparator);
 
-				file.Write(station.SoilMoisture5 + ListSeparator);
-				file.Write(station.SoilMoisture6 + ListSeparator);
-				file.Write(station.SoilMoisture7 + ListSeparator);
-				file.Write(station.SoilMoisture8 + ListSeparator);
-				file.Write(station.SoilMoisture9 + ListSeparator);
-				file.Write(station.SoilMoisture10 + ListSeparator);
-				file.Write(station.SoilMoisture11 + ListSeparator);
-				file.Write(station.SoilMoisture12 + ListSeparator);
-				file.Write(station.SoilMoisture13 + ListSeparator);
-				file.Write(station.SoilMoisture14 + ListSeparator);
-				file.Write(station.SoilMoisture15 + ListSeparator);
-				file.Write(station.SoilMoisture16 + ListSeparator);
+				file.Write(station.SoilMoisture5.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture6.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture7.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture8.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture9.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture10.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture11.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture12.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture13.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture14.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture15.ToString() + ListSeparator);
+				file.Write(station.SoilMoisture16.ToString() + ListSeparator);
 
 				file.Write(station.AirQuality1.ToString(AirQualityFormat) + ListSeparator);
 				file.Write(station.AirQuality2.ToString(AirQualityFormat) + ListSeparator);
@@ -6430,8 +6450,7 @@ namespace CumulusMX
 		{
 			if (Sslftp == FtpProtocols.SFTP)
 			{
-				// BUILD 3082 - added alternate SFTP authenication options, but currently only "password" is functional
-				/*
+				// BUILD 3092 - added alternate SFTP authenication options
 				ConnectionInfo connectionInfo;
 				if (SshftpAuthentication == "password")
 				{
@@ -6457,8 +6476,7 @@ namespace CumulusMX
 				}
 
 				using (SftpClient conn = new SftpClient(connectionInfo))
-				*/
-				using (SftpClient conn = new SftpClient(ftp_host, ftp_port, ftp_user, ftp_password))
+				//using (SftpClient conn = new SftpClient(ftp_host, ftp_port, ftp_user, ftp_password))
 				{
 					try
 					{
@@ -7745,8 +7763,7 @@ namespace CumulusMX
 				LogMessage($"SFTP[{cycle}]: Attempting realtime SFTP connect to host {ftp_host} on port {ftp_port}");
 				try
 				{
-					// BUILD 3082 - added alternate SFTP authenication options, but currently only "password" is functional
-					/*
+					// BUILD 3092 - added alternate SFTP authenication options
 					ConnectionInfo connectionInfo;
 					PrivateKeyFile pskFile;
 					if (SshftpAuthentication == "password")
@@ -7772,9 +7789,9 @@ namespace CumulusMX
 						return;
 					}
 					RealtimeSSH = new SftpClient(connectionInfo);
-					*/
-					if (RealtimeSSH != null) RealtimeSSH.Dispose();
-					RealtimeSSH = new SftpClient(ftp_host, ftp_port, ftp_user, ftp_password);
+
+					//if (RealtimeSSH != null) RealtimeSSH.Dispose();
+					//RealtimeSSH = new SftpClient(ftp_host, ftp_port, ftp_user, ftp_password);
 					RealtimeSSH.Connect();
 					RealtimeSSH.ConnectionInfo.Timeout = TimeSpan.FromSeconds(15);  // 15 seconds to match FTP default timeout
 					LogMessage($"SFTP[{cycle}]: Realtime SFTP connected");

@@ -256,7 +256,7 @@ namespace CumulusMX
 
         private string ConvertPeriodToSystemDecimal(string AStr)
         {
-            return AStr.Replace(".", cumulus.DecimalSeparator);
+            return AStr.Replace(".", cumulus.UserDecimalSeparator);
         }
 
         private double GetConvertedValue(string AStr)

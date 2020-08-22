@@ -1,3 +1,69 @@
+3.x.0 - b30xx
+=============
+- CMX calculated dew point is automatically enabled for GW1000 stations
+- Major changes to how Cumulus MX handles it's data files
+	- Dayfile.txt
+		- The date field format is now fixed at "dd-MM-yy" (old order is retained for third party compatibility)
+		- The decimal point is now fixed at "."
+		- The list separator is now fixed at ","
+	- Monthly log files
+		- The file names are fixed at "yyyy-MM-log.txt"
+		- The date field format is now fixed at "dd-MM-yy" (old order is retained for third party compatibility)
+		- The time field format is now fixed at "HH:mm"
+		- The decimal point is now fixed at "."
+		- The list separator is now fixed at ","
+	- Extra Data log files
+		- No change in file names
+		- The date field format is now fixed at "dd-MM-yy" (old order is retained for third party compatibility)
+		- The time field format is now fixed at "HH:mm"
+		- The decimal point is now fixed at "."
+		- The list separator is now fixed at ","
+	- Cumulus.ini file
+		- ???Do we do this one??? Records began date (StartDate=) is converted to yyyy-MM-dd
+	- All other .ini files
+		- No changes
+	- All the records and data editors will use the standard date/time formats - "yyyy-MM-dd HH:mm" or "yyyy-MM-dd"
+	- Data displayed in administrative interface will continue to be in the user locale
+	- All web tags will continue to use the user locale
+	- This does mean that once converted the data files used with MX will no longer be compatible with Cumulus 1
+
+
+
+
+3.8.2 - b3092
+=============
+- Fix: Davis VP2 stations - LastRainTip not being updated correctly with mixed metric/imperial gauges/units
+- Fix: Davis VP2 stations - Bug that prevented the seconds being read from the console clock
+- Fix: Dashboard temp/press trend arrows not working in locales with comma decimals
+- MXdiags log files are now rotated if they exceed 20MB in size, 15 log files are now retained
+- For Davis VP2 stations, setting the console clock now checks the console time and only sets it if it
+  differs from the current time by greater than 60 seconds
+- Davis VP2 stations protocols have been extensively rewritten to make them more efficent and less timing sensitive
+  Third party IP loggers such as meteobridge and WiFi logger should now work more reliably
+- Enables PSK authentication when using SFTP. Options are now Password, PSK, PSK with Password fallback
+	New Cumulus.ini entries...
+	[FTP site]
+	SshFtpAuthentication=password      [password (default), psk, password_psk]
+	SshFtpPskFile=                     [PSK filename, must include the full path is the file is not in the CumulusMX folder]
+
+
+- Updated files
+	\CumulusMX.exe
+	\interface\js\dashboard.js
+	\interface\json\InternetOptions.json
+	\interface\json\InternetSchema.json
+
+
+3.8.1 - b3091
+=============
+- Fix: Davis TCP loggers failing to connect correctly
+- Fix: NOAA reports not viewable in Admin interface when Cumulus started as a service
+- Fix: Prevents an Exception on shutdown when running as a service
+
+- Updated files
+	\CumulusMX.exe
+
+
 3.8.0 - b3090
 =============
 - Fix: Malformed API JSON returned by api/tags/process.json if no data output is generated

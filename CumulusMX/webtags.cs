@@ -293,17 +293,17 @@ namespace CumulusMX
 			string dtformat = TagParams.Get("format");
 			if (dtformat == null)
 			{
-				s = dt.ToString();
+				s = dt.ToString(cumulus.userCulture);
 			}
 			else
 			{
 				try
 				{
-					s = dt.ToString(dtformat);
+					s = dt.ToString(dtformat, cumulus.userCulture);
 				}
 				catch (Exception)
 				{
-					s = dt.ToString();
+					s = dt.ToString(cumulus.userCulture);
 				}
 			}
 			return s;
@@ -323,7 +323,7 @@ namespace CumulusMX
 				{
 					dtformat = defaultFormat;
 				}
-				s = dt.ToString(dtformat);
+				s = dt.ToString(dtformat, cumulus.userCulture);
 			}
 			return s;
 		}
@@ -357,7 +357,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				return station.monthlyrecarray[identifier, month].value.ToString(format);
+				return station.monthlyrecarray[identifier, month].value.ToString(format, cumulus.userCulture);
 			}
 		}
 
@@ -377,17 +377,17 @@ namespace CumulusMX
 
 		private string Tagwlatest(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.WindLatest.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.WindLatest.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagwindrun(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.WindRunToday.ToString(cumulus.WindRunFormat), TagParams);
+			return CheckRC(station.WindRunToday.ToString(cumulus.WindRunFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagwspeed(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.WindAverage.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.WindAverage.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagcurrentwdir(Dictionary<string,string> TagParams)
@@ -402,22 +402,22 @@ namespace CumulusMX
 
 		private string Tagwgust(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.RecentMaxGust.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.RecentMaxGust.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagwchill(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.WindChill.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.WindChill.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagrrate(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.RainRate.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.RainRate.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagStormRain(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.StormRain.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.StormRain.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagStormRainStart(Dictionary<string,string> TagParams)
@@ -435,7 +435,7 @@ namespace CumulusMX
 				{
 					dtformat = "d"; // short date format
 				}
-				return station.StartOfStorm.ToString(dtformat);
+				return station.StartOfStorm.ToString(dtformat, cumulus.userCulture);
 			}
 		}
 
@@ -446,47 +446,47 @@ namespace CumulusMX
 
 		private string TagwindrunY(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.YesterdayWindRun.ToString(cumulus.WindRunFormat), TagParams);
+			return CheckRC(station.YesterdayWindRun.ToString(cumulus.WindRunFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagheatdegdays(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HeatingDegreeDays.ToString("F1"), TagParams);
+			return CheckRC(station.HeatingDegreeDays.ToString("F1", cumulus.userCulture), TagParams);
 		}
 
 		private string Tagcooldegdays(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.CoolingDegreeDays.ToString("F1"), TagParams);
+			return CheckRC(station.CoolingDegreeDays.ToString("F1", cumulus.userCulture), TagParams);
 		}
 
 		private string TagheatdegdaysY(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.YestHeatingDegreeDays.ToString("F1"), TagParams);
+			return CheckRC(station.YestHeatingDegreeDays.ToString("F1", cumulus.userCulture), TagParams);
 		}
 
 		private string TagcooldegdaysY(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.YestCoolingDegreeDays.ToString("F1"), TagParams);
+			return CheckRC(station.YestCoolingDegreeDays.ToString("F1", cumulus.userCulture), TagParams);
 		}
 
 		private string Tagpresstrendval(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.presstrendval.ToString(cumulus.PressFormat), TagParams);
+			return CheckRC(station.presstrendval.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTempChangeLastHour(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.TempChangeLastHour.ToString("+##0.0;-##0.0;0"), TagParams); ;
+			return CheckRC(station.TempChangeLastHour.ToString("+##0.0;-##0.0;0", cumulus.userCulture), TagParams); ;
 		}
 
 		private string Tagdew(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.OutdoorDewpoint.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.OutdoorDewpoint.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagwetbulb(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.WetBulb.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.WetBulb.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagcloudbase(Dictionary<string,string> TagParams)
@@ -520,23 +520,19 @@ namespace CumulusMX
 
 		private string TagTime(Dictionary<string,string> TagParams)
 		{
-			string result;
 			string dtformat;
-			string s;
 			dtformat = TagParams.Get("format");
 			if (dtformat == null)
 			{
 				dtformat = "HH:mm\" on \"dd MMMM yyyy";
 			}
-			s = DateTime.Now.ToString(dtformat);
-			result = s;
-			return result;
+			return DateTime.Now.ToString(dtformat, cumulus.userCulture);
 		}
 
 		private string TagDaysSince30Dec1899(Dictionary<string,string> TagParams)
 		{
 			DateTime startDate = new DateTime(1899,12,30);
-			return ((DateTime.Now - startDate).TotalDays).ToString();
+			return ((DateTime.Now - startDate).TotalDays).ToString(cumulus.userCulture);
 		}
 
 		private string TagTimeUTC(Dictionary<string,string> TagParams)
@@ -546,12 +542,12 @@ namespace CumulusMX
 			{
 				dtformat = "HH:mm\" on \"dd MMMM yyyy";
 			}
-			return DateTime.UtcNow.ToString(dtformat);
+			return DateTime.UtcNow.ToString(dtformat, cumulus.userCulture);
 		}
 
 		private string TagTimehhmmss(Dictionary<string,string> TagParams)
 		{
-			return DateTime.Now.ToString("HH:mm:ss");
+			return DateTime.Now.ToString("HH:mm:ss", cumulus.userCulture);
 		}
 
 		private string TagTimeJavascript(Dictionary<string, string> TagParams)
@@ -573,28 +569,24 @@ namespace CumulusMX
 			}
 			else
 			{
-				return DateTime.Now.ToString(dtformat);
+				return DateTime.Now.ToString(dtformat, cumulus.userCulture);
 			}
 		}
 
 		private string TagYesterday(Dictionary<string,string> TagParams)
 		{
-			string result;
 			string dtformat;
-			string s;
 			DateTime yesterday;
 			yesterday = DateTime.Now.AddDays(-1);
 			dtformat = TagParams.Get("format");
 			if (dtformat == null)
 			{
-				s = (yesterday).ToString("d");
+				return (yesterday).ToString("d", cumulus.userCulture);
 			}
 			else
 			{
-				s = yesterday.ToString(dtformat);
+				return yesterday.ToString(dtformat, cumulus.userCulture);
 			}
-			result = s;
-			return result;
 		}
 
 		private string TagMetDate(Dictionary<string,string> TagParams)
@@ -609,7 +601,7 @@ namespace CumulusMX
 
 			int offset = cumulus.GetHourInc();
 
-			return DateTime.Now.AddHours(offset).ToString(dtformat);
+			return DateTime.Now.AddHours(offset).ToString(dtformat, cumulus.userCulture);
 		}
 
 		private string TagMetDateYesterday(Dictionary<string,string> TagParams)
@@ -623,7 +615,7 @@ namespace CumulusMX
 
 			int offset = cumulus.GetHourInc();
 
-			return DateTime.Now.AddHours(offset).AddDays(-1).ToString(dtformat);
+			return DateTime.Now.AddHours(offset).AddDays(-1).ToString(dtformat, cumulus.userCulture);
 		}
 
 		private string TagDay(Dictionary<string,string> TagParams)
@@ -633,12 +625,12 @@ namespace CumulusMX
 
 		private string TagDayname(Dictionary<string,string> TagParams)
 		{
-			return DateTime.Now.ToString("dddd");
+			return DateTime.Now.ToString("dddd", cumulus.userCulture);
 		}
 
 		private string TagShortdayname(Dictionary<string,string> TagParams)
 		{
-			return DateTime.Now.ToString("ddd");
+			return DateTime.Now.ToString("ddd", cumulus.userCulture);
 		}
 
 		private string TagMonth(Dictionary<string,string> TagParams)
@@ -648,12 +640,12 @@ namespace CumulusMX
 
 		private string TagMonthname(Dictionary<string,string> TagParams)
 		{
-			return DateTime.Now.ToString("MMMM");
+			return DateTime.Now.ToString("MMMM", cumulus.userCulture);
 		}
 
 		private string TagShortmonthname(Dictionary<string,string> TagParams)
 		{
-			return DateTime.Now.ToString("MMM");
+			return DateTime.Now.ToString("MMM", cumulus.userCulture);
 		}
 
 		private string TagYear(Dictionary<string,string> TagParams)
@@ -713,42 +705,42 @@ namespace CumulusMX
 
 		private string Tagtemp(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.OutdoorTemperature.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.OutdoorTemperature.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagtemprange(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.TempRangeToday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.TempRangeToday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagtemprangeY(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.TempRangeYesterday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.TempRangeYesterday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagavgtemp(Dictionary<string,string> TagParams)
 		{
-			return CheckRC((station.TempTotalToday/station.tempsamplestoday).ToString(cumulus.TempFormat), TagParams);
+			return CheckRC((station.TempTotalToday/station.tempsamplestoday).ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagavgtempY(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.YestAvgTemp.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.YestAvgTemp.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagapptemp(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ApparentTemperature.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ApparentTemperature.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagfeelsliketemp(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.FeelsLike.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.FeelsLike.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagtemptrend(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.temptrendval.ToString(cumulus.TempTrendFormat), TagParams);
+			return CheckRC(station.temptrendval.ToString(cumulus.TempTrendFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagtemptrendtext(Dictionary<string,string> TagParams)
@@ -787,7 +779,7 @@ namespace CumulusMX
 
 		private string Tagheatindex(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HeatIndex.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HeatIndex.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Taghum(Dictionary<string,string> TagParams)
@@ -797,17 +789,17 @@ namespace CumulusMX
 
 		private string Taghumidex(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.Humidex.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.Humidex.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagpress(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.Pressure.ToString(cumulus.PressFormat), TagParams);
+			return CheckRC(station.Pressure.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagaltimeterpressure(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.AltimeterPressure.ToString(cumulus.PressFormat), TagParams);
+			return CheckRC(station.AltimeterPressure.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagpresstrend(Dictionary<string,string> TagParams)
@@ -898,30 +890,24 @@ namespace CumulusMX
 
 		private string Tagwdirdata(Dictionary<string,string> TagParams)
 		{
-			//String s = station.windbears[0].ToString();
 			var sb = new StringBuilder(station.windbears[0].ToString());
 
 			for (var i = 1; i < station.numwindvalues; i++)
 			{
-				//s = s + "," + station.windbears[i];
 				sb.Append("," + station.windbears[i]);
 			}
 
-			//return s;
 			return sb.ToString();
 		}
 
 		private string Tagwspddata(Dictionary<string,string> TagParams)
 		{
-			//String s = (station.windspeeds[0]*cumulus.WindGustMult).ToString(cumulus.WindFormat).Replace(",", ".");
-			var sb = new StringBuilder((station.windspeeds[0]*cumulus.WindGustMult).ToString(cumulus.WindFormat, CultureInfo.InvariantCulture));
+			var sb = new StringBuilder((station.windspeeds[0]*cumulus.WindGustMult).ToString(cumulus.WindFormat));
 			for (var i = 1; i < station.numwindvalues; i++)
 			{
-				sb.Append("," + (station.windspeeds[i]*cumulus.WindGustMult).ToString(cumulus.WindFormat, CultureInfo.InvariantCulture));
-				//s = s + "," + (station.windspeeds[i]*cumulus.WindGustMult).ToString(cumulus.WindFormat).Replace(",", ".");
+				sb.Append("," + (station.windspeeds[i]*cumulus.WindGustMult).ToString(cumulus.WindFormat));
 			}
 
-			//return s;
 			return sb.ToString();
 		}
 
@@ -937,11 +923,11 @@ namespace CumulusMX
 
 		private string TagWindRoseData(Dictionary<string,string> TagParams)
 		{
-			String s = (station.windcounts[0]*cumulus.WindGustMult).ToString(cumulus.WindFormat, CultureInfo.InvariantCulture);
+			String s = (station.windcounts[0]*cumulus.WindGustMult).ToString(cumulus.WindFormat);
 
 			for (var i = 1; i < cumulus.NumWindRosePoints; i++)
 			{
-				s = s + "," + (station.windcounts[i]*cumulus.WindGustMult).ToString(cumulus.WindFormat, CultureInfo.InvariantCulture);
+				s = s + "," + (station.windcounts[i]*cumulus.WindGustMult).ToString(cumulus.WindFormat);
 			}
 
 			return s;
@@ -954,32 +940,32 @@ namespace CumulusMX
 
 		private string Tagrfall(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.RainToday.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.RainToday.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagrmidnight(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.RainSinceMidnight.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.RainSinceMidnight.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagrmonth(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.RainMonth.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.RainMonth.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagrhour(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.RainLastHour.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.RainLastHour.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagr24hour(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.RainLast24Hour.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.RainLast24Hour.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagryear(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.RainYear.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.RainYear.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Taginhum(Dictionary<string,string> TagParams)
@@ -989,7 +975,7 @@ namespace CumulusMX
 
 		private string Tagintemp(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.IndoorTemperature.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.IndoorTemperature.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagbattery(Dictionary<string,string> TagParams)
@@ -1050,7 +1036,7 @@ namespace CumulusMX
 		{
 			try
 			{
-				return (station.multicastsGood / (float)(station.multicastsBad + station.multicastsGood) * 100).ToString("0.00");
+				return (station.multicastsGood / (float)(station.multicastsBad + station.multicastsGood) * 100).ToString("0.00", cumulus.userCulture);
 			}
 			catch
 			{
@@ -1072,7 +1058,7 @@ namespace CumulusMX
 			{
 				ts = DateTime.Now;
 			}
-			return CheckRC(GetSnowDepth(ts).ToString(), TagParams);
+			return CheckRC(GetSnowDepth(ts).ToString(cumulus.userCulture), TagParams);
 		}
 
 		private string Tagsnowlying(Dictionary<string, string> TagParams)
@@ -1333,7 +1319,7 @@ namespace CumulusMX
 
 		private string TagtempTH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighTempToday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighTempToday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTtempTH(Dictionary<string,string> TagParams)
@@ -1343,7 +1329,7 @@ namespace CumulusMX
 
 		private string TagtempTL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowTempToday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowTempToday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTtempTL(Dictionary<string,string> TagParams)
@@ -1363,7 +1349,7 @@ namespace CumulusMX
 
 		private string TagUVTH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighUVToday.ToString(cumulus.UVFormat), TagParams);
+			return CheckRC(station.HighUVToday.ToString(cumulus.UVFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTUVTH(Dictionary<string,string> TagParams)
@@ -1373,12 +1359,12 @@ namespace CumulusMX
 
 		private string TagapptempTH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighAppTempToday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighAppTempToday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagRCapptempTH(Dictionary<string,string> TagParams)
 		{
-			return ReplaceCommas(station.HighAppTempToday.ToString(cumulus.TempFormat));
+			return ReplaceCommas(station.HighAppTempToday.ToString(cumulus.TempFormat, cumulus.userCulture));
 		}
 
 		private string TagTapptempTH(Dictionary<string,string> TagParams)
@@ -1388,12 +1374,12 @@ namespace CumulusMX
 
 		private string TagapptempTL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowAppTempToday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowAppTempToday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagRCapptempTL(Dictionary<string,string> TagParams)
 		{
-			return ReplaceCommas(station.LowAppTempToday.ToString(cumulus.TempFormat));
+			return ReplaceCommas(station.LowAppTempToday.ToString(cumulus.TempFormat, cumulus.userCulture));
 		}
 
 		private string TagTapptempTL(Dictionary<string,string> TagParams)
@@ -1403,7 +1389,7 @@ namespace CumulusMX
 
 		private string TagfeelslikeTH(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.HighFeelsLikeToday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighFeelsLikeToday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTfeelslikeTH(Dictionary<string, string> TagParams)
@@ -1413,7 +1399,7 @@ namespace CumulusMX
 
 		private string TagfeelslikeTL(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.LowFeelsLikeToday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowFeelsLikeToday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTfeelslikeTL(Dictionary<string, string> TagParams)
@@ -1423,7 +1409,7 @@ namespace CumulusMX
 
 		private string TaghumidexTH(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.HighHumidexToday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighHumidexToday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagThumidexTH(Dictionary<string, string> TagParams)
@@ -1433,12 +1419,12 @@ namespace CumulusMX
 
 		private string TagdewpointTH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighDewpointToday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighDewpointToday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagRCdewpointTH(Dictionary<string,string> TagParams)
 		{
-		   return ReplaceCommas(station.HighDewpointToday.ToString(cumulus.TempFormat));
+		   return ReplaceCommas(station.HighDewpointToday.ToString(cumulus.TempFormat, cumulus.userCulture));
 		}
 
 		private string TagTdewpointTH(Dictionary<string,string> TagParams)
@@ -1448,12 +1434,12 @@ namespace CumulusMX
 
 		private string TagdewpointTL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowDewpointToday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowDewpointToday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagRCdewpointTL(Dictionary<string,string> TagParams)
 		{
-			return ReplaceCommas(station.LowDewpointToday.ToString(cumulus.TempFormat));
+			return ReplaceCommas(station.LowDewpointToday.ToString(cumulus.TempFormat, cumulus.userCulture));
 		}
 
 		private string TagTdewpointTL(Dictionary<string,string> TagParams)
@@ -1463,12 +1449,12 @@ namespace CumulusMX
 
 		private string TagwchillTL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowWindChillToday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowWindChillToday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagRCwchillTL(Dictionary<string,string> TagParams)
 		{
-			return ReplaceCommas(station.LowWindChillToday.ToString(cumulus.TempFormat));
+			return ReplaceCommas(station.LowWindChillToday.ToString(cumulus.TempFormat, cumulus.userCulture));
 		}
 
 		private string TagTwchillTL(Dictionary<string,string> TagParams)
@@ -1478,12 +1464,12 @@ namespace CumulusMX
 
 		private string TagheatindexTH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighHeatIndexToday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighHeatIndexToday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagRCheatindexTH(Dictionary<string,string> TagParams)
 		{
-			return ReplaceCommas(station.HighHeatIndexToday.ToString(cumulus.TempFormat));
+			return ReplaceCommas(station.HighHeatIndexToday.ToString(cumulus.TempFormat, cumulus.userCulture));
 		}
 
 		private string TagTheatindexTH(Dictionary<string,string> TagParams)
@@ -1493,7 +1479,7 @@ namespace CumulusMX
 
 		private string TagheatindexYH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighHeatIndexYesterday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighHeatIndexYesterday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTheatindexYH(Dictionary<string,string> TagParams)
@@ -1503,7 +1489,7 @@ namespace CumulusMX
 
 		private string TagpressTH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighPressToday.ToString(cumulus.PressFormat), TagParams);
+			return CheckRC(station.HighPressToday.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTpressTH(Dictionary<string,string> TagParams)
@@ -1513,7 +1499,7 @@ namespace CumulusMX
 
 		private string TagpressTL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowPressToday.ToString(cumulus.PressFormat), TagParams);
+			return CheckRC(station.LowPressToday.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTpressTL(Dictionary<string,string> TagParams)
@@ -1543,7 +1529,7 @@ namespace CumulusMX
 
 		private string TagwindTM(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighWindToday.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.HighWindToday.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTbeaufort(Dictionary<string,string> TagParams)
@@ -1568,7 +1554,7 @@ namespace CumulusMX
 
 		private string TagwgustTM(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighGustToday.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.HighGustToday.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTwgustTM(Dictionary<string,string> TagParams)
@@ -1588,7 +1574,7 @@ namespace CumulusMX
 
 		private string TagrrateTM(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighRainToday.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.HighRainToday.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTrrateTM(Dictionary<string,string> TagParams)
@@ -1598,7 +1584,7 @@ namespace CumulusMX
 
 		private string TaghourlyrainTH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighHourlyRainToday.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.HighHourlyRainToday.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagThourlyrainTH(Dictionary<string,string> TagParams)
@@ -1608,7 +1594,7 @@ namespace CumulusMX
 
 		private string TaghourlyrainYH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighHourlyRainYesterday.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.HighHourlyRainYesterday.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagThourlyrainYH(Dictionary<string,string> TagParams)
@@ -1628,7 +1614,7 @@ namespace CumulusMX
 
 		private string TagUVYH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighUVYesterday.ToString(cumulus.UVFormat), TagParams);
+			return CheckRC(station.HighUVYesterday.ToString(cumulus.UVFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTUVYH(Dictionary<string,string> TagParams)
@@ -1654,12 +1640,12 @@ namespace CumulusMX
 
 		private string TagRG11RainToday(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.RG11RainToday.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.RG11RainToday.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagRG11RainYest(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.RG11RainYesterday.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.RG11RainYesterday.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string Tagcurrcond(Dictionary<string,string> TagParams)
@@ -1674,7 +1660,7 @@ namespace CumulusMX
 
 		private string TagtempYH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighTempYesterday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighTempYesterday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTtempYH(Dictionary<string,string> TagParams)
@@ -1684,7 +1670,7 @@ namespace CumulusMX
 
 		private string TagtempYL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowTempYesterday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowTempYesterday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTtempYL(Dictionary<string,string> TagParams)
@@ -1694,7 +1680,7 @@ namespace CumulusMX
 
 		private string TagapptempYH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighAppTempYesterday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighAppTempYesterday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTapptempYH(Dictionary<string,string> TagParams)
@@ -1704,7 +1690,7 @@ namespace CumulusMX
 
 		private string TagapptempYL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowAppTempYesterday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowAppTempYesterday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTapptempYL(Dictionary<string,string> TagParams)
@@ -1714,12 +1700,12 @@ namespace CumulusMX
 
 		private string TagdewpointYH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighDewpointYesterday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighDewpointYesterday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagfeelslikeYH(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.HighFeelsLikeYesterday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighFeelsLikeYesterday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTfeelslikeYH(Dictionary<string, string> TagParams)
@@ -1729,7 +1715,7 @@ namespace CumulusMX
 
 		private string TagfeelslikeYL(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.LowFeelsLikeYesterday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowFeelsLikeYesterday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTfeelslikeYL(Dictionary<string, string> TagParams)
@@ -1739,7 +1725,7 @@ namespace CumulusMX
 
 		private string TaghumidexYH(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.HighHumidexYesterday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighHumidexYesterday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagThumidexYH(Dictionary<string, string> TagParams)
@@ -1754,7 +1740,7 @@ namespace CumulusMX
 
 		private string TagdewpointYL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowDewpointYesterday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowDewpointYesterday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTdewpointYL(Dictionary<string,string> TagParams)
@@ -1764,7 +1750,7 @@ namespace CumulusMX
 
 		private string TagwchillYL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowWindChillYesterday.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowWindChillYesterday.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTwchillYL(Dictionary<string,string> TagParams)
@@ -1774,7 +1760,7 @@ namespace CumulusMX
 
 		private string TagpressYH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighPressYesterday.ToString(cumulus.PressFormat), TagParams);
+			return CheckRC(station.HighPressYesterday.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTpressYH(Dictionary<string,string> TagParams)
@@ -1784,7 +1770,7 @@ namespace CumulusMX
 
 		private string TagpressYL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowPressYesterday.ToString(cumulus.PressFormat), TagParams);
+			return CheckRC(station.LowPressYesterday.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTpressYL(Dictionary<string,string> TagParams)
@@ -1814,7 +1800,7 @@ namespace CumulusMX
 
 		private string TagwindYM(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighWindYesterday.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.HighWindYesterday.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYbeaufort(Dictionary<string,string> TagParams)
@@ -1839,7 +1825,7 @@ namespace CumulusMX
 
 		private string TagwgustYM(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighGustYesterday.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.HighGustYesterday.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTwgustYM(Dictionary<string,string> TagParams)
@@ -1859,7 +1845,7 @@ namespace CumulusMX
 
 		private string TagrrateYM(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighRainYesterday.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.HighRainYesterday.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTrrateYM(Dictionary<string,string> TagParams)
@@ -1869,13 +1855,13 @@ namespace CumulusMX
 
 		private string TagrfallY(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.RainYesterday.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.RainYesterday.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		// all time records
 		private string TagtempH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighTemp].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighTemp].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTtempH(Dictionary<string,string> TagParams)
@@ -1885,7 +1871,7 @@ namespace CumulusMX
 
 		private string TagtempL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowTemp].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowTemp].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTtempL(Dictionary<string,string> TagParams)
@@ -1895,7 +1881,7 @@ namespace CumulusMX
 
 		private string TagapptempH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighAppTemp].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighAppTemp].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTapptempH(Dictionary<string,string> TagParams)
@@ -1905,7 +1891,7 @@ namespace CumulusMX
 
 		private string TagapptempL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowAppTemp].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowAppTemp].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTapptempL(Dictionary<string,string> TagParams)
@@ -1915,7 +1901,7 @@ namespace CumulusMX
 
 		private string TagfeelslikeH(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighFeelsLike].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighFeelsLike].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTfeelslikeH(Dictionary<string, string> TagParams)
@@ -1925,7 +1911,7 @@ namespace CumulusMX
 
 		private string TagfeelslikeL(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowFeelsLike].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowFeelsLike].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTfeelslikeL(Dictionary<string, string> TagParams)
@@ -1935,7 +1921,7 @@ namespace CumulusMX
 
 		private string TaghumidexH(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighHumidex].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighHumidex].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagThumidexH(Dictionary<string, string> TagParams)
@@ -1945,7 +1931,7 @@ namespace CumulusMX
 
 		private string TagdewpointH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighDewPoint].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighDewPoint].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTdewpointH(Dictionary<string,string> TagParams)
@@ -1955,7 +1941,7 @@ namespace CumulusMX
 
 		private string TagdewpointL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowDewpoint].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowDewpoint].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTdewpointL(Dictionary<string,string> TagParams)
@@ -1965,7 +1951,7 @@ namespace CumulusMX
 
 		private string TagheatindexH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighHeatIndex].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighHeatIndex].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTheatindexH(Dictionary<string,string> TagParams)
@@ -1975,7 +1961,7 @@ namespace CumulusMX
 
 		private string TaggustM(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighGust].value.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighGust].value.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTgustM(Dictionary<string,string> TagParams)
@@ -1985,7 +1971,7 @@ namespace CumulusMX
 
 		private string TagwspeedH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighWind].value.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighWind].value.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTwspeedH(Dictionary<string,string> TagParams)
@@ -1995,7 +1981,7 @@ namespace CumulusMX
 
 		private string TagwchillH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowChill].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowChill].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTwchillH(Dictionary<string,string> TagParams)
@@ -2005,7 +1991,7 @@ namespace CumulusMX
 
 		private string TagrrateM(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighRainRate].value.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighRainRate].value.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTrrateM(Dictionary<string,string> TagParams)
@@ -2015,7 +2001,7 @@ namespace CumulusMX
 
 		private string TagwindrunH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighWindrun].value.ToString(cumulus.WindRunFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighWindrun].value.ToString(cumulus.WindRunFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTwindrunH(Dictionary<string,string> TagParams)
@@ -2025,7 +2011,7 @@ namespace CumulusMX
 
 		private string TagrfallH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_DailyRain].value.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_DailyRain].value.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTrfallH(Dictionary<string,string> TagParams)
@@ -2055,12 +2041,12 @@ namespace CumulusMX
 
 		private string TagLowDailyTempRange(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowDailyTempRange].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowDailyTempRange].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagHighDailyTempRange(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighDailyTempRange].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighDailyTempRange].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTLowDailyTempRange(Dictionary<string,string> TagParams)
@@ -2075,7 +2061,7 @@ namespace CumulusMX
 
 		private string TagrfallhH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HourlyRain].value.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HourlyRain].value.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTrfallhH(Dictionary<string,string> TagParams)
@@ -2085,7 +2071,7 @@ namespace CumulusMX
 
 		private string TagrfallmH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_WetMonth].value.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_WetMonth].value.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTrfallmH(Dictionary<string,string> TagParams)
@@ -2095,7 +2081,7 @@ namespace CumulusMX
 
 		private string TagpressH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighPress].value.ToString(cumulus.PressFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighPress].value.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTpressH(Dictionary<string,string> TagParams)
@@ -2105,7 +2091,7 @@ namespace CumulusMX
 
 		private string TagpressL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowPress].value.ToString(cumulus.PressFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowPress].value.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTpressL(Dictionary<string,string> TagParams)
@@ -2115,7 +2101,7 @@ namespace CumulusMX
 
 		private string TaghumH(Dictionary<string,string> TagParams)
 		{
-			return station.alltimerecarray[WeatherStation.AT_HighHumidity].value.ToString(cumulus.HumFormat);
+			return station.alltimerecarray[WeatherStation.AT_HighHumidity].value.ToString(cumulus.HumFormat, cumulus.userCulture);
 		}
 
 		private string TagThumH(Dictionary<string,string> TagParams)
@@ -2125,7 +2111,7 @@ namespace CumulusMX
 
 		private string TaghumL(Dictionary<string,string> TagParams)
 		{
-			return station.alltimerecarray[WeatherStation.AT_lowhumidity].value.ToString(cumulus.HumFormat);
+			return station.alltimerecarray[WeatherStation.AT_lowhumidity].value.ToString(cumulus.HumFormat, cumulus.userCulture);
 		}
 
 		private string TagThumL(Dictionary<string,string> TagParams)
@@ -2135,19 +2121,19 @@ namespace CumulusMX
 
 		private string Tagrecordsbegandate(Dictionary<string,string> TagParams)
 		{
-			var begandate = DateTime.Parse(cumulus.RecordsBeganDate);
+			var begandate = DateTime.Parse(cumulus.RecordsBeganDate, cumulus.userCulture);
 			return GetFormattedDateTime(begandate, "dd MMMM yyyy", TagParams);
 		}
 
 		private string TagDaysSinceRecordsBegan(Dictionary<string,string> TagParams)
 		{
-			var begandate = DateTime.Parse(cumulus.RecordsBeganDate);
+			var begandate = DateTime.Parse(cumulus.RecordsBeganDate, cumulus.userCulture);
 			return (DateTime.Now - begandate).Days.ToString();
 		}
 
 		private string TagmintempH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighMinTemp].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighMinTemp].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTmintempH(Dictionary<string,string> TagParams)
@@ -2157,7 +2143,7 @@ namespace CumulusMX
 
 		private string TagmaxtempL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowMaxTemp].value.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_LowMaxTemp].value.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTmaxtempL(Dictionary<string,string> TagParams)
@@ -2542,7 +2528,7 @@ namespace CumulusMX
 
 				{
 					var dp = int.Parse(dpstr);
-					return CheckRC(String.Format("{0:F"+dp+"}",cumulus.Latitude), TagParams);
+					return CheckRC(String.Format(cumulus.userCulture, "{0:F" +dp+"}",cumulus.Latitude), TagParams);
 				}
 				catch
 				{
@@ -2563,7 +2549,7 @@ namespace CumulusMX
 				try
 				{
 					var dp = int.Parse(dpstr);
-					return CheckRC(String.Format("{0:F" + dp + "}", cumulus.Longitude), TagParams);
+					return CheckRC(String.Format(cumulus.userCulture, "{0:F" + dp + "}", cumulus.Longitude), TagParams);
 				}
 				catch
 				{
@@ -2762,11 +2748,11 @@ namespace CumulusMX
 
 			if (dtformat == null)
 			{
-				return DateTime.Now.ToString();
+				return DateTime.Now.ToString(cumulus.userCulture);
 			}
 			else
 			{
-				return DateTime.Now.ToString(dtformat);
+				return DateTime.Now.ToString(dtformat, cumulus.userCulture);
 			}
 		}
 
@@ -2795,7 +2781,7 @@ namespace CumulusMX
 			int i, dp;
 			dp = Int32.TryParse(dpstr, out i) ? i : 0;
 
-			return CheckRC(Math.Round(Math.Abs(cumulus.MoonPercent), dp).ToString(), TagParams);
+			return CheckRC(Math.Round(Math.Abs(cumulus.MoonPercent), dp).ToString(cumulus.userCulture), TagParams);
 		}
 
 		private string TagMoonAge(Dictionary<string,string> TagParams)
@@ -2811,7 +2797,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				return CheckRC(Math.Round(cumulus.MoonAge, dp).ToString(), TagParams);
+				return CheckRC(Math.Round(cumulus.MoonAge, dp).ToString(cumulus.userCulture), TagParams);
 			}
 		}
 
@@ -2829,11 +2815,11 @@ namespace CumulusMX
 				lastTip = DateTime.Parse(station.LastRainTip);
 				if (dtformat == null)
 				{
-					return lastTip.ToString("d");
+					return lastTip.ToString("d", cumulus.userCulture);
 				}
 				else
 				{
-					return lastTip.ToString(dtformat);
+					return lastTip.ToString(dtformat, cumulus.userCulture);
 				}
 			}
 			catch (Exception)
@@ -2954,17 +2940,17 @@ namespace CumulusMX
 
 		private string TagET(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ET.ToString(cumulus.ETFormat), TagParams);
+			return CheckRC(station.ET.ToString(cumulus.ETFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagLight(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LightValue.ToString("F1"), TagParams);
+			return CheckRC(station.LightValue.ToString("F1", cumulus.userCulture), TagParams);
 		}
 
 		private string TagUV(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.UV.ToString(cumulus.UVFormat), TagParams);
+			return CheckRC(station.UV.ToString(cumulus.UVFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSolarRad(Dictionary<string,string> TagParams)
@@ -2983,22 +2969,22 @@ namespace CumulusMX
 			int i, dp;
 			dp = Int32.TryParse(dpstr, out i) ? i : cumulus.SunshineDPlaces;
 
-			return CheckRC(station.SunshineHours.ToString("F" + dp), TagParams);
+			return CheckRC(station.SunshineHours.ToString("F" + dp, cumulus.userCulture), TagParams);
 		}
 
 		private string TagTHWIndex(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.THWIndex.ToString("F1"), TagParams);
+			return CheckRC(station.THWIndex.ToString("F1", cumulus.userCulture), TagParams);
 		}
 
 		private string TagTHSWIndex(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.THSWIndex.ToString("F1"), TagParams);
+			return CheckRC(station.THSWIndex.ToString("F1", cumulus.userCulture), TagParams);
 		}
 
 		private string TagChillHours(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ChillHours.ToString("F1"), TagParams);
+			return CheckRC(station.ChillHours.ToString("F1", cumulus.userCulture), TagParams);
 		}
 
 		private string TagYSunshineHours(Dictionary<string,string> TagParams)
@@ -3006,7 +2992,7 @@ namespace CumulusMX
 			var dpstr = TagParams.Get("dp");
 			int i, dp;
 			dp = Int32.TryParse(dpstr, out i) ? i : cumulus.SunshineDPlaces;
-			return CheckRC(station.YestSunshineHours.ToString("F" + dp), TagParams);
+			return CheckRC(station.YestSunshineHours.ToString("F" + dp, cumulus.userCulture), TagParams);
 		}
 
 		private string TagIsSunny(Dictionary<string,string> TagParams)
@@ -3037,232 +3023,232 @@ namespace CumulusMX
 		// Extra sensors
 		private string TagExtraTemp1(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraTemp[1].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraTemp[1].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraTemp2(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraTemp[2].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraTemp[2].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraTemp3(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraTemp[3].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraTemp[3].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraTemp4(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraTemp[4].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraTemp[4].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraTemp5(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraTemp[5].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraTemp[5].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraTemp6(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraTemp[6].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraTemp[6].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraTemp7(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraTemp[7].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraTemp[7].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraTemp8(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraTemp[8].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraTemp[8].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraTemp9(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraTemp[9].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraTemp[9].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraTemp10(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraTemp[10].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraTemp[10].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraDP1(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraDewPoint[1].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraDewPoint[1].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraDP2(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraDewPoint[2].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraDewPoint[2].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraDP3(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraDewPoint[3].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraDewPoint[3].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraDP4(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraDewPoint[4].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraDewPoint[4].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraDP5(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraDewPoint[5].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraDewPoint[5].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraDP6(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraDewPoint[6].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraDewPoint[6].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraDP7(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraDewPoint[7].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraDewPoint[7].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraDP8(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraDewPoint[8].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraDewPoint[8].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraDP9(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraDewPoint[9].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraDewPoint[9].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraDP10(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraDewPoint[10].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.ExtraDewPoint[10].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraHum1(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraHum[1].ToString(cumulus.HumFormat), TagParams);
+			return CheckRC(station.ExtraHum[1].ToString(cumulus.HumFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraHum2(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraHum[2].ToString(cumulus.HumFormat), TagParams);
+			return CheckRC(station.ExtraHum[2].ToString(cumulus.HumFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraHum3(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraHum[3].ToString(cumulus.HumFormat), TagParams);
+			return CheckRC(station.ExtraHum[3].ToString(cumulus.HumFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraHum4(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraHum[4].ToString(cumulus.HumFormat), TagParams);
+			return CheckRC(station.ExtraHum[4].ToString(cumulus.HumFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraHum5(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraHum[5].ToString(cumulus.HumFormat), TagParams);
+			return CheckRC(station.ExtraHum[5].ToString(cumulus.HumFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraHum6(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraHum[6].ToString(cumulus.HumFormat), TagParams);
+			return CheckRC(station.ExtraHum[6].ToString(cumulus.HumFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraHum7(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraHum[7].ToString(cumulus.HumFormat), TagParams);
+			return CheckRC(station.ExtraHum[7].ToString(cumulus.HumFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraHum8(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraHum[8].ToString(cumulus.HumFormat), TagParams);
+			return CheckRC(station.ExtraHum[8].ToString(cumulus.HumFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraHum9(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraHum[9].ToString(cumulus.HumFormat), TagParams);
+			return CheckRC(station.ExtraHum[9].ToString(cumulus.HumFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagExtraHum10(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.ExtraHum[10].ToString(cumulus.HumFormat), TagParams);
+			return CheckRC(station.ExtraHum[10].ToString(cumulus.HumFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp1(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.SoilTemp1.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp1.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp2(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.SoilTemp2.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp2.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp3(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.SoilTemp3.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp3.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp4(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.SoilTemp4.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp4.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp5(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.SoilTemp5.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp5.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp6(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.SoilTemp6.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp6.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp7(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.SoilTemp7.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp7.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp8(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.SoilTemp8.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp8.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp9(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.SoilTemp9.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp9.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp10(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.SoilTemp10.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp10.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp11(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.SoilTemp11.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp11.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp12(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.SoilTemp12.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp12.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp13(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.SoilTemp13.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp13.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp14(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.SoilTemp14.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp14.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp15(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.SoilTemp15.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp15.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilTemp16(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.SoilTemp16.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.SoilTemp16.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagSoilMoisture1(Dictionary<string,string> TagParams)
@@ -3347,102 +3333,102 @@ namespace CumulusMX
 
 		private string TagUserTemp1(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.UserTemp[1].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.UserTemp[1].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagUserTemp2(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.UserTemp[2].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.UserTemp[2].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagUserTemp3(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.UserTemp[3].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.UserTemp[3].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagUserTemp4(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.UserTemp[4].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.UserTemp[4].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagUserTemp5(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.UserTemp[5].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.UserTemp[5].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagUserTemp6(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.UserTemp[6].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.UserTemp[6].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagUserTemp7(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.UserTemp[7].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.UserTemp[7].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagUserTemp8(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.UserTemp[8].ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.UserTemp[8].ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagAirQuality1(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.AirQuality1.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.AirQuality1.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagAirQuality2(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.AirQuality2.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.AirQuality2.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagAirQuality3(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.AirQuality3.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.AirQuality3.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagAirQuality4(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.AirQuality4.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.AirQuality4.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagAirQualityAvg1(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.AirQualityAvg1.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.AirQualityAvg1.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagAirQualityAvg2(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.AirQualityAvg2.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.AirQualityAvg2.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagAirQualityAvg3(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.AirQuality3.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.AirQuality3.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagAirQualityAvg4(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.AirQualityAvg4.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.AirQualityAvg4.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagLeafTemp1(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LeafTemp1.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LeafTemp1.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagLeafTemp2(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LeafTemp2.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LeafTemp2.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagLeafTemp3(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.LeafTemp3.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LeafTemp3.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagLeafTemp4(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.LeafTemp4.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LeafTemp4.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagLeakSensor1(Dictionary<string, string> TagParams)
@@ -3470,7 +3456,7 @@ namespace CumulusMX
 			if (station.LightningDistance == 999)
 				return "--";
 			else
-				return CheckRC(station.LightningDistance.ToString(cumulus.WindRunFormat), TagParams);
+				return CheckRC(station.LightningDistance.ToString(cumulus.WindRunFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagLightningTime(Dictionary<string, string> TagParams)
@@ -3678,64 +3664,64 @@ namespace CumulusMX
 		// Monthly highs and lows - values
 		private string TagMonthTempH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighTempThisMonth.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighTempThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthTempL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowTempThisMonth.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowTempThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthHeatIndexH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighHeatIndexThisMonth.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighHeatIndexThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthWChillL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowWindChillThisMonth.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowWindChillThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthAppTempH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighAppTempThisMonth.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighAppTempThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthAppTempL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowAppTempThisMonth.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowAppTempThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthFeelsLikeH(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.HighFeelsLikeThisMonth.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighFeelsLikeThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthFeelsLikeL(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.LowFeelsLikeThisMonth.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowFeelsLikeThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthHumidexH(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.HighHumidexThisMonth.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighHumidexThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthDewPointH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighDewpointThisMonth.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighDewpointThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthDewPointL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowDewpointThisMonth.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowDewpointThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthMinTempH(Dictionary<string,string> TagParams)
 		{
 			if (station.HighMinTempThisMonth > -999)
 			{
-				return CheckRC(station.HighMinTempThisMonth.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(station.HighMinTempThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			return "--";
 		}
@@ -3744,59 +3730,59 @@ namespace CumulusMX
 		{
 			if (station.LowMaxTempThisMonth < 999)
 			{
-				return CheckRC(station.LowMaxTempThisMonth.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(station.LowMaxTempThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			return "--";
 		}
 
 		private string TagMonthPressH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighPressThisMonth.ToString(cumulus.PressFormat), TagParams);
+			return CheckRC(station.HighPressThisMonth.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthPressL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowPressThisMonth.ToString(cumulus.PressFormat), TagParams);
+			return CheckRC(station.LowPressThisMonth.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthHumH(Dictionary<string,string> TagParams)
 		{
-			return station.HighHumidityThisMonth.ToString(cumulus.HumFormat);
+			return station.HighHumidityThisMonth.ToString(cumulus.HumFormat, cumulus.userCulture);
 		}
 
 		private string TagMonthHumL(Dictionary<string,string> TagParams)
 		{
-			return station.LowHumidityThisMonth.ToString(cumulus.HumFormat);
+			return station.LowHumidityThisMonth.ToString(cumulus.HumFormat, cumulus.userCulture);
 		}
 
 		private string TagMonthGustH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighGustThisMonth.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.HighGustThisMonth.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthWindH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighWindThisMonth.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.HighWindThisMonth.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthWindRunH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighDailyWindrunThisMonth.ToString(cumulus.WindRunFormat), TagParams);
+			return CheckRC(station.HighDailyWindrunThisMonth.ToString(cumulus.WindRunFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthRainRateH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighRainThisMonth.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.HighRainThisMonth.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthHourlyRainH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighHourlyRainThisMonth.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.HighHourlyRainThisMonth.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthDailyRainH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighDailyRainThisMonth.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.HighDailyRainThisMonth.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagMonthLongestDryPeriod(Dictionary<string,string> TagParams)
@@ -3813,7 +3799,7 @@ namespace CumulusMX
 		{
 			if (station.HighDailyTempRangeThisMonth > -999)
 			{
-				return CheckRC(station.HighDailyTempRangeThisMonth.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(station.HighDailyTempRangeThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			return "--";
 		}
@@ -3822,7 +3808,7 @@ namespace CumulusMX
 		{
 			if (station.LowDailyTempRangeThisMonth < 999)
 			{
-				return CheckRC(station.LowDailyTempRangeThisMonth.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(station.LowDailyTempRangeThisMonth.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			return "--";
 		}
@@ -4078,64 +4064,64 @@ namespace CumulusMX
 		// Yearly highs and lows - values
 		private string TagYearTempH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighTempThisYear.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighTempThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearTempL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowTempThisYear.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowTempThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearHeatIndexH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighHeatIndexThisYear.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighHeatIndexThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearWChillL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowWindChillThisYear.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowWindChillThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearAppTempH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighAppTempThisYear.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighAppTempThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearAppTempL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowAppTempThisYear.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowAppTempThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearFeelsLikeH(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.HighFeelsLikeThisYear.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighFeelsLikeThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearFeelsLikeL(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.LowFeelsLikeThisYear.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowFeelsLikeThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearHumidexH(Dictionary<string, string> TagParams)
 		{
-			return CheckRC(station.HighHumidexThisYear.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighHumidexThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearDewPointH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighDewpointThisYear.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.HighDewpointThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearDewPointL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowDewpointThisYear.ToString(cumulus.TempFormat), TagParams);
+			return CheckRC(station.LowDewpointThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearMinTempH(Dictionary<string,string> TagParams)
 		{
 			if (station.HighMinTempThisYear > -999)
 			{
-				return CheckRC(station.HighMinTempThisYear.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(station.HighMinTempThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			return "--";
 		}
@@ -4144,59 +4130,59 @@ namespace CumulusMX
 		{
 			if (station.LowMaxTempThisYear < 999)
 			{
-				return CheckRC(station.LowMaxTempThisYear.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(station.LowMaxTempThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			return "--";
 		}
 
 		private string TagYearPressH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighPressThisYear.ToString(cumulus.PressFormat), TagParams);
+			return CheckRC(station.HighPressThisYear.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearPressL(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.LowPressThisYear.ToString(cumulus.PressFormat), TagParams);
+			return CheckRC(station.LowPressThisYear.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearHumH(Dictionary<string,string> TagParams)
 		{
-			return station.HighHumidityThisYear.ToString(cumulus.HumFormat);
+			return station.HighHumidityThisYear.ToString(cumulus.HumFormat, cumulus.userCulture);
 		}
 
 		private string TagYearHumL(Dictionary<string,string> TagParams)
 		{
-			return station.LowHumidityThisYear.ToString(cumulus.HumFormat);
+			return station.LowHumidityThisYear.ToString(cumulus.HumFormat, cumulus.userCulture);
 		}
 
 		private string TagYearGustH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighGustThisYear.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.HighGustThisYear.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearWindH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighWindThisYear.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.HighWindThisYear.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearWindRunH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighDailyWindrunThisYear.ToString(cumulus.WindRunFormat), TagParams);
+			return CheckRC(station.HighDailyWindrunThisYear.ToString(cumulus.WindRunFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearRainRateH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighRainThisYear.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.HighRainThisYear.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearHourlyRainH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighHourlyRainThisYear.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.HighHourlyRainThisYear.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearDailyRainH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighDailyRainThisYear.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.HighDailyRainThisYear.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		private string TagYearLongestDryPeriod(Dictionary<string,string> TagParams)
@@ -4213,7 +4199,7 @@ namespace CumulusMX
 		{
 			if (station.HighDailyTempRangeThisYear > -999)
 			{
-				return CheckRC(station.HighDailyTempRangeThisYear.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(station.HighDailyTempRangeThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			return "--";
 		}
@@ -4222,14 +4208,14 @@ namespace CumulusMX
 		{
 			if (station.LowDailyTempRangeThisYear < 999)
 			{
-				return CheckRC(station.LowDailyTempRangeThisYear.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(station.LowDailyTempRangeThisYear.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			return "--";
 		}
 
 		private string TagYearMonthlyRainH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighMonthlyRainThisYear.ToString(cumulus.RainFormat), TagParams);
+			return CheckRC(station.HighMonthlyRainThisYear.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 		}
 
 		// Yearly highs and lows - times
@@ -4574,7 +4560,7 @@ namespace CumulusMX
 
 		private string TagAllocatedMemory(Dictionary<string,string> TagParams)
 		{
-			return (Environment.WorkingSet/1048576.0).ToString("F2") + " MB";
+			return CheckRC((Environment.WorkingSet/1048576.0).ToString("F2", cumulus.userCulture) + " MB", TagParams);
 		}
 
 		private string TagDiskSize(Dictionary<string,string> TagParams)
@@ -4652,11 +4638,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return CheckRC(station.OutdoorTemperature.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(station.OutdoorTemperature.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			else
 			{
-				return CheckRC(result[0].OutsideTemp.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(result[0].OutsideTemp.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 		}
 
@@ -4668,11 +4654,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return CheckRC(station.WindAverage.ToString(cumulus.WindFormat), TagParams);
+				return CheckRC(station.WindAverage.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 			}
 			else
 			{
-				return CheckRC(result[0].WindSpeed.ToString(cumulus.WindFormat), TagParams);
+				return CheckRC(result[0].WindSpeed.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 			}
 		}
 
@@ -4684,11 +4670,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return CheckRC(station.RecentMaxGust.ToString(cumulus.WindFormat), TagParams);
+				return CheckRC(station.RecentMaxGust.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 			}
 			else
 			{
-				return CheckRC(result[0].WindGust.ToString(cumulus.WindFormat), TagParams);
+				return CheckRC(result[0].WindGust.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 			}
 		}
 
@@ -4700,11 +4686,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return CheckRC(station.WindLatest.ToString(cumulus.WindFormat), TagParams);
+				return CheckRC(station.WindLatest.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 			}
 			else
 			{
-				return CheckRC(result[0].WindLatest.ToString(cumulus.WindFormat), TagParams);
+				return CheckRC(result[0].WindLatest.ToString(cumulus.WindFormat, cumulus.userCulture), TagParams);
 			}
 		}
 
@@ -4748,11 +4734,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return  CheckRC(station.WindChill.ToString(cumulus.TempFormat), TagParams);
+				return  CheckRC(station.WindChill.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			else
 			{
-				return CheckRC(result[0].WindChill.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(result[0].WindChill.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 		}
 
@@ -4764,11 +4750,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return CheckRC(station.OutdoorDewpoint.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(station.OutdoorDewpoint.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			else
 			{
-				return CheckRC(result[0].DewPoint.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(result[0].DewPoint.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 		}
 
@@ -4780,11 +4766,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return CheckRC(station.HeatIndex.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(station.HeatIndex.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			else
 			{
-				return CheckRC(result[0].HeatIndex.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(result[0].HeatIndex.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 		}
 
@@ -4796,11 +4782,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return CheckRC(station.FeelsLike.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(station.FeelsLike.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			else
 			{
-				return CheckRC(result[0].FeelsLike.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(result[0].FeelsLike.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 		}
 
@@ -4812,11 +4798,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return CheckRC(station.Humidex.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(station.Humidex.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 			else
 			{
-				return CheckRC(result[0].Humidex.ToString(cumulus.TempFormat), TagParams);
+				return CheckRC(result[0].Humidex.ToString(cumulus.TempFormat, cumulus.userCulture), TagParams);
 			}
 		}
 
@@ -4844,11 +4830,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return CheckRC(station.Pressure.ToString(cumulus.PressFormat), TagParams);
+				return CheckRC(station.Pressure.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 			}
 			else
 			{
-				return CheckRC(result[0].Pressure.ToString(cumulus.PressFormat), TagParams);
+				return CheckRC(result[0].Pressure.ToString(cumulus.PressFormat, cumulus.userCulture), TagParams);
 			}
 		}
 
@@ -4860,11 +4846,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return CheckRC(station.RainToday.ToString(cumulus.RainFormat), TagParams);
+				return CheckRC(station.RainToday.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 			}
 			else
 			{
-				return CheckRC(result[0].RainToday.ToString(cumulus.RainFormat), TagParams);
+				return CheckRC(result[0].RainToday.ToString(cumulus.RainFormat, cumulus.userCulture), TagParams);
 			}
 		}
 
@@ -4892,11 +4878,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return CheckRC(station.UV.ToString(cumulus.UVFormat), TagParams);
+				return CheckRC(station.UV.ToString(cumulus.UVFormat, cumulus.userCulture), TagParams);
 			}
 			else
 			{
-				return CheckRC(result[0].UV.ToString(cumulus.UVFormat), TagParams);
+				return CheckRC(result[0].UV.ToString(cumulus.UVFormat, cumulus.userCulture), TagParams);
 			}
 		}
 
@@ -4908,11 +4894,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return GetFormattedDateTime(DateTime.Now,TagParams);
+				return GetFormattedDateTime(DateTime.Now, TagParams);
 			}
 			else
 			{
-				return GetFormattedDateTime(result[0].Timestamp,TagParams);
+				return GetFormattedDateTime(result[0].Timestamp, TagParams);
 			}
 		}
 

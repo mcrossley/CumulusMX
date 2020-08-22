@@ -130,7 +130,6 @@ namespace CumulusMX
 		public double GetAverageWindSpeed(int month, int year, out int domdir)
 		{
 			string Line;
-			string Date;
 			int linenum = 0;
 			int windsamples = 0;
 			double windspeed;
@@ -160,8 +159,7 @@ namespace CumulusMX
 
 							Line = sr.ReadLine();
 							linenum++;
-							var st = new List<string>(Regex.Split(Line, CultureInfo.CurrentCulture.TextInfo.ListSeparator));
-							Date = st[0];
+							var st = new List<string>(Regex.Split(Line, cumulus.ListSeparator.ToString()));
 							windspeed = Convert.ToSingle(st[5]);
 							// add in wind speed sample for whole month
 							windsamples++;
@@ -262,7 +260,6 @@ namespace CumulusMX
 			int linenum = 0;
 			string Line;
 
-			string listSep = CultureInfo.CurrentCulture.TextInfo.ListSeparator;
 
 			try
 			{
@@ -273,13 +270,16 @@ namespace CumulusMX
 					{
 						Line = sr.ReadLine();
 						linenum++;
-						var st = new List<string>(Regex.Split(Line, listSep));
-						string DateStr = st[0];
+						var st = new List<string>(Regex.Split(Line, cumulus.ListSeparator.ToString()));
 
-						if ((Convert.ToInt32(DateStr.Substring(3, 2)) == month) && (Convert.ToInt32(DateStr.Substring(6, 2))+2000 == year))
+						// dd-MM-yy
+						string DateStr = st[0];
+						var DateStrArr = DateStr.Split(cumulus.DateSeparator);
+
+						if ((Convert.ToInt32(DateStrArr[1]) == month) && (Convert.ToInt32(DateStrArr[2]) == year))
 						{
 							// entry is for this month (month and year match)
-							int daynumber = Convert.ToInt32(DateStr.Substring(0, 2));
+							int daynumber = Convert.ToInt32(DateStrArr[2]);
 
 							if (DayList[daynumber].valid)
 							{
@@ -449,8 +449,9 @@ namespace CumulusMX
 						{
 							Line = sr.ReadLine();
 							linenum++;
-							var st = new List<string>(Regex.Split(Line, listSep));
-
+							var st = new List<string>(Regex.Split(Line, cumulus.ListSeparator.ToString()));
+							// dd-MM-YY
+							// HH:mm
 							int entryday = Convert.ToInt32(st[0].Substring(0, 2));
 							int entrymonth = Convert.ToInt32(st[0].Substring(3, 2));
 							int entryyear = Convert.ToInt32(st[0].Substring(6, 2));
@@ -755,7 +756,6 @@ namespace CumulusMX
 		{
 			var output = new List<string>();
 
-			string listSep = CultureInfo.CurrentCulture.TextInfo.ListSeparator;
 			string Line;
 			StringBuilder repLine = new StringBuilder(200);
 			int linenum = 0;
@@ -863,14 +863,16 @@ namespace CumulusMX
 					{
 						Line = sr.ReadLine();
 						linenum++;
-						var st = new List<string>(Regex.Split(Line, listSep));
+						var st = new List<string>(Regex.Split(Line, cumulus.ListSeparator.ToString()));
+						// dd-MM-yy
 						string DateStr = st[0];
+						string[] DateStrArr = DateStr.Split(cumulus.DateSeparator);
 
-						if (Convert.ToInt32(DateStr.Substring(6, 2))+2000 == year)
+						if (Convert.ToInt32(DateStrArr[2]) + 2000 == year)
 						{
 							// entry is for this year
-							var day = Convert.ToInt32(DateStr.Substring(0, 2));
-							month = Convert.ToInt32(DateStr.Substring(3, 2));
+							var day = Convert.ToInt32(DateStrArr[0]);
+							month = Convert.ToInt32(DateStrArr[1]);
 							MonthList[month].valid = true;
 							MonthList[month].samples ++;
 							var meantemp = Convert.ToDouble(st[15]);
