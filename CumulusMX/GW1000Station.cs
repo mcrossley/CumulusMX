@@ -382,6 +382,7 @@ namespace CumulusMX
 				socket.GetStream().WriteByte(10);
 				socket.Close();
 				tmrDataWatchdog.Stop();
+				StopMinuteTimer();
 			}
 			catch
 			{

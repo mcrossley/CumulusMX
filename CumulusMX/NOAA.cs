@@ -159,7 +159,8 @@ namespace CumulusMX
 
 							Line = sr.ReadLine();
 							linenum++;
-							var st = new List<string>(Regex.Split(Line, cumulus.ListSeparator.ToString()));
+							var st = new List<string>(Line.Split(cumulus.ListSeparator[0]));
+							Date = st[0];
 							windspeed = Convert.ToSingle(st[5]);
 							// add in wind speed sample for whole month
 							windsamples++;
@@ -260,7 +261,6 @@ namespace CumulusMX
 			int linenum = 0;
 			string Line;
 
-
 			try
 			{
 				using (FileStream fs = new FileStream(cumulus.DayFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
@@ -270,9 +270,7 @@ namespace CumulusMX
 					{
 						Line = sr.ReadLine();
 						linenum++;
-						var st = new List<string>(Regex.Split(Line, cumulus.ListSeparator.ToString()));
-
-						// dd-MM-yy
+						var st = new List<string>(Line.Split(cumulus.ListSeparator[0]));
 						string DateStr = st[0];
 						var DateStrArr = DateStr.Split(cumulus.DateSeparator);
 
@@ -449,9 +447,8 @@ namespace CumulusMX
 						{
 							Line = sr.ReadLine();
 							linenum++;
-							var st = new List<string>(Regex.Split(Line, cumulus.ListSeparator.ToString()));
-							// dd-MM-YY
-							// HH:mm
+							var st = new List<string>(Line.Split(cumulus.ListSeparator[0]));
+
 							int entryday = Convert.ToInt32(st[0].Substring(0, 2));
 							int entrymonth = Convert.ToInt32(st[0].Substring(3, 2));
 							int entryyear = Convert.ToInt32(st[0].Substring(6, 2));
@@ -470,7 +467,7 @@ namespace CumulusMX
 
 								// add in wind speed sample for this day
 								DayList[daynumber].windsamples++;
-								DayList[daynumber].totalwindspeed = DayList[daynumber].totalwindspeed + windspeed;
+								DayList[daynumber].totalwindspeed += windspeed;
 
 								// add in wind speed sample for whole month
 								windsamples++;
@@ -506,7 +503,7 @@ namespace CumulusMX
 			for (int i = 1; i < 32; i++)
 			{
 				if (DayList[i].windsamples > 0)
-					DayList[i].avgwindspeed = DayList[i].totalwindspeed/DayList[i].windsamples;
+					DayList[i].avgwindspeed = DayList[i].totalwindspeed / DayList[i].windsamples;
 				else
 					DayList[i].avgwindspeed = -1000;
 

@@ -7,6 +7,8 @@ using System.Text;
 using System.Threading;
 using System.Globalization;
 using System.Linq;
+using Renci.SshNet.Sftp;
+using Unosquare.Swan;
 
 namespace CumulusMX
 {
@@ -84,13 +86,23 @@ namespace CumulusMX
 
 				cumulus.LogMessage("IP address = " + ipaddr + " Port = " + port);
 				cumulus.LogMessage("periodic disconnect = " + cumulus.VP2PeriodicDisconnectInterval);
-				socket = OpenTcpPort();
+
+				do
+				{
+					socket = OpenTcpPort();
+
+					if (socket == null)
+					{
+						cumulus.LogMessage("Failed to connect to the station, waiting 30 seconds before trying again");
+						Thread.Sleep(30000);
+					}
+				} while (socket == null || !socket.Connected);
 
 				connectedOK = socket != null;
 
 				if (connectedOK)
 				{
-					init(socket);
+					tcpInit(socket);
 				}
 			}
 
@@ -152,35 +164,36 @@ namespace CumulusMX
 				if (consoleclock > DateTime.MinValue)
 				{
 					cumulus.LogMessage("Console clock: " + consoleclock);
+
+					if (cumulus.SyncTime && Math.Abs(nowTime.Subtract(consoleclock).TotalSeconds) >= 60)
+					{
+						setTime();
+						// Pause whilst the console sorts itself out
+						cumulus.LogMessage("Console clock: Pausing to allow console to process the new date/time");
+						cumulus.LogConsoleMessage("Pausing to allow console to process the new date/time");
+						Thread.Sleep(10 * 1000);
+
+						consoleclock = getTime();
+
+						if (consoleclock > DateTime.MinValue)
+						{
+							cumulus.LogMessage("Console clock: " + consoleclock);
+						}
+						else
+						{
+							cumulus.LogMessage("Console clock: Failed to read console time");
+						}
+					}
+					else
+					{
+						cumulus.LogMessage($"Console clock: Accurate to < 60 seconds, no need to set it (diff={(int)nowTime.Subtract(consoleclock).TotalSeconds}s)");
+					}
 				}
 				else
 				{
 					cumulus.LogMessage("Console clock: Failed to read console time");
 				}
 
-				if (cumulus.SyncTime && Math.Abs(nowTime.Subtract(consoleclock).TotalSeconds) >= 60)
-				{
-					setTime();
-					// Pause whilst the console sorts itself out
-					cumulus.LogMessage("Console clock: Pausing to allow console to process the new date/time");
-					cumulus.LogConsoleMessage("Pausing to allow console to process the new date/time");
-					Thread.Sleep(10 * 1000);
-
-					consoleclock = getTime();
-
-					if (consoleclock > DateTime.MinValue)
-					{
-						cumulus.LogMessage("Console clock: " + consoleclock);
-					}
-					else
-					{
-						cumulus.LogMessage("Console clock: Failed to read console time");
-					}
-				}
-				else
-				{
-					cumulus.LogMessage($"Console clock: Accurate to < 60 seconds, no need to set it (diff={(int)nowTime.Subtract(consoleclock).TotalSeconds}s)");
-				}
 
 				DateTime tooold = new DateTime(0);
 
@@ -288,6 +301,8 @@ namespace CumulusMX
 
 						stream.Write(Encoding.ASCII.GetBytes(commandString), 0, commandString.Length);
 
+						Thread.Sleep(cumulus.DavisIPResponseTime);
+
 						do
 						{
 							// Read the current character
@@ -302,9 +317,16 @@ namespace CumulusMX
 
 						data = data.Remove(data.Length - 1);
 					}
-					catch (TimeoutException)
+					catch (System.IO.IOException ex)
 					{
-						cumulus.LogMessage("GetFirmwareVersion: Timed out waiting for a response");
+						if (ex.Message.Contains("did not properly respond after a period of time"))
+						{
+							cumulus.LogMessage("GetFirmwareVersion: Timed out waiting for a response");
+						}
+						else
+						{
+							cumulus.LogMessage("GetFirmwareVersion: Error - " + ex.Message);
+						}
 					}
 					catch (Exception ex)
 					{
@@ -398,9 +420,17 @@ namespace CumulusMX
 							//cumulus.LogMessage("Received " + ch.ToString("X2"));
 						} while (bytesRead < 3);
 					}
-					catch (TimeoutException)
+					catch (System.IO.IOException ex)
 					{
-						cumulus.LogMessage("CheckLoggerInterval: Timed out waiting for a response");
+						if (ex.Message.Contains("did not properly respond after a period"))
+						{
+							cumulus.LogMessage("CheckLoggerInterval: Timed out waiting for a response");
+						}
+						else
+						{
+							cumulus.LogMessage("CheckLoggerInterval: Error - " + ex.Message);
+							awakeStopWatch.Stop();
+						}
 					}
 					catch (Exception ex)
 					{
@@ -480,6 +510,8 @@ namespace CumulusMX
 
 						stream.Write(Encoding.ASCII.GetBytes(commandString), 0, commandString.Length);
 
+						Thread.Sleep(cumulus.DavisIPResponseTime);
+
 						do
 						{
 							// Read the current character
@@ -493,13 +525,22 @@ namespace CumulusMX
 							}
 						} while (crCount < 3);
 					}
-					catch (TimeoutException)
+					catch (System.IO.IOException ex)
 					{
-						cumulus.LogMessage("GetReceptionStats: Timed out waiting for a response");
+						if (ex.Message.Contains("did not properly respond after a period"))
+						{
+							cumulus.LogMessage("GetReceptionStats: Timed out waiting for a response");
+						}
+						else
+						{
+							cumulus.LogMessage("GetReceptionStats: Error - " + ex.Message);
+							awakeStopWatch.Stop();
+						}
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogMessage("GetReceptionStats: Error - " + ex.Message);
+						awakeStopWatch.Stop();
 					}
 				}
 			}
@@ -808,6 +849,7 @@ namespace CumulusMX
 			cumulus.LogMessage("Start normal reading loop");
 			int loopcount = cumulus.ForceVPBarUpdate ? 20 : 50;
 			const int loop2count = 1;
+			bool reconnecting = false;
 
 			try
 			{
@@ -880,20 +922,50 @@ namespace CumulusMX
 							}
 							if (!comport.IsOpen)
 							{
-								Thread.Sleep(10000);
+								cumulus.LogMessage("Failed to connect to the station, waiting 30 seconds before trying again");
+								Thread.Sleep(30000);
+								continue;
 							}
 						}
 					}
 					else
 					{
-						if (cumulus.UseDavisLoop2 && SendLoopCommand(socket, "LPS 2 " + loop2count + newline))
+						if (socket == null || !socket.Connected)
 						{
-							GetAndProcessLoop2Data(loop2count);
+							reconnecting = true;
+
+							socket = OpenTcpPort();
+
+							if (socket != null)
+							{
+								tcpInit(socket);
+								reconnecting = false;
+							}
 						}
 
-						if (SendLoopCommand(socket, "LOOP " + loopcount + newline))
+						if (socket != null && socket.Connected)
 						{
-							GetAndProcessLoopData(loopcount);
+							if (cumulus.UseDavisLoop2 && SendLoopCommand(socket, "LPS 2 " + loop2count + newline))
+							{
+								GetAndProcessLoop2Data(loop2count);
+							}
+						}
+
+						if (socket != null && socket.Connected)
+						{
+							if (SendLoopCommand(socket, "LOOP " + loopcount + newline))
+							{
+								GetAndProcessLoopData(loopcount);
+							}
+						}
+						else
+						{
+							if (reconnecting)
+							{
+								cumulus.LogMessage("Failed to connect to the station, waiting 30 seconds before trying again");
+								Thread.Sleep(30000);
+							}
+							continue;
 						}
 					}
 
@@ -988,6 +1060,8 @@ namespace CumulusMX
 
 						stream.Write(Encoding.ASCII.GetBytes(commandString), 0, commandString.Length);
 
+						Thread.Sleep(cumulus.DavisIPResponseTime);
+
 						do
 						{
 							// Read the current character
@@ -998,9 +1072,17 @@ namespace CumulusMX
 							//cumulus.LogMessage("Received " + ch.ToString("X2"));
 						} while (stream.DataAvailable) ;
 					}
-					catch (TimeoutException)
+					catch (System.IO.IOException ex)
 					{
-						cumulus.LogDebugMessage("SendBarRead: Timed out waiting for a response");
+						if (ex.Message.Contains("did not properly respond after a period"))
+						{
+							cumulus.LogDebugMessage("SendBarRead: Timed out waiting for a response");
+						}
+						else
+						{
+							cumulus.LogDebugMessage("SendBarRead: Error - " + ex.Message);
+							awakeStopWatch.Stop();
+						}
 					}
 					catch (Exception ex)
 					{
@@ -1075,7 +1157,24 @@ namespace CumulusMX
 
 			try
 			{
+				if (!tcpPort.Connected)
+				{
+					cumulus.LogDebugMessage("SendLoopCommand: Error, TCP not connected!");
+					awakeStopWatch.Stop();
+					return false;
+				}
+
 				NetworkStream stream = tcpPort.GetStream();
+
+				// flush the input stream
+				stream.WriteByte(10);
+
+				Thread.Sleep(cumulus.DavisIPResponseTime);
+
+				while (stream.DataAvailable)
+				{
+					stream.ReadByte();
+				}
 
 				// Try the command until we get a clean ACKnowledge from the VP.  We count the number of passes since
 				// a timeout will never occur reading from the sockets buffer.  If we try a few times (maxPasses) and
@@ -1085,7 +1184,6 @@ namespace CumulusMX
 					// send the LOOP n command
 					cumulus.LogDebugMessage("SendLoopCommand: Sending command - " + commandString.Replace("\n","") + ", attempt " + passCount);
 					stream.Write(Encoding.ASCII.GetBytes(commandString), 0, commandString.Length);
-					//Thread.Sleep(cumulus.DavisIPResponseTime);
 					cumulus.LogDebugMessage("SendLoopCommand: Wait for ACK");
 					// Wait for the VP to acknowledge the the receipt of the command - sometimes we get a '\n\r'
 					// in the buffer first or no response is given.  If all else fails, try again.
@@ -1103,7 +1201,7 @@ namespace CumulusMX
 				{
 					cumulus.LogMessage("SendLoopCommand: Error sending LOOP command [" + commandString.Replace("\n", "") + "]: " + ex.Message);
 					awakeStopWatch.Stop();
-					WakeVP(tcpPort);
+					return false;
 				}
 			}
 
@@ -1227,22 +1325,30 @@ namespace CumulusMX
 						}
 						tmrComm.Stop();
 
-						if (comport.BytesToRead < loopDataLength)
+						if (socket.Available < loopDataLength)
 						{
-							cumulus.LogMessage($"LOOP: Expected data not received, expected 99 bytes, got {comport.BytesToRead}");
+							cumulus.LogMessage($"LOOP: Expected data not received, expected 99 bytes, got {socket.Available}");
 						}
 
 						// Read the first 99 bytes of the buffer into the array
 						socket.GetStream().Read(loopString, 0, loopDataLength);
 					}
-					catch (TimeoutException)
+					catch (System.IO.IOException ex)
 					{
-						cumulus.LogMessage("LOOP: Timed out waiting for LOOP data");
+						if (ex.Message.Contains("did not properly respond after a period"))
+						{
+							cumulus.LogMessage("LOOP: Timed out waiting for LOOP data");
+						}
+						else
+						{
+							cumulus.LogMessage("LOOP: Receive error - " + ex.ToString());
+							awakeStopWatch.Stop();
+						}
 						return;
 					}
 					catch (Exception ex)
 					{
-						cumulus.LogMessage("LOOP: Exception - " + ex.ToString());
+						cumulus.LogMessage("LOOP: Receive error - " + ex.ToString());
 						awakeStopWatch.Stop();
 						return;
 					}
@@ -1648,7 +1754,6 @@ namespace CumulusMX
 
 			cumulus.LogDebugMessage("LOOP2: Waiting for LOOP2 data");
 
-
 			for (int i = 0; i < number; i++)
 			{
 				// Allocate a byte array to hold the loop data
@@ -1706,10 +1811,18 @@ namespace CumulusMX
 						// Read the first 99 bytes of the buffer into the array
 						socket.GetStream().Read(loopString, 0, loopDataLength);
 					}
-					catch (TimeoutException)
+					catch (System.IO.IOException ex)
 					{
-						cumulus.LogDebugMessage("LOOP2: Timed out waiting for LOOP2 data");
-						continue;
+						if (ex.Message.Contains("did not properly respond after a period"))
+						{
+							cumulus.LogDebugMessage("LOOP2: Timed out waiting for LOOP2 data");
+							continue;
+						}
+						else
+						{
+							cumulus.LogDebugMessage("LOOP2: Data: Error - " + ex.Message);
+							awakeStopWatch.Stop();
+						}
 					}
 					catch (Exception ex)
 					{
@@ -1891,13 +2004,16 @@ namespace CumulusMX
 
 				do
 				{
-					WakeVP(socket);
+					if (!WakeVP(socket))
+					{
+						cumulus.LogMessage("GetArchiveData: Unable to wake VP");
+					}
+
+					cumulus.LogMessage("GetArchiveData: Sending DMPAFT");
 					string dmpaft = "DMPAFT\n";
 					stream.Write(Encoding.ASCII.GetBytes(dmpaft), 0, dmpaft.Length);
 
-					//Thread.Sleep(cumulus.DavisIPResponseTime);
-
-					ack = WaitForACK(comport);
+					ack = WaitForACK(stream);
 					if (!ack)
 					{
 						cumulus.LogMessage("GetArchiveData: No Ack in response to DMPAFT");
@@ -2458,7 +2574,7 @@ namespace CumulusMX
 			if (numtodo > 0)
 			{
 				if (!Program.service)
-					Console.WriteLine(""); // flush the progress line
+					Console.WriteLine("No records to process"); // flush the progress line
 			}
 		}
 
@@ -2696,21 +2812,27 @@ namespace CumulusMX
 						cumulus.LogDebugMessage("WakeVP: Attempting reconnect to logger");
 						// open a new connection
 						socket = OpenTcpPort();
-						thePort = socket;
+						tcpInit(socket);
 					}
 
 					if (thePort == null)
 					{
 						return (false);
 					}
-					else
+					else if (thePort.Connected)
 					{
 						stream = thePort.GetStream();
+					}
+					else
+					{
+						return false;
 					}
 				}
 				stream.ReadTimeout = 2500;
 				stream.WriteTimeout = 2500;
 
+				// Pause to allow any data to come in
+				Thread.Sleep(250);
 
 				// First flush the stream
 				int cnt = 0;
@@ -2719,6 +2841,10 @@ namespace CumulusMX
 					// Read the current character
 					stream.ReadByte();
 					cnt++;
+				}
+				if (cnt > 0)
+				{
+					cumulus.LogDebugMessage($"WakeVP: Flushed {cnt} suprious characters from input stream");
 				}
 				if (cnt > 0)
 				{
@@ -2738,6 +2864,8 @@ namespace CumulusMX
 							cumulus.LogDebugMessage($"WakeVP: Sending newline ({passCount}/{maxPasses})");
 							stream.WriteByte(LF);
 
+							Thread.Sleep(cumulus.DavisIPResponseTime);
+
 							do
 							{
 								thisChar = stream.ReadByte();
@@ -2753,15 +2881,25 @@ namespace CumulusMX
 								}
 							} while (thisChar > -1);
 						}
-						catch (TimeoutException)
+						catch (System.IO.IOException ex)
 						{
-							cumulus.LogDebugMessage("WakeVP: Timed out waiting for a response");
-							passCount++;
+							if (ex.Message.Contains("did not properly respond after a period"))
+							{
+								cumulus.LogDebugMessage("WakeVP: Timed out waiting for a response");
+								passCount++;
+							}
+							else
+							{
+								cumulus.LogDebugMessage("WakeVP: Problem with TCP connection " + ex.Message);
+							}
 						}
 						catch (Exception ex)
 						{
 							cumulus.LogDebugMessage("WakeVP: Problem with TCP connection " + ex.Message);
 							socket.Client.Close(0);
+							socket = OpenTcpPort();
+							tcpInit(socket);
+							stream = socket.GetStream();
 						}
 					}
 
@@ -2824,38 +2962,73 @@ namespace CumulusMX
 		}
 		*/
 
-		private void init(TcpClient thePort)
+		private void tcpInit(TcpClient thePort)
 		{
 			try
 			{
-				cumulus.LogMessage("Flushing input stream");
+				cumulus.LogMessage("tcpInit: Flushing input stream");
 				NetworkStream stream = thePort.GetStream();
 				stream.ReadTimeout = 2500;
 				stream.WriteTimeout = 2500;
 
 				// stop loop data
-				stream.WriteByte(0x0D);
+				stream.WriteByte(0x0A);
 
 				Thread.Sleep(cumulus.DavisInitWaitTime);
+
+				byte[] buffer1 = new byte[100];
+				byte[] buffer2 = new byte[buffer1.Length];
+				int idx = 0;
+				int ch;
 
 				while (stream.DataAvailable)
 				{
 					// Read the current character
-					int ch = stream.ReadByte();
-					if (ch == -1)
-					{
-						// end of stream - or can occur if DataAvailable is true and socket has been disconnected at remote end?
-						cumulus.LogDataMessage("No data available - disconnected?");
-						return;
-					}
-					cumulus.LogDataMessage("Received - " + ch.ToString("X2"));
-
+					stream.ReadByte();
 					Thread.Sleep(200);
 				}
+
+				// now we have purged any data, test the connection
+				do
+				{
+					idx = 0;
+					// write TEST, we expect to get "TEST\n\r" back
+					cumulus.LogDebugMessage("tcpInit: Sending TEST command");
+					stream.Write(Encoding.ASCII.GetBytes("TEST\n"), 0, 5);
+
+					Thread.Sleep(cumulus.DavisInitWaitTime);
+
+					while (stream.DataAvailable)
+					{
+						ch = stream.ReadByte();
+						if (idx < buffer1.Length)
+						{
+							buffer1[idx++] = (byte)ch;
+						}
+						else
+						{
+							Array.Copy(buffer1, 1, buffer2, 0, buffer1.Length);
+							buffer2[9] = (byte)ch;
+							Array.Copy(buffer2, buffer1, buffer1.Length);
+						}
+					}
+
+					var resp = Encoding.ASCII.GetString(buffer1);
+					cumulus.LogDebugMessage($"tcpInit: TEST received - '{BitConverter.ToString(buffer1.Take(idx).ToArray())}'");
+
+					if (resp.Contains("TEST"))
+					{
+						cumulus.LogDebugMessage("tcpInit: TEST successful");
+						break;
+					}
+				} while (true);
+
+
+				awakeStopWatch.Restart();
 			}
 			catch (Exception ex)
 			{
-				cumulus.LogMessage("init: Error - " + ex.Message);
+				cumulus.LogMessage("tcpInit: Error - " + ex.Message);
 			}
 		}
 
@@ -2916,6 +3089,8 @@ namespace CumulusMX
 			// in the buffer first or no response is given.  If all else fails, try again.
 			cumulus.LogDebugMessage("WaitForACK: Starting");
 
+			Thread.Sleep(cumulus.DavisIPResponseTime);
+
 			if (timeoutMs > -1)
 			{
 				stream.ReadTimeout = timeoutMs;
@@ -2948,9 +3123,22 @@ namespace CumulusMX
 						cumulus.LogDataMessage("WaitForACK: Received - " + currChar.ToString("X2"));
 					}
 				}
-				catch (TimeoutException)
+				catch (System.IO.IOException ex)
 				{
-					cumulus.LogDebugMessage($"WaitForAck: timed out, attempt {tryCount}");
+					if (ex.Message.Contains("did not properly respond after a period"))
+					{
+						cumulus.LogDebugMessage($"WaitForAck: timed out, attempt {tryCount}");
+					}
+					else
+					{
+						cumulus.LogDebugMessage($"WaitForAck: {tryCount} Error - {ex.Message}");
+						awakeStopWatch.Stop();
+					}
+				}
+				catch (Exception ex)
+				{
+					cumulus.LogDebugMessage($"WaitForAck: {tryCount} Error - {ex.Message}");
+					awakeStopWatch.Stop();
 				}
 				finally
 				{
@@ -3034,12 +3222,10 @@ namespace CumulusMX
 							cumulus.LogMessage("getTime: No ACK - wait a little longer");
 							if (!WaitForACK(stream))
 							{
-								cumulus.LogMessage("getTime: No ACK");
+								cumulus.LogMessage("getTime: No ACK, returning");
 								return DateTime.MinValue;
 							}
 						}
-
-						cumulus.LogMessage("getTime: ACK received");
 
 						// Read the time
 						do
@@ -3052,14 +3238,22 @@ namespace CumulusMX
 							//cumulus.LogMessage("Received " + ch.ToString("X2"));
 						} while (bytesRead < 8) ;
 					}
-					catch (TimeoutException)
+					catch (System.IO.IOException ex)
 					{
-						cumulus.LogMessage("getTime: Timed out waiting for a response");
+						if (ex.Message.Contains("did not properly respond after a period"))
+						{
+							cumulus.LogMessage("getTime: Timed out waiting for a response");
+						}
+						else
+						{
+							cumulus.LogDebugMessage("getTime: Error - " + ex.Message);
+						}
 						return DateTime.MinValue;
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogDebugMessage("getTime: Error - " + ex.Message);
+						return DateTime.MinValue;
 					}
 				}
 			}

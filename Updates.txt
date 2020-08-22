@@ -28,8 +28,6 @@
 	- This does mean that once converted the data files used with MX will no longer be compatible with Cumulus 1
 
 
-
-
 3.8.2 - b3092
 =============
 - Fix: Davis VP2 stations - LastRainTip not being updated correctly with mixed metric/imperial gauges/units

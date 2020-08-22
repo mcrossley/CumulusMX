@@ -256,6 +256,7 @@ namespace CumulusMX
                     Console.WriteLine("Press Enter to terminate");
                     Console.ReadLine();
                 }
+                Thread.Sleep(1000);
                 Environment.Exit(1);
             }
             catch (Exception)
@@ -304,6 +305,7 @@ namespace CumulusMX
             Console.WriteLine("Cumulus stopped");
 
             //allow main to run off
+            Thread.Sleep(200);
             Program.exitSystem = true;
 
             return true;
