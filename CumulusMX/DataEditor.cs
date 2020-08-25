@@ -3062,7 +3062,7 @@ namespace CumulusMX
 						station.LowFeelsLikeThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highHumidexVal":
-						station.HighHumidexThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighHumidexThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highHumidexTime":
 						dt = value.Split('+');
@@ -3175,7 +3175,7 @@ namespace CumulusMX
 						station.HighDailyRainThisYearTS = ShortDateStrToDate(value);
 						break;
 					case "highMonthlyRainVal":
-						station.HighMonthlyRainThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighMonthlyRainThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highMonthlyRainTime":
 						var dat = value.Split(cumulus.cmxCulture.DateTimeFormat.DateSeparator[0]);  // yyyy-MM
