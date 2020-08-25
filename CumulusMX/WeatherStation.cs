@@ -2224,7 +2224,7 @@ namespace CumulusMX
 				sb.Append("],\"wspeed\":[");
 				for (var i = 0; i < GraphDataList.Count; i++)
 				{
-					sb.Append("[" + DateTimeToUnix(GraphDataList[i].timestamp) * 1000 + "," + GraphDataList[i].windspeed.ToString(cumulus.WindFormat, cumulus.cmxCulture) + "]");
+					sb.Append("[" + DateTimeToUnix(GraphDataList[i].timestamp) * 1000 + "," + GraphDataList[i].windspeed.ToString(cumulus.WindAvgFormat, cumulus.cmxCulture) + "]");
 					if (i < GraphDataList.Count - 1)
 						sb.Append(",");
 				}
@@ -3468,7 +3468,7 @@ namespace CumulusMX
 		{
 			if (!cumulus.CalculatedDP)
 			{
-				if (dp <= cumulus.LimitDewHigh)
+				if (ConvertUserTempToC(dp) <= cumulus.LimitDewHigh)
 				{
 					OutdoorDewpoint = dp;
 					CheckForDewpointHighLow(timestamp);
@@ -5228,7 +5228,7 @@ namespace CumulusMX
 			strb.Append(RainToday.ToString(cumulus.RainFormat, cumulus.cmxCulture) + cumulus.ListSeparator);
 			strb.Append(AvgTemp.ToString(cumulus.TempFormat, cumulus.cmxCulture) + cumulus.ListSeparator);
 			strb.Append(WindRunToday.ToString("F1", cumulus.cmxCulture) + cumulus.ListSeparator);
-			strb.Append(HighWindToday.ToString(cumulus.WindFormat, cumulus.cmxCulture) + cumulus.ListSeparator);
+			strb.Append(HighWindToday.ToString(cumulus.WindAvgFormat, cumulus.cmxCulture) + cumulus.ListSeparator);
 			strb.Append(HighWindTodayTime.ToString("HH:mm", cumulus.cmxCulture) + cumulus.ListSeparator);
 			strb.Append(LowHumidityToday.ToString() + cumulus.ListSeparator);
 			strb.Append(LowHumidityTodayTime.ToString("HH:mm", cumulus.cmxCulture) + cumulus.ListSeparator);
@@ -5330,7 +5330,7 @@ namespace CumulusMX
 				queryString.Append(RainToday.ToString(cumulus.RainFormat, cumulus.cmxCulture) + ",");
 				queryString.Append(AvgTemp.ToString(cumulus.TempFormat, cumulus.cmxCulture) + ",");
 				queryString.Append(WindRunToday.ToString("F1", cumulus.cmxCulture) + ",");
-				queryString.Append(HighWindToday.ToString(cumulus.WindFormat, cumulus.cmxCulture) + ",");
+				queryString.Append(HighWindToday.ToString(cumulus.WindAvgFormat, cumulus.cmxCulture) + ",");
 				queryString.Append(HighWindTodayTime.ToString("\\'HH:mm\\'", cumulus.cmxCulture) + ",");
 				queryString.Append(LowHumidityToday + ",");
 				queryString.Append(LowHumidityTodayTime.ToString("\\'HH:mm\\'", cumulus.cmxCulture) + ",");
@@ -8632,7 +8632,7 @@ namespace CumulusMX
 
 			json.Append(alltimejsonformat(AT_HighGust, cumulus.WindUnitText, cumulus.WindFormat, "g"));
 			json.Append(",");
-			json.Append(alltimejsonformat(AT_HighWind, cumulus.WindUnitText, cumulus.WindFormat, "g"));
+			json.Append(alltimejsonformat(AT_HighWind, cumulus.WindUnitText, cumulus.WindAvgFormat, "g"));
 			json.Append(",");
 			json.Append(alltimejsonformat(AT_HighWindrun, cumulus.WindRunUnitText, cumulus.WindRunFormat, "d"));
 			json.Append("]}");
@@ -8728,7 +8728,7 @@ namespace CumulusMX
 
 			json.Append(monthlyjsonformat(AT_HighGust, month, cumulus.WindUnitText, cumulus.WindFormat, "g"));
 			json.Append(",");
-			json.Append(monthlyjsonformat(AT_HighWind, month, cumulus.WindUnitText, cumulus.WindFormat, "g"));
+			json.Append(monthlyjsonformat(AT_HighWind, month, cumulus.WindUnitText, cumulus.WindAvgFormat, "g"));
 			json.Append(",");
 			json.Append(monthlyjsonformat(AT_HighWindrun, month, cumulus.WindRunUnitText, cumulus.WindRunFormat, "d"));
 			json.Append("]}");
@@ -8824,7 +8824,7 @@ namespace CumulusMX
 
 			json.Append(monthyearjsonformat(AT_HighGust, HighGustThisMonth, HighGustThisMonthTS, cumulus.WindUnitText, cumulus.WindFormat, "g"));
 			json.Append(",");
-			json.Append(monthyearjsonformat(AT_HighWind, HighWindThisMonth, HighWindThisMonthTS, cumulus.WindUnitText, cumulus.WindFormat, "g"));
+			json.Append(monthyearjsonformat(AT_HighWind, HighWindThisMonth, HighWindThisMonthTS, cumulus.WindUnitText, cumulus.WindAvgFormat, "g"));
 			json.Append(",");
 			json.Append(monthyearjsonformat(AT_HighWindrun, HighDailyWindrunThisMonth, HighDailyWindrunThisMonthTS, cumulus.WindRunUnitText, cumulus.WindRunFormat, "d"));
 			json.Append("]}");
@@ -8915,7 +8915,7 @@ namespace CumulusMX
 
 			json.Append(monthyearjsonformat(AT_HighGust, HighGustThisYear, HighGustThisYearTS, cumulus.WindUnitText, cumulus.WindFormat, "g"));
 			json.Append(",");
-			json.Append(monthyearjsonformat(AT_HighWind, HighWindThisYear, HighWindThisYearTS, cumulus.WindUnitText, cumulus.WindFormat, "g"));
+			json.Append(monthyearjsonformat(AT_HighWind, HighWindThisYear, HighWindThisYearTS, cumulus.WindUnitText, cumulus.WindAvgFormat, "g"));
 			json.Append(",");
 			json.Append(monthyearjsonformat(AT_HighWindrun, HighDailyWindrunThisYear, HighDailyWindrunThisYearTS, cumulus.WindRunUnitText, cumulus.WindRunFormat, "d"));
 			json.Append("]}");
@@ -9153,120 +9153,120 @@ namespace CumulusMX
 			var timeFormat = "HH:mm";
 
 			json.Append("[\"High Temperature\",\"");
-			json.Append(HighTempToday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(HighTempToday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(HighTempTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighTempTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(HighTempYesterday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(HighTempYesterday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(HighTempYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighTempYesterdayTime.ToString(timeFormat));
 			json.Append(closeStr);
 
 			json.Append("[\"Low Temperature\",\"");
-			json.Append(LowTempToday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(LowTempToday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(LowTempTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowTempTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(LowTempYesterday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(LowTempYesterday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(LowTempYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowTempYesterdayTime.ToString(timeFormat));
 			json.Append(closeStr);
 
 			json.Append("[\"Temperature Range\",\"");
-			json.Append((HighTempToday - LowTempToday).ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append((HighTempToday - LowTempToday).ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
 			json.Append("&nbsp;\",\"");
-			json.Append((HighTempYesterday - LowTempYesterday).ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append((HighTempYesterday - LowTempYesterday).ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
 			json.Append("&nbsp;\"],");
 
 			json.Append("[\"High Apparent Temperature\",\"");
-			json.Append(HighAppTempToday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(HighAppTempToday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(HighAppTempTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighAppTempTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(HighAppTempYesterday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(HighAppTempYesterday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(HighAppTempYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighAppTempYesterdayTime.ToString(timeFormat));
 			json.Append(closeStr);
 
 			json.Append("[\"Low Apparent Temperature\",\"");
-			json.Append(LowAppTempToday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(LowAppTempToday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(LowAppTempTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowAppTempTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(LowAppTempYesterday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(LowAppTempYesterday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(LowAppTempYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowAppTempYesterdayTime.ToString(timeFormat));
 			json.Append(closeStr);
 
 			json.Append("[\"High Feels Like\",\"");
-			json.Append(HighFeelsLikeToday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(HighFeelsLikeToday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(HighFeelsLikeTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighFeelsLikeTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(HighFeelsLikeYesterday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(HighFeelsLikeYesterday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(HighFeelsLikeYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighFeelsLikeYesterdayTime.ToString(timeFormat));
 			json.Append(closeStr);
 
 			json.Append("[\"Low Feels Like\",\"");
-			json.Append(LowFeelsLikeToday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(LowFeelsLikeToday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(LowFeelsLikeTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowFeelsLikeTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(LowFeelsLikeYesterday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(LowFeelsLikeYesterday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(LowFeelsLikeYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowFeelsLikeYesterdayTime.ToString(timeFormat));
 			json.Append(closeStr);
 
 			json.Append("[\"High Humidex\",\"");
-			json.Append(HighHumidexToday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(HighHumidexToday.ToString(cumulus.TempFormat));
 			json.Append("\",\"");
-			json.Append(HighHumidexTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighHumidexTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(HighHumidexYesterday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(HighHumidexYesterday.ToString(cumulus.TempFormat));
 			json.Append("\",\"");
-			json.Append(HighHumidexYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighHumidexYesterdayTime.ToString(timeFormat));
 			json.Append(closeStr);
 			json.Append("[\"High Dew Point\",\"");
-			json.Append(HighDewpointToday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(HighDewpointToday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(HighDewpointTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighDewpointTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(HighDewpointYesterday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(HighDewpointYesterday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(HighDewpointYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighDewpointYesterdayTime.ToString(timeFormat));
 			json.Append(closeStr);
 
 			json.Append("[\"Low Dew Point\",\"");
-			json.Append(LowDewpointToday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(LowDewpointToday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(LowDewpointTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowDewpointTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(LowDewpointYesterday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(LowDewpointYesterday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(LowDewpointYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowDewpointYesterdayTime.ToString(timeFormat));
 			json.Append(closeStr);
 
 			json.Append("[\"Low Wind Chill\",\"");
-			json.Append(LowWindChillToday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(LowWindChillToday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(LowWindChillTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowWindChillTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(LowWindChillYesterday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(LowWindChillYesterday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(LowWindChillYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowWindChillYesterdayTime.ToString(timeFormat));
 			json.Append(closeStr);
 
 			json.Append("[\"High Heat Index\",\"");
-			json.Append(HighHeatIndexToday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(HighHeatIndexToday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(HighHeatIndexTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighHeatIndexTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(HighHeatIndexYesterday.ToString(cumulus.TempFormat, cumulus.userCulture));
+			json.Append(HighHeatIndexYesterday.ToString(cumulus.TempFormat));
 			json.Append(tempUnitStr);
-			json.Append(HighHeatIndexYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighHeatIndexYesterdayTime.ToString(timeFormat));
 			json.Append("\"]");
 
 			json.Append("]}");
@@ -9281,23 +9281,23 @@ namespace CumulusMX
 			var timeFormat = "HH:mm";
 
 			json.Append("[\"High Humidity\",\"");
-			json.Append(HighHumidityToday.ToString(cumulus.HumFormat, cumulus.userCulture));
+			json.Append(HighHumidityToday.ToString(cumulus.HumFormat));
 			json.Append(unitStr);
-			json.Append(HighHumidityTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighHumidityTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(HighHumidityYesterday.ToString(cumulus.HumFormat, cumulus.userCulture));
+			json.Append(HighHumidityYesterday.ToString(cumulus.HumFormat));
 			json.Append(unitStr);
-			json.Append(HighHumidityYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighHumidityYesterdayTime.ToString(timeFormat));
 			json.Append("\"],");
 
 			json.Append("[\"Low Humidity\",\"");
-			json.Append(LowHumidityToday.ToString(cumulus.HumFormat, cumulus.userCulture));
+			json.Append(LowHumidityToday.ToString(cumulus.HumFormat));
 			json.Append(unitStr);
-			json.Append(LowHumidityTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowHumidityTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(LowHumidityYesterday.ToString(cumulus.HumFormat, cumulus.userCulture));
+			json.Append(LowHumidityYesterday.ToString(cumulus.HumFormat));
 			json.Append(unitStr);
-			json.Append(LowHumidityYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowHumidityYesterdayTime.ToString(timeFormat));
 			json.Append("\"]");
 
 			json.Append("]}");
@@ -9312,39 +9312,39 @@ namespace CumulusMX
 			var timeFormat = "HH:mm";
 
 			json.Append("[\"Total Rain\",\"");
-			json.Append(RainToday.ToString(cumulus.RainFormat, cumulus.userCulture));
+			json.Append(RainToday.ToString(cumulus.RainFormat));
 			json.Append(unitStr);
 			json.Append(sepStr);
 			json.Append("&nbsp;");
 			json.Append(sepStr);
-			json.Append(RainYesterday.ToString(cumulus.RainFormat, cumulus.userCulture));
+			json.Append(RainYesterday.ToString(cumulus.RainFormat));
 			json.Append(unitStr);
 			json.Append(sepStr);
 			json.Append("&nbsp;");
 			json.Append("\"],");
 
 			json.Append("[\"High Rain Rate\",\"");
-			json.Append(HighRainToday.ToString(cumulus.RainFormat, cumulus.userCulture));
+			json.Append(HighRainToday.ToString(cumulus.RainFormat));
 			json.Append(unitStr + "/hr");
 			json.Append(sepStr);
-			json.Append(HighRainTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighRainTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(HighRainYesterday.ToString(cumulus.RainFormat, cumulus.userCulture));
+			json.Append(HighRainYesterday.ToString(cumulus.RainFormat));
 			json.Append(unitStr + "/hr");
 			json.Append(sepStr);
-			json.Append(HighRainYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighRainYesterdayTime.ToString(timeFormat));
 			json.Append("\"],");
 
 			json.Append("[\"High Hourly Rain\",\"");
-			json.Append(HighHourlyRainToday.ToString(cumulus.RainFormat, cumulus.userCulture));
+			json.Append(HighHourlyRainToday.ToString(cumulus.RainFormat));
 			json.Append(unitStr);
 			json.Append(sepStr);
-			json.Append(HighHourlyRainTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighHourlyRainTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(HighHourlyRainYesterday.ToString(cumulus.RainFormat, cumulus.userCulture));
+			json.Append(HighHourlyRainYesterday.ToString(cumulus.RainFormat));
 			json.Append(unitStr);
 			json.Append(sepStr);
-			json.Append(HighHourlyRainYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighHourlyRainYesterdayTime.ToString(timeFormat));
 			json.Append("\"]");
 
 			json.Append("]}");
@@ -9358,36 +9358,36 @@ namespace CumulusMX
 			var timeFormat = "HH:mm";
 
 			json.Append("[\"Highest Gust\",\"");
-			json.Append(HighGustToday.ToString(cumulus.WindFormat, cumulus.userCulture));
+			json.Append(HighGustToday.ToString(cumulus.WindFormat));
 			json.Append("&nbsp;" + cumulus.WindUnitText);
 			json.Append(sepStr);
-			json.Append(HighGustTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighGustTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(HighGustYesterday.ToString(cumulus.WindFormat, cumulus.userCulture));
+			json.Append(HighGustYesterday.ToString(cumulus.WindFormat));
 			json.Append("&nbsp;" + cumulus.WindUnitText);
 			json.Append(sepStr);
-			json.Append(HighGustYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighGustYesterdayTime.ToString(timeFormat));
 			json.Append("\"],");
 
 			json.Append("[\"Highest Speed\",\"");
-			json.Append(HighWindToday.ToString(cumulus.WindFormat, cumulus.userCulture));
+			json.Append(HighWindToday.ToString(cumulus.WindAvgFormat));
 			json.Append("&nbsp;" + cumulus.WindUnitText);
 			json.Append(sepStr);
-			json.Append(HighWindTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighWindTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(HighWindYesterday.ToString(cumulus.WindFormat, cumulus.userCulture));
+			json.Append(HighWindYesterday.ToString(cumulus.WindAvgFormat));
 			json.Append("&nbsp;" + cumulus.WindUnitText);
 			json.Append(sepStr);
-			json.Append(HighWindYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighWindYesterdayTime.ToString(timeFormat));
 			json.Append("\"],");
 
 			json.Append("[\"Wind Run\",\"");
-			json.Append(WindRunToday.ToString(cumulus.WindRunFormat, cumulus.userCulture));
+			json.Append(WindRunToday.ToString(cumulus.WindRunFormat));
 			json.Append("&nbsp;" + cumulus.WindRunUnitText);
 			json.Append(sepStr);
 			json.Append("&nbsp;");
 			json.Append(sepStr);
-			json.Append(YesterdayWindRun.ToString(cumulus.WindRunFormat, cumulus.userCulture));
+			json.Append(YesterdayWindRun.ToString(cumulus.WindRunFormat));
 			json.Append("&nbsp;" + cumulus.WindRunUnitText);
 			json.Append(sepStr);
 			json.Append("&nbsp;");
@@ -9417,27 +9417,27 @@ namespace CumulusMX
 			var timeFormat = "HH:mm";
 
 			json.Append("[\"High Pressure\",\"");
-			json.Append(HighPressToday.ToString(cumulus.PressFormat, cumulus.userCulture));
+			json.Append(HighPressToday.ToString(cumulus.PressFormat));
 			json.Append(unitStr);
 			json.Append(sepStr);
-			json.Append(HighPressTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighPressTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(HighPressYesterday.ToString(cumulus.PressFormat, cumulus.userCulture));
+			json.Append(HighPressYesterday.ToString(cumulus.PressFormat));
 			json.Append(unitStr);
 			json.Append(sepStr);
-			json.Append(HighPressYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighPressYesterdayTime.ToString(timeFormat));
 			json.Append("\"],");
 
 			json.Append("[\"Low Pressure\",\"");
-			json.Append(LowPressToday.ToString(cumulus.PressFormat, cumulus.userCulture));
+			json.Append(LowPressToday.ToString(cumulus.PressFormat));
 			json.Append(unitStr);
 			json.Append(sepStr);
-			json.Append(LowPressTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowPressTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
-			json.Append(LowPressYesterday.ToString(cumulus.PressFormat, cumulus.userCulture));
+			json.Append(LowPressYesterday.ToString(cumulus.PressFormat));
 			json.Append(unitStr);
 			json.Append(sepStr);
-			json.Append(LowPressYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(LowPressYesterdayTime.ToString(timeFormat));
 			json.Append("\"]");
 
 			json.Append("]}");
@@ -9454,21 +9454,21 @@ namespace CumulusMX
 			json.Append(HighSolarToday.ToString("F0"));
 			json.Append("&nbsp;W/m2");
 			json.Append(sepStr);
-			json.Append(HighSolarTodayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighSolarTodayTime.ToString(timeFormat));
 			json.Append(sepStr);
 			json.Append(HighSolarYesterday.ToString("F0"));
 			json.Append("&nbsp;W/m2");
 			json.Append(sepStr);
-			json.Append(HighSolarYesterdayTime.ToString(timeFormat, cumulus.userCulture));
+			json.Append(HighSolarYesterdayTime.ToString(timeFormat));
 			json.Append("\"],");
 
 			json.Append("[\"Hours of Sunshine\",\"");
-			json.Append(SunshineHours.ToString(cumulus.SunFormat, cumulus.userCulture));
+			json.Append(SunshineHours.ToString(cumulus.SunFormat));
 			json.Append("&nbsp;hrs");
 			json.Append(sepStr);
 			json.Append("&nbsp;");
 			json.Append(sepStr);
-			json.Append(YestSunshineHours.ToString(cumulus.SunFormat, cumulus.userCulture));
+			json.Append(YestSunshineHours.ToString(cumulus.SunFormat));
 			json.Append("&nbsp;hrs");
 			json.Append(sepStr);
 			json.Append("&nbsp;");
@@ -9693,7 +9693,7 @@ namespace CumulusMX
 			var json = new StringBuilder(200);
 			json.Append("{");
 			json.Append($"\"temp\":{{\"units\":\"{cumulus.TempUnitText[1]}\",\"decimals\":{cumulus.TempDPlaces}}},");
-			json.Append($"\"wind\":{{\"units\":\"{cumulus.WindUnitText}\",\"decimals\":{cumulus.WindDPlaces}}},");
+			json.Append($"\"wind\":{{\"units\":\"{cumulus.WindUnitText}\",\"decimals\":{cumulus.WindAvgDPlaces}}},");
 			json.Append($"\"rain\":{{\"units\":\"{cumulus.RainUnitText}\",\"decimals\":{cumulus.RainDPlaces}}},");
 			json.Append($"\"press\":{{\"units\":\"{cumulus.PressUnitText}\",\"decimals\":{cumulus.PressDPlaces}}},");
 			json.Append($"\"hum\":{{\"decimals\":{cumulus.HumDPlaces}}},");

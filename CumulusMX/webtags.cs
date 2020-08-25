@@ -387,7 +387,7 @@ namespace CumulusMX
 
 		private string Tagwspeed(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.WindAverage.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.WindAverage.ToString(cumulus.WindAvgFormat), TagParams);
 		}
 
 		private string Tagcurrentwdir(Dictionary<string,string> TagParams)
@@ -1529,7 +1529,7 @@ namespace CumulusMX
 
 		private string TagwindTM(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighWindToday.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.HighWindToday.ToString(cumulus.WindAvgFormat), TagParams);
 		}
 
 		private string TagTbeaufort(Dictionary<string,string> TagParams)
@@ -1800,7 +1800,7 @@ namespace CumulusMX
 
 		private string TagwindYM(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighWindYesterday.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.HighWindYesterday.ToString(cumulus.WindAvgFormat), TagParams);
 		}
 
 		private string TagYbeaufort(Dictionary<string,string> TagParams)
@@ -1971,7 +1971,7 @@ namespace CumulusMX
 
 		private string TagwspeedH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighWind].value.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.alltimerecarray[WeatherStation.AT_HighWind].value.ToString(cumulus.WindAvgFormat), TagParams);
 		}
 
 		private string TagTwspeedH(Dictionary<string,string> TagParams)
@@ -2288,7 +2288,7 @@ namespace CumulusMX
 		private string TagByMonthWindH(Dictionary<string,string> TagParams)
 		{
 			var month = GetMonthParam(TagParams);
-			return CheckRC(GetMonthlyAlltimeValueStr(WeatherStation.AT_HighWind, month, cumulus.WindFormat), TagParams);
+			return CheckRC(GetMonthlyAlltimeValueStr(WeatherStation.AT_HighWind, month, cumulus.WindAvgFormat), TagParams);
 		}
 
 		private string TagByMonthWindHT(Dictionary<string,string> TagParams)
@@ -3762,7 +3762,7 @@ namespace CumulusMX
 
 		private string TagMonthWindH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighWindThisMonth.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.HighWindThisMonth.ToString(cumulus.WindAvgFormat), TagParams);
 		}
 
 		private string TagMonthWindRunH(Dictionary<string,string> TagParams)
@@ -4162,7 +4162,7 @@ namespace CumulusMX
 
 		private string TagYearWindH(Dictionary<string,string> TagParams)
 		{
-			return CheckRC(station.HighWindThisYear.ToString(cumulus.WindFormat), TagParams);
+			return CheckRC(station.HighWindThisYear.ToString(cumulus.WindAvgFormat), TagParams);
 		}
 
 		private string TagYearWindRunH(Dictionary<string,string> TagParams)
@@ -4654,11 +4654,11 @@ namespace CumulusMX
 
 			if (result.Count == 0)
 			{
-				return CheckRC(station.WindAverage.ToString(cumulus.WindFormat), TagParams);
+				return CheckRC(station.WindAverage.ToString(cumulus.WindAvgFormat), TagParams);
 			}
 			else
 			{
-				return CheckRC(result[0].WindSpeed.ToString(cumulus.WindFormat), TagParams);
+				return CheckRC(result[0].WindSpeed.ToString(cumulus.WindAvgFormat), TagParams);
 			}
 		}
 

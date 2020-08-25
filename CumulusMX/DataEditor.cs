@@ -180,7 +180,7 @@ namespace CumulusMX
 			json.Append($"\"lowBarometerTime\":\"{station.alltimerecarray[WeatherStation.AT_LowPress].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 			// Records - Wind values
 			json.Append($"\"highGustVal\":\"{station.alltimerecarray[WeatherStation.AT_HighGust].value.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
-			json.Append($"\"highWindVal\":\"{station.alltimerecarray[WeatherStation.AT_HighWind].value.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindVal\":\"{station.alltimerecarray[WeatherStation.AT_HighWind].value.ToString(cumulus.WindAvgFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highWindRunVal\":\"{station.alltimerecarray[WeatherStation.AT_HighWindrun].value.ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
 			// Records - Wind times
 			json.Append($"\"highGustTime\":\"{station.alltimerecarray[WeatherStation.AT_HighGust].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
@@ -616,7 +616,7 @@ namespace CumulusMX
 					json.Append($"\"lowBarometerTimeDayfile\":\"{lowBaroTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 					json.Append($"\"highGustValDayfile\":\"{highGustVal.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
 					json.Append($"\"highGustTimeDayfile\":\"{highGustTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
-					json.Append($"\"highWindValDayfile\":\"{highWindVal.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highWindValDayfile\":\"{highWindVal.ToString(cumulus.WindAvgFormat, cumulus.cmxCulture)}\",");
 					json.Append($"\"highWindTimeDayfile\":\"{highWindTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 					json.Append($"\"highWindRunValDayfile\":\"{highWindRunVal.ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
 					json.Append($"\"highWindRunTimeDayfile\":\"{highWindRunTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
@@ -1123,7 +1123,7 @@ namespace CumulusMX
 			json.Append($"\"lowBarometerTimeLogfile\":\"{lowBaroTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highGustValLogfile\":\"{highGustVal.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highGustTimeLogfile\":\"{highGustTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
-			json.Append($"\"highWindValLogfile\":\"{highWindVal.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindValLogfile\":\"{highWindVal.ToString(cumulus.WindAvgFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highWindTimeLogfile\":\"{highWindTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highWindRunValLogfile\":\"{highWindRunVal.ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highWindRunTimeLogfile\":\"{highWindRunTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
@@ -1674,7 +1674,7 @@ namespace CumulusMX
 				json.Append($"\"{m}-lowBarometerTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowPress, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 				// Records - Wind values
 				json.Append($"\"{m}-highGustVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighGust, m].value.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
-				json.Append($"\"{m}-highWindVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighWind, m].value.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highWindVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighWind, m].value.ToString(cumulus.WindAvgFormat, cumulus.cmxCulture)}\",");
 				json.Append($"\"{m}-highWindRunVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighWindrun, m].value.ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
 				// Records - Wind times
 				json.Append($"\"{m}-highGustTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighGust, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
@@ -2099,7 +2099,7 @@ namespace CumulusMX
 						json.Append($"\"{m}-lowBarometerTimeDayfile\":\"{lowBaroTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 						json.Append($"\"{m}-highGustValDayfile\":\"{highGustVal[i].ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
 						json.Append($"\"{m}-highGustTimeDayfile\":\"{highGustTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
-						json.Append($"\"{m}-highWindValDayfile\":\"{highWindVal[i].ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highWindValDayfile\":\"{highWindVal[i].ToString(cumulus.WindAvgFormat, cumulus.cmxCulture)}\",");
 						json.Append($"\"{m}-highWindTimeDayfile\":\"{highWindTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 						json.Append($"\"{m}-highWindRunValDayfile\":\"{highWindRunVal[i].ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
 						json.Append($"\"{m}-highWindRunTimeDayfile\":\"{highWindRunTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
@@ -2601,7 +2601,7 @@ namespace CumulusMX
 				json.Append($"\"{m}-lowBarometerTimeLogfile\":\"{lowBaroTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 				json.Append($"\"{m}-highGustValLogfile\":\"{highGustVal[i].ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
 				json.Append($"\"{m}-highGustTimeLogfile\":\"{highGustTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
-				json.Append($"\"{m}-highWindValLogfile\":\"{highWindVal[i].ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highWindValLogfile\":\"{highWindVal[i].ToString(cumulus.WindAvgFormat, cumulus.cmxCulture)}\",");
 				json.Append($"\"{m}-highWindTimeLogfile\":\"{highWindTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 				json.Append($"\"{m}-highWindRunValLogfile\":\"{highWindRunVal[i].ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
 				json.Append($"\"{m}-highWindRunTimeLogfile\":\"{highWindRunTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
@@ -2679,7 +2679,7 @@ namespace CumulusMX
 			// Records - Wind
 			json.Append($"\"highGustVal\":\"{station.HighGustThisMonth.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highGustTime\":\"{station.HighGustThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
-			json.Append($"\"highWindVal\":\"{station.HighWindThisMonth.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindVal\":\"{station.HighWindThisMonth.ToString(cumulus.WindAvgFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highWindTime\":\"{station.HighWindThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highWindRunVal\":\"{station.HighDailyWindrunThisMonth.ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highWindRunTime\":\"{station.HighDailyWindrunThisMonthTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
@@ -2963,7 +2963,7 @@ namespace CumulusMX
 			// Records - Wind
 			json.Append($"\"highGustVal\":\"{station.HighGustThisYear.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highGustTime\":\"{station.HighGustThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
-			json.Append($"\"highWindVal\":\"{station.HighWindThisYear.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindVal\":\"{station.HighWindThisYear.ToString(cumulus.WindAvgFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highWindTime\":\"{station.HighWindThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highWindRunVal\":\"{station.HighDailyWindrunThisYear.ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"highWindRunTime\":\"{station.HighDailyWindrunThisYearTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
