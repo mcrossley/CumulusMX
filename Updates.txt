@@ -1,13 +1,12 @@
 3.x.0 - b30xx
 =============
-- CMX calculated dew point is automatically enabled for GW1000 stations
 - Major changes to how Cumulus MX handles it's data files
 	- Dayfile.txt
 		- The date field format is now fixed at "dd-MM-yy" (old order is retained for third party compatibility)
 		- The decimal point is now fixed at "."
 		- The list separator is now fixed at ","
 	- Monthly log files
-		- The file names are fixed at "yyyy-MM-log.txt"
+		- The file names are fixed at "yyyyMMlog.txt"
 		- The date field format is now fixed at "dd-MM-yy" (old order is retained for third party compatibility)
 		- The time field format is now fixed at "HH:mm"
 		- The decimal point is now fixed at "."
@@ -37,13 +36,13 @@
 - For Davis VP2 stations, setting the console clock now checks the console time and only sets it if it
   differs from the current time by greater than 60 seconds
 - Davis VP2 stations protocols have been extensively rewritten to make them more efficent and less timing sensitive
-  Third party IP loggers such as meteobridge and WiFi logger should now work more reliably
+  Third party IP loggers such as meteobridge and WiFi logger should now work more reliabily
 - Enables PSK authentication when using SFTP. Options are now Password, PSK, PSK with Password fallback
 	New Cumulus.ini entries...
 	[FTP site]
 	SshFtpAuthentication=password      [password (default), psk, password_psk]
 	SshFtpPskFile=                     [PSK filename, must include the full path is the file is not in the CumulusMX folder]
-
+- CMX calculated dew point is automatically enabled for GW1000 stations
 
 - Updated files
 	\CumulusMX.exe

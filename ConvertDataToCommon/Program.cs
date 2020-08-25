@@ -100,7 +100,7 @@ namespace ConvertDataToCommon
 			}
 
 			// Process Cumulus.ini
-			if (!ProcessCumulusIni.ProcessFile(Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar + "Cumulus.ini", newPath)
+			if (!ProcessCumulusIni.ProcessFile(path + "Cumulus.ini", newPath))
 			{
 				Console.WriteLine("Aborting conversion due to error in the Cumulus.ini file processing");
 				Environment.Exit(1);

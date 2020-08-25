@@ -42,11 +42,11 @@ namespace CumulusMX
 			{
 				try
 				{
-					var raintoday = double.Parse(raintodaystring);
-					cumulus.LogMessage("Before rain today edit, raintoday=" + station.RainToday.ToString(cumulus.RainFormat) + " Raindaystart=" + station.raindaystart.ToString(cumulus.RainFormat));
+					var raintoday = double.Parse(raintodaystring, cumulus.cmxCulture);
+					cumulus.LogMessage("Before rain today edit, raintoday=" + station.RainToday.ToString(cumulus.RainFormat, cumulus.cmxCulture) + " Raindaystart=" + station.raindaystart.ToString(cumulus.RainFormat, cumulus.cmxCulture));
 					station.RainToday = raintoday;
 					station.raindaystart = station.Raincounter - (station.RainToday / cumulus.RainMult);
-					cumulus.LogMessage("After rain today edit,  raintoday=" + station.RainToday.ToString(cumulus.RainFormat) + " Raindaystart=" + station.raindaystart.ToString(cumulus.RainFormat));
+					cumulus.LogMessage("After rain today edit,  raintoday=" + station.RainToday.ToString(cumulus.RainFormat, cumulus.cmxCulture) + " Raindaystart=" + station.raindaystart.ToString(cumulus.RainFormat, cumulus.cmxCulture));
 				}
 				catch (Exception ex)
 				{
@@ -54,10 +54,10 @@ namespace CumulusMX
 				}
 			}
 
-			var json = "{\"raintoday\":\"" + station.RainToday.ToString(cumulus.RainFormat) +
-				"\",\"raincounter\":\"" + station.Raincounter.ToString(cumulus.RainFormat) +
-				"\",\"startofdayrain\":\"" + station.raindaystart.ToString(cumulus.RainFormat) +
-				"\",\"rainmult\":\"" + cumulus.RainMult.ToString("F3") + "\"}";
+			var json = "{\"raintoday\":\"" + station.RainToday.ToString(cumulus.RainFormat, cumulus.cmxCulture) +
+				"\",\"raincounter\":\"" + station.Raincounter.ToString(cumulus.RainFormat, cumulus.cmxCulture) +
+				"\",\"startofdayrain\":\"" + station.raindaystart.ToString(cumulus.RainFormat, cumulus.cmxCulture) +
+				"\",\"rainmult\":\"" + cumulus.RainMult.ToString("F3", cumulus.cmxCulture) + "\"}";
 
 			return json;
 		}
@@ -65,10 +65,10 @@ namespace CumulusMX
 		internal string GetRainTodayEditData()
 		{
 			var step = (cumulus.RainDPlaces == 1 ? "0.1" : "0.01");
-			var json = "{\"raintoday\":\"" + station.RainToday.ToString(cumulus.RainFormat) +
-				"\",\"raincounter\":\"" + station.Raincounter.ToString(cumulus.RainFormat) +
-				"\",\"startofdayrain\":\"" + station.raindaystart.ToString(cumulus.RainFormat) +
-				"\",\"rainmult\":\"" + cumulus.RainMult.ToString("F3") +
+			var json = "{\"raintoday\":\"" + station.RainToday.ToString(cumulus.RainFormat, cumulus.cmxCulture) +
+				"\",\"raincounter\":\"" + station.Raincounter.ToString(cumulus.RainFormat, cumulus.cmxCulture) +
+				"\",\"startofdayrain\":\"" + station.raindaystart.ToString(cumulus.RainFormat, cumulus.cmxCulture) +
+				"\",\"rainmult\":\"" + cumulus.RainMult.ToString("F3", cumulus.cmxCulture) +
 				"\",\"step\":\"" + step + "\"}";
 
 			return json;
@@ -135,71 +135,71 @@ namespace CumulusMX
 
 			// Records - Temperature values
 			var json = new StringBuilder("{", 1700);
-			json.Append($"\"highTempVal\":\"{station.alltimerecarray[WeatherStation.AT_HighTemp].value.ToString(cumulus.TempFormat)}\","); ;
-			json.Append($"\"lowTempVal\":\"{station.alltimerecarray[WeatherStation.AT_LowTemp].value.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highDewPointVal\":\"{station.alltimerecarray[WeatherStation.AT_HighDewPoint].value.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowDewPointVal\":\"{station.alltimerecarray[WeatherStation.AT_LowDewpoint].value.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highApparentTempVal\":\"{station.alltimerecarray[WeatherStation.AT_HighAppTemp].value.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowApparentTempVal\":\"{station.alltimerecarray[WeatherStation.AT_LowAppTemp].value.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highFeelsLikeVal\":\"{station.alltimerecarray[WeatherStation.AT_HighFeelsLike].value.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowFeelsLikeVal\":\"{station.alltimerecarray[WeatherStation.AT_LowFeelsLike].value.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highHumidexVal\":\"{station.alltimerecarray[WeatherStation.AT_HighHumidex].value.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowWindChillVal\":\"{station.alltimerecarray[WeatherStation.AT_LowChill].value.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highHeatIndexVal\":\"{station.alltimerecarray[WeatherStation.AT_HighHeatIndex].value.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highMinTempVal\":\"{station.alltimerecarray[WeatherStation.AT_HighMinTemp].value.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowMaxTempVal\":\"{station.alltimerecarray[WeatherStation.AT_LowMaxTemp].value.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highDailyTempRangeVal\":\"{station.alltimerecarray[WeatherStation.AT_HighDailyTempRange].value.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowDailyTempRangeVal\":\"{station.alltimerecarray[WeatherStation.AT_LowDailyTempRange].value.ToString(cumulus.TempFormat)}\",");
+			json.Append($"\"highTempVal\":\"{station.alltimerecarray[WeatherStation.AT_HighTemp].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\","); ;
+			json.Append($"\"lowTempVal\":\"{station.alltimerecarray[WeatherStation.AT_LowTemp].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDewPointVal\":\"{station.alltimerecarray[WeatherStation.AT_HighDewPoint].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDewPointVal\":\"{station.alltimerecarray[WeatherStation.AT_LowDewpoint].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highApparentTempVal\":\"{station.alltimerecarray[WeatherStation.AT_HighAppTemp].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowApparentTempVal\":\"{station.alltimerecarray[WeatherStation.AT_LowAppTemp].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highFeelsLikeVal\":\"{station.alltimerecarray[WeatherStation.AT_HighFeelsLike].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowFeelsLikeVal\":\"{station.alltimerecarray[WeatherStation.AT_LowFeelsLike].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHumidexVal\":\"{station.alltimerecarray[WeatherStation.AT_HighHumidex].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowWindChillVal\":\"{station.alltimerecarray[WeatherStation.AT_LowChill].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHeatIndexVal\":\"{station.alltimerecarray[WeatherStation.AT_HighHeatIndex].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMinTempVal\":\"{station.alltimerecarray[WeatherStation.AT_HighMinTemp].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowMaxTempVal\":\"{station.alltimerecarray[WeatherStation.AT_LowMaxTemp].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyTempRangeVal\":\"{station.alltimerecarray[WeatherStation.AT_HighDailyTempRange].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDailyTempRangeVal\":\"{station.alltimerecarray[WeatherStation.AT_LowDailyTempRange].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
 			// Records - Temperature timestamps
-			json.Append($"\"highTempTime\":\"{station.alltimerecarray[WeatherStation.AT_HighTemp].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowTempTime\":\"{station.alltimerecarray[WeatherStation.AT_LowTemp].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"highDewPointTime\":\"{station.alltimerecarray[WeatherStation.AT_HighDewPoint].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowDewPointTime\":\"{station.alltimerecarray[WeatherStation.AT_LowDewpoint].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"highApparentTempTime\":\"{station.alltimerecarray[WeatherStation.AT_HighAppTemp].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowApparentTempTime\":\"{station.alltimerecarray[WeatherStation.AT_LowAppTemp].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"highFeelsLikeTime\":\"{station.alltimerecarray[WeatherStation.AT_HighFeelsLike].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowFeelsLikeTime\":\"{station.alltimerecarray[WeatherStation.AT_LowFeelsLike].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"highHumidexTime\":\"{station.alltimerecarray[WeatherStation.AT_HighHumidex].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowWindChillTime\":\"{station.alltimerecarray[WeatherStation.AT_LowChill].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"highHeatIndexTime\":\"{station.alltimerecarray[WeatherStation.AT_HighHeatIndex].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"highMinTempTime\":\"{station.alltimerecarray[WeatherStation.AT_HighMinTemp].timestamp.ToString(dateStampFormat)}\",");
-			json.Append($"\"lowMaxTempTime\":\"{station.alltimerecarray[WeatherStation.AT_LowMaxTemp].timestamp.ToString(dateStampFormat)}\",");
-			json.Append($"\"highDailyTempRangeTime\":\"{station.alltimerecarray[WeatherStation.AT_HighDailyTempRange].timestamp.ToString(dateStampFormat)}\",");
-			json.Append($"\"lowDailyTempRangeTime\":\"{station.alltimerecarray[WeatherStation.AT_LowDailyTempRange].timestamp.ToString(dateStampFormat)}\",");
+			json.Append($"\"highTempTime\":\"{station.alltimerecarray[WeatherStation.AT_HighTemp].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowTempTime\":\"{station.alltimerecarray[WeatherStation.AT_LowTemp].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDewPointTime\":\"{station.alltimerecarray[WeatherStation.AT_HighDewPoint].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDewPointTime\":\"{station.alltimerecarray[WeatherStation.AT_LowDewpoint].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highApparentTempTime\":\"{station.alltimerecarray[WeatherStation.AT_HighAppTemp].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowApparentTempTime\":\"{station.alltimerecarray[WeatherStation.AT_LowAppTemp].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highFeelsLikeTime\":\"{station.alltimerecarray[WeatherStation.AT_HighFeelsLike].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowFeelsLikeTime\":\"{station.alltimerecarray[WeatherStation.AT_LowFeelsLike].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHumidexTime\":\"{station.alltimerecarray[WeatherStation.AT_HighHumidex].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowWindChillTime\":\"{station.alltimerecarray[WeatherStation.AT_LowChill].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHeatIndexTime\":\"{station.alltimerecarray[WeatherStation.AT_HighHeatIndex].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMinTempTime\":\"{station.alltimerecarray[WeatherStation.AT_HighMinTemp].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowMaxTempTime\":\"{station.alltimerecarray[WeatherStation.AT_LowMaxTemp].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyTempRangeTime\":\"{station.alltimerecarray[WeatherStation.AT_HighDailyTempRange].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDailyTempRangeTime\":\"{station.alltimerecarray[WeatherStation.AT_LowDailyTempRange].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 			// Records - Humidity values
-			json.Append($"\"highHumidityVal\":\"{station.alltimerecarray[WeatherStation.AT_HighHumidity].value.ToString(cumulus.HumFormat)}\",");
-			json.Append($"\"lowHumidityVal\":\"{station.alltimerecarray[WeatherStation.AT_lowhumidity].value.ToString(cumulus.HumFormat)}\",");
+			json.Append($"\"highHumidityVal\":\"{station.alltimerecarray[WeatherStation.AT_HighHumidity].value.ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowHumidityVal\":\"{station.alltimerecarray[WeatherStation.AT_lowhumidity].value.ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
 			// Records - Humidity times
-			json.Append($"\"highHumidityTime\":\"{station.alltimerecarray[WeatherStation.AT_HighHumidity].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowHumidityTime\":\"{station.alltimerecarray[WeatherStation.AT_lowhumidity].timestamp.ToString(timeStampFormat)}\",");
+			json.Append($"\"highHumidityTime\":\"{station.alltimerecarray[WeatherStation.AT_HighHumidity].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowHumidityTime\":\"{station.alltimerecarray[WeatherStation.AT_lowhumidity].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 			// Records - Pressure values
-			json.Append($"\"highBarometerVal\":\"{station.alltimerecarray[WeatherStation.AT_HighPress].value.ToString(cumulus.PressFormat)}\",");
-			json.Append($"\"lowBarometerVal\":\"{station.alltimerecarray[WeatherStation.AT_LowPress].value.ToString(cumulus.PressFormat)}\",");
+			json.Append($"\"highBarometerVal\":\"{station.alltimerecarray[WeatherStation.AT_HighPress].value.ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowBarometerVal\":\"{station.alltimerecarray[WeatherStation.AT_LowPress].value.ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
 			// Records - Pressure times
-			json.Append($"\"highBarometerTime\":\"{station.alltimerecarray[WeatherStation.AT_HighPress].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowBarometerTime\":\"{station.alltimerecarray[WeatherStation.AT_LowPress].timestamp.ToString(timeStampFormat)}\",");
+			json.Append($"\"highBarometerTime\":\"{station.alltimerecarray[WeatherStation.AT_HighPress].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowBarometerTime\":\"{station.alltimerecarray[WeatherStation.AT_LowPress].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 			// Records - Wind values
-			json.Append($"\"highGustVal\":\"{station.alltimerecarray[WeatherStation.AT_HighGust].value.ToString(cumulus.WindFormat)}\",");
-			json.Append($"\"highWindVal\":\"{station.alltimerecarray[WeatherStation.AT_HighWind].value.ToString(cumulus.WindFormat)}\",");
-			json.Append($"\"highWindRunVal\":\"{station.alltimerecarray[WeatherStation.AT_HighWindrun].value.ToString(cumulus.WindRunFormat)}\",");
+			json.Append($"\"highGustVal\":\"{station.alltimerecarray[WeatherStation.AT_HighGust].value.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindVal\":\"{station.alltimerecarray[WeatherStation.AT_HighWind].value.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindRunVal\":\"{station.alltimerecarray[WeatherStation.AT_HighWindrun].value.ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
 			// Records - Wind times
-			json.Append($"\"highGustTime\":\"{station.alltimerecarray[WeatherStation.AT_HighGust].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"highWindTime\":\"{station.alltimerecarray[WeatherStation.AT_HighWind].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"highWindRunTime\":\"{station.alltimerecarray[WeatherStation.AT_HighWindrun].timestamp.ToString(dateStampFormat)}\",");
+			json.Append($"\"highGustTime\":\"{station.alltimerecarray[WeatherStation.AT_HighGust].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindTime\":\"{station.alltimerecarray[WeatherStation.AT_HighWind].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindRunTime\":\"{station.alltimerecarray[WeatherStation.AT_HighWindrun].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 			// Records - Rain values
-			json.Append($"\"highRainRateVal\":\"{station.alltimerecarray[WeatherStation.AT_HighRainRate].value.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highHourlyRainVal\":\"{station.alltimerecarray[WeatherStation.AT_HourlyRain].value.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highDailyRainVal\":\"{station.alltimerecarray[WeatherStation.AT_DailyRain].value.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highMonthlyRainVal\":\"{station.alltimerecarray[WeatherStation.AT_WetMonth].value.ToString(cumulus.RainFormat)}\",");
+			json.Append($"\"highRainRateVal\":\"{station.alltimerecarray[WeatherStation.AT_HighRainRate].value.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHourlyRainVal\":\"{station.alltimerecarray[WeatherStation.AT_HourlyRain].value.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyRainVal\":\"{station.alltimerecarray[WeatherStation.AT_DailyRain].value.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMonthlyRainVal\":\"{station.alltimerecarray[WeatherStation.AT_WetMonth].value.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"longestDryPeriodVal\":\"{station.alltimerecarray[WeatherStation.AT_LongestDryPeriod].value.ToString("f0")}\",");
 			json.Append($"\"longestWetPeriodVal\":\"{station.alltimerecarray[WeatherStation.AT_LongestWetPeriod].value.ToString("f0")}\",");
 			// Records - Rain times
-			json.Append($"\"highRainRateTime\":\"{station.alltimerecarray[WeatherStation.AT_HighRainRate].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"highHourlyRainTime\":\"{station.alltimerecarray[WeatherStation.AT_HourlyRain].timestamp.ToString(timeStampFormat)}\",");
-			json.Append($"\"highDailyRainTime\":\"{station.alltimerecarray[WeatherStation.AT_DailyRain].timestamp.ToString(dateStampFormat)}\",");
-			json.Append($"\"highMonthlyRainTime\":\"{station.alltimerecarray[WeatherStation.AT_WetMonth].timestamp.ToString("yyyy-MM")}\",");
-			json.Append($"\"longestDryPeriodTime\":\"{station.alltimerecarray[WeatherStation.AT_LongestDryPeriod].timestamp.ToString(dateStampFormat)}\",");
-			json.Append($"\"longestWetPeriodTime\":\"{station.alltimerecarray[WeatherStation.AT_LongestWetPeriod].timestamp.ToString(dateStampFormat)}\"");
+			json.Append($"\"highRainRateTime\":\"{station.alltimerecarray[WeatherStation.AT_HighRainRate].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHourlyRainTime\":\"{station.alltimerecarray[WeatherStation.AT_HourlyRain].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyRainTime\":\"{station.alltimerecarray[WeatherStation.AT_DailyRain].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMonthlyRainTime\":\"{station.alltimerecarray[WeatherStation.AT_WetMonth].timestamp.ToString("yyyy-MM", cumulus.cmxCulture)}\",");
+			json.Append($"\"longestDryPeriodTime\":\"{station.alltimerecarray[WeatherStation.AT_LongestDryPeriod].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"longestWetPeriodTime\":\"{station.alltimerecarray[WeatherStation.AT_LongestWetPeriod].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\"");
 			json.Append("}");
 
 			return json.ToString();
@@ -339,37 +339,37 @@ namespace CumulusMX
 							rainThisMonth = 0;
 						}
 						// hi gust
-						if (double.TryParse(st[1], out valDbl) && valDbl > highGustVal)
+						if (double.TryParse(st[1], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highGustVal)
 						{
 							highGustVal = valDbl;
 							highGustTime = GetDateTime(loggedDate, st[3]);
 						}
 						// hi temp
-						if (double.TryParse(st[6], out valDbl) && valDbl > highTempVal)
+						if (double.TryParse(st[6], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highTempVal)
 						{
 							highTempVal = valDbl;
 							highTempTime = GetDateTime(loggedDate, st[7]);
 						}
 						// lo temp
-						if (double.TryParse(st[4], out valDbl) && valDbl < lowTempVal)
+						if (double.TryParse(st[4], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowTempVal)
 						{
 							lowTempVal = valDbl;
 							lowTempTime = GetDateTime(loggedDate, st[5]);
 						}
 						// hi min temp
-						if (double.TryParse(st[4], out valDbl) && valDbl > highMinTempVal)
+						if (double.TryParse(st[4], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highMinTempVal)
 						{
 							highMinTempVal = valDbl;
 							highMinTempTime = loggedDate;
 						}
 						// lo max temp
-						if (double.TryParse(st[6], out valDbl) && valDbl < lowMaxTempVal)
+						if (double.TryParse(st[6], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowMaxTempVal)
 						{
 							lowMaxTempVal = valDbl;
 							lowMaxTempTime = loggedDate;
 						}
 						// temp ranges
-						if (double.TryParse(st[6], out valDbl) && double.TryParse(st[4], out valDbl2))
+						if (double.TryParse(st[6], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && double.TryParse(st[4], NumberStyles.Float, cumulus.cmxCulture, out valDbl2))
 						{
 							// hi temp range
 							if ((valDbl - valDbl2) > highTempRangeVal)
@@ -385,24 +385,24 @@ namespace CumulusMX
 							}
 						}
 						// lo baro
-						if (double.TryParse(st[8], out valDbl) && valDbl < lowBaroVal)
+						if (double.TryParse(st[8], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowBaroVal)
 						{
 							lowBaroVal = valDbl;
 							lowBaroTime = GetDateTime(loggedDate, st[9]);
 						}
 						// hi baro
-						if (double.TryParse(st[10], out valDbl) && valDbl > highBaroVal)
+						if (double.TryParse(st[10], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highBaroVal)
 						{
 							highBaroVal = valDbl;
 							highBaroTime = GetDateTime(loggedDate, st[11]);
 						}
 						// hi rain rate
-						if (double.TryParse(st[12], out valDbl) && valDbl > highRainRateVal)
+						if (double.TryParse(st[12], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highRainRateVal)
 						{
 							highRainRateVal = valDbl;
 							highRainRateTime = GetDateTime(loggedDate, st[13]);
 						}
-						if (double.TryParse(st[14], out valDbl))
+						if (double.TryParse(st[14], NumberStyles.Float, cumulus.cmxCulture, out valDbl))
 						{
 							// hi rain day
 							if (valDbl > highRainDayVal)
@@ -458,7 +458,7 @@ namespace CumulusMX
 						if (st.Count > 15)
 						{
 							// hi wind run
-							if (double.TryParse(st[16], out valDbl) && valDbl > highWindRunVal)
+							if (double.TryParse(st[16], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highWindRunVal)
 							{
 								highWindRunVal = valDbl;
 								highWindRunTime = loggedDate;
@@ -468,7 +468,7 @@ namespace CumulusMX
 						if (st.Count > 17)
 						{
 							// hi wind
-							if (double.TryParse(st[17], out valDbl) && valDbl > highWindVal)
+							if (double.TryParse(st[17], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highWindVal)
 							{
 								highWindVal = valDbl;
 								highWindTime = GetDateTime(loggedDate, st[18]);
@@ -478,43 +478,43 @@ namespace CumulusMX
 						if (st.Count > 18)
 						{
 							// lo humidity
-							if (double.TryParse(st[19], out valDbl) && valDbl < lowHumVal)
+							if (double.TryParse(st[19], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowHumVal)
 							{
 								lowHumVal = valDbl;
 								lowHumTime = GetDateTime(loggedDate, st[20]);
 							}
 							// hi humidity
-							if (double.TryParse(st[21], out valDbl) && valDbl > highHumVal)
+							if (double.TryParse(st[21], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highHumVal)
 							{
 								highHumVal = valDbl;
 								highHumTime = GetDateTime(loggedDate, st[22]);
 							}
 							// hi heat index
-							if (double.TryParse(st[25], out valDbl) && valDbl > highHeatIndVal)
+							if (double.TryParse(st[25], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highHeatIndVal)
 							{
 								highHeatIndVal = valDbl;
 								highHeatIndTime = GetDateTime(loggedDate, st[26]);
 							}
 							// hi app temp
-							if (double.TryParse(st[27], out valDbl) && valDbl > highAppTempVal)
+							if (double.TryParse(st[27], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highAppTempVal)
 							{
 								highAppTempVal = valDbl;
 								highAppTempTime = GetDateTime(loggedDate, st[28]);
 							}
 							// lo app temp
-							if (double.TryParse(st[29], out valDbl) && valDbl < lowAppTempVal)
+							if (double.TryParse(st[29], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowAppTempVal)
 							{
 								lowAppTempVal = valDbl;
 								lowAppTempTime = GetDateTime(loggedDate, st[30]);
 							}
 							// hi rain hour
-							if (double.TryParse(st[31], out valDbl) && valDbl > highRainHourVal)
+							if (double.TryParse(st[31], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highRainHourVal)
 							{
 								highRainHourVal = valDbl;
 								highRainHourTime = GetDateTime(loggedDate, st[32]);
 							}
 							// lo wind chill
-							if (double.TryParse(st[33], out valDbl) && valDbl < lowWindChillVal)
+							if (double.TryParse(st[33], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowWindChillVal)
 							{
 								lowWindChillVal = valDbl;
 								lowWindChillTime = GetDateTime(loggedDate, st[34]);
@@ -524,13 +524,13 @@ namespace CumulusMX
 						if (st.Count > 35)
 						{
 							// hi dewpt
-							if (double.TryParse(st[35], out valDbl) && valDbl > highDewPtVal)
+							if (double.TryParse(st[35], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highDewPtVal)
 							{
 								highDewPtVal = valDbl;
 								highDewPtTime = GetDateTime(loggedDate, st[36]);
 							}
 							// lo dewpt
-							if (double.TryParse(st[37], out valDbl) && valDbl < lowDewPtVal)
+							if (double.TryParse(st[37], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowDewPtVal)
 							{
 								lowDewPtVal = valDbl;
 								lowDewPtTime = GetDateTime(loggedDate, st[38]);
@@ -540,13 +540,13 @@ namespace CumulusMX
 						if (st.Count > 46)
 						{
 							// hi feels like
-							if (double.TryParse(st[46], out valDbl) && valDbl > highFeelsLikeVal)
+							if (double.TryParse(st[46], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highFeelsLikeVal)
 							{
 								highFeelsLikeVal = valDbl;
 								highFeelsLikeTime = GetDateTime(loggedDate, st[47]);
 							}
 							// lo feels like
-							if (double.TryParse(st[48], out valDbl) && valDbl < lowFeelsLikeVal)
+							if (double.TryParse(st[48], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowFeelsLikeVal)
 							{
 								lowFeelsLikeVal = valDbl;
 								lowFeelsLikeTime = GetDateTime(loggedDate, st[49]);
@@ -556,7 +556,7 @@ namespace CumulusMX
 						if (st.Count > 50)
 						{
 							// hi humidex
-							if (double.TryParse(st[50], out valDbl) && valDbl > highHumidexVal)
+							if (double.TryParse(st[50], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highHumidexVal)
 							{
 								highHumidexVal = valDbl;
 								highHumidexTime = GetDateTime(loggedDate, st[51]);
@@ -576,65 +576,65 @@ namespace CumulusMX
 						dryPeriodTime = thisDateDry;
 					}
 
-					json.Append($"\"highTempValDayfile\":\"{highTempVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"highTempTimeDayfile\":\"{highTempTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"lowTempValDayfile\":\"{lowTempVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"lowTempTimeDayfile\":\"{lowTempTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"highDewPointValDayfile\":\"{highDewPtVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"highDewPointTimeDayfile\":\"{highDewPtTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"lowDewPointValDayfile\":\"{lowDewPtVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"lowDewPointTimeDayfile\":\"{lowDewPtTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"highApparentTempValDayfile\":\"{highAppTempVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"highApparentTempTimeDayfile\":\"{highAppTempTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"lowApparentTempValDayfile\":\"{lowAppTempVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"lowApparentTempTimeDayfile\":\"{lowAppTempTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"highFeelsLikeValDayfile\":\"{highFeelsLikeVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"highFeelsLikeTimeDayfile\":\"{highFeelsLikeTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"lowFeelsLikeValDayfile\":\"{lowFeelsLikeVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"lowFeelsLikeTimeDayfile\":\"{lowFeelsLikeTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"highHumidexValDayfile\":\"{highHumidexVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"highHumidexTimeDayfile\":\"{highHumidexTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"lowWindChillValDayfile\":\"{lowWindChillVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"lowWindChillTimeDayfile\":\"{lowWindChillTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"highHeatIndexValDayfile\":\"{highHeatIndVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"highHeatIndexTimeDayfile\":\"{highHeatIndTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"highMinTempValDayfile\":\"{highMinTempVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"highMinTempTimeDayfile\":\"{highMinTempTime.ToString(dateStampFormat)}\",");
-					json.Append($"\"lowMaxTempValDayfile\":\"{lowMaxTempVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"lowMaxTempTimeDayfile\":\"{lowMaxTempTime.ToString(dateStampFormat)}\",");
-					json.Append($"\"highDailyTempRangeValDayfile\":\"{highTempRangeVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"highDailyTempRangeTimeDayfile\":\"{highTempRangeTime.ToString(dateStampFormat)}\",");
-					json.Append($"\"lowDailyTempRangeValDayfile\":\"{lowTempRangeVal.ToString(cumulus.TempFormat)}\",");
-					json.Append($"\"lowDailyTempRangeTimeDayfile\":\"{lowTempRangeTime.ToString(dateStampFormat)}\",");
-					json.Append($"\"highHumidityValDayfile\":\"{highHumVal.ToString(cumulus.HumFormat)}\",");
-					json.Append($"\"highHumidityTimeDayfile\":\"{highHumTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"lowHumidityValDayfile\":\"{lowHumVal.ToString(cumulus.HumFormat)}\",");
-					json.Append($"\"lowHumidityTimeDayfile\":\"{lowHumTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"highBarometerValDayfile\":\"{highBaroVal.ToString(cumulus.PressFormat)}\",");
-					json.Append($"\"highBarometerTimeDayfile\":\"{highBaroTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"lowBarometerValDayfile\":\"{lowBaroVal.ToString(cumulus.PressFormat)}\",");
-					json.Append($"\"lowBarometerTimeDayfile\":\"{lowBaroTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"highGustValDayfile\":\"{highGustVal.ToString(cumulus.WindFormat)}\",");
-					json.Append($"\"highGustTimeDayfile\":\"{highGustTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"highWindValDayfile\":\"{highWindVal.ToString(cumulus.WindFormat)}\",");
-					json.Append($"\"highWindTimeDayfile\":\"{highWindTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"highWindRunValDayfile\":\"{highWindRunVal.ToString(cumulus.WindRunFormat)}\",");
-					json.Append($"\"highWindRunTimeDayfile\":\"{highWindRunTime.ToString(dateStampFormat)}\",");
-					json.Append($"\"highRainRateValDayfile\":\"{highRainRateVal.ToString(cumulus.RainFormat)}\",");
-					json.Append($"\"highRainRateTimeDayfile\":\"{highRainRateTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"highHourlyRainValDayfile\":\"{highRainHourVal.ToString(cumulus.RainFormat)}\",");
-					json.Append($"\"highHourlyRainTimeDayfile\":\"{highRainHourTime.ToString(timeStampFormat)}\",");
-					json.Append($"\"highDailyRainValDayfile\":\"{highRainDayVal.ToString(cumulus.RainFormat)}\",");
-					json.Append($"\"highDailyRainTimeDayfile\":\"{highRainDayTime.ToString(dateStampFormat)}\",");
+					json.Append($"\"highTempValDayfile\":\"{highTempVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highTempTimeDayfile\":\"{highTempTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowTempValDayfile\":\"{lowTempVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowTempTimeDayfile\":\"{lowTempTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highDewPointValDayfile\":\"{highDewPtVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highDewPointTimeDayfile\":\"{highDewPtTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowDewPointValDayfile\":\"{lowDewPtVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowDewPointTimeDayfile\":\"{lowDewPtTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highApparentTempValDayfile\":\"{highAppTempVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highApparentTempTimeDayfile\":\"{highAppTempTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowApparentTempValDayfile\":\"{lowAppTempVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowApparentTempTimeDayfile\":\"{lowAppTempTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highFeelsLikeValDayfile\":\"{highFeelsLikeVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highFeelsLikeTimeDayfile\":\"{highFeelsLikeTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowFeelsLikeValDayfile\":\"{lowFeelsLikeVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowFeelsLikeTimeDayfile\":\"{lowFeelsLikeTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highHumidexValDayfile\":\"{highHumidexVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highHumidexTimeDayfile\":\"{highHumidexTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowWindChillValDayfile\":\"{lowWindChillVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowWindChillTimeDayfile\":\"{lowWindChillTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highHeatIndexValDayfile\":\"{highHeatIndVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highHeatIndexTimeDayfile\":\"{highHeatIndTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highMinTempValDayfile\":\"{highMinTempVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highMinTempTimeDayfile\":\"{highMinTempTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowMaxTempValDayfile\":\"{lowMaxTempVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowMaxTempTimeDayfile\":\"{lowMaxTempTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highDailyTempRangeValDayfile\":\"{highTempRangeVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highDailyTempRangeTimeDayfile\":\"{highTempRangeTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowDailyTempRangeValDayfile\":\"{lowTempRangeVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowDailyTempRangeTimeDayfile\":\"{lowTempRangeTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highHumidityValDayfile\":\"{highHumVal.ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highHumidityTimeDayfile\":\"{highHumTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowHumidityValDayfile\":\"{lowHumVal.ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowHumidityTimeDayfile\":\"{lowHumTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highBarometerValDayfile\":\"{highBaroVal.ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highBarometerTimeDayfile\":\"{highBaroTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowBarometerValDayfile\":\"{lowBaroVal.ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"lowBarometerTimeDayfile\":\"{lowBaroTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highGustValDayfile\":\"{highGustVal.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highGustTimeDayfile\":\"{highGustTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highWindValDayfile\":\"{highWindVal.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highWindTimeDayfile\":\"{highWindTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highWindRunValDayfile\":\"{highWindRunVal.ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highWindRunTimeDayfile\":\"{highWindRunTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highRainRateValDayfile\":\"{highRainRateVal.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highRainRateTimeDayfile\":\"{highRainRateTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highHourlyRainValDayfile\":\"{highRainHourVal.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highHourlyRainTimeDayfile\":\"{highRainHourTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highDailyRainValDayfile\":\"{highRainDayVal.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+					json.Append($"\"highDailyRainTimeDayfile\":\"{highRainDayTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 					if (recordType != "thismonth")
 					{
-						json.Append($"\"highMonthlyRainValDayfile\":\"{highRainMonthVal.ToString(cumulus.RainFormat)}\",");
-						json.Append($"\"highMonthlyRainTimeDayfile\":\"{highRainMonthTime.ToString("yyyy-MM")}\",");
+						json.Append($"\"highMonthlyRainValDayfile\":\"{highRainMonthVal.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"highMonthlyRainTimeDayfile\":\"{highRainMonthTime.ToString("yyyy-MM", cumulus.cmxCulture)}\",");
 					}
 					json.Append($"\"longestDryPeriodValDayfile\":\"{dryPeriodVal}\",");
-					json.Append($"\"longestDryPeriodTimeDayfile\":\"{dryPeriodTime.ToString(dateStampFormat)}\",");
+					json.Append($"\"longestDryPeriodTimeDayfile\":\"{dryPeriodTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 					json.Append($"\"longestWetPeriodValDayfile\":\"{wetPeriodVal}\",");
-					json.Append($"\"longestWetPeriodTimeDayfile\":\"{wetPeriodTime.ToString(dateStampFormat)}\"");
+					json.Append($"\"longestWetPeriodTimeDayfile\":\"{wetPeriodTime.ToString(dateStampFormat, cumulus.cmxCulture)}\"");
 					json.Append("}");
 				}
 				catch (Exception e)
@@ -664,7 +664,7 @@ namespace CumulusMX
 			switch (recordType)
 			{
 				case "alltime":
-					datefrom = DateTime.Parse(cumulus.RecordsBeganDate, cumulus.userCulture);
+					datefrom = DateTime.Parse(cumulus.RecordsBeganDate, cumulus.cmxCulture);
 					break;
 				case "thisyear":
 					var now = DateTime.Now;
@@ -675,7 +675,7 @@ namespace CumulusMX
 					datefrom = new DateTime(now.Year, now.Month, 2);
 					break;
 				default:
-					datefrom = DateTime.Parse(cumulus.RecordsBeganDate, cumulus.userCulture);
+					datefrom = DateTime.Parse(cumulus.RecordsBeganDate, cumulus.cmxCulture);
 					break;
 			}
 			datefrom = new DateTime(datefrom.Year, datefrom.Month, datefrom.Day, 0, 0, 0);
@@ -800,29 +800,29 @@ namespace CumulusMX
 								started = true;
 							}
 
-							var outsidetemp = double.Parse(st[2]);
-							var hum = int.Parse(st[3]);
-							var dewpoint = double.Parse(st[4]);
-							var speed = double.Parse(st[5]);
-							var gust = double.Parse(st[6]);
-							var rainrate = double.Parse(st[8]);
-							var raintoday = double.Parse(st[9]);
-							var pressure = double.Parse(st[10]);
+							var outsidetemp = double.Parse(st[2], cumulus.cmxCulture);
+							var hum = int.Parse(st[3], cumulus.cmxCulture);
+							var dewpoint = double.Parse(st[4], cumulus.cmxCulture);
+							var speed = double.Parse(st[5], cumulus.cmxCulture);
+							var gust = double.Parse(st[6], cumulus.cmxCulture);
+							var rainrate = double.Parse(st[8], cumulus.cmxCulture);
+							var raintoday = double.Parse(st[9], cumulus.cmxCulture);
+							var pressure = double.Parse(st[10], cumulus.cmxCulture);
 
 							// low chill
-							if (double.TryParse(st[15], out valDbl) && valDbl < lowWindChillVal)
+							if (double.TryParse(st[15], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowWindChillVal)
 							{
 								lowWindChillVal = valDbl;
 								lowWindChillTime = entrydate;
 							}
 							// hi heat
-							if (double.TryParse(st[16], out valDbl) && valDbl > highHeatIndVal)
+							if (double.TryParse(st[16], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highHeatIndVal)
 							{
 								highHeatIndVal = valDbl;
 								highHeatIndTime = entrydate;
 							}
 							// hi/low appt
-							if (st.Count > 21 && double.TryParse(st[21], out valDbl))
+							if (st.Count > 21 && double.TryParse(st[21], NumberStyles.Float, cumulus.cmxCulture,  out valDbl))
 							{
 								if (valDbl > highAppTempVal)
 								{
@@ -836,7 +836,7 @@ namespace CumulusMX
 								}
 							}
 							// hi/low feels like
-							if (st.Count > 27 && double.TryParse(st[27], out valDbl))
+							if (st.Count > 27 && double.TryParse(st[27], NumberStyles.Float, cumulus.cmxCulture, out valDbl))
 							{
 								if (valDbl > highFeelsLikeVal)
 								{
@@ -851,7 +851,7 @@ namespace CumulusMX
 							}
 
 							// hi/low humidex
-							if (st.Count > 28 && double.TryParse(st[28], out valDbl))
+							if (st.Count > 28 && double.TryParse(st[28], NumberStyles.Float, cumulus.cmxCulture, out valDbl))
 							{
 								if (valDbl > highHumidexVal)
 								{
@@ -1083,71 +1083,71 @@ namespace CumulusMX
 				dryPeriodTime = thisDateDry;
 			}
 
-			json.Append($"\"highTempValLogfile\":\"{highTempVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highTempTimeLogfile\":\"{highTempTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowTempValLogfile\":\"{lowTempVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowTempTimeLogfile\":\"{lowTempTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"highDewPointValLogfile\":\"{highDewPtVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highDewPointTimeLogfile\":\"{highDewPtTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowDewPointValLogfile\":\"{lowDewPtVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowDewPointTimeLogfile\":\"{lowDewPtTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"highApparentTempValLogfile\":\"{highAppTempVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highApparentTempTimeLogfile\":\"{highAppTempTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowApparentTempValLogfile\":\"{lowAppTempVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowApparentTempTimeLogfile\":\"{lowAppTempTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"highFeelsLikeValLogfile\":\"{highFeelsLikeVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highFeelsLikeTimeLogfile\":\"{highFeelsLikeTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowFeelsLikeValLogfile\":\"{lowFeelsLikeVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowFeelsLikeTimeLogfile\":\"{lowFeelsLikeTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"highHumidexValLogfile\":\"{highHumidexVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highHumidexTimeLogfile\":\"{highHumidexTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowWindChillValLogfile\":\"{lowWindChillVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowWindChillTimeLogfile\":\"{lowWindChillTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"highHeatIndexValLogfile\":\"{highHeatIndVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highHeatIndexTimeLogfile\":\"{highHeatIndTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"highMinTempValLogfile\":\"{highMinTempVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highMinTempTimeLogfile\":\"{highMinTempTime.ToString(dateStampFormat)}\",");
-			json.Append($"\"lowMaxTempValLogfile\":\"{lowMaxTempVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowMaxTempTimeLogfile\":\"{lowMaxTempTime.ToString(dateStampFormat)}\",");
-			json.Append($"\"highDailyTempRangeValLogfile\":\"{highTempRangeVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highDailyTempRangeTimeLogfile\":\"{highTempRangeTime.ToString(dateStampFormat)}\",");
-			json.Append($"\"lowDailyTempRangeValLogfile\":\"{lowTempRangeVal.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowDailyTempRangeTimeLogfile\":\"{lowTempRangeTime.ToString(dateStampFormat)}\",");
-			json.Append($"\"highHumidityValLogfile\":\"{highHumVal.ToString(cumulus.HumFormat)}\",");
-			json.Append($"\"highHumidityTimeLogfile\":\"{highHumTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowHumidityValLogfile\":\"{lowHumVal.ToString(cumulus.HumFormat)}\",");
-			json.Append($"\"lowHumidityTimeLogfile\":\"{lowHumTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"highBarometerValLogfile\":\"{highBaroVal.ToString(cumulus.PressFormat)}\",");
-			json.Append($"\"highBarometerTimeLogfile\":\"{highBaroTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowBarometerValLogfile\":\"{lowBaroVal.ToString(cumulus.PressFormat)}\",");
-			json.Append($"\"lowBarometerTimeLogfile\":\"{lowBaroTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"highGustValLogfile\":\"{highGustVal.ToString(cumulus.WindFormat)}\",");
-			json.Append($"\"highGustTimeLogfile\":\"{highGustTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"highWindValLogfile\":\"{highWindVal.ToString(cumulus.WindFormat)}\",");
-			json.Append($"\"highWindTimeLogfile\":\"{highWindTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"highWindRunValLogfile\":\"{highWindRunVal.ToString(cumulus.WindRunFormat)}\",");
-			json.Append($"\"highWindRunTimeLogfile\":\"{highWindRunTime.ToString(dateStampFormat)}\",");
-			json.Append($"\"highRainRateValLogfile\":\"{highRainRateVal.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highRainRateTimeLogfile\":\"{highRainRateTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"highHourlyRainValLogfile\":\"{highRainHourVal.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highHourlyRainTimeLogfile\":\"{highRainHourTime.ToString(timeStampFormat)}\",");
-			json.Append($"\"highDailyRainValLogfile\":\"{highRainDayVal.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highDailyRainTimeLogfile\":\"{highRainDayTime.ToString(dateStampFormat)}\",");
-			json.Append($"\"highMonthlyRainValLogfile\":\"{highRainMonthVal.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highMonthlyRainTimeLogfile\":\"{highRainMonthTime.ToString($"yyyy/MM")}\",");
+			json.Append($"\"highTempValLogfile\":\"{highTempVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highTempTimeLogfile\":\"{highTempTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowTempValLogfile\":\"{lowTempVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowTempTimeLogfile\":\"{lowTempTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDewPointValLogfile\":\"{highDewPtVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDewPointTimeLogfile\":\"{highDewPtTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDewPointValLogfile\":\"{lowDewPtVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDewPointTimeLogfile\":\"{lowDewPtTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highApparentTempValLogfile\":\"{highAppTempVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highApparentTempTimeLogfile\":\"{highAppTempTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowApparentTempValLogfile\":\"{lowAppTempVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowApparentTempTimeLogfile\":\"{lowAppTempTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highFeelsLikeValLogfile\":\"{highFeelsLikeVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highFeelsLikeTimeLogfile\":\"{highFeelsLikeTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowFeelsLikeValLogfile\":\"{lowFeelsLikeVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowFeelsLikeTimeLogfile\":\"{lowFeelsLikeTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHumidexValLogfile\":\"{highHumidexVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHumidexTimeLogfile\":\"{highHumidexTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowWindChillValLogfile\":\"{lowWindChillVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowWindChillTimeLogfile\":\"{lowWindChillTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHeatIndexValLogfile\":\"{highHeatIndVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHeatIndexTimeLogfile\":\"{highHeatIndTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMinTempValLogfile\":\"{highMinTempVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMinTempTimeLogfile\":\"{highMinTempTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowMaxTempValLogfile\":\"{lowMaxTempVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowMaxTempTimeLogfile\":\"{lowMaxTempTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyTempRangeValLogfile\":\"{highTempRangeVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyTempRangeTimeLogfile\":\"{highTempRangeTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDailyTempRangeValLogfile\":\"{lowTempRangeVal.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDailyTempRangeTimeLogfile\":\"{lowTempRangeTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHumidityValLogfile\":\"{highHumVal.ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHumidityTimeLogfile\":\"{highHumTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowHumidityValLogfile\":\"{lowHumVal.ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowHumidityTimeLogfile\":\"{lowHumTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highBarometerValLogfile\":\"{highBaroVal.ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highBarometerTimeLogfile\":\"{highBaroTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowBarometerValLogfile\":\"{lowBaroVal.ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowBarometerTimeLogfile\":\"{lowBaroTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highGustValLogfile\":\"{highGustVal.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highGustTimeLogfile\":\"{highGustTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindValLogfile\":\"{highWindVal.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindTimeLogfile\":\"{highWindTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindRunValLogfile\":\"{highWindRunVal.ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindRunTimeLogfile\":\"{highWindRunTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highRainRateValLogfile\":\"{highRainRateVal.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highRainRateTimeLogfile\":\"{highRainRateTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHourlyRainValLogfile\":\"{highRainHourVal.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHourlyRainTimeLogfile\":\"{highRainHourTime.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyRainValLogfile\":\"{highRainDayVal.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyRainTimeLogfile\":\"{highRainDayTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMonthlyRainValLogfile\":\"{highRainMonthVal.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMonthlyRainTimeLogfile\":\"{highRainMonthTime.ToString($"yyyy/MM", cumulus.cmxCulture)}\",");
 			if (recordType == "alltime")
 			{
 				json.Append($"\"longestDryPeriodValLogfile\":\"{dryPeriodVal}\",");
-				json.Append($"\"longestDryPeriodTimeLogfile\":\"{dryPeriodTime.ToString(dateStampFormat)}\",");
+				json.Append($"\"longestDryPeriodTimeLogfile\":\"{dryPeriodTime.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 				json.Append($"\"longestWetPeriodValLogfile\":\"{wetPeriodVal}\",");
-				json.Append($"\"longestWetPeriodTimeLogfile\":\"{wetPeriodTime.ToString(dateStampFormat)}\"");
+				json.Append($"\"longestWetPeriodTimeLogfile\":\"{wetPeriodTime.ToString(dateStampFormat, cumulus.cmxCulture)}\"");
 			}
 			else
 			{
 				json.Append($"\"longestDryPeriodValLogfile\":\"{dryPeriodVal}*\",");
-				json.Append($"\"longestDryPeriodTimeLogfile\":\"{dryPeriodTime.ToString(dateStampFormat)}*\",");
+				json.Append($"\"longestDryPeriodTimeLogfile\":\"{dryPeriodTime.ToString(dateStampFormat, cumulus.cmxCulture)}*\",");
 				json.Append($"\"longestWetPeriodValLogfile\":\"{wetPeriodVal}*\",");
-				json.Append($"\"longestWetPeriodTimeLogfile\":\"{wetPeriodTime.ToString(dateStampFormat)}*\"");
+				json.Append($"\"longestWetPeriodTimeLogfile\":\"{wetPeriodTime.ToString(dateStampFormat, cumulus.cmxCulture)}*\"");
 			}
 			json.Append("}");
 			watch.Stop();
@@ -1159,19 +1159,19 @@ namespace CumulusMX
 
 		private static DateTime GetDateTime(DateTime date, string time)
 		{
-			var tim = time.Split(CultureInfo.CurrentCulture.DateTimeFormat.TimeSeparator.ToCharArray()[0]);
+			var tim = time.Split(':');
 			return new DateTime(date.Year, date.Month, date.Day, int.Parse(tim[0]), int.Parse(tim[1]), 0);
 		}
 
 		private DateTime LongDateStrToDate(string date, string time)
 		{
-			return DateTime.Parse(date + " " + time);
+			return DateTime.Parse(date + " " + time, cumulus.cmxCulture);
 		}
 
 		public DateTime ShortDateStrToDate(string d)
 		{
 			// Converts a user formatted date string in ISO order to a DateTime
-			return DateTime.Parse(d);
+			return DateTime.Parse(d, cumulus.cmxCulture);
 		}
 
 
@@ -1195,176 +1195,176 @@ namespace CumulusMX
 				switch (field)
 				{
 					case "highTempVal":
-						station.SetAlltime(WeatherStation.AT_HighTemp, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighTemp].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighTemp, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighTemp].timestamp);
 						break;
 					case "highTempTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_HighTemp, station.alltimerecarray[WeatherStation.AT_HighTemp].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "lowTempVal":
-						station.SetAlltime(WeatherStation.AT_LowTemp, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_LowTemp].timestamp);
+						station.SetAlltime(WeatherStation.AT_LowTemp, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_LowTemp].timestamp);
 						break;
 					case "lowTempTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_LowTemp, station.alltimerecarray[WeatherStation.AT_LowTemp].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "highDewPointVal":
-						station.SetAlltime(WeatherStation.AT_HighDewPoint, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighDewPoint].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighDewPoint, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighDewPoint].timestamp);
 						break;
 					case "highDewPointTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_HighDewPoint, station.alltimerecarray[WeatherStation.AT_HighDewPoint].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "lowDewPointVal":
-						station.SetAlltime(WeatherStation.AT_LowDewpoint, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_LowDewpoint].timestamp);
+						station.SetAlltime(WeatherStation.AT_LowDewpoint, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_LowDewpoint].timestamp);
 						break;
 					case "lowDewPointTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_LowDewpoint, station.alltimerecarray[WeatherStation.AT_LowDewpoint].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "highApparentTempVal":
-						station.SetAlltime(WeatherStation.AT_HighAppTemp, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighAppTemp].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighAppTemp, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighAppTemp].timestamp);
 						break;
 					case "highApparentTempTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_HighAppTemp, station.alltimerecarray[WeatherStation.AT_HighAppTemp].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "lowApparentTempVal":
-						station.SetAlltime(WeatherStation.AT_LowAppTemp, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_LowAppTemp].timestamp);
+						station.SetAlltime(WeatherStation.AT_LowAppTemp, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_LowAppTemp].timestamp);
 						break;
 					case "lowApparentTempTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_LowAppTemp, station.alltimerecarray[WeatherStation.AT_LowAppTemp].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "highFeelsLikeVal":
-						station.SetAlltime(WeatherStation.AT_HighFeelsLike, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighFeelsLike].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighFeelsLike, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighFeelsLike].timestamp);
 						break;
 					case "highFeelsLikeTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_HighFeelsLike, station.alltimerecarray[WeatherStation.AT_HighFeelsLike].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "lowFeelsLikeVal":
-						station.SetAlltime(WeatherStation.AT_LowFeelsLike, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_LowFeelsLike].timestamp);
+						station.SetAlltime(WeatherStation.AT_LowFeelsLike, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_LowFeelsLike].timestamp);
 						break;
 					case "lowFeelsLikeTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_LowFeelsLike, station.alltimerecarray[WeatherStation.AT_LowFeelsLike].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "highHumidexVal":
-						station.SetAlltime(WeatherStation.AT_HighHumidex, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighHumidex].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighHumidex, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighHumidex].timestamp);
 						break;
 					case "highHumidexTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_HighHumidex, station.alltimerecarray[WeatherStation.AT_HighHumidex].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "lowWindChillVal":
-						station.SetAlltime(WeatherStation.AT_LowChill, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_LowChill].timestamp);
+						station.SetAlltime(WeatherStation.AT_LowChill, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_LowChill].timestamp);
 						break;
 					case "lowWindChillTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_LowChill, station.alltimerecarray[WeatherStation.AT_LowChill].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "highHeatIndexVal":
-						station.SetAlltime(WeatherStation.AT_HighHeatIndex, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighHeatIndex].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighHeatIndex, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighHeatIndex].timestamp);
 						break;
 					case "highHeatIndexTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_HighHeatIndex, station.alltimerecarray[WeatherStation.AT_HighHeatIndex].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "highMinTempVal":
-						station.SetAlltime(WeatherStation.AT_HighMinTemp, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighMinTemp].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighMinTemp, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighMinTemp].timestamp);
 						break;
 					case "highMinTempTime":
 						station.SetAlltime(WeatherStation.AT_HighMinTemp, station.alltimerecarray[WeatherStation.AT_HighMinTemp].value, ShortDateStrToDate(value));
 						break;
 					case "lowMaxTempVal":
-						station.SetAlltime(WeatherStation.AT_LowMaxTemp, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_LowMaxTemp].timestamp);
+						station.SetAlltime(WeatherStation.AT_LowMaxTemp, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_LowMaxTemp].timestamp);
 						break;
 					case "lowMaxTempTime":
 						station.SetAlltime(WeatherStation.AT_LowMaxTemp, station.alltimerecarray[WeatherStation.AT_LowMaxTemp].value, ShortDateStrToDate(value));
 						break;
 					case "highDailyTempRangeVal":
-						station.SetAlltime(WeatherStation.AT_HighDailyTempRange, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighDailyTempRange].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighDailyTempRange, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighDailyTempRange].timestamp);
 						break;
 					case "highDailyTempRangeTime":
 						station.SetAlltime(WeatherStation.AT_HighDailyTempRange, station.alltimerecarray[WeatherStation.AT_HighDailyTempRange].value, ShortDateStrToDate(value));
 						break;
 					case "lowDailyTempRangeVal":
-						station.SetAlltime(WeatherStation.AT_LowDailyTempRange, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_LowDailyTempRange].timestamp);
+						station.SetAlltime(WeatherStation.AT_LowDailyTempRange, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_LowDailyTempRange].timestamp);
 						break;
 					case "lowDailyTempRangeTime":
 						station.SetAlltime(WeatherStation.AT_LowDailyTempRange, station.alltimerecarray[WeatherStation.AT_LowDailyTempRange].value, ShortDateStrToDate(value));
 						break;
 					case "highHumidityVal":
-						station.SetAlltime(WeatherStation.AT_HighHumidity, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighHumidity].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighHumidity, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighHumidity].timestamp);
 						break;
 					case "highHumidityTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_HighHumidity, station.alltimerecarray[WeatherStation.AT_HighHumidity].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "lowHumidityVal":
-						station.SetAlltime(WeatherStation.AT_lowhumidity, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_lowhumidity].timestamp);
+						station.SetAlltime(WeatherStation.AT_lowhumidity, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_lowhumidity].timestamp);
 						break;
 					case "lowHumidityTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_lowhumidity, station.alltimerecarray[WeatherStation.AT_lowhumidity].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "highBarometerVal":
-						station.SetAlltime(WeatherStation.AT_HighPress, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighPress].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighPress, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighPress].timestamp);
 						break;
 					case "highBarometerTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_HighPress, station.alltimerecarray[WeatherStation.AT_HighPress].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "lowBarometerVal":
-						station.SetAlltime(WeatherStation.AT_LowPress, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_LowPress].timestamp);
+						station.SetAlltime(WeatherStation.AT_LowPress, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_LowPress].timestamp);
 						break;
 					case "lowBarometerTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_LowPress, station.alltimerecarray[WeatherStation.AT_LowPress].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "highGustVal":
-						station.SetAlltime(WeatherStation.AT_HighGust, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighGust].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighGust, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighGust].timestamp);
 						break;
 					case "highGustTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_HighGust, station.alltimerecarray[WeatherStation.AT_HighGust].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "highWindVal":
-						station.SetAlltime(WeatherStation.AT_HighWind, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighWind].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighWind, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighWind].timestamp);
 						break;
 					case "highWindTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_HighWind, station.alltimerecarray[WeatherStation.AT_HighWind].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "highWindRunVal":
-						station.SetAlltime(WeatherStation.AT_HighWindrun, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighWindrun].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighWindrun, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighWindrun].timestamp);
 						break;
 					case "highWindRunTime":
 						station.SetAlltime(WeatherStation.AT_HighWindrun, station.alltimerecarray[WeatherStation.AT_HighWindrun].value, ShortDateStrToDate(value));
 						break;
 					case "highRainRateVal":
-						station.SetAlltime(WeatherStation.AT_HighRainRate, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HighRainRate].timestamp);
+						station.SetAlltime(WeatherStation.AT_HighRainRate, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HighRainRate].timestamp);
 						break;
 					case "highRainRateTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_HighRainRate, station.alltimerecarray[WeatherStation.AT_HighRainRate].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "highHourlyRainVal":
-						station.SetAlltime(WeatherStation.AT_HourlyRain, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_HourlyRain].timestamp);
+						station.SetAlltime(WeatherStation.AT_HourlyRain, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_HourlyRain].timestamp);
 						break;
 					case "highHourlyRainTime":
 						dt = value.Split('+');
 						station.SetAlltime(WeatherStation.AT_HourlyRain, station.alltimerecarray[WeatherStation.AT_HourlyRain].value, LongDateStrToDate(dt[0], dt[1]));
 						break;
 					case "highDailyRainVal":
-						station.SetAlltime(WeatherStation.AT_DailyRain, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_DailyRain].timestamp);
+						station.SetAlltime(WeatherStation.AT_DailyRain, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_DailyRain].timestamp);
 						break;
 					case "highDailyRainTime":
 						station.SetAlltime(WeatherStation.AT_DailyRain, station.alltimerecarray[WeatherStation.AT_DailyRain].value, ShortDateStrToDate(value));
 						break;
 					case "highMonthlyRainVal":
-						station.SetAlltime(WeatherStation.AT_WetMonth, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_WetMonth].timestamp);
+						station.SetAlltime(WeatherStation.AT_WetMonth, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_WetMonth].timestamp);
 						break;
 					case "highMonthlyRainTime":
 						dt = value.Split(cumulus.userCulture.DateTimeFormat.DateSeparator[0]);
@@ -1372,13 +1372,13 @@ namespace CumulusMX
 						station.SetAlltime(WeatherStation.AT_WetMonth, station.alltimerecarray[WeatherStation.AT_WetMonth].value, station.yyyymmddStrToDate(datstr));
 						break;
 					case "longestDryPeriodVal":
-						station.SetAlltime(WeatherStation.AT_LongestDryPeriod, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_LongestDryPeriod].timestamp);
+						station.SetAlltime(WeatherStation.AT_LongestDryPeriod, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_LongestDryPeriod].timestamp);
 						break;
 					case "longestDryPeriodTime":
 						station.SetAlltime(WeatherStation.AT_LongestDryPeriod, station.alltimerecarray[WeatherStation.AT_LongestDryPeriod].value, ShortDateStrToDate(value));
 						break;
 					case "longestWetPeriodVal":
-						station.SetAlltime(WeatherStation.AT_LongestWetPeriod, double.Parse(value, cumulus.userCulture), station.alltimerecarray[WeatherStation.AT_LongestWetPeriod].timestamp);
+						station.SetAlltime(WeatherStation.AT_LongestWetPeriod, double.Parse(value, cumulus.cmxCulture), station.alltimerecarray[WeatherStation.AT_LongestWetPeriod].timestamp);
 						break;
 					case "longestWetPeriodTime":
 						station.SetAlltime(WeatherStation.AT_LongestWetPeriod, station.alltimerecarray[WeatherStation.AT_LongestWetPeriod].value, ShortDateStrToDate(value));
@@ -1419,176 +1419,176 @@ namespace CumulusMX
 					switch (field)
 					{
 						case "highTempVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighTemp, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighTemp, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighTemp, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighTemp, month].timestamp, month);
 							break;
 						case "highTempTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_HighTemp, station.monthlyrecarray[WeatherStation.AT_HighTemp, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "lowTempVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_LowTemp, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_LowTemp, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_LowTemp, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_LowTemp, month].timestamp, month);
 							break;
 						case "lowTempTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_LowTemp, station.monthlyrecarray[WeatherStation.AT_LowTemp, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "highDewPointVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighDewPoint, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighDewPoint, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighDewPoint, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighDewPoint, month].timestamp, month);
 							break;
 						case "highDewPointTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_HighDewPoint, station.monthlyrecarray[WeatherStation.AT_HighDewPoint, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "lowDewPointVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_LowDewpoint, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_LowDewpoint, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_LowDewpoint, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_LowDewpoint, month].timestamp, month);
 							break;
 						case "lowDewPointTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_LowDewpoint, station.monthlyrecarray[WeatherStation.AT_LowDewpoint, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "highApparentTempVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighAppTemp, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighAppTemp, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighAppTemp, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighAppTemp, month].timestamp, month);
 							break;
 						case "highApparentTempTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_HighAppTemp, station.monthlyrecarray[WeatherStation.AT_HighAppTemp, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "lowApparentTempVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_LowAppTemp, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_LowAppTemp, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_LowAppTemp, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_LowAppTemp, month].timestamp, month);
 							break;
 						case "lowApparentTempTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_LowAppTemp, station.monthlyrecarray[WeatherStation.AT_LowAppTemp, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "highFeelsLikeVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighFeelsLike, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighFeelsLike, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighFeelsLike, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighFeelsLike, month].timestamp, month);
 							break;
 						case "highFeelsLikeTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_HighFeelsLike, station.monthlyrecarray[WeatherStation.AT_HighFeelsLike, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "lowFeelsLikeVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_LowFeelsLike, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_LowFeelsLike, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_LowFeelsLike, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_LowFeelsLike, month].timestamp, month);
 							break;
 						case "lowFeelsLikeTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_LowFeelsLike, station.monthlyrecarray[WeatherStation.AT_LowFeelsLike, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "highHumidexVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighHumidex, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighHumidex, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighHumidex, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighHumidex, month].timestamp, month);
 							break;
 						case "highHumidexTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_HighHumidex, station.monthlyrecarray[WeatherStation.AT_HighHumidex, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "lowWindChillVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_LowChill, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_LowChill, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_LowChill, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_LowChill, month].timestamp, month);
 							break;
 						case "lowWindChillTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_LowChill, station.monthlyrecarray[WeatherStation.AT_LowChill, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "highHeatIndexVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighHeatIndex, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighHeatIndex, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighHeatIndex, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighHeatIndex, month].timestamp, month);
 							break;
 						case "highHeatIndexTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_HighHeatIndex, station.monthlyrecarray[WeatherStation.AT_HighHeatIndex, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "highMinTempVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighMinTemp, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighMinTemp, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighMinTemp, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighMinTemp, month].timestamp, month);
 							break;
 						case "highMinTempTime":
 							station.SetMonthlyAlltime(WeatherStation.AT_HighMinTemp, station.monthlyrecarray[WeatherStation.AT_HighMinTemp, month].value, ShortDateStrToDate(value), month);
 							break;
 						case "lowMaxTempVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_LowMaxTemp, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_LowMaxTemp, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_LowMaxTemp, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_LowMaxTemp, month].timestamp, month);
 							break;
 						case "lowMaxTempTime":
 							station.SetMonthlyAlltime(WeatherStation.AT_LowMaxTemp, station.monthlyrecarray[WeatherStation.AT_LowMaxTemp, month].value, ShortDateStrToDate(value), month);
 							break;
 						case "highDailyTempRangeVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighDailyTempRange, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighDailyTempRange, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighDailyTempRange, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighDailyTempRange, month].timestamp, month);
 							break;
 						case "highDailyTempRangeTime":
 							station.SetMonthlyAlltime(WeatherStation.AT_HighDailyTempRange, station.monthlyrecarray[WeatherStation.AT_HighDailyTempRange, month].value, ShortDateStrToDate(value), month);
 							break;
 						case "lowDailyTempRangeVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_LowDailyTempRange, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_LowDailyTempRange, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_LowDailyTempRange, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_LowDailyTempRange, month].timestamp, month);
 							break;
 						case "lowDailyTempRangeTime":
 							station.SetMonthlyAlltime(WeatherStation.AT_LowDailyTempRange, station.monthlyrecarray[WeatherStation.AT_LowDailyTempRange, month].value, ShortDateStrToDate(value), month);
 							break;
 						case "highHumidityVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighHumidity, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighHumidity, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighHumidity, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighHumidity, month].timestamp, month);
 							break;
 						case "highHumidityTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_HighHumidity, station.monthlyrecarray[WeatherStation.AT_HighHumidity, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "lowHumidityVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_lowhumidity, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_lowhumidity, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_lowhumidity, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_lowhumidity, month].timestamp, month);
 							break;
 						case "lowHumidityTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_lowhumidity, station.monthlyrecarray[WeatherStation.AT_lowhumidity, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "highBarometerVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighPress, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighPress, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighPress, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighPress, month].timestamp, month);
 							break;
 						case "highBarometerTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_HighPress, station.monthlyrecarray[WeatherStation.AT_HighPress, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "lowBarometerVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_LowPress, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_LowPress, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_LowPress, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_LowPress, month].timestamp, month);
 							break;
 						case "lowBarometerTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_LowPress, station.monthlyrecarray[WeatherStation.AT_LowPress, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "highGustVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighGust, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighGust, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighGust, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighGust, month].timestamp, month);
 							break;
 						case "highGustTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_HighGust, station.monthlyrecarray[WeatherStation.AT_HighGust, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "highWindVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighWind, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighWind, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighWind, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighWind, month].timestamp, month);
 							break;
 						case "highWindTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_HighWind, station.monthlyrecarray[WeatherStation.AT_HighWind, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "highWindRunVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighWindrun, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighWindrun, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighWindrun, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighWindrun, month].timestamp, month);
 							break;
 						case "highWindRunTime":
 							station.SetMonthlyAlltime(WeatherStation.AT_HighWindrun, station.monthlyrecarray[WeatherStation.AT_HighWindrun, month].value, ShortDateStrToDate(value), month);
 							break;
 						case "highRainRateVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HighRainRate, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HighRainRate, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HighRainRate, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HighRainRate, month].timestamp, month);
 							break;
 						case "highRainRateTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_HighRainRate, station.monthlyrecarray[WeatherStation.AT_HighRainRate, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "highHourlyRainVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_HourlyRain, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_HourlyRain, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_HourlyRain, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_HourlyRain, month].timestamp, month);
 							break;
 						case "highHourlyRainTime":
 							dt = value.Split('+');
 							station.SetMonthlyAlltime(WeatherStation.AT_HourlyRain, station.monthlyrecarray[WeatherStation.AT_HourlyRain, month].value, LongDateStrToDate(dt[0], dt[1]), month);
 							break;
 						case "highDailyRainVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_DailyRain, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_DailyRain, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_DailyRain, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_DailyRain, month].timestamp, month);
 							break;
 						case "highDailyRainTime":
 							station.SetMonthlyAlltime(WeatherStation.AT_DailyRain, station.monthlyrecarray[WeatherStation.AT_DailyRain, month].value, ShortDateStrToDate(value), month);
 							break;
 						case "highMonthlyRainVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_WetMonth, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_WetMonth, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_WetMonth, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_WetMonth, month].timestamp, month);
 							break;
 						case "highMonthlyRainTime":
 							dt = value.Split(cumulus.userCulture.DateTimeFormat.DateSeparator[0]);
@@ -1596,13 +1596,13 @@ namespace CumulusMX
 							station.SetMonthlyAlltime(WeatherStation.AT_WetMonth, station.monthlyrecarray[WeatherStation.AT_WetMonth, month].value, station.yyyymmddStrToDate(datstr), month);
 							break;
 						case "longestDryPeriodVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_LongestDryPeriod, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_LongestDryPeriod, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_LongestDryPeriod, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_LongestDryPeriod, month].timestamp, month);
 							break;
 						case "longestDryPeriodTime":
 							station.SetMonthlyAlltime(WeatherStation.AT_LongestDryPeriod, station.monthlyrecarray[WeatherStation.AT_LongestDryPeriod, month].value, ShortDateStrToDate(value), month);
 							break;
 						case "longestWetPeriodVal":
-							station.SetMonthlyAlltime(WeatherStation.AT_LongestWetPeriod, double.Parse(value, cumulus.userCulture), station.monthlyrecarray[WeatherStation.AT_LongestWetPeriod, month].timestamp, month);
+							station.SetMonthlyAlltime(WeatherStation.AT_LongestWetPeriod, double.Parse(value, cumulus.cmxCulture), station.monthlyrecarray[WeatherStation.AT_LongestWetPeriod, month].timestamp, month);
 							break;
 						case "longestWetPeriodTime":
 							station.SetMonthlyAlltime(WeatherStation.AT_LongestWetPeriod, station.monthlyrecarray[WeatherStation.AT_LongestWetPeriod, month].value, ShortDateStrToDate(value), month);
@@ -1629,71 +1629,71 @@ namespace CumulusMX
 			for (var m = 1; m <= 12; m++)
 			{
 				// Records - Temperature values
-				json.Append($"\"{m}-highTempVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighTemp, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowTempVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowTemp, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highDewPointVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighDewPoint, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowDewPointVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowDewpoint, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highApparentTempVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighAppTemp, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowApparentTempVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowAppTemp, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highFeelsLikeVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighFeelsLike, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowFeelsLikeVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowFeelsLike, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highHumidexVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighHumidex, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowWindChillVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowChill, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highHeatIndexVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighHeatIndex, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highMinTempVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighMinTemp, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowMaxTempVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowMaxTemp, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highDailyTempRangeVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighDailyTempRange, m].value.ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowDailyTempRangeVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowDailyTempRange, m].value.ToString(cumulus.TempFormat)}\",");
+				json.Append($"\"{m}-highTempVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighTemp, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowTempVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowTemp, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highDewPointVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighDewPoint, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowDewPointVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowDewpoint, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highApparentTempVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighAppTemp, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowApparentTempVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowAppTemp, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highFeelsLikeVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighFeelsLike, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowFeelsLikeVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowFeelsLike, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHumidexVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighHumidex, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowWindChillVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowChill, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHeatIndexVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighHeatIndex, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highMinTempVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighMinTemp, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowMaxTempVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowMaxTemp, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highDailyTempRangeVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighDailyTempRange, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowDailyTempRangeVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowDailyTempRange, m].value.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
 				// Records - Temperature timestamps
-				json.Append($"\"{m}-highTempTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighTemp, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowTempTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowTemp, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highDewPointTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighDewPoint, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowDewPointTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowDewpoint, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highApparentTempTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighAppTemp, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowApparentTempTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowAppTemp, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highFeelsLikeTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighFeelsLike, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowFeelsLikeTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowFeelsLike, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highHumidexTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighHumidex, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowWindChillTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowChill, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highHeatIndexTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighHeatIndex, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highMinTempTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighMinTemp, m].timestamp.ToString(dateStampFormat)}\",");
-				json.Append($"\"{m}-lowMaxTempTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowMaxTemp, m].timestamp.ToString(dateStampFormat)}\",");
-				json.Append($"\"{m}-highDailyTempRangeTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighDailyTempRange, m].timestamp.ToString(dateStampFormat)}\",");
-				json.Append($"\"{m}-lowDailyTempRangeTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowDailyTempRange, m].timestamp.ToString(dateStampFormat)}\",");
+				json.Append($"\"{m}-highTempTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighTemp, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowTempTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowTemp, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highDewPointTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighDewPoint, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowDewPointTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowDewpoint, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highApparentTempTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighAppTemp, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowApparentTempTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowAppTemp, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highFeelsLikeTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighFeelsLike, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowFeelsLikeTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowFeelsLike, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHumidexTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighHumidex, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowWindChillTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowChill, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHeatIndexTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighHeatIndex, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highMinTempTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighMinTemp, m].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowMaxTempTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowMaxTemp, m].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highDailyTempRangeTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighDailyTempRange, m].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowDailyTempRangeTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowDailyTempRange, m].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 				// Records - Humidity values
-				json.Append($"\"{m}-highHumidityVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighHumidity, m].value.ToString(cumulus.HumFormat)}\",");
-				json.Append($"\"{m}-lowHumidityVal\":\"{station.monthlyrecarray[WeatherStation.AT_lowhumidity, m].value.ToString(cumulus.HumFormat)}\",");
+				json.Append($"\"{m}-highHumidityVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighHumidity, m].value.ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowHumidityVal\":\"{station.monthlyrecarray[WeatherStation.AT_lowhumidity, m].value.ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
 				// Records - Humidity times
-				json.Append($"\"{m}-highHumidityTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighHumidity, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowHumidityTime\":\"{station.monthlyrecarray[WeatherStation.AT_lowhumidity, m].timestamp.ToString(timeStampFormat)}\",");
+				json.Append($"\"{m}-highHumidityTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighHumidity, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowHumidityTime\":\"{station.monthlyrecarray[WeatherStation.AT_lowhumidity, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 				// Records - Pressure values
-				json.Append($"\"{m}-highBarometerVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighPress, m].value.ToString(cumulus.PressFormat)}\",");
-				json.Append($"\"{m}-lowBarometerVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowPress, m].value.ToString(cumulus.PressFormat)}\",");
+				json.Append($"\"{m}-highBarometerVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighPress, m].value.ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowBarometerVal\":\"{station.monthlyrecarray[WeatherStation.AT_LowPress, m].value.ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
 				// Records - Pressure times
-				json.Append($"\"{m}-highBarometerTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighPress, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowBarometerTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowPress, m].timestamp.ToString(timeStampFormat)}\",");
+				json.Append($"\"{m}-highBarometerTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighPress, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowBarometerTime\":\"{station.monthlyrecarray[WeatherStation.AT_LowPress, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 				// Records - Wind values
-				json.Append($"\"{m}-highGustVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighGust, m].value.ToString(cumulus.WindFormat)}\",");
-				json.Append($"\"{m}-highWindVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighWind, m].value.ToString(cumulus.WindFormat)}\",");
-				json.Append($"\"{m}-highWindRunVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighWindrun, m].value.ToString(cumulus.WindRunFormat)}\",");
+				json.Append($"\"{m}-highGustVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighGust, m].value.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highWindVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighWind, m].value.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highWindRunVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighWindrun, m].value.ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
 				// Records - Wind times
-				json.Append($"\"{m}-highGustTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighGust, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highWindTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighWind, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highWindRunTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighWindrun, m].timestamp.ToString(dateStampFormat)}\",");
+				json.Append($"\"{m}-highGustTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighGust, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highWindTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighWind, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highWindRunTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighWindrun, m].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 				// Records - Rain values
-				json.Append($"\"{m}-highRainRateVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighRainRate, m].value.ToString(cumulus.RainFormat)}\",");
-				json.Append($"\"{m}-highHourlyRainVal\":\"{station.monthlyrecarray[WeatherStation.AT_HourlyRain, m].value.ToString(cumulus.RainFormat)}\",");
-				json.Append($"\"{m}-highDailyRainVal\":\"{station.monthlyrecarray[WeatherStation.AT_DailyRain, m].value.ToString(cumulus.RainFormat)}\",");
-				json.Append($"\"{m}-highMonthlyRainVal\":\"{station.monthlyrecarray[WeatherStation.AT_WetMonth, m].value.ToString(cumulus.RainFormat)}\",");
-				json.Append($"\"{m}-longestDryPeriodVal\":\"{station.monthlyrecarray[WeatherStation.AT_LongestDryPeriod, m].value.ToString("f0")}\",");
-				json.Append($"\"{m}-longestWetPeriodVal\":\"{station.monthlyrecarray[WeatherStation.AT_LongestWetPeriod, m].value.ToString("f0")}\",");
+				json.Append($"\"{m}-highRainRateVal\":\"{station.monthlyrecarray[WeatherStation.AT_HighRainRate, m].value.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHourlyRainVal\":\"{station.monthlyrecarray[WeatherStation.AT_HourlyRain, m].value.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highDailyRainVal\":\"{station.monthlyrecarray[WeatherStation.AT_DailyRain, m].value.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highMonthlyRainVal\":\"{station.monthlyrecarray[WeatherStation.AT_WetMonth, m].value.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-longestDryPeriodVal\":\"{station.monthlyrecarray[WeatherStation.AT_LongestDryPeriod, m].value.ToString("f0", cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-longestWetPeriodVal\":\"{station.monthlyrecarray[WeatherStation.AT_LongestWetPeriod, m].value.ToString("f0", cumulus.cmxCulture)}\",");
 				// Records - Rain times
-				json.Append($"\"{m}-highRainRateTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighRainRate, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highHourlyRainTime\":\"{station.monthlyrecarray[WeatherStation.AT_HourlyRain, m].timestamp.ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highDailyRainTime\":\"{station.monthlyrecarray[WeatherStation.AT_DailyRain, m].timestamp.ToString(dateStampFormat)}\",");
-				json.Append($"\"{m}-highMonthlyRainTime\":\"{station.monthlyrecarray[WeatherStation.AT_WetMonth, m].timestamp.ToString("yyyy/MM")}\",");
-				json.Append($"\"{m}-longestDryPeriodTime\":\"{station.monthlyrecarray[WeatherStation.AT_LongestDryPeriod, m].timestamp.ToString(dateStampFormat)}\",");
-				json.Append($"\"{m}-longestWetPeriodTime\":\"{station.monthlyrecarray[WeatherStation.AT_LongestWetPeriod, m].timestamp.ToString(dateStampFormat)}\",");
+				json.Append($"\"{m}-highRainRateTime\":\"{station.monthlyrecarray[WeatherStation.AT_HighRainRate, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHourlyRainTime\":\"{station.monthlyrecarray[WeatherStation.AT_HourlyRain, m].timestamp.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highDailyRainTime\":\"{station.monthlyrecarray[WeatherStation.AT_DailyRain, m].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highMonthlyRainTime\":\"{station.monthlyrecarray[WeatherStation.AT_WetMonth, m].timestamp.ToString("yyyy/MM", cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-longestDryPeriodTime\":\"{station.monthlyrecarray[WeatherStation.AT_LongestDryPeriod, m].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-longestWetPeriodTime\":\"{station.monthlyrecarray[WeatherStation.AT_LongestWetPeriod, m].timestamp.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 			}
 			json.Remove(json.Length - 1, 1);
 			json.Append("}");
@@ -1822,13 +1822,13 @@ namespace CumulusMX
 							rainThisMonth = 0;
 						}
 						// hi gust
-						if (double.TryParse(st[1], out valDbl) && valDbl > highGustVal[monthOffset])
+						if (double.TryParse(st[1], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highGustVal[monthOffset])
 						{
 							highGustVal[monthOffset] = valDbl;
 							highGustTime[monthOffset] = GetDateTime(loggedDate, st[3]);
 						}
 						// lo temp
-						if (double.TryParse(st[4], out valDbl))
+						if (double.TryParse(st[4], NumberStyles.Float, cumulus.cmxCulture, out valDbl))
 						{
 							if (valDbl < lowTempVal[monthOffset])
 							{
@@ -1843,7 +1843,7 @@ namespace CumulusMX
 							}
 						}
 						// hi temp
-						if (double.TryParse(st[6], out valDbl))
+						if (double.TryParse(st[6], NumberStyles.Float, cumulus.cmxCulture, out valDbl))
 						{
 							if (valDbl > highTempVal[monthOffset])
 							{
@@ -1859,7 +1859,7 @@ namespace CumulusMX
 						}
 
 						// temp ranges
-						if (double.TryParse(st[6], out valDbl) && double.TryParse(st[4], out valDbl2))
+						if (double.TryParse(st[6], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && double.TryParse(st[4], NumberStyles.Float, cumulus.cmxCulture, out valDbl2))
 						{
 							// hi temp range
 							if ((valDbl - valDbl2) > highTempRangeVal[monthOffset])
@@ -1875,24 +1875,24 @@ namespace CumulusMX
 							}
 						}
 						// lo baro
-						if (double.TryParse(st[8], out valDbl) && valDbl < lowBaroVal[monthOffset])
+						if (double.TryParse(st[8], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowBaroVal[monthOffset])
 						{
 							lowBaroVal[monthOffset] = valDbl;
 							lowBaroTime[monthOffset] = GetDateTime(loggedDate, st[9]);
 						}
 						// hi baro
-						if (double.TryParse(st[10], out valDbl) && valDbl > highBaroVal[monthOffset])
+						if (double.TryParse(st[10], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highBaroVal[monthOffset])
 						{
 							highBaroVal[monthOffset] = valDbl;
 							highBaroTime[monthOffset] = GetDateTime(loggedDate, st[11]);
 						}
 						// hi rain rate
-						if (double.TryParse(st[12], out valDbl) && valDbl > highRainRateVal[monthOffset])
+						if (double.TryParse(st[12], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highRainRateVal[monthOffset])
 						{
 							highRainRateVal[monthOffset] = valDbl;
 							highRainRateTime[monthOffset] = GetDateTime(loggedDate, st[13]);
 						}
-						if (double.TryParse(st[14], out valDbl))
+						if (double.TryParse(st[14], NumberStyles.Float, cumulus.cmxCulture, out valDbl))
 						{
 							// hi rain day
 							if (valDbl > highRainDayVal[monthOffset])
@@ -1950,7 +1950,7 @@ namespace CumulusMX
 						if (st.Count > 15)
 						{
 							// hi wind run
-							if (double.TryParse(st[16], out valDbl) && valDbl > highWindRunVal[monthOffset])
+							if (double.TryParse(st[16], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highWindRunVal[monthOffset])
 							{
 								highWindRunVal[monthOffset] = valDbl;
 								highWindRunTime[monthOffset] = loggedDate;
@@ -1960,7 +1960,7 @@ namespace CumulusMX
 						if (st.Count > 17)
 						{
 							// hi wind
-							if (double.TryParse(st[17], out valDbl) && valDbl > highWindVal[monthOffset])
+							if (double.TryParse(st[17], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highWindVal[monthOffset])
 							{
 								highWindVal[monthOffset] = valDbl;
 								highWindTime[monthOffset] = GetDateTime(loggedDate, st[18]);
@@ -1970,43 +1970,43 @@ namespace CumulusMX
 						if (st.Count > 19)
 						{
 							// lo humidity
-							if (double.TryParse(st[19], out valDbl) && valDbl < lowHumVal[monthOffset])
+							if (double.TryParse(st[19], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowHumVal[monthOffset])
 							{
 								lowHumVal[monthOffset] = valDbl;
 								lowHumTime[monthOffset] = GetDateTime(loggedDate, st[20]);
 							}
 							// hi humidity
-							if (double.TryParse(st[21], out valDbl) && valDbl > highHumVal[monthOffset])
+							if (double.TryParse(st[21], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highHumVal[monthOffset])
 							{
 								highHumVal[monthOffset] = valDbl;
 								highHumTime[monthOffset] = GetDateTime(loggedDate, st[22]);
 							}
 							// hi heat index
-							if (double.TryParse(st[25], out valDbl) && valDbl > highHeatIndVal[monthOffset])
+							if (double.TryParse(st[25], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highHeatIndVal[monthOffset])
 							{
 								highHeatIndVal[monthOffset] = valDbl;
 								highHeatIndTime[monthOffset] = GetDateTime(loggedDate, st[26]);
 							}
 							// hi app temp
-							if (double.TryParse(st[27], out valDbl) && valDbl > highAppTempVal[monthOffset])
+							if (double.TryParse(st[27], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highAppTempVal[monthOffset])
 							{
 								highAppTempVal[monthOffset] = valDbl;
 								highAppTempTime[monthOffset] = GetDateTime(loggedDate, st[28]);
 							}
 							// lo app temp
-							if (double.TryParse(st[29], out valDbl) && valDbl < lowAppTempVal[monthOffset])
+							if (double.TryParse(st[29], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowAppTempVal[monthOffset])
 							{
 								lowAppTempVal[monthOffset] = valDbl;
 								lowAppTempTime[monthOffset] = GetDateTime(loggedDate, st[30]);
 							}
 							// hi rain hour
-							if (double.TryParse(st[31], out valDbl) && valDbl > highRainHourVal[monthOffset])
+							if (double.TryParse(st[31], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highRainHourVal[monthOffset])
 							{
 								highRainHourVal[monthOffset] = valDbl;
 								highRainHourTime[monthOffset] = GetDateTime(loggedDate, st[32]);
 							}
 							// lo wind chill
-							if (double.TryParse(st[33], out valDbl) && valDbl < lowWindChillVal[monthOffset])
+							if (double.TryParse(st[33], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowWindChillVal[monthOffset])
 							{
 								lowWindChillVal[monthOffset] = valDbl;
 								lowWindChillTime[monthOffset] = GetDateTime(loggedDate, st[34]);
@@ -2016,13 +2016,13 @@ namespace CumulusMX
 						if (st.Count > 35)
 						{
 							// hi dewpt
-							if (double.TryParse(st[35], out valDbl) && valDbl > highDewPtVal[monthOffset])
+							if (double.TryParse(st[35], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highDewPtVal[monthOffset])
 							{
 								highDewPtVal[monthOffset] = valDbl;
 								highDewPtTime[monthOffset] = GetDateTime(loggedDate, st[36]);
 							}
 							// lo dewpt
-							if (double.TryParse(st[37], out valDbl) && valDbl < lowDewPtVal[monthOffset])
+							if (double.TryParse(st[37], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowDewPtVal[monthOffset])
 							{
 								lowDewPtVal[monthOffset] = valDbl;
 								lowDewPtTime[monthOffset] = GetDateTime(loggedDate, st[38]);
@@ -2032,13 +2032,13 @@ namespace CumulusMX
 						if (st.Count > 46)
 						{
 							// hi feels like
-							if (double.TryParse(st[46], out valDbl) && valDbl > highFeelsLikeVal[monthOffset])
+							if (double.TryParse(st[46], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highFeelsLikeVal[monthOffset])
 							{
 								highFeelsLikeVal[monthOffset] = valDbl;
 								highFeelsLikeTime[monthOffset] = GetDateTime(loggedDate, st[47]);
 							}
 							// lo feels like
-							if (double.TryParse(st[48], out valDbl) && valDbl < lowFeelsLikeVal[monthOffset])
+							if (double.TryParse(st[48], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowFeelsLikeVal[monthOffset])
 							{
 								lowFeelsLikeVal[monthOffset] = valDbl;
 								lowFeelsLikeTime[monthOffset] = GetDateTime(loggedDate, st[49]);
@@ -2048,7 +2048,7 @@ namespace CumulusMX
 						if (st.Count > 50)
 						{
 							// hi humidex
-							if (double.TryParse(st[50], out valDbl) && valDbl > highHumidexVal[monthOffset])
+							if (double.TryParse(st[50], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highHumidexVal[monthOffset])
 							{
 								highHumidexVal[monthOffset] = valDbl;
 								highHumidexTime[monthOffset] = GetDateTime(loggedDate, st[51]);
@@ -2059,62 +2059,62 @@ namespace CumulusMX
 					for (var i = 0; i < 12; i++)
 					{
 						var m = i + 1;
-						json.Append($"\"{m}-highTempValDayfile\":\"{highTempVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-highTempTimeDayfile\":\"{highTempTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-lowTempValDayfile\":\"{lowTempVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-lowTempTimeDayfile\":\"{lowTempTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-highDewPointValDayfile\":\"{highDewPtVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-highDewPointTimeDayfile\":\"{highDewPtTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-lowDewPointValDayfile\":\"{lowDewPtVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-lowDewPointTimeDayfile\":\"{lowDewPtTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-highApparentTempValDayfile\":\"{highAppTempVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-highApparentTempTimeDayfile\":\"{highAppTempTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-lowApparentTempValDayfile\":\"{lowAppTempVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-lowApparentTempTimeDayfile\":\"{lowAppTempTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-highFeelsLikeValDayfile\":\"{highFeelsLikeVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-highFeelsLikeTimeDayfile\":\"{highFeelsLikeTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-lowFeelsLikeValDayfile\":\"{lowFeelsLikeVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-lowFeelsLikeTimeDayfile\":\"{lowFeelsLikeTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-highHumidexValDayfile\":\"{highHumidexVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-highHumidexTimeDayfile\":\"{highHumidexTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-lowWindChillValDayfile\":\"{lowWindChillVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-lowWindChillTimeDayfile\":\"{lowWindChillTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-highHeatIndexValDayfile\":\"{highHeatIndVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-highHeatIndexTimeDayfile\":\"{highHeatIndTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-highMinTempValDayfile\":\"{highMinTempVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-highMinTempTimeDayfile\":\"{highMinTempTime[i].ToString(dateStampFormat)}\",");
-						json.Append($"\"{m}-lowMaxTempValDayfile\":\"{lowMaxTempVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-lowMaxTempTimeDayfile\":\"{lowMaxTempTime[i].ToString(dateStampFormat)}\",");
-						json.Append($"\"{m}-highDailyTempRangeValDayfile\":\"{highTempRangeVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-highDailyTempRangeTimeDayfile\":\"{highTempRangeTime[i].ToString(dateStampFormat)}\",");
-						json.Append($"\"{m}-lowDailyTempRangeValDayfile\":\"{lowTempRangeVal[i].ToString(cumulus.TempFormat)}\",");
-						json.Append($"\"{m}-lowDailyTempRangeTimeDayfile\":\"{lowTempRangeTime[i].ToString(dateStampFormat)}\",");
-						json.Append($"\"{m}-highHumidityValDayfile\":\"{highHumVal[i].ToString(cumulus.HumFormat)}\",");
-						json.Append($"\"{m}-highHumidityTimeDayfile\":\"{highHumTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-lowHumidityValDayfile\":\"{lowHumVal[i].ToString(cumulus.HumFormat)}\",");
-						json.Append($"\"{m}-lowHumidityTimeDayfile\":\"{lowHumTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-highBarometerValDayfile\":\"{highBaroVal[i].ToString(cumulus.PressFormat)}\",");
-						json.Append($"\"{m}-highBarometerTimeDayfile\":\"{highBaroTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-lowBarometerValDayfile\":\"{lowBaroVal[i].ToString(cumulus.PressFormat)}\",");
-						json.Append($"\"{m}-lowBarometerTimeDayfile\":\"{lowBaroTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-highGustValDayfile\":\"{highGustVal[i].ToString(cumulus.WindFormat)}\",");
-						json.Append($"\"{m}-highGustTimeDayfile\":\"{highGustTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-highWindValDayfile\":\"{highWindVal[i].ToString(cumulus.WindFormat)}\",");
-						json.Append($"\"{m}-highWindTimeDayfile\":\"{highWindTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-highWindRunValDayfile\":\"{highWindRunVal[i].ToString(cumulus.WindRunFormat)}\",");
-						json.Append($"\"{m}-highWindRunTimeDayfile\":\"{highWindRunTime[i].ToString(dateStampFormat)}\",");
-						json.Append($"\"{m}-highRainRateValDayfile\":\"{highRainRateVal[i].ToString(cumulus.RainFormat)}\",");
-						json.Append($"\"{m}-highRainRateTimeDayfile\":\"{highRainRateTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-highHourlyRainValDayfile\":\"{highRainHourVal[i].ToString(cumulus.RainFormat)}\",");
-						json.Append($"\"{m}-highHourlyRainTimeDayfile\":\"{highRainHourTime[i].ToString(timeStampFormat)}\",");
-						json.Append($"\"{m}-highDailyRainValDayfile\":\"{highRainDayVal[i].ToString(cumulus.RainFormat)}\",");
-						json.Append($"\"{m}-highDailyRainTimeDayfile\":\"{highRainDayTime[i].ToString(dateStampFormat)}\",");
-						json.Append($"\"{m}-highMonthlyRainValDayfile\":\"{highRainMonthVal[i].ToString(cumulus.RainFormat)}\",");
-						json.Append($"\"{m}-highMonthlyRainTimeDayfile\":\"{highRainMonthTime[i].ToString("yyyy-MM")}\",");
+						json.Append($"\"{m}-highTempValDayfile\":\"{highTempVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highTempTimeDayfile\":\"{highTempTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowTempValDayfile\":\"{lowTempVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowTempTimeDayfile\":\"{lowTempTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highDewPointValDayfile\":\"{highDewPtVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highDewPointTimeDayfile\":\"{highDewPtTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowDewPointValDayfile\":\"{lowDewPtVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowDewPointTimeDayfile\":\"{lowDewPtTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highApparentTempValDayfile\":\"{highAppTempVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highApparentTempTimeDayfile\":\"{highAppTempTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowApparentTempValDayfile\":\"{lowAppTempVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowApparentTempTimeDayfile\":\"{lowAppTempTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highFeelsLikeValDayfile\":\"{highFeelsLikeVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highFeelsLikeTimeDayfile\":\"{highFeelsLikeTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowFeelsLikeValDayfile\":\"{lowFeelsLikeVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowFeelsLikeTimeDayfile\":\"{lowFeelsLikeTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highHumidexValDayfile\":\"{highHumidexVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highHumidexTimeDayfile\":\"{highHumidexTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowWindChillValDayfile\":\"{lowWindChillVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowWindChillTimeDayfile\":\"{lowWindChillTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highHeatIndexValDayfile\":\"{highHeatIndVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highHeatIndexTimeDayfile\":\"{highHeatIndTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highMinTempValDayfile\":\"{highMinTempVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highMinTempTimeDayfile\":\"{highMinTempTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowMaxTempValDayfile\":\"{lowMaxTempVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowMaxTempTimeDayfile\":\"{lowMaxTempTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highDailyTempRangeValDayfile\":\"{highTempRangeVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highDailyTempRangeTimeDayfile\":\"{highTempRangeTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowDailyTempRangeValDayfile\":\"{lowTempRangeVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowDailyTempRangeTimeDayfile\":\"{lowTempRangeTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highHumidityValDayfile\":\"{highHumVal[i].ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highHumidityTimeDayfile\":\"{highHumTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowHumidityValDayfile\":\"{lowHumVal[i].ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowHumidityTimeDayfile\":\"{lowHumTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highBarometerValDayfile\":\"{highBaroVal[i].ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highBarometerTimeDayfile\":\"{highBaroTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowBarometerValDayfile\":\"{lowBaroVal[i].ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-lowBarometerTimeDayfile\":\"{lowBaroTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highGustValDayfile\":\"{highGustVal[i].ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highGustTimeDayfile\":\"{highGustTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highWindValDayfile\":\"{highWindVal[i].ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highWindTimeDayfile\":\"{highWindTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highWindRunValDayfile\":\"{highWindRunVal[i].ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highWindRunTimeDayfile\":\"{highWindRunTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highRainRateValDayfile\":\"{highRainRateVal[i].ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highRainRateTimeDayfile\":\"{highRainRateTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highHourlyRainValDayfile\":\"{highRainHourVal[i].ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highHourlyRainTimeDayfile\":\"{highRainHourTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highDailyRainValDayfile\":\"{highRainDayVal[i].ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highDailyRainTimeDayfile\":\"{highRainDayTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highMonthlyRainValDayfile\":\"{highRainMonthVal[i].ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+						json.Append($"\"{m}-highMonthlyRainTimeDayfile\":\"{highRainMonthTime[i].ToString("yyyy-MM", cumulus.cmxCulture)}\",");
 						json.Append($"\"{m}-longestDryPeriodValDayfile\":\"{dryPeriodVal[i]}\",");
-						json.Append($"\"{m}-longestDryPeriodTimeDayfile\":\"{dryPeriodTime[i].ToString(dateStampFormat)}\",");
+						json.Append($"\"{m}-longestDryPeriodTimeDayfile\":\"{dryPeriodTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 						json.Append($"\"{m}-longestWetPeriodValDayfile\":\"{wetPeriodVal[i]}\",");
-						json.Append($"\"{m}-longestWetPeriodTimeDayfile\":\"{wetPeriodTime[i].ToString(dateStampFormat)}\",");
+						json.Append($"\"{m}-longestWetPeriodTimeDayfile\":\"{wetPeriodTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 					}
 					json.Remove(json.Length - 1, 1);
 					json.Append("}");
@@ -2264,31 +2264,31 @@ namespace CumulusMX
 								started = true;
 							}
 
-							var outsidetemp = double.Parse(st[2]);
-							var hum = double.Parse(st[3]);
-							var dewpoint = double.Parse(st[4]);
-							var speed = double.Parse(st[5]);
-							var gust = double.Parse(st[6]);
-							var rainrate = double.Parse(st[8]);
-							var raintoday = double.Parse(st[9]);
-							var pressure = double.Parse(st[10]);
+							var outsidetemp = double.Parse(st[2], cumulus.cmxCulture);
+							var hum = double.Parse(st[3], cumulus.cmxCulture);
+							var dewpoint = double.Parse(st[4], cumulus.cmxCulture);
+							var speed = double.Parse(st[5], cumulus.cmxCulture);
+							var gust = double.Parse(st[6], cumulus.cmxCulture);
+							var rainrate = double.Parse(st[8], cumulus.cmxCulture);
+							var raintoday = double.Parse(st[9], cumulus.cmxCulture);
+							var pressure = double.Parse(st[10], cumulus.cmxCulture);
 
 							// extended v1.9.1
 							if (st.Count > 19)
 							{
 								// low chill
-								if (double.TryParse(st[15], out valDbl) && valDbl < lowWindChillVal[monthOffset])
+								if (double.TryParse(st[15], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl < lowWindChillVal[monthOffset])
 								{
 									lowWindChillVal[monthOffset] = valDbl;
 									lowWindChillTime[monthOffset] = entrydate;
 								}
 								// hi heat
-								if (double.TryParse(st[16], out valDbl) && valDbl > highHeatIndVal[monthOffset])
+								if (double.TryParse(st[16], NumberStyles.Float, cumulus.cmxCulture, out valDbl) && valDbl > highHeatIndVal[monthOffset])
 								{
 									highHeatIndVal[monthOffset] = valDbl;
 									highHeatIndTime[monthOffset] = entrydate;
 								}
-								if (double.TryParse(st[21], out valDbl))
+								if (double.TryParse(st[21], NumberStyles.Float, cumulus.cmxCulture, out valDbl))
 								{
 									// hi appt
 									if (valDbl > highAppTempVal[monthOffset])
@@ -2307,7 +2307,7 @@ namespace CumulusMX
 							// extended v3.6.0
 							if (st.Count > 27)
 							{
-								if (double.TryParse(st[27], out valDbl))
+								if (double.TryParse(st[27], NumberStyles.Float, cumulus.cmxCulture, out valDbl))
 								{
 									// hi feels like
 									if (valDbl > highFeelsLikeVal[monthOffset])
@@ -2326,7 +2326,7 @@ namespace CumulusMX
 							// extended v3.7.0
 							if (st.Count > 28)
 							{
-								if (double.TryParse(st[28], out valDbl))
+								if (double.TryParse(st[28], NumberStyles.Float, cumulus.cmxCulture, out valDbl))
 								{
 									// hi humidex
 									if (valDbl > highHumidexVal[monthOffset])
@@ -2561,62 +2561,62 @@ namespace CumulusMX
 			for (var i = 0; i < 12; i++)
 			{
 				var m = i + 1;
-				json.Append($"\"{m}-highTempValLogfile\":\"{highTempVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highTempTimeLogfile\":\"{highTempTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowTempValLogfile\":\"{lowTempVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowTempTimeLogfile\":\"{lowTempTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highDewPointValLogfile\":\"{highDewPtVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highDewPointTimeLogfile\":\"{highDewPtTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowDewPointValLogfile\":\"{lowDewPtVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowDewPointTimeLogfile\":\"{lowDewPtTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highApparentTempValLogfile\":\"{highAppTempVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highApparentTempTimeLogfile\":\"{highAppTempTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowApparentTempValLogfile\":\"{lowAppTempVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowApparentTempTimeLogfile\":\"{lowAppTempTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highFeelsLikeValLogfile\":\"{highFeelsLikeVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highFeelsLikeTimeLogfile\":\"{highFeelsLikeTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowFeelsLikeValLogfile\":\"{lowFeelsLikeVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowFeelsLikeTimeLogfile\":\"{lowFeelsLikeTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highHumidexValLogfile\":\"{highHumidexVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highHumidexTimeLogfile\":\"{highHumidexTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowWindChillValLogfile\":\"{lowWindChillVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowWindChillTimeLogfile\":\"{lowWindChillTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highHeatIndexValLogfile\":\"{highHeatIndVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highHeatIndexTimeLogfile\":\"{highHeatIndTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highMinTempValLogfile\":\"{highMinTempVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highMinTempTimeLogfile\":\"{highMinTempTime[i].ToString(dateStampFormat)}\",");
-				json.Append($"\"{m}-lowMaxTempValLogfile\":\"{lowMaxTempVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowMaxTempTimeLogfile\":\"{lowMaxTempTime[i].ToString(dateStampFormat)}\",");
-				json.Append($"\"{m}-highDailyTempRangeValLogfile\":\"{highTempRangeVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-highDailyTempRangeTimeLogfile\":\"{highTempRangeTime[i].ToString(dateStampFormat)}\",");
-				json.Append($"\"{m}-lowDailyTempRangeValLogfile\":\"{lowTempRangeVal[i].ToString(cumulus.TempFormat)}\",");
-				json.Append($"\"{m}-lowDailyTempRangeTimeLogfile\":\"{lowTempRangeTime[i].ToString(dateStampFormat)}\",");
-				json.Append($"\"{m}-highHumidityValLogfile\":\"{highHumVal[i].ToString(cumulus.HumFormat)}\",");
-				json.Append($"\"{m}-highHumidityTimeLogfile\":\"{highHumTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowHumidityValLogfile\":\"{lowHumVal[i].ToString(cumulus.HumFormat)}\",");
-				json.Append($"\"{m}-lowHumidityTimeLogfile\":\"{lowHumTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highBarometerValLogfile\":\"{highBaroVal[i].ToString(cumulus.PressFormat)}\",");
-				json.Append($"\"{m}-highBarometerTimeLogfile\":\"{highBaroTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-lowBarometerValLogfile\":\"{lowBaroVal[i].ToString(cumulus.PressFormat)}\",");
-				json.Append($"\"{m}-lowBarometerTimeLogfile\":\"{lowBaroTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highGustValLogfile\":\"{highGustVal[i].ToString(cumulus.WindFormat)}\",");
-				json.Append($"\"{m}-highGustTimeLogfile\":\"{highGustTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highWindValLogfile\":\"{highWindVal[i].ToString(cumulus.WindFormat)}\",");
-				json.Append($"\"{m}-highWindTimeLogfile\":\"{highWindTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highWindRunValLogfile\":\"{highWindRunVal[i].ToString(cumulus.WindRunFormat)}\",");
-				json.Append($"\"{m}-highWindRunTimeLogfile\":\"{highWindRunTime[i].ToString(dateStampFormat)}\",");
-				json.Append($"\"{m}-highRainRateValLogfile\":\"{highRainRateVal[i].ToString(cumulus.RainFormat)}\",");
-				json.Append($"\"{m}-highRainRateTimeLogfile\":\"{highRainRateTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highHourlyRainValLogfile\":\"{highRainHourVal[i].ToString(cumulus.RainFormat)}\",");
-				json.Append($"\"{m}-highHourlyRainTimeLogfile\":\"{highRainHourTime[i].ToString(timeStampFormat)}\",");
-				json.Append($"\"{m}-highDailyRainValLogfile\":\"{highRainDayVal[i].ToString(cumulus.RainFormat)}\",");
-				json.Append($"\"{m}-highDailyRainTimeLogfile\":\"{highRainDayTime[i].ToString(dateStampFormat)}\",");
-				json.Append($"\"{m}-highMonthlyRainValLogfile\":\"{highRainMonthVal[i].ToString(cumulus.RainFormat)}\",");
-				json.Append($"\"{m}-highMonthlyRainTimeLogfile\":\"{highRainMonthTime[i].ToString("yyyy/MM")}\",");
+				json.Append($"\"{m}-highTempValLogfile\":\"{highTempVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highTempTimeLogfile\":\"{highTempTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowTempValLogfile\":\"{lowTempVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowTempTimeLogfile\":\"{lowTempTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highDewPointValLogfile\":\"{highDewPtVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highDewPointTimeLogfile\":\"{highDewPtTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowDewPointValLogfile\":\"{lowDewPtVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowDewPointTimeLogfile\":\"{lowDewPtTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highApparentTempValLogfile\":\"{highAppTempVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highApparentTempTimeLogfile\":\"{highAppTempTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowApparentTempValLogfile\":\"{lowAppTempVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowApparentTempTimeLogfile\":\"{lowAppTempTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highFeelsLikeValLogfile\":\"{highFeelsLikeVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highFeelsLikeTimeLogfile\":\"{highFeelsLikeTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowFeelsLikeValLogfile\":\"{lowFeelsLikeVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowFeelsLikeTimeLogfile\":\"{lowFeelsLikeTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHumidexValLogfile\":\"{highHumidexVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHumidexTimeLogfile\":\"{highHumidexTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowWindChillValLogfile\":\"{lowWindChillVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowWindChillTimeLogfile\":\"{lowWindChillTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHeatIndexValLogfile\":\"{highHeatIndVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHeatIndexTimeLogfile\":\"{highHeatIndTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highMinTempValLogfile\":\"{highMinTempVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highMinTempTimeLogfile\":\"{highMinTempTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowMaxTempValLogfile\":\"{lowMaxTempVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowMaxTempTimeLogfile\":\"{lowMaxTempTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highDailyTempRangeValLogfile\":\"{highTempRangeVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highDailyTempRangeTimeLogfile\":\"{highTempRangeTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowDailyTempRangeValLogfile\":\"{lowTempRangeVal[i].ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowDailyTempRangeTimeLogfile\":\"{lowTempRangeTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHumidityValLogfile\":\"{highHumVal[i].ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHumidityTimeLogfile\":\"{highHumTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowHumidityValLogfile\":\"{lowHumVal[i].ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowHumidityTimeLogfile\":\"{lowHumTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highBarometerValLogfile\":\"{highBaroVal[i].ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highBarometerTimeLogfile\":\"{highBaroTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowBarometerValLogfile\":\"{lowBaroVal[i].ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-lowBarometerTimeLogfile\":\"{lowBaroTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highGustValLogfile\":\"{highGustVal[i].ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highGustTimeLogfile\":\"{highGustTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highWindValLogfile\":\"{highWindVal[i].ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highWindTimeLogfile\":\"{highWindTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highWindRunValLogfile\":\"{highWindRunVal[i].ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highWindRunTimeLogfile\":\"{highWindRunTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highRainRateValLogfile\":\"{highRainRateVal[i].ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highRainRateTimeLogfile\":\"{highRainRateTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHourlyRainValLogfile\":\"{highRainHourVal[i].ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highHourlyRainTimeLogfile\":\"{highRainHourTime[i].ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highDailyRainValLogfile\":\"{highRainDayVal[i].ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highDailyRainTimeLogfile\":\"{highRainDayTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highMonthlyRainValLogfile\":\"{highRainMonthVal[i].ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+				json.Append($"\"{m}-highMonthlyRainTimeLogfile\":\"{highRainMonthTime[i].ToString("yyyy/MM", cumulus.cmxCulture)}\",");
 				json.Append($"\"{m}-longestDryPeriodValLogfile\":\"{dryPeriodVal[i]}\",");
-				json.Append($"\"{m}-longestDryPeriodTimeLogfile\":\"{dryPeriodTime[i].ToString(dateStampFormat)}\",");
+				json.Append($"\"{m}-longestDryPeriodTimeLogfile\":\"{dryPeriodTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 				json.Append($"\"{m}-longestWetPeriodValLogfile\":\"{wetPeriodVal[i]}\",");
-				json.Append($"\"{m}-longestWetPeriodTimeLogfile\":\"{wetPeriodTime[i].ToString(dateStampFormat)}\",");
+				json.Append($"\"{m}-longestWetPeriodTimeLogfile\":\"{wetPeriodTime[i].ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 			}
 
 			json.Remove(json.Length - 1, 1);
@@ -2636,64 +2636,64 @@ namespace CumulusMX
 
 			var json = new StringBuilder("{", 1700);
 			// Records - Temperature
-			json.Append($"\"highTempVal\":\"{station.HighTempThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highTempTime\":\"{station.HighTempThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowTempVal\":\"{station.LowTempThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowTempTime\":\"{station.LowTempThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highDewPointVal\":\"{station.HighDewpointThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highDewPointTime\":\"{station.HighDewpointThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowDewPointVal\":\"{station.LowDewpointThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowDewPointTime\":\"{station.LowDewpointThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highApparentTempVal\":\"{station.HighAppTempThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highApparentTempTime\":\"{station.HighAppTempThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowApparentTempVal\":\"{station.LowAppTempThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowApparentTempTime\":\"{station.LowAppTempThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highFeelsLikeVal\":\"{station.HighFeelsLikeThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highFeelsLikeTime\":\"{station.HighFeelsLikeThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowFeelsLikeVal\":\"{station.LowFeelsLikeThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowFeelsLikeTime\":\"{station.LowFeelsLikeThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highHumidexVal\":\"{station.HighHumidexThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highHumidexTime\":\"{station.HighHumidexThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowWindChillVal\":\"{station.LowWindChillThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowWindChillTime\":\"{station.LowWindChillThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highHeatIndexVal\":\"{station.HighHeatIndexThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highHeatIndexTime\":\"{station.HighHeatIndexThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highMinTempVal\":\"{station.HighMinTempThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highMinTempTime\":\"{station.HighMinTempThisMonthTS.ToString(dateStampFormat)}\",");
-			json.Append($"\"lowMaxTempVal\":\"{station.LowMaxTempThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowMaxTempTime\":\"{station.LowMaxTempThisMonthTS.ToString(dateStampFormat)}\",");
-			json.Append($"\"highDailyTempRangeVal\":\"{station.HighDailyTempRangeThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highDailyTempRangeTime\":\"{station.HighDailyTempRangeThisMonthTS.ToString(dateStampFormat)}\",");
-			json.Append($"\"lowDailyTempRangeVal\":\"{station.LowDailyTempRangeThisMonth.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowDailyTempRangeTime\":\"{station.LowDailyTempRangeThisMonthTS.ToString(dateStampFormat)}\",");
+			json.Append($"\"highTempVal\":\"{station.HighTempThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highTempTime\":\"{station.HighTempThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowTempVal\":\"{station.LowTempThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowTempTime\":\"{station.LowTempThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDewPointVal\":\"{station.HighDewpointThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDewPointTime\":\"{station.HighDewpointThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDewPointVal\":\"{station.LowDewpointThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDewPointTime\":\"{station.LowDewpointThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highApparentTempVal\":\"{station.HighAppTempThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highApparentTempTime\":\"{station.HighAppTempThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowApparentTempVal\":\"{station.LowAppTempThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowApparentTempTime\":\"{station.LowAppTempThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highFeelsLikeVal\":\"{station.HighFeelsLikeThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highFeelsLikeTime\":\"{station.HighFeelsLikeThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowFeelsLikeVal\":\"{station.LowFeelsLikeThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowFeelsLikeTime\":\"{station.LowFeelsLikeThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHumidexVal\":\"{station.HighHumidexThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHumidexTime\":\"{station.HighHumidexThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowWindChillVal\":\"{station.LowWindChillThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowWindChillTime\":\"{station.LowWindChillThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHeatIndexVal\":\"{station.HighHeatIndexThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHeatIndexTime\":\"{station.HighHeatIndexThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMinTempVal\":\"{station.HighMinTempThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMinTempTime\":\"{station.HighMinTempThisMonthTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowMaxTempVal\":\"{station.LowMaxTempThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowMaxTempTime\":\"{station.LowMaxTempThisMonthTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyTempRangeVal\":\"{station.HighDailyTempRangeThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyTempRangeTime\":\"{station.HighDailyTempRangeThisMonthTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDailyTempRangeVal\":\"{station.LowDailyTempRangeThisMonth.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDailyTempRangeTime\":\"{station.LowDailyTempRangeThisMonthTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 			// Records - Humidty
-			json.Append($"\"highHumidityVal\":\"{station.HighHumidityThisMonth.ToString(cumulus.HumFormat)}\",");
-			json.Append($"\"highHumidityTime\":\"{station.HighHumidityThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowHumidityVal\":\"{station.LowHumidityThisMonth.ToString(cumulus.HumFormat)}\",");
-			json.Append($"\"lowHumidityTime\":\"{station.LowHumidityThisMonthTS.ToString(timeStampFormat)}\",");
+			json.Append($"\"highHumidityVal\":\"{station.HighHumidityThisMonth.ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHumidityTime\":\"{station.HighHumidityThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowHumidityVal\":\"{station.LowHumidityThisMonth.ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowHumidityTime\":\"{station.LowHumidityThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 			// Records - Pressure
-			json.Append($"\"highBarometerVal\":\"{station.HighPressThisMonth.ToString(cumulus.PressFormat)}\",");
-			json.Append($"\"highBarometerTime\":\"{station.HighPressThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowBarometerVal\":\"{station.LowPressThisMonth.ToString(cumulus.PressFormat)}\",");
-			json.Append($"\"lowBarometerTime\":\"{station.LowPressThisMonthTS.ToString(timeStampFormat)}\",");
+			json.Append($"\"highBarometerVal\":\"{station.HighPressThisMonth.ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highBarometerTime\":\"{station.HighPressThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowBarometerVal\":\"{station.LowPressThisMonth.ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowBarometerTime\":\"{station.LowPressThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 			// Records - Wind
-			json.Append($"\"highGustVal\":\"{station.HighGustThisMonth.ToString(cumulus.WindFormat)}\",");
-			json.Append($"\"highGustTime\":\"{station.HighGustThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highWindVal\":\"{station.HighWindThisMonth.ToString(cumulus.WindFormat)}\",");
-			json.Append($"\"highWindTime\":\"{station.HighWindThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highWindRunVal\":\"{station.HighDailyWindrunThisMonth.ToString(cumulus.WindRunFormat)}\",");
-			json.Append($"\"highWindRunTime\":\"{station.HighDailyWindrunThisMonthTS.ToString(dateStampFormat)}\",");
+			json.Append($"\"highGustVal\":\"{station.HighGustThisMonth.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highGustTime\":\"{station.HighGustThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindVal\":\"{station.HighWindThisMonth.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindTime\":\"{station.HighWindThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindRunVal\":\"{station.HighDailyWindrunThisMonth.ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindRunTime\":\"{station.HighDailyWindrunThisMonthTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 			// Records - Rain
-			json.Append($"\"highRainRateVal\":\"{station.HighRainThisMonth.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highRainRateTime\":\"{station.HighRainThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highHourlyRainVal\":\"{station.HighHourlyRainThisMonth.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highHourlyRainTime\":\"{station.HighHourlyRainThisMonthTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highDailyRainVal\":\"{station.HighDailyRainThisMonth.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highDailyRainTime\":\"{station.HighDailyRainThisMonthTS.ToString(dateStampFormat)}\",");
+			json.Append($"\"highRainRateVal\":\"{station.HighRainThisMonth.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highRainRateTime\":\"{station.HighRainThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHourlyRainVal\":\"{station.HighHourlyRainThisMonth.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHourlyRainTime\":\"{station.HighHourlyRainThisMonthTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyRainVal\":\"{station.HighDailyRainThisMonth.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyRainTime\":\"{station.HighDailyRainThisMonthTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"longestDryPeriodVal\":\"{station.LongestDryPeriodThisMonth}\",");
-			json.Append($"\"longestDryPeriodTime\":\"{station.LongestDryPeriodThisMonthTS.ToString(dateStampFormat)}\",");
+			json.Append($"\"longestDryPeriodTime\":\"{station.LongestDryPeriodThisMonthTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"longestWetPeriodVal\":\"{station.LongestWetPeriodThisMonth}\",");
-			json.Append($"\"longestWetPeriodTime\":\"{station.LongestWetPeriodThisMonthTS.ToString(dateStampFormat)}\"");
+			json.Append($"\"longestWetPeriodTime\":\"{station.LongestWetPeriodThisMonthTS.ToString(dateStampFormat, cumulus.cmxCulture)}\"");
 
 			json.Append("}");
 
@@ -2720,102 +2720,102 @@ namespace CumulusMX
 				switch (field)
 				{
 					case "highTempVal":
-						station.HighTempThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighTempThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highTempTime":
 						dt = value.Split('+');
 						station.HighTempThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "lowTempVal":
-						station.LowTempThisMonth = double.Parse(value, cumulus.userCulture);
+						station.LowTempThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowTempTime":
 						dt = value.Split('+');
 						station.LowTempThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highDewPointVal":
-						station.HighDewpointThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighDewpointThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highDewPointTime":
 						dt = value.Split('+');
 						station.HighDewpointThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "lowDewPointVal":
-						station.LowDewpointThisMonth = double.Parse(value, cumulus.userCulture);
+						station.LowDewpointThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowDewPointTime":
 						dt = value.Split('+');
 						station.LowDewpointThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highApparentTempVal":
-						station.HighAppTempThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighAppTempThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highApparentTempTime":
 						dt = value.Split('+');
 						station.HighAppTempThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "lowApparentTempVal":
-						station.LowAppTempThisMonth = double.Parse(value, cumulus.userCulture);
+						station.LowAppTempThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowApparentTempTime":
 						dt = value.Split('+');
 						station.LowAppTempThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highFeelsLikeVal":
-						station.HighFeelsLikeThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighFeelsLikeThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highFeelsLikeTime":
 						dt = value.Split('+');
 						station.HighFeelsLikeThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "lowFeelsLikeVal":
-						station.LowFeelsLikeThisMonth = double.Parse(value, cumulus.userCulture);
+						station.LowFeelsLikeThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowFeelsLikeTime":
 						dt = value.Split('+');
 						station.LowFeelsLikeThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highHumidexVal":
-						station.HighHumidexThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighHumidexThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highHumidexTime":
 						dt = value.Split('+');
 						station.HighHumidexThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "lowWindChillVal":
-						station.LowWindChillThisMonth = double.Parse(value, cumulus.userCulture);
+						station.LowWindChillThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowWindChillTime":
 						dt = value.Split('+');
 						station.LowWindChillThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highHeatIndexVal":
-						station.HighHeatIndexThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighHeatIndexThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highHeatIndexTime":
 						dt = value.Split('+');
 						station.HighHeatIndexThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highMinTempVal":
-						station.HighMinTempThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighMinTempThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highMinTempTime":
 						station.HighMinTempThisMonthTS = ShortDateStrToDate(value);
 						break;
 					case "lowMaxTempVal":
-						station.LowMaxTempThisMonth = double.Parse(value, cumulus.userCulture);
+						station.LowMaxTempThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowMaxTempTime":
 						station.LowMaxTempThisMonthTS = ShortDateStrToDate(value);
 						break;
 					case "highDailyTempRangeVal":
-						station.HighDailyTempRangeThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighDailyTempRangeThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highDailyTempRangeTime":
 						station.HighDailyTempRangeThisMonthTS = ShortDateStrToDate(value);
 						break;
 					case "lowDailyTempRangeVal":
-						station.LowDailyTempRangeThisMonth = double.Parse(value, cumulus.userCulture);
+						station.LowDailyTempRangeThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowDailyTempRangeTime":
 						station.LowDailyTempRangeThisMonthTS = ShortDateStrToDate(value);
@@ -2835,55 +2835,55 @@ namespace CumulusMX
 						station.LowHumidityThisMonthTS =  LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highBarometerVal":
-						station.HighPressThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighPressThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highBarometerTime":
 						dt = value.Split('+');
 						station.HighPressThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "lowBarometerVal":
-						station.LowPressThisMonth = double.Parse(value, cumulus.userCulture);
+						station.LowPressThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowBarometerTime":
 						dt = value.Split('+');
 						station.LowPressThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highGustVal":
-						station.HighGustThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighGustThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highGustTime":
 						dt = value.Split('+');
 						station.HighGustThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highWindVal":
-						station.HighWindThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighWindThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highWindTime":
 						dt = value.Split('+');
 						station.HighWindThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highWindRunVal":
-						station.HighDailyWindrunThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighDailyWindrunThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highWindRunTime":
 						station.HighDailyWindrunThisMonthTS = ShortDateStrToDate(value);
 						break;
 					case "highRainRateVal":
-						station.HighRainThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighRainThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highRainRateTime":
 						dt = value.Split('+');
 						station.HighRainThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highHourlyRainVal":
-						station.HighHourlyRainThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighHourlyRainThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highHourlyRainTime":
 						dt = value.Split('+');
 						station.HighHourlyRainThisMonthTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highDailyRainVal":
-						station.HighDailyRainThisMonth = double.Parse(value, cumulus.userCulture);
+						station.HighDailyRainThisMonth = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highDailyRainTime":
 						station.HighDailyRainThisMonthTS = ShortDateStrToDate(value);
@@ -2920,66 +2920,66 @@ namespace CumulusMX
 
 			var json = new StringBuilder("{", 1800);
 			// Records - Temperature
-			json.Append($"\"highTempVal\":\"{station.HighTempThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highTempTime\":\"{station.HighTempThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowTempVal\":\"{station.LowTempThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowTempTime\":\"{station.LowTempThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highDewPointVal\":\"{station.HighDewpointThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highDewPointTime\":\"{station.HighDewpointThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowDewPointVal\":\"{station.LowDewpointThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowDewPointTime\":\"{station.LowDewpointThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highApparentTempVal\":\"{station.HighAppTempThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highApparentTempTime\":\"{station.HighAppTempThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowApparentTempVal\":\"{station.LowAppTempThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowApparentTempTime\":\"{station.LowAppTempThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highFeelsLikeVal\":\"{station.HighFeelsLikeThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highFeelsLikeTime\":\"{station.HighFeelsLikeThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowFeelsLikeVal\":\"{station.LowFeelsLikeThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowFeelsLikeTime\":\"{station.LowFeelsLikeThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highHumidexVal\":\"{station.HighHumidexThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highHumidexTime\":\"{station.HighHumidexThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowWindChillVal\":\"{station.LowWindChillThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowWindChillTime\":\"{station.LowWindChillThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highHeatIndexVal\":\"{station.HighHeatIndexThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highHeatIndexTime\":\"{station.HighHeatIndexThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highMinTempVal\":\"{station.HighMinTempThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highMinTempTime\":\"{station.HighMinTempThisYearTS.ToString(dateStampFormat)}\",");
-			json.Append($"\"lowMaxTempVal\":\"{station.LowMaxTempThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowMaxTempTime\":\"{station.LowMaxTempThisYearTS.ToString(dateStampFormat)}\",");
-			json.Append($"\"highDailyTempRangeVal\":\"{station.HighDailyTempRangeThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"highDailyTempRangeTime\":\"{station.HighDailyTempRangeThisYearTS.ToString(dateStampFormat)}\",");
-			json.Append($"\"lowDailyTempRangeVal\":\"{station.LowDailyTempRangeThisYear.ToString(cumulus.TempFormat)}\",");
-			json.Append($"\"lowDailyTempRangeTime\":\"{station.LowDailyTempRangeThisYearTS.ToString(dateStampFormat)}\",");
+			json.Append($"\"highTempVal\":\"{station.HighTempThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highTempTime\":\"{station.HighTempThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowTempVal\":\"{station.LowTempThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowTempTime\":\"{station.LowTempThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDewPointVal\":\"{station.HighDewpointThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDewPointTime\":\"{station.HighDewpointThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDewPointVal\":\"{station.LowDewpointThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDewPointTime\":\"{station.LowDewpointThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highApparentTempVal\":\"{station.HighAppTempThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highApparentTempTime\":\"{station.HighAppTempThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowApparentTempVal\":\"{station.LowAppTempThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowApparentTempTime\":\"{station.LowAppTempThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highFeelsLikeVal\":\"{station.HighFeelsLikeThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highFeelsLikeTime\":\"{station.HighFeelsLikeThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowFeelsLikeVal\":\"{station.LowFeelsLikeThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowFeelsLikeTime\":\"{station.LowFeelsLikeThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHumidexVal\":\"{station.HighHumidexThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHumidexTime\":\"{station.HighHumidexThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowWindChillVal\":\"{station.LowWindChillThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowWindChillTime\":\"{station.LowWindChillThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHeatIndexVal\":\"{station.HighHeatIndexThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHeatIndexTime\":\"{station.HighHeatIndexThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMinTempVal\":\"{station.HighMinTempThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMinTempTime\":\"{station.HighMinTempThisYearTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowMaxTempVal\":\"{station.LowMaxTempThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowMaxTempTime\":\"{station.LowMaxTempThisYearTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyTempRangeVal\":\"{station.HighDailyTempRangeThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyTempRangeTime\":\"{station.HighDailyTempRangeThisYearTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDailyTempRangeVal\":\"{station.LowDailyTempRangeThisYear.ToString(cumulus.TempFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowDailyTempRangeTime\":\"{station.LowDailyTempRangeThisYearTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 			// Records - Humidty
-			json.Append($"\"highHumidityVal\":\"{station.HighHumidityThisYear.ToString(cumulus.HumFormat)}\",");
-			json.Append($"\"highHumidityTime\":\"{station.HighHumidityThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowHumidityVal\":\"{station.LowHumidityThisYear.ToString(cumulus.HumFormat)}\",");
-			json.Append($"\"lowHumidityTime\":\"{station.LowHumidityThisYearTS.ToString(timeStampFormat)}\",");
+			json.Append($"\"highHumidityVal\":\"{station.HighHumidityThisYear.ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHumidityTime\":\"{station.HighHumidityThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowHumidityVal\":\"{station.LowHumidityThisYear.ToString(cumulus.HumFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowHumidityTime\":\"{station.LowHumidityThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 			// Records - Pressure
-			json.Append($"\"highBarometerVal\":\"{station.HighPressThisYear.ToString(cumulus.PressFormat)}\",");
-			json.Append($"\"highBarometerTime\":\"{station.HighPressThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"lowBarometerVal\":\"{station.LowPressThisYear.ToString(cumulus.PressFormat)}\",");
-			json.Append($"\"lowBarometerTime\":\"{station.LowPressThisYearTS.ToString(timeStampFormat)}\",");
+			json.Append($"\"highBarometerVal\":\"{station.HighPressThisYear.ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highBarometerTime\":\"{station.HighPressThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowBarometerVal\":\"{station.LowPressThisYear.ToString(cumulus.PressFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"lowBarometerTime\":\"{station.LowPressThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
 			// Records - Wind
-			json.Append($"\"highGustVal\":\"{station.HighGustThisYear.ToString(cumulus.WindFormat)}\",");
-			json.Append($"\"highGustTime\":\"{station.HighGustThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highWindVal\":\"{station.HighWindThisYear.ToString(cumulus.WindFormat)}\",");
-			json.Append($"\"highWindTime\":\"{station.HighWindThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highWindRunVal\":\"{station.HighDailyWindrunThisYear.ToString(cumulus.WindRunFormat)}\",");
-			json.Append($"\"highWindRunTime\":\"{station.HighDailyWindrunThisYearTS.ToString(dateStampFormat)}\",");
+			json.Append($"\"highGustVal\":\"{station.HighGustThisYear.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highGustTime\":\"{station.HighGustThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindVal\":\"{station.HighWindThisYear.ToString(cumulus.WindFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindTime\":\"{station.HighWindThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindRunVal\":\"{station.HighDailyWindrunThisYear.ToString(cumulus.WindRunFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highWindRunTime\":\"{station.HighDailyWindrunThisYearTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 			// Records - Rain
-			json.Append($"\"highRainRateVal\":\"{station.HighRainThisYear.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highRainRateTime\":\"{station.HighRainThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highHourlyRainVal\":\"{station.HighHourlyRainThisYear.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highHourlyRainTime\":\"{station.HighHourlyRainThisYearTS.ToString(timeStampFormat)}\",");
-			json.Append($"\"highDailyRainVal\":\"{station.HighDailyRainThisYear.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highDailyRainTime\":\"{station.HighDailyRainThisYearTS.ToString(dateStampFormat)}\",");
-			json.Append($"\"highMonthlyRainVal\":\"{station.HighMonthlyRainThisYear.ToString(cumulus.RainFormat)}\",");
-			json.Append($"\"highMonthlyRainTime\":\"{station.HighMonthlyRainThisYearTS.ToString("yyyy/MM")}\",");
+			json.Append($"\"highRainRateVal\":\"{station.HighRainThisYear.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highRainRateTime\":\"{station.HighRainThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHourlyRainVal\":\"{station.HighHourlyRainThisYear.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highHourlyRainTime\":\"{station.HighHourlyRainThisYearTS.ToString(timeStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyRainVal\":\"{station.HighDailyRainThisYear.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highDailyRainTime\":\"{station.HighDailyRainThisYearTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMonthlyRainVal\":\"{station.HighMonthlyRainThisYear.ToString(cumulus.RainFormat, cumulus.cmxCulture)}\",");
+			json.Append($"\"highMonthlyRainTime\":\"{station.HighMonthlyRainThisYearTS.ToString("yyyy/MM", cumulus.cmxCulture)}\",");
 			json.Append($"\"longestDryPeriodVal\":\"{station.LongestDryPeriodThisYear}\",");
-			json.Append($"\"longestDryPeriodTime\":\"{station.LongestDryPeriodThisYearTS.ToString(dateStampFormat)}\",");
+			json.Append($"\"longestDryPeriodTime\":\"{station.LongestDryPeriodThisYearTS.ToString(dateStampFormat, cumulus.cmxCulture)}\",");
 			json.Append($"\"longestWetPeriodVal\":\"{station.LongestWetPeriodThisYear}\",");
-			json.Append($"\"longestWetPeriodTime\":\"{station.LongestWetPeriodThisYearTS.ToString(dateStampFormat)}\"");
+			json.Append($"\"longestWetPeriodTime\":\"{station.LongestWetPeriodThisYearTS.ToString(dateStampFormat, cumulus.cmxCulture)}\"");
 
 			json.Append("}");
 
@@ -3006,56 +3006,56 @@ namespace CumulusMX
 				switch (field)
 				{
 					case "highTempVal":
-						station.HighTempThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighTempThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highTempTime":
 						dt = value.Split('+');
 						station.HighTempThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "lowTempVal":
-						station.LowTempThisYear = double.Parse(value, cumulus.userCulture);
+						station.LowTempThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowTempTime":
 						dt = value.Split('+');
 						station.LowTempThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highDewPointVal":
-						station.HighDewpointThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighDewpointThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highDewPointTime":
 						dt = value.Split('+');
 						station.HighDewpointThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "lowDewPointVal":
-						station.LowDewpointThisYear = double.Parse(value, cumulus.userCulture);
+						station.LowDewpointThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowDewPointTime":
 						dt = value.Split('+');
 						station.LowDewpointThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highApparentTempVal":
-						station.HighAppTempThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighAppTempThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highApparentTempTime":
 						dt = value.Split('+');
 						station.HighAppTempThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "lowApparentTempVal":
-						station.LowAppTempThisYear = double.Parse(value, cumulus.userCulture);
+						station.LowAppTempThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowApparentTempTime":
 						dt = value.Split('+');
 						station.LowAppTempThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highFeelsLikeVal":
-						station.HighFeelsLikeThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighFeelsLikeThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highFeelsLikeTime":
 						dt = value.Split('+');
 						station.HighFeelsLikeThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "lowFeelsLikeVal":
-						station.LowFeelsLikeThisYear = double.Parse(value, cumulus.userCulture);
+						station.LowFeelsLikeThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowFeelsLikeTime":
 						dt = value.Split('+');
@@ -3069,39 +3069,39 @@ namespace CumulusMX
 						station.HighHumidexThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "lowWindChillVal":
-						station.LowWindChillThisYear = double.Parse(value, cumulus.userCulture);
+						station.LowWindChillThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowWindChillTime":
 						dt = value.Split('+');
 						station.LowWindChillThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highHeatIndexVal":
-						station.HighHeatIndexThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighHeatIndexThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highHeatIndexTime":
 						dt = value.Split('+');
 						station.HighHeatIndexThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highMinTempVal":
-						station.HighMinTempThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighMinTempThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highMinTempTime":
 						station.HighMinTempThisYearTS = ShortDateStrToDate(value);
 						break;
 					case "lowMaxTempVal":
-						station.LowMaxTempThisYear = double.Parse(value, cumulus.userCulture);
+						station.LowMaxTempThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowMaxTempTime":
 						station.LowMaxTempThisYearTS = ShortDateStrToDate(value);
 						break;
 					case "highDailyTempRangeVal":
-						station.HighDailyTempRangeThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighDailyTempRangeThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highDailyTempRangeTime":
 						station.HighDailyTempRangeThisYearTS = ShortDateStrToDate(value);
 						break;
 					case "lowDailyTempRangeVal":
-						station.LowDailyTempRangeThisYear = double.Parse(value, cumulus.userCulture);
+						station.LowDailyTempRangeThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowDailyTempRangeTime":
 						station.LowDailyTempRangeThisYearTS = ShortDateStrToDate(value);
@@ -3121,55 +3121,55 @@ namespace CumulusMX
 						station.LowHumidityThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highBarometerVal":
-						station.HighPressThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighPressThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highBarometerTime":
 						dt = value.Split('+');
 						station.HighPressThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "lowBarometerVal":
-						station.LowPressThisYear = double.Parse(value, cumulus.userCulture);
+						station.LowPressThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "lowBarometerTime":
 						dt = value.Split('+');
 						station.LowPressThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highGustVal":
-						station.HighGustThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighGustThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highGustTime":
 						dt = value.Split('+');
 						station.HighGustThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highWindVal":
-						station.HighWindThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighWindThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highWindTime":
 						dt = value.Split('+');
 						station.HighWindThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highWindRunVal":
-						station.HighDailyWindrunThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighDailyWindrunThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highWindRunTime":
 						station.HighDailyWindrunThisYearTS = ShortDateStrToDate(value);
 						break;
 					case "highRainRateVal":
-						station.HighRainThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighRainThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highRainRateTime":
 						dt = value.Split('+');
 						station.HighRainThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highHourlyRainVal":
-						station.HighHourlyRainThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighHourlyRainThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highHourlyRainTime":
 						dt = value.Split('+');
 						station.HighHourlyRainThisYearTS = LongDateStrToDate(dt[0], dt[1]);
 						break;
 					case "highDailyRainVal":
-						station.HighDailyRainThisYear = double.Parse(value, cumulus.userCulture);
+						station.HighDailyRainThisYear = double.Parse(value, cumulus.cmxCulture);
 						break;
 					case "highDailyRainTime":
 						station.HighDailyRainThisYearTS = ShortDateStrToDate(value);
@@ -3178,7 +3178,7 @@ namespace CumulusMX
 						station.HighMonthlyRainThisYear = double.Parse(value, cumulus.userCulture);
 						break;
 					case "highMonthlyRainTime":
-						var dat = value.Split(cumulus.userCulture.DateTimeFormat.DateSeparator[0]);  // yyyy-MM
+						var dat = value.Split(cumulus.cmxCulture.DateTimeFormat.DateSeparator[0]);  // yyyy-MM
 						station.HighMonthlyRainThisYearTS = new DateTime(int.Parse(dat[0]), int.Parse(dat[1]), 1);
 						break;
 					case "longestDryPeriodVal":
@@ -3301,9 +3301,9 @@ namespace CumulusMX
 
 			var newData = JsonConvert.DeserializeObject<DatalogEditor>(text);
 
-			// date will be in format "yyyy-MM"
-			int month = Convert.ToInt32(newData.Month.Split('-')[1]);
-			int year = Convert.ToInt32(newData.Month.Split('-')[0]);
+			// date will be in format "MM-yyyy"
+			int month = Convert.ToInt32(newData.Month.Split('-')[0]);
+			int year = Convert.ToInt32(newData.Month.Split('-')[1]);
 
 			// Get a timestamp, use 15th day to avoid wrap issues
 			var ts = new DateTime(year, month, 15);

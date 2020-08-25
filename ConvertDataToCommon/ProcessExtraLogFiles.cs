@@ -94,18 +94,45 @@ namespace ConvertDataToCommon
 			//foreach(var field in st)
 			for (var i = 0; i < st.Count; i++)
 			{
-				if (i == 0) // date
+				switch (i)
 				{
-					// change date order from dd/mm/yy to dd-mm-yy
-					st[i] = st[i].Replace(Program.oldDateSep, Program.newDateSep);
-				}
-				else if (i == 1) // time
-				{
-					st[i] = st[i].Replace(Program.oldTimeSep, Program.newTimeSep);
-				}
-				else // all the other fields
-				{
-					st[i] = st[i].Replace(Program.oldDecimal, Program.newDecimal);
+					case 0: // date
+						DateTime.Parse(st[i]);
+						// change date from dd/mm/yy to dd-mm-yy
+						st[i] = st[i].Replace(Program.oldDateSep, Program.newDateSep);
+						break;
+					case 1: // time
+						DateTime.Parse(st[i]);
+						st[i] = st[i].Replace(Program.oldTimeSep, Program.newTimeSep);
+						break;
+					// decimals
+					case int n when (
+						(n >= 2 && n <= 11) ||  // temp 1-10
+						(n >= 22 && n <= 35) || // dp 1-10, soil temp 1-4
+						(n == 40 || n == 41) || // leaf temp 1-2
+						(n >= 44 && n <= 55) || // soil temp 5-16
+						(n > 67)  // AQ 1-4, AQ av 1-4, user temp 1-8
+						):
+						if (st[i].Length > 0)
+						{
+							double.Parse(st[i]);
+							st[i] = st[i].Replace(Program.oldDecimal, Program.newDecimal);
+						}
+						break;
+					// integers
+					case int n when (
+						(n >= 12 && n <= 21) || // hum 1-10
+						(n >= 36 && n <= 40) || // soil moist 1-4
+						(n == 42 || n == 43) || // leaf wet 1-2
+						(n >= 56 && n <= 67)    // soil moist 5-16
+						):
+						if (st[i].Length > 0)
+						{
+							int.Parse(st[i]);
+						}
+						break;
+					default: // all the other fields
+						break;
 				}
 			}
 			return string.Join(Program.newListSep, st.ToArray());

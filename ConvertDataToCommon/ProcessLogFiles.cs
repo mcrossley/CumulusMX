@@ -72,7 +72,7 @@ namespace ConvertDataToCommon
 					} while (!sr.EndOfStream);
 				}
 
-				var newFile = $"{newPath}{year}-{month}-log.txt";
+				var newFile = $"{newPath}{year}{month}log.txt";
 				Console.WriteLine($"   Writing new monthly log file: {newFile}");
 				File.WriteAllLines(newFile, newContent);
 
@@ -93,18 +93,56 @@ namespace ConvertDataToCommon
 			//foreach(var field in st)
 			for (var i = 0; i < st.Count; i++)
 			{
-				if (i == 0) // date
+				switch (i)
 				{
-					// change date order from dd/mm/yy to dd-mm-yy
-					st[i] = st[i].Replace(Program.oldDateSep, Program.newDateSep);
-				}
-				else if (i == 1) // time
-				{
-					st[i] = st[i].Replace(Program.oldTimeSep, Program.newTimeSep);
-				}
-				else // all the other fields
-				{
-					st[i] = st[i].Replace(Program.oldDecimal, Program.newDecimal);
+					case 0: // date
+						var dat = DateTime.Parse(st[i]);
+						year = dat.Year.ToString();
+						month = dat.Month.ToString("D2");
+						// change date from dd/mm/yy to dd-mm-yy
+						st[i] = st[i].Replace(Program.oldDateSep, Program.newDateSep);
+						break;
+					case 1: // time
+						DateTime.Parse(st[i]);
+						st[i] = st[i].Replace(Program.oldTimeSep, Program.newTimeSep);
+						break;
+					// decimals
+					case 2: // temp
+					case 4: // dp
+					case 5: // wind sp
+					case 6: // gust
+					case 8: // rrate
+					case 9: // rainfall
+					case 10: // press
+					case 11: // rcounter
+					case 12: // in temp
+					case 14: // gust
+					case 15: // WC
+					case 16: // HI
+					case 17: // UV
+					case 19: // evap
+					case 20: // ann evap
+					case 21: // app temp
+					case 23: // sunshine
+					case 25: // RG-11 rain
+					case 26: // rain midnight
+					case 27: // feels like
+					case 28: // humidex
+						double.Parse(st[i]);
+						st[i] = st[i].Replace(Program.oldDecimal, Program.newDecimal);
+						break;
+					// integers
+					case 3: // hum
+					case 7: // bearing
+					case 13: // in hum
+					case 18: // solar
+					case 22: // max solar
+					case 24: // bearing
+
+						int.Parse(st[i]);
+						break;
+					default: // all the other fields
+						break;
 				}
 			}
 			return string.Join(Program.newListSep, st.ToArray());

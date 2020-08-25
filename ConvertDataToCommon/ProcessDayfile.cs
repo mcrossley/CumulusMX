@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
+using System.Globalization;
 
 
 namespace ConvertDataToCommon
@@ -72,6 +72,7 @@ namespace ConvertDataToCommon
 					case 13: // hi rrate
 					case 18: // hi avg wind
 					case 20: // lo hum
+					case 22: // hi hum
 					case 26: // hi HI
 					case 28: // hi appT
 					case 30: // lo appT
@@ -83,10 +84,58 @@ namespace ConvertDataToCommon
 					case 45: // hi UV
 					case 47: // hi feels
 					case 49: // lo feels
-						st[i] = st[i].Replace(Program.oldTimeSep, Program.newTimeSep);
+					case 51: // hi humidex
+						if (st[i].Length > 0)
+						{
+							DateTime.Parse(st[i]);
+							st[i] = st[i].Replace(Program.oldTimeSep, Program.newTimeSep);
+						}
 						break;
-					default: // all the other fields
-						st[i] = st[i].Replace(Program.oldDecimal, Program.newDecimal);
+					// decimals
+					case 1: // hi gust
+					case 4: // lo temp
+					case 6: // hi temp
+					case 8: // lo press
+					case 10: // hi press
+					case 12: // hi rrate
+					case 14: // tot rain
+					case 15: // avg temp
+					case 16: // wind run
+					case 17: // hi avg wind
+					case 23: // tot evap
+					case 24: // sunshine
+					case 25: // hi HI
+					case 27: // hi appT
+					case 29: // lo appT
+					case 31: // hi hour rain
+					case 33: // lo WC
+					case 35: // hi DP
+					case 37: // lo DP
+					case 40: // heat DG
+					case 41: // cool DG
+					case 44: // hi UV
+					case 46: // hi feels
+					case 48: // lo feels
+					case 50: // hi humidex
+						if (st[i].Length > 0)
+						{
+							double.Parse(st[i]);
+							st[i] = st[i].Replace(Program.oldDecimal, Program.newDecimal);
+						}
+						break;
+					// integers
+					case 2: // gust bearing
+					case 19: // lo hum
+					case 21: // hi hum
+					case 39: // dom bearing
+					case 42: // hi solar
+						if (st[i].Length > 0)
+						{
+							int.Parse(st[i]);
+						}
+						break;
+					// all the other fields
+					default:
 						break;
 				}
 			}

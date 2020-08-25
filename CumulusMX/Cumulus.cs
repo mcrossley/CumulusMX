@@ -1026,10 +1026,9 @@ namespace CumulusMX
 			cmxCulture.DateTimeFormat.DateSeparator = "-";
 			cmxCulture.NumberFormat.NumberGroupSeparator = "";
 
-			// switch MX to using the common culture, and save the user culuture
 			userCulture = CultureInfo.DefaultThreadCurrentCulture;
-			CultureInfo.DefaultThreadCurrentCulture = cmxCulture;
-			CultureInfo.DefaultThreadCurrentUICulture = cmxCulture;
+			//CultureInfo.DefaultThreadCurrentCulture = cmxCulture;
+			//CultureInfo.DefaultThreadCurrentUICulture = cmxCulture;
 
 			DirectorySeparator = Path.DirectorySeparatorChar;
 
@@ -3472,7 +3471,7 @@ namespace CumulusMX
 			DavisConsoleHighGust = ini.GetValue("Station", "DavisConsoleHighGust", false);
 			VPrainGaugeType = ini.GetValue("Station", "VPrainGaugeType", -1);
 
-			RecordsBeganDate = ini.GetValue("Station", "StartDate", DateTime.Now.ToString(userCulture.DateTimeFormat.LongDatePattern, userCulture));
+			RecordsBeganDate = ini.GetValue("Station", "StartDate", DateTime.Now.ToString(userCulture.DateTimeFormat.LongDatePattern));
 
 			LogMessage("Cumulus start date: " + RecordsBeganDate);
 
@@ -5487,9 +5486,9 @@ namespace CumulusMX
 				}
 			}
 
-			var datestring = logfiledate.ToString("yyyy-MM");
+			var datestring = logfiledate.ToString("yyyyMM");
 
-			return Datapath + datestring + "-log.txt";
+			return Datapath + datestring + "log.txt";
 		}
 
 		public string GetExtraLogFileName(DateTime thedate)
@@ -5566,35 +5565,35 @@ namespace CumulusMX
 			using (FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read))
 			using (StreamWriter file = new StreamWriter(fs))
 			{
-				file.Write(timestamp.ToString("dd-MM-yy") + ListSeparator);
-				file.Write(timestamp.ToString("HH:mm") + ListSeparator);
-				file.Write(station.OutdoorTemperature.ToString(TempFormat) + ListSeparator);
+				file.Write(timestamp.ToString("dd-MM-yy", cmxCulture) + ListSeparator);
+				file.Write(timestamp.ToString("HH:mm", cmxCulture) + ListSeparator);
+				file.Write(station.OutdoorTemperature.ToString(TempFormat, cmxCulture) + ListSeparator);
 				file.Write(station.OutdoorHumidity.ToString() + ListSeparator);
-				file.Write(station.OutdoorDewpoint.ToString(TempFormat) + ListSeparator);
-				file.Write(station.WindAverage.ToString(WindFormat) + ListSeparator);
-				file.Write(station.RecentMaxGust.ToString(WindFormat) + ListSeparator);
+				file.Write(station.OutdoorDewpoint.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.WindAverage.ToString(WindFormat, cmxCulture) + ListSeparator);
+				file.Write(station.RecentMaxGust.ToString(WindFormat, cmxCulture) + ListSeparator);
 				file.Write(station.AvgBearing.ToString() + ListSeparator);
-				file.Write(station.RainRate.ToString(RainFormat) + ListSeparator);
-				file.Write(station.RainToday.ToString(RainFormat) + ListSeparator);
-				file.Write(station.Pressure.ToString(PressFormat) + ListSeparator);
-				file.Write(station.Raincounter.ToString(RainFormat) + ListSeparator);
-				file.Write(station.IndoorTemperature.ToString(TempFormat) + ListSeparator);
+				file.Write(station.RainRate.ToString(RainFormat, cmxCulture) + ListSeparator);
+				file.Write(station.RainToday.ToString(RainFormat, cmxCulture) + ListSeparator);
+				file.Write(station.Pressure.ToString(PressFormat, cmxCulture) + ListSeparator);
+				file.Write(station.Raincounter.ToString(RainFormat, cmxCulture) + ListSeparator);
+				file.Write(station.IndoorTemperature.ToString(TempFormat, cmxCulture) + ListSeparator);
 				file.Write(station.IndoorHumidity.ToString() + ListSeparator);
-				file.Write(station.WindLatest.ToString(WindFormat) + ListSeparator);
-				file.Write(station.WindChill.ToString(TempFormat) + ListSeparator);
-				file.Write(station.HeatIndex.ToString(TempFormat) + ListSeparator);
-				file.Write(station.UV.ToString(UVFormat) + ListSeparator);
+				file.Write(station.WindLatest.ToString(WindFormat, cmxCulture) + ListSeparator);
+				file.Write(station.WindChill.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.HeatIndex.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.UV.ToString(UVFormat, cmxCulture) + ListSeparator);
 				file.Write(station.SolarRad.ToString() + ListSeparator);
-				file.Write(station.ET.ToString(ETFormat) + ListSeparator);
-				file.Write(station.AnnualETTotal.ToString(ETFormat) + ListSeparator);
-				file.Write(station.ApparentTemperature.ToString(TempFormat) + ListSeparator);
+				file.Write(station.ET.ToString(ETFormat, cmxCulture) + ListSeparator);
+				file.Write(station.AnnualETTotal.ToString(ETFormat, cmxCulture) + ListSeparator);
+				file.Write(station.ApparentTemperature.ToString(TempFormat, cmxCulture) + ListSeparator);
 				file.Write((Math.Round(station.CurrentSolarMax)).ToString() + ListSeparator);
-				file.Write(station.SunshineHours.ToString(SunFormat) + ListSeparator);
+				file.Write(station.SunshineHours.ToString(SunFormat, cmxCulture) + ListSeparator);
 				file.Write(station.Bearing.ToString() + ListSeparator);
-				file.Write(station.RG11RainToday.ToString(RainFormat) + ListSeparator);
-				file.Write(station.RainSinceMidnight.ToString(RainFormat) + ListSeparator);
-				file.Write(station.FeelsLike.ToString(TempFormat) + ListSeparator);
-				file.WriteLine(station.Humidex.ToString(TempFormat));
+				file.Write(station.RG11RainToday.ToString(RainFormat, cmxCulture) + ListSeparator);
+				file.Write(station.RainSinceMidnight.ToString(RainFormat, cmxCulture) + ListSeparator);
+				file.Write(station.FeelsLike.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.WriteLine(station.Humidex.ToString(TempFormat, cmxCulture));
 				file.Close();
 			}
 
@@ -5612,36 +5611,36 @@ namespace CumulusMX
 			{
 				StringBuilder values = new StringBuilder(StartOfMonthlyInsertSQL, 600);
 				values.Append(" Values('");
-				values.Append(timestamp.ToString("yy-MM-dd HH:mm") + "',");
-				values.Append(station.OutdoorTemperature.ToString(TempFormat) + ",");
+				values.Append(timestamp.ToString("yy-MM-dd HH:mm", cmxCulture) + "',");
+				values.Append(station.OutdoorTemperature.ToString(TempFormat, cmxCulture) + ",");
 				values.Append(station.OutdoorHumidity + ",");
-				values.Append(station.OutdoorDewpoint.ToString(TempFormat) + ",");
-				values.Append(station.WindAverage.ToString(WindFormat) + ",");
-				values.Append(station.RecentMaxGust.ToString(WindFormat) + ",");
+				values.Append(station.OutdoorDewpoint.ToString(TempFormat, cmxCulture) + ",");
+				values.Append(station.WindAverage.ToString(WindFormat, cmxCulture) + ",");
+				values.Append(station.RecentMaxGust.ToString(WindFormat, cmxCulture) + ",");
 				values.Append(station.AvgBearing + ",");
-				values.Append(station.RainRate.ToString(RainFormat) + ",");
-				values.Append(station.RainToday.ToString(RainFormat) + ",");
-				values.Append(station.Pressure.ToString(PressFormat) + ",");
-				values.Append(station.Raincounter.ToString(RainFormat) + ",");
-				values.Append(station.IndoorTemperature.ToString(TempFormat) + ",");
+				values.Append(station.RainRate.ToString(RainFormat, cmxCulture) + ",");
+				values.Append(station.RainToday.ToString(RainFormat, cmxCulture) + ",");
+				values.Append(station.Pressure.ToString(PressFormat, cmxCulture) + ",");
+				values.Append(station.Raincounter.ToString(RainFormat, cmxCulture) + ",");
+				values.Append(station.IndoorTemperature.ToString(TempFormat, cmxCulture) + ",");
 				values.Append(station.IndoorHumidity + ",");
-				values.Append(station.WindLatest.ToString(WindFormat) + ",");
-				values.Append(station.WindChill.ToString(TempFormat) + ",");
-				values.Append(station.HeatIndex.ToString(TempFormat) + ",");
-				values.Append(station.UV.ToString(UVFormat) + ",");
+				values.Append(station.WindLatest.ToString(WindFormat, cmxCulture) + ",");
+				values.Append(station.WindChill.ToString(TempFormat, cmxCulture) + ",");
+				values.Append(station.HeatIndex.ToString(TempFormat, cmxCulture) + ",");
+				values.Append(station.UV.ToString(UVFormat, cmxCulture) + ",");
 				values.Append(station.SolarRad + ",");
-				values.Append(station.ET.ToString(ETFormat) + ",");
-				values.Append(station.AnnualETTotal.ToString(ETFormat) + ",");
-				values.Append(station.ApparentTemperature.ToString(TempFormat) + ",");
+				values.Append(station.ET.ToString(ETFormat, cmxCulture) + ",");
+				values.Append(station.AnnualETTotal.ToString(ETFormat, cmxCulture) + ",");
+				values.Append(station.ApparentTemperature.ToString(TempFormat, cmxCulture) + ",");
 				values.Append((Math.Round(station.CurrentSolarMax)) + ",");
-				values.Append(station.SunshineHours.ToString(SunFormat) + ",");
+				values.Append(station.SunshineHours.ToString(SunFormat, cmxCulture) + ",");
 				values.Append(station.Bearing + ",");
-				values.Append(station.RG11RainToday.ToString(RainFormat) + ",");
-				values.Append(station.RainSinceMidnight.ToString(RainFormat) + ",'");
+				values.Append(station.RG11RainToday.ToString(RainFormat, cmxCulture) + ",");
+				values.Append(station.RainSinceMidnight.ToString(RainFormat, cmxCulture) + ",'");
 				values.Append(station.CompassPoint(station.AvgBearing) + "','");
 				values.Append(station.CompassPoint(station.Bearing) + "',");
-				values.Append(station.FeelsLike.ToString(TempFormat) + ",");
-				values.Append(station.Humidex.ToString(TempFormat));
+				values.Append(station.FeelsLike.ToString(TempFormat, cmxCulture) + ",");
+				values.Append(station.Humidex.ToString(TempFormat, cmxCulture));
 				values.Append(")");
 
 				string queryString = values.ToString();
@@ -5688,50 +5687,50 @@ namespace CumulusMX
 			using (FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read))
 			using (StreamWriter file = new StreamWriter(fs))
 			{
-				file.Write(timestamp.ToString("dd-MM-yy") + ListSeparator);
-				file.Write(timestamp.ToString("HH:mm") + ListSeparator);
+				file.Write(timestamp.ToString("dd-MM-yy", cmxCulture) + ListSeparator);
+				file.Write(timestamp.ToString("HH:mm", cmxCulture) + ListSeparator);
 
 				for (int i = 1; i < 11; i++)
 				{
-					file.Write(station.ExtraTemp[i].ToString(TempFormat) + ListSeparator);
+					file.Write(station.ExtraTemp[i].ToString(TempFormat, cmxCulture) + ListSeparator);
 				}
 				for (int i = 1; i < 11; i++)
 				{
-					file.Write(station.ExtraHum[i].ToString(HumFormat) + ListSeparator);
+					file.Write(station.ExtraHum[i].ToString(HumFormat, cmxCulture) + ListSeparator);
 				}
 				for (int i = 1; i < 11; i++)
 				{
-					file.Write(station.ExtraDewPoint[i].ToString(TempFormat) + ListSeparator);
+					file.Write(station.ExtraDewPoint[i].ToString(TempFormat, cmxCulture) + ListSeparator);
 				}
 
-				file.Write(station.SoilTemp1.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp2.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp3.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp4.ToString(TempFormat) + ListSeparator);
+				file.Write(station.SoilTemp1.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp2.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp3.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp4.ToString(TempFormat, cmxCulture) + ListSeparator);
 
 				file.Write(station.SoilMoisture1.ToString() + ListSeparator);
 				file.Write(station.SoilMoisture2.ToString() + ListSeparator);
 				file.Write(station.SoilMoisture3.ToString() + ListSeparator);
 				file.Write(station.SoilMoisture4.ToString() + ListSeparator);
 
-				file.Write(station.LeafTemp1.ToString(TempFormat) + ListSeparator);
-				file.Write(station.LeafTemp2.ToString(TempFormat) + ListSeparator);
+				file.Write(station.LeafTemp1.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.LeafTemp2.ToString(TempFormat, cmxCulture) + ListSeparator);
 
 				file.Write(station.LeafWetness1.ToString() + ListSeparator);
 				file.Write(station.LeafWetness2.ToString() + ListSeparator);
 
-				file.Write(station.SoilTemp5.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp6.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp7.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp8.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp9.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp10.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp11.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp12.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp13.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp14.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp15.ToString(TempFormat) + ListSeparator);
-				file.Write(station.SoilTemp16.ToString(TempFormat) + ListSeparator);
+				file.Write(station.SoilTemp5.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp6.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp7.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp8.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp9.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp10.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp11.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp12.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp13.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp14.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp15.ToString(TempFormat, cmxCulture) + ListSeparator);
+				file.Write(station.SoilTemp16.ToString(TempFormat, cmxCulture) + ListSeparator);
 
 				file.Write(station.SoilMoisture5.ToString() + ListSeparator);
 				file.Write(station.SoilMoisture6.ToString() + ListSeparator);
@@ -5746,20 +5745,20 @@ namespace CumulusMX
 				file.Write(station.SoilMoisture15.ToString() + ListSeparator);
 				file.Write(station.SoilMoisture16.ToString() + ListSeparator);
 
-				file.Write(station.AirQuality1.ToString(AirQualityFormat) + ListSeparator);
-				file.Write(station.AirQuality2.ToString(AirQualityFormat) + ListSeparator);
-				file.Write(station.AirQuality3.ToString(AirQualityFormat) + ListSeparator);
-				file.Write(station.AirQuality4.ToString(AirQualityFormat) + ListSeparator);
-				file.Write(station.AirQualityAvg1.ToString(AirQualityFormat) + ListSeparator);
-				file.Write(station.AirQualityAvg2.ToString(AirQualityFormat) + ListSeparator);
-				file.Write(station.AirQualityAvg3.ToString(AirQualityFormat) + ListSeparator);
-				file.Write(station.AirQualityAvg4.ToString(AirQualityFormat) + ListSeparator);
+				file.Write(station.AirQuality1.ToString(AirQualityFormat, cmxCulture) + ListSeparator);
+				file.Write(station.AirQuality2.ToString(AirQualityFormat, cmxCulture) + ListSeparator);
+				file.Write(station.AirQuality3.ToString(AirQualityFormat, cmxCulture) + ListSeparator);
+				file.Write(station.AirQuality4.ToString(AirQualityFormat, cmxCulture) + ListSeparator);
+				file.Write(station.AirQualityAvg1.ToString(AirQualityFormat, cmxCulture) + ListSeparator);
+				file.Write(station.AirQualityAvg2.ToString(AirQualityFormat, cmxCulture) + ListSeparator);
+				file.Write(station.AirQualityAvg3.ToString(AirQualityFormat, cmxCulture) + ListSeparator);
+				file.Write(station.AirQualityAvg4.ToString(AirQualityFormat, cmxCulture) + ListSeparator);
 
 				for (int i = 1; i < 8; i++)
 				{
-					file.Write(station.UserTemp[i].ToString(TempFormat) + ListSeparator);
+					file.Write(station.UserTemp[i].ToString(TempFormat, cmxCulture) + ListSeparator);
 				}
-				file.Write(station.UserTemp[8].ToString(TempFormat));
+				file.Write(station.UserTemp[8].ToString(TempFormat, cmxCulture));
 
 				file.WriteLine();
 				file.Close();
