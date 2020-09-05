@@ -87,15 +87,9 @@
 - MXdiags log files are now rotated if they exceed 20MB in size, 15 log files are now retained
 - For Davis VP2 stations, setting the console clock now checks the console time and only sets it if it
   differs from the current time by greater than 60 seconds
-<<<<<<< HEAD
-- Davis VP2 stations protocols have been extensively rewritten to make them more efficent and less timing sensitive
-  Third party IP loggers such as meteobridge and WiFi logger should now work more reliabily
-- Enables PSK authentication when using SFTP. Options are now Password, PSK, PSK with Password fallback
-=======
 - Davis VP2 stations protocols have been extensively rewritten to make them more efficient and less timing sensitive
   Third party IP loggers such as meteobridge and WiFi logger should now work more reliably
 - Enables PSK authentication when using SFTP. Options are now Password, PSK, PSK with Password fall-back
->>>>>>> b17bff878fa881a260c42067ed067c72c814bf90
 	New Cumulus.ini entries...
 	[FTP site]
 	SshFtpAuthentication=password      [password (default), psk, password_psk]
