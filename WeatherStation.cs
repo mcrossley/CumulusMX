@@ -334,8 +334,8 @@ namespace CumulusMX
 
 		private readonly DateTime versionCheckTime;
 
-		//public SQLiteConnection RecentDataDb;
-		public SQLiteAsyncConnection RecentDataDb;
+		public SQLiteConnection Database;
+		public SQLiteAsyncConnection DatabaseAsync;
 		// Extra sensors
 
 		public double SolarElevation;
@@ -372,6 +372,12 @@ namespace CumulusMX
 			WindRecent = new TWindRecent[MaxWindRecent];
 			WindVec = new TWindVec[MaxWindRecent];
 
+			Database = new SQLiteConnection(cumulus.dbfile, true);
+			DatabaseAsync = new SQLiteAsyncConnection(cumulus.dbfile, true);
+
+			Database.CreateTable<RecentData>();
+			Database.CreateTable<DayData>();
+
 			ReadTodayFile();
 			ReadYesterdayFile();
 			ReadAlltimeIniFile();
@@ -383,12 +389,8 @@ namespace CumulusMX
 			GetRainCounter();
 			GetRainFallTotals();
 
-			//RecentDataDb = new SQLiteConnection(cumulus.dbfile, true);
-			RecentDataDb = new SQLiteAsyncConnection(cumulus.dbfile, true);
-
-			RecentDataDb.CreateTableAsync<RecentData>();
-			// switch off full synchronisation - the data base isn't that critical and we get a performance boost
-			RecentDataDb.ExecuteAsync("PRAGMA synchronous = NORMAL");
+			// switch off full synchronisation - we get a performance boost and its fine for non-shared db's
+			DatabaseAsync.ExecuteAsync("PRAGMA synchronous = NORMAL");
 
 			var rnd = new Random();
 			versionCheckTime = new DateTime(1, 1, 1, rnd.Next(0, 23), rnd.Next(0, 59), 0);
@@ -1538,7 +1540,7 @@ namespace CumulusMX
 		{
 			var deleteTime = ts.AddDays(-7);
 
-			await RecentDataDb.ExecuteAsync("delete from RecentData where Timestamp < ?", deleteTime);
+			await DatabaseAsync.ExecuteAsync("delete from RecentData where Timestamp < ?", deleteTime);
 		}
 
 		private void ClearAlarms()
@@ -2046,7 +2048,7 @@ namespace CumulusMX
 			var dateFrom = date.AddHours(-1);
 
 			// get the min and max temps, humidity, pressure, and mean solar rad and wind speed for the last hour
-			var result = await RecentDataDb.QueryAsync<EtData>("select max(OutsideTemp) maxTemp, min(OutsideTemp) minTemp, max(Humidity) maxHum, min(Humidity) minHum, max(Pressure) maxPress, min(Pressure) minPress, avg(SolarRad) avgSol, avg(WindSpeed) avgWind from RecentData where Timestamp >= ? order by Timestamp", dateFrom);
+			var result = await DatabaseAsync.QueryAsync<EtData>("select max(OutsideTemp) maxTemp, min(OutsideTemp) minTemp, max(Humidity) maxHum, min(Humidity) minHum, max(Pressure) maxPress, min(Pressure) minPress, avg(SolarRad) avgSol, avg(WindSpeed) avgWind from RecentData where Timestamp >= ? order by Timestamp", dateFrom);
 
 			// finally calculate the ETo
 			var newET = MeteoLib.Evapotranspiration(
@@ -2213,7 +2215,7 @@ namespace CumulusMX
 
 			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 
-			var data = await RecentDataDb.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var data = await DatabaseAsync.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -2272,7 +2274,7 @@ namespace CumulusMX
 
 			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 
-			var data = await RecentDataDb.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var data = await DatabaseAsync.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -2302,7 +2304,7 @@ namespace CumulusMX
 
 			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 
-			var data = await RecentDataDb.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var data = await DatabaseAsync.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -2349,7 +2351,7 @@ namespace CumulusMX
 			var sbAvg = new StringBuilder("\"avgbearing\":[");
 			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 
-			var data = await RecentDataDb.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var data = await DatabaseAsync.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -2378,7 +2380,7 @@ namespace CumulusMX
 			var sbSpd = new StringBuilder("\"wspeed\":[");
 			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 
-			var data = await RecentDataDb.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var data = await DatabaseAsync.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -2406,7 +2408,7 @@ namespace CumulusMX
 			StringBuilder sb = new StringBuilder("{\"press\":[");
 			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 
-			var data = await RecentDataDb.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var data = await DatabaseAsync.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -2435,7 +2437,7 @@ namespace CumulusMX
 			var sbHumidex = new StringBuilder("\"humidex\":[");
 			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 
-			var data = await RecentDataDb.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var data = await DatabaseAsync.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -2561,7 +2563,7 @@ namespace CumulusMX
 			if (cumulus.StationOptions.PrimaryAqSensor > (int)Cumulus.PrimaryAqSensor.Undefined
 				&& cumulus.StationOptions.PrimaryAqSensor != (int)Cumulus.PrimaryAqSensor.AirLinkIndoor)
 			{
-				var data = await RecentDataDb.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+				var data = await DatabaseAsync.QueryAsync<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
 				for (var i = 0; i < data.Count; i++)
 				{
@@ -2606,7 +2608,7 @@ namespace CumulusMX
 		{
 			try
 			{
-				await RecentDataDb.InsertOrReplaceAsync(new RecentData()
+				await DatabaseAsync.InsertOrReplaceAsync(new RecentData()
 				{
 					Timestamp = timestamp,
 					DewPoint = dewpoint,
@@ -3593,7 +3595,7 @@ namespace CumulusMX
 
 					// update any data in the recent data db
 					var counterChange = Raincounter - prevraincounter;
-					await RecentDataDb.ExecuteAsync("update RecentData set raincounter=raincounter+?", counterChange);
+					await DatabaseAsync.ExecuteAsync("update RecentData set raincounter=raincounter+?", counterChange);
 
 					FirstChanceRainReset = false;
 				}
@@ -6004,7 +6006,7 @@ namespace CumulusMX
 		{
 			try
 			{
-				await RecentDataDb.ExecuteAsync("update RecentData set Pm2p5=?, Pm10=? where Timestamp=?", pm2p5, pm10, ts);
+				await DatabaseAsync.ExecuteAsync("update RecentData set Pm2p5=?, Pm10=? where Timestamp=?", pm2p5, pm10, ts);
 			}
 			catch (Exception ex)
 			{
@@ -6060,7 +6062,7 @@ namespace CumulusMX
 			try
 			{
 				// Do 3 hour trends
-				retVals = await RecentDataDb.QueryAsync<RecentData>("select * from RecentData where Timestamp >=? order by Timestamp", ts.AddHours(-3));
+				retVals = await DatabaseAsync.QueryAsync<RecentData>("select * from RecentData where Timestamp >=? order by Timestamp", ts.AddHours(-3));
 
 				if (retVals.Count > 1)
 				{
@@ -6085,7 +6087,7 @@ namespace CumulusMX
 				}
 
 				// Do 1 hour trends
-				retVals = await RecentDataDb.QueryAsync<RecentData>("select * from RecentData where Timestamp >=? order by Timestamp", ts.AddHours(-1));
+				retVals = await DatabaseAsync.QueryAsync<RecentData>("select * from RecentData where Timestamp >=? order by Timestamp", ts.AddHours(-1));
 
 				if (retVals.Count > 1)
 				{
@@ -6164,7 +6166,7 @@ namespace CumulusMX
 					DateTime fiveminutesago = ts.AddSeconds(-330);
 
 
-					var fiveminutedata = await RecentDataDb.QueryAsync<RecentData>("select * from RecentData where Timestamp >= ? order by Timestamp", fiveminutesago);
+					var fiveminutedata = await DatabaseAsync.QueryAsync<RecentData>("select * from RecentData where Timestamp >= ? order by Timestamp", fiveminutesago);
 
 					if (fiveminutedata.Count > 1)
 					{
@@ -6247,7 +6249,7 @@ namespace CumulusMX
 
 				// calculate and display rainfall in last 24 hour
 				var onedayago = ts.AddDays(-1);
-				retVals = await RecentDataDb.QueryAsync<RecentData>("select raincounter from RecentData where Timestamp >= ? order by Timestamp", onedayago);
+				retVals = await DatabaseAsync.QueryAsync<RecentData>("select raincounter from RecentData where Timestamp >= ? order by Timestamp", onedayago);
 
 				if (retVals.Count > 1)
 				{
@@ -6414,7 +6416,7 @@ namespace CumulusMX
 			// try and find the first entry in the database that has a "blank" AQ entry (PM2.5 or PM10 = -1)
 			try
 			{
-				var start = await RecentDataDb.ExecuteScalarAsync<DateTime>("select MAX(Timestamp) from RecentData");
+				var start = await DatabaseAsync.ExecuteScalarAsync<DateTime>("select MAX(Timestamp) from RecentData");
 				if (datefrom < start)
 					datefrom = start;
 			}
@@ -6506,7 +6508,7 @@ namespace CumulusMX
 
 						foreach (var row in rowsToAdd)
 						{
-							await RecentDataDb.InsertOrReplaceAsync(row);
+							await DatabaseAsync.InsertOrReplaceAsync(row);
 						}
 
 					}
@@ -6543,7 +6545,7 @@ namespace CumulusMX
 			// try and find the first entry in the database that has a "blank" AQ entry (PM2.5 or PM10 = -1)
 			try
 			{
-				var start = await RecentDataDb.ExecuteScalarAsync<DateTime>("select Timestamp from RecentData where Pm2p5=-1 or Pm10=-1 order by Timestamp limit 1");
+				var start = await DatabaseAsync.ExecuteScalarAsync<DateTime>("select Timestamp from RecentData where Pm2p5=-1 or Pm10=-1 order by Timestamp limit 1");
 				if (start == DateTime.MinValue)
 					return;
 
@@ -6680,7 +6682,7 @@ namespace CumulusMX
 			// We can now just query the recent data database as it has been populated from the logs
 			var datefrom = DateTime.Now.AddHours(-24);
 
-			var result = await RecentDataDb.QueryAsync<RecentData>("select WindGust, WindDir from RecentData where Timestamp >= ? order by Timestamp", datefrom);
+			var result = await DatabaseAsync.QueryAsync<RecentData>("select WindGust, WindDir from RecentData where Timestamp >= ? order by Timestamp", datefrom);
 
 			foreach (var rec in result)
 			{
@@ -6701,7 +6703,7 @@ namespace CumulusMX
 
 			Cumulus.LogMessage($"LoadLast3Hour: Attempting to load 3 hour data list");
 
-			var result = await RecentDataDb.QueryAsync<RecentData>("select * from RecentData where Timestamp >= ? and Timestamp <= ? order by Timestamp", datefrom, dateto);
+			var result = await DatabaseAsync.QueryAsync<RecentData>("select * from RecentData where Timestamp >= ? and Timestamp <= ? order by Timestamp", datefrom, dateto);
 
 			foreach (var rec in result)
 			{
@@ -6729,22 +6731,39 @@ namespace CumulusMX
 		public void LoadDayFile()
 		{
 			int addedEntries = 0;
+			DateTime start;
+
+			var rowsToAdd = new List<DayData>();
 
 			Cumulus.LogMessage($"LoadDayFile: Attempting to load the day file");
+
+			var watch = Stopwatch.StartNew();
+
+			// try and find the first entry in the database that has a "blank" AQ entry (PM2.5 or PM10 = -1)
+			try
+			{
+				start = DatabaseAsync.ExecuteScalarAsync<DateTime>("select MAX(Timestamp) from DayData").Result;
+			}
+			catch (Exception ex)
+			{
+				cumulus.LogExceptionMessage(ex, "LoadRecent: Error querying database for latest record");
+				start = DateTime.MinValue;
+			}
+
+
 			if (File.Exists(cumulus.DayFileName))
 			{
 				int linenum = 0;
 				int errorCount = 0;
 
-				var watch = Stopwatch.StartNew();
-
 				// Clear the existing list
-				DayFile.Clear();
+				//DayFile.Clear();
 
 				try
 				{
 					using (var sr = new StreamReader(cumulus.DayFileName))
 					{
+						var doMore = true;
 						do
 						{
 							try
@@ -6753,9 +6772,19 @@ namespace CumulusMX
 
 								linenum++;
 								string Line = sr.ReadLine();
-								DayFile.Add(ParseDayFileRec(Line));
 
-								addedEntries++;
+								var newRec = ParseDayFileRec2(Line);
+								if (newRec.Timestamp > start)
+								{
+									rowsToAdd.Add(newRec);
+									addedEntries++;
+								}
+								else
+								{
+									doMore = false;
+								}
+
+
 							}
 							catch (Exception ex)
 							{
@@ -6767,26 +6796,208 @@ namespace CumulusMX
 									Cumulus.LogMessage($"LoadDayFile: Too many errors reading {cumulus.DayFileName} - aborting load of daily data");
 								}
 							}
-						} while (!(sr.EndOfStream || errorCount >= 20));
+						} while (!(sr.EndOfStream || errorCount >= 20) && doMore);
 						sr.Close();
 					}
-
-					watch.Stop();
-					cumulus.LogDebugMessage($"LoadDayFile: Dayfile parse = {watch.ElapsedMilliseconds} ms");
-
 				}
 				catch (Exception ex)
 				{
 					cumulus.LogExceptionMessage(ex, $"LoadDayFile: Error at line {linenum} of {cumulus.DayFileName}");
 					Cumulus.LogMessage("Please edit the file to correct the error");
 				}
-				Cumulus.LogMessage($"LoadDayFile: Loaded {addedEntries} entries to recent daily data list");
+
+				// Anything to add to the data base?
+				try
+				{
+					Database.InsertAll(rowsToAdd);
+				}
+				catch (Exception ex)
+				{
+					cumulus.LogExceptionMessage(ex, "LoadDayFile: Error inserting day data into database");
+				}
+
+
+				watch.Stop();
+				cumulus.LogDebugMessage($"LoadDayFile: Dayfile load = {watch.ElapsedMilliseconds} ms");
+				Cumulus.LogMessage($"LoadDayFile: Loaded {addedEntries} entries to the day data table");
 			}
 			else
 			{
-				Cumulus.LogMessage("LoadDayFile: No Dayfile found - No entries added to recent daily data list");
+				Cumulus.LogMessage("LoadDayFile: No Dayfile found - No entries added to the day data table");
 			}
 		}
+
+
+		public DayData ParseDayFileRec2(string data)
+		{
+			var st = new List<string>(data.Split(','));
+			double varDbl;
+			int varInt;
+			int idx = 0;
+
+			var rec = new DayData();
+			try
+			{
+				rec.Timestamp = Utils.ddmmyyStrToDate(st[idx++]);
+				rec.WindGust = Convert.ToDouble(st[idx++], invNum);
+				rec.WindGustDir = Convert.ToInt32(st[idx++]);
+				rec.WindGustTime = Utils.AddTimeToDate(rec.Timestamp, st[idx++]);
+				rec.MinTemp = Convert.ToDouble(st[idx++], invNum);
+				rec.MinTempTime = Utils.AddTimeToDate(rec.Timestamp, st[idx++]);
+				rec.MaxTemp = Convert.ToDouble(st[idx++], invNum);
+				rec.MaxTempTime = Utils.AddTimeToDate(rec.Timestamp, st[idx++]);
+				rec.MinPress = Convert.ToDouble(st[idx++], invNum);
+				rec.MinPressTime = Utils.AddTimeToDate(rec.Timestamp, st[idx++]);
+				rec.MaxPress = Convert.ToDouble(st[idx++], invNum);
+				rec.MaxPressTime = Utils.AddTimeToDate(rec.Timestamp, st[idx++]);
+				rec.MaxRainRate = Convert.ToDouble(st[idx++], invNum);
+				rec.MaxRainRateTime = Utils.AddTimeToDate(rec.Timestamp, st[idx++]);
+				rec.Rainfall = Convert.ToDouble(st[idx++], invNum);
+				rec.AvgTemp = Convert.ToDouble(st[idx++], invNum);
+
+				if (st.Count > idx++ && double.TryParse(st[16], NumberStyles.Float, invNum, out varDbl))
+					rec.WindRun = varDbl;
+
+				if (st.Count > idx++ && double.TryParse(st[17], NumberStyles.Float, invNum, out varDbl))
+					rec.MaxAvgWind = varDbl;
+
+				if (st.Count > idx++ && st[18].Length == 5)
+					rec.MaxAvgWindTime = Utils.AddTimeToDate(rec.Timestamp, st[18]);
+
+				if (st.Count > idx++ && int.TryParse(st[19], out varInt))
+					rec.MinHum = varInt;
+				else
+					rec.MinHum = 9999;
+
+				if (st.Count > idx++ && st[20].Length == 5)
+					rec.MinHumTime = Utils.AddTimeToDate(rec.Timestamp, st[20]);
+
+				if (st.Count > idx++ && int.TryParse(st[21], out varInt))
+					rec.MaxHum = varInt;
+				else
+					rec.MaxHum = -9999;
+
+				if (st.Count > idx++ && st[22].Length == 5)
+					rec.MaxHumTime = Utils.AddTimeToDate(rec.Timestamp, st[22]);
+
+				if (st.Count > idx++ && double.TryParse(st[23], NumberStyles.Float, invNum, out varDbl))
+					rec.EVT = varDbl;
+
+				if (st.Count > idx++ && double.TryParse(st[24], NumberStyles.Float, invNum, out varDbl))
+					rec.SunHrs = varDbl;
+
+				if (st.Count > idx++ && double.TryParse(st[25], NumberStyles.Float, invNum, out varDbl))
+					rec.MaxHeatInd = varDbl;
+				else
+					rec.MaxHeatInd = -9999;
+
+				if (st.Count > idx++ && st[26].Length == 5)
+					rec.MaxHeatIndTime = Utils.AddTimeToDate(rec.Timestamp, st[26]);
+
+				if (st.Count > idx++ && double.TryParse(st[27], NumberStyles.Float, invNum, out varDbl))
+					rec.MaxAppTemp = varDbl;
+				else
+					rec.MaxAppTemp = -9999;
+
+				if (st.Count > idx++ && st[28].Length == 5)
+					rec.MaxAppTempTime = Utils.AddTimeToDate(rec.Timestamp, st[28]);
+
+				if (st.Count > idx++ && double.TryParse(st[29], NumberStyles.Float, invNum, out varDbl))
+					rec.MinAppTemp = varDbl;
+				else
+					rec.MinAppTemp = 9999;
+
+				if (st.Count > idx++ && st[30].Length == 5)
+					rec.MinAppTempTime = Utils.AddTimeToDate(rec.Timestamp, st[30]);
+
+				if (st.Count > idx++ && double.TryParse(st[31], NumberStyles.Float, invNum, out varDbl))
+					rec.MaxRainHr = varDbl;
+
+				if (st.Count > idx++ && st[32].Length == 5)
+					rec.MaxRainHrTime = Utils.AddTimeToDate(rec.Timestamp, st[32]);
+
+				if (st.Count > idx++ && double.TryParse(st[33], NumberStyles.Float, invNum, out varDbl))
+					rec.MinChill = varDbl;
+				else
+					rec.MinChill = 9999;
+
+				if (st.Count > idx++ && st[34].Length == 5)
+					rec.MinChillTime = Utils.AddTimeToDate(rec.Timestamp, st[34]);
+
+				if (st.Count > idx++ && double.TryParse(st[35], NumberStyles.Float, invNum, out varDbl))
+					rec.MaxDewPt = varDbl;
+				else
+					rec.MaxDewPt = -9999;
+
+				if (st.Count > idx++ && st[36].Length == 5)
+					rec.MaxDewPtTime = Utils.AddTimeToDate(rec.Timestamp, st[36]);
+
+				if (st.Count > idx++ && double.TryParse(st[37], NumberStyles.Float, invNum, out varDbl))
+					rec.MinDewPt = varDbl;
+				else
+					rec.MinDewPt = 9999;
+
+				if (st.Count > idx++ && st[38].Length == 5)
+					rec.MinDewPtTime = Utils.AddTimeToDate(rec.Timestamp, st[38]);
+
+				if (st.Count > idx++ && int.TryParse(st[39], out varInt))
+					rec.DominantDir = varInt;
+
+				if (st.Count > idx++ && double.TryParse(st[40], NumberStyles.Float, invNum, out varDbl))
+					rec.HeatDegDay = varDbl;
+
+				if (st.Count > idx++ && double.TryParse(st[41], NumberStyles.Float, invNum, out varDbl))
+					rec.CoolDegDay = varDbl;
+
+				if (st.Count > idx++ && int.TryParse(st[42], out varInt))
+					rec.MaxSolar = varInt;
+
+				if (st.Count > idx++ && st[43].Length == 5)
+					rec.MaxSolarTime = Utils.AddTimeToDate(rec.Timestamp, st[43]);
+
+				if (st.Count > idx++ && double.TryParse(st[44], NumberStyles.Float, invNum, out varDbl))
+					rec.MaxUV = varDbl;
+
+				if (st.Count > idx++ && st[45].Length == 5)
+					rec.MaxUVTime = Utils.AddTimeToDate(rec.Timestamp, st[45]);
+
+				if (st.Count > idx++ && double.TryParse(st[46], NumberStyles.Float, invNum, out varDbl))
+					rec.MaxFeels = varDbl;
+				else
+					rec.MaxFeels = -9999;
+
+				if (st.Count > idx++ && st[47].Length == 5)
+					rec.MaxFeelsTime = Utils.AddTimeToDate(rec.Timestamp, st[47]);
+
+				if (st.Count > idx++ && double.TryParse(st[48], NumberStyles.Float, invNum, out varDbl))
+					rec.MinFeels = varDbl;
+				else
+					rec.MinFeels = 9999;
+
+				if (st.Count > idx++ && st[49].Length == 5)
+					rec.MinFeelsTime = Utils.AddTimeToDate(rec.Timestamp, st[49]);
+
+				if (st.Count > idx++ && double.TryParse(st[50], NumberStyles.Float, invNum, out varDbl))
+					rec.MaxHumidex = varDbl;
+				else
+					rec.MaxHumidex = -9999;
+
+				if (st.Count > idx++ && st[51].Length == 5)
+					rec.MaxHumidexTime = Utils.AddTimeToDate(rec.Timestamp, st[51]);
+
+				if (st.Count > idx++ && double.TryParse(st[52], NumberStyles.Float, invNum, out varDbl))
+					rec.ChillHrs = varDbl;
+			}
+			catch (Exception ex)
+			{
+				cumulus.LogExceptionMessage(ex, $"ParseDayFileRec: Error at record {idx}");
+				var e = new Exception($"Error at record {idx} = \"{st[idx - 1]}\" - {ex.Message}");
+				throw e;
+			}
+			return rec;
+		}
+
+
 
 		// errors are caught by the caller
 		public dayfilerec ParseDayFileRec(string data)
@@ -11994,6 +12205,199 @@ namespace CumulusMX
 		public double Pm10 { get; set; }
 		public double RainRate { get; set; }
 	}
+
+	public class DayData
+	{
+		[PrimaryKey]
+		public DateTime Timestamp { get; set; }			// 0  Date
+		public double WindGust { get; set; }			// 1  Highest wind gust
+		public int WindGustDir { get; set; }			// 2  Bearing of highest wind gust
+		public DateTime WindGustTime { get; set; }		// 3  Time of highest wind gust
+		public double MinTemp { get; set; }             // 4  Minimum temperature
+		public DateTime MinTempTime { get; set; }       // 5  Time of minimum temperature
+		public double MaxTemp { get; set; }             // 6  Maximum temperature
+		public DateTime MaxTempTime { get; set; }       // 7  Time of maximum temperature
+		public double MinPress { get; set; }            // 8  Minimum sea level pressure
+		public DateTime MinPressTime { get; set; }      // 9  Time of minimum pressure
+		public double MaxPress { get; set; }            // 10  Maximum sea level pressure
+		public DateTime MaxPressTime { get; set; }      // 11  Time of maximum pressure
+		public double MaxRainRate { get; set; }         // 12  Maximum rainfall rate
+		public DateTime MaxRainRateTime { get; set; }   // 13  Time of maximum rainfall rate
+		public double Rainfall { get; set; }			// 14  Total rainfall for the day
+		public double AvgTemp { get; set; }             // 15  Average temperature for the day
+		public double WindRun { get; set; }				// 16  Total wind run
+		public double MaxAvgWind { get; set; }          // 17  Highest average wind speed
+		public DateTime MaxAvgWindTime { get; set; }	// 18  Time of highest average wind speed
+		public int MinHum { get; set; }                 // 19  Lowest humidity
+		public DateTime MinHumTime { get; set; }        // 20  Time of lowest humidity
+		public int MaxHum { get; set; }                 // 21  Highest humidity
+		public DateTime MaxHumTime { get; set; }        // 22  Time of highest humidity
+		public double EVT { get; set; }                 // 23  Total evapotranspiration
+		public double SunHrs { get; set; }              // 24  Total hours of sunshine
+		public double MaxHeatInd { get; set; }          // 25  High heat index
+		public DateTime MaxHeatIndTime { get; set; }    // 26  Time of high heat index
+		public double MaxAppTemp { get; set; }          // 27  High apparent temperature
+		public DateTime MaxAppTempTime { get; set; }    // 28  Time of high apparent temperature
+		public double MinAppTemp { get; set; }          // 29  Low apparent temperature
+		public DateTime MinAppTempTime { get; set; }    // 30  Time of low apparent temperature
+		public double MaxRainHr { get; set; }           // 31  High hourly rain
+		public DateTime MaxRainHrTime { get; set; }     // 32  Time of high hourly rain
+		public double MinChill { get; set; }            // 33  Low wind chill
+		public DateTime MinChillTime { get; set; }      // 34  Time of low wind chill
+		public double MaxDewPt { get; set; }            // 35  High dew point
+		public DateTime MaxDewPtTime { get; set; }      // 36  Time of high dew point
+		public double MinDewPt { get; set; }            // 37  Low dew point
+		public DateTime MinDewPtTime { get; set; }      // 38  Time of low dew point
+		public int DominantDir { get; set; }            // 39  Dominant wind bearing
+		public double HeatDegDay { get; set; }          // 40  Heating degree days
+		public double CoolDegDay { get; set; }          // 41  Cooling degree days
+		public int MaxSolar { get; set; }               // 42  High solar radiation
+		public DateTime MaxSolarTime { get; set; }      // 43  Time of high solar radiation
+		public double MaxUV { get; set; }               // 44  High UV Index
+		public DateTime MaxUVTime { get; set; }         // 45  Time of high UV Index
+		public double MaxFeels { get; set; }            // 46  High Feels like
+		public DateTime MaxFeelsTime { get; set; }      // 47  Time of high feels like
+		public double MinFeels { get; set; }            // 48  Low feels like
+		public DateTime MinFeelsTime { get; set; }      // 49  Time of low feels like
+		public double MaxHumidex { get; set; }          // 50  High Humidex
+		public DateTime MaxHumidexTime { get; set; }    // 51  Time of high Humidex
+		public double ChillHrs { get; set; }			// 52  Total chill hours
+
+		public override string ToString()
+		{
+			var invNum = CultureInfo.InvariantCulture.NumberFormat;
+			var invDate = CultureInfo.InvariantCulture.NumberFormat;
+			var timForm = "'\"'HH:mm'\"'";
+
+			var sb = new StringBuilder(350);
+			sb.Append(Timestamp.ToString("'\"'dd/MM/yy'\"'", invDate)).Append(',');
+			sb.Append(WindGust.ToString(Program.cumulus.WindFormat, invNum)).Append(',');
+			sb.Append(WindGustDir).Append(',');
+			sb.Append(WindGustTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MinTemp.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(MinTempTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MaxTemp.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(MaxTempTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MinPress.ToString(Program.cumulus.PressFormat, invNum)).Append(',');
+			sb.Append(MinPressTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MaxPress.ToString(Program.cumulus.PressFormat, invNum)).Append(',');
+			sb.Append(MaxPressTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MaxRainRate.ToString(Program.cumulus.RainFormat, invNum)).Append(',');
+			sb.Append(MaxRainRateTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(Rainfall.ToString(Program.cumulus.RainFormat, invNum)).Append(',');
+			sb.Append(AvgTemp.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(WindRun.ToString(Program.cumulus.WindRunFormat, invNum)).Append(',');
+			sb.Append(MaxAvgWind.ToString(Program.cumulus.WindFormat, invNum)).Append(',');
+			sb.Append(MaxAvgWindTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MinHum).Append(',');
+			sb.Append(MinHumTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MaxHum).Append(',');
+			sb.Append(MaxHumTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(EVT.ToString(Program.cumulus.ETFormat, invNum)).Append(',');
+			sb.Append(SunHrs.ToString(Program.cumulus.SunFormat, invNum)).Append(',');
+			sb.Append(MaxHeatInd.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(MaxHeatIndTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MaxAppTemp.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(MaxAppTempTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MinAppTemp.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(MinAppTempTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MaxRainHr.ToString(Program.cumulus.RainFormat, invNum)).Append(',');
+			sb.Append(MaxRainHrTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MinChill.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(MinChillTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MaxDewPt.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(MaxDewPtTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MinDewPt.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(MinDewPtTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(DominantDir).Append(',');
+			sb.Append(HeatDegDay.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(CoolDegDay.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(MaxSolar).Append(',');
+			sb.Append(MaxSolarTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MaxUV).Append(',');
+			sb.Append(MaxUVTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MaxFeels.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(MaxFeelsTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MinFeels.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(MinFeelsTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(MaxHumidex.ToString(Program.cumulus.TempFormat, invNum)).Append(',');
+			sb.Append(MaxHumidexTime.ToString(timForm, invDate)).Append(',');
+			sb.Append(ChillHrs.ToString("F1", invNum));
+
+			return sb.ToString();
+		}
+
+		public bool FromString(string[] data)
+		{
+			var invNum = CultureInfo.InvariantCulture.NumberFormat;
+			var invDate = CultureInfo.InvariantCulture.NumberFormat;
+			var timForm = "hh\\:mm";
+
+			if (data.Length != Cumulus.DayfileFields)
+			{
+				Cumulus.LogMessage($"Error parsing dayfile fileds. Expected {Cumulus.DayfileFields}, got {data.Length}");
+				return false;
+			}
+
+			Timestamp = DateTime.ParseExact(data[0], "dd/MM/yy", invDate);
+			WindGust = double.Parse(data[1], invNum);
+			WindGustDir = int.Parse(data[2]);
+			WindGustTime = Timestamp.Add(TimeSpan.ParseExact(data[3], timForm, invDate));
+			MinTemp = double.Parse(data[4], invNum);
+			MinTempTime = Timestamp.Add(TimeSpan.ParseExact(data[5], timForm, invDate));
+			MaxTemp = double.Parse(data[6], invNum);
+			MaxTempTime = Timestamp.Add(TimeSpan.ParseExact(data[7], timForm, invDate));
+			MinPress = double.Parse(data[8], invNum);
+			MinPressTime = Timestamp.Add(TimeSpan.ParseExact(data[9], timForm, invDate));
+			MaxPress = double.Parse(data[10], invNum);
+			MaxPressTime = Timestamp.Add(TimeSpan.ParseExact(data[11], timForm, invDate));
+			MaxRainRate = double.Parse(data[12], invNum);
+			MaxRainRateTime = Timestamp.Add(TimeSpan.ParseExact(data[13], timForm, invDate));
+			Rainfall = double.Parse(data[14], invNum);
+			AvgTemp = double.Parse(data[15], invNum);
+			WindRun = double.Parse(data[16], invNum);
+			MaxAvgWind = double.Parse(data[17], invNum);
+			MaxAvgWindTime = Timestamp.Add(TimeSpan.ParseExact(data[18], timForm, invDate));
+			MinHum = int.Parse(data[19]);
+			MinHumTime = Timestamp.Add(TimeSpan.ParseExact(data[20], timForm, invDate));
+			MaxHum = int.Parse(data[21]);
+			MaxHumTime = Timestamp.Add(TimeSpan.ParseExact(data[22], timForm, invDate));
+			EVT = double.Parse(data[23], invNum);
+			SunHrs = double.Parse(data[24], invNum);
+			MaxHeatInd = double.Parse(data[25], invNum);
+			MaxHeatIndTime = Timestamp.Add(TimeSpan.ParseExact(data[26], timForm, invDate));
+			MaxAppTemp = double.Parse(data[27], invNum);
+			MaxAppTempTime = Timestamp.Add(TimeSpan.ParseExact(data[28], timForm, invDate));
+			MinAppTemp = double.Parse(data[29], invNum);
+			MinAppTempTime = Timestamp.Add(TimeSpan.ParseExact(data[30], timForm, invDate));
+			MaxRainHr = double.Parse(data[31], invNum);
+			MaxRainHrTime = Timestamp.Add(TimeSpan.ParseExact(data[32], timForm, invDate));
+			MinChill = double.Parse(data[33], invNum);
+			MinChillTime = Timestamp.Add(TimeSpan.ParseExact(data[34], timForm, invDate));
+			MaxDewPt = double.Parse(data[35], invNum);
+			MaxDewPtTime = Timestamp.Add(TimeSpan.ParseExact(data[36], timForm, invDate));
+			MinDewPt = double.Parse(data[37], invNum);
+			MinDewPtTime = Timestamp.Add(TimeSpan.ParseExact(data[38], timForm, invDate));
+			DominantDir = int.Parse(data[39]);
+			HeatDegDay = double.Parse(data[40], invNum);
+			CoolDegDay = double.Parse(data[41], invNum);
+			MaxSolar = int.Parse(data[42]);
+			MaxSolarTime = Timestamp.Add(TimeSpan.ParseExact(data[43], timForm, invDate));
+			MaxUV = double.Parse(data[44], invNum);
+			MaxUVTime = Timestamp.Add(TimeSpan.ParseExact(data[45], timForm, invDate));
+			MaxFeels = double.Parse(data[46], invNum);
+			MaxFeelsTime = Timestamp.Add(TimeSpan.ParseExact(data[47], timForm, invDate));
+			MinFeels = double.Parse(data[48], invNum);
+			MinFeelsTime = Timestamp.Add(TimeSpan.ParseExact(data[49], timForm, invDate));
+			MaxHumidex = double.Parse(data[50], invNum);
+			MaxHumidexTime = Timestamp.Add(TimeSpan.ParseExact(data[51], timForm, invDate));
+			ChillHrs = double.Parse(data[52], invNum);
+
+			return true;
+		}
+
+	}
+
 
 	public class AvgData
 	{

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using EmbedIO;
 using ServiceStack;
 
@@ -34,10 +35,11 @@ namespace CumulusMX
 		/// <param name="start"></param>
 		/// <param name="length"></param>
 		/// <returns>JSON encoded section of the dayfile as a string</returns>
-		internal string GetDayfile(string draw, int start, int length)
+		internal async Task<string> GetDayfile(string draw, int start, int length)
 		{
 			try
 			{
+				/*
 				var allLines = File.ReadAllLines(cumulus.DayFileName);
 				var total = allLines.Length;
 				var lines = allLines.Skip(start).Take(length);
@@ -81,6 +83,33 @@ namespace CumulusMX
 				json.Append("]}");
 
 				return json.ToString();
+				*/
+
+
+				var allRows = await station.DatabaseAsync.QueryAsync<DayData>("select * from DayData order by Timestamp");
+				var total = allRows.Count;
+				var lines = allRows.Skip(start).Take(length);
+				var json = new StringBuilder(350 * lines.Count());
+
+				json.Append("{\"draw\":" + draw);
+				json.Append(",\"recordsTotal\":" + total);
+				json.Append(",\"recordsFiltered\":" + total);
+				json.Append(",\"data\":[");
+
+				var lineNum = start + 1; // Start is zero relative
+
+				foreach (var row in lines)
+				{
+					json.Append($"[{lineNum++},");
+					json.Append(row.ToString());
+					json.Append("],");
+				}
+
+				// trim last ","
+				json.Length--;
+				json.Append("]}");
+
+				return json.ToString();
 			}
 			catch (Exception ex)
 			{
@@ -102,6 +131,8 @@ namespace CumulusMX
 
 			var newData = text.FromJson<DayFileEditor>();
 
+
+
 			// read dayfile into a List
 			var lines = File.ReadAllLines(cumulus.DayFileName).ToList();
 
@@ -109,12 +140,8 @@ namespace CumulusMX
 
 			if (newData.action == "Edit")
 			{
-				// replace the edited line
-				var orgLine = lines[lineNum];
-				var newLine = string.Join(",", newData.data);
 
-				lines[lineNum] = newLine;
-
+				/*
 				// Update the in memory record
 				try
 				{
@@ -133,6 +160,27 @@ namespace CumulusMX
 
 					return "{\"errors\":{\"Logfile\":[\"<br>Failed, new data does not match required values\"]}}";
 				}
+				*/
+
+				// Update the MX database
+				var newRec = new DayData();
+				newRec.FromString(newData.data);
+
+				var updated = station.Database.Update(newRec);
+
+				// Update the dayfile
+				if (Program.cumulus.ProgramOptions.UpdateDayfile)
+				{
+					// replace the edited line
+					var orgLine = lines[lineNum];
+					var newLine = string.Join(",", newData.data);
+
+					lines[lineNum] = newLine;
+
+					// write dayfile back again
+					File.WriteAllLines(cumulus.DayFileName, lines);
+				}
+
 
 				// Update the MySQL record
 				if (!string.IsNullOrEmpty(cumulus.MySqlConnSettings.Server) &&
@@ -220,7 +268,6 @@ namespace CumulusMX
 						return "{\"errors\":{\"Dayfile\":[\"<br>Updated the dayfile OK\"], \"MySQL\":[\"<br>Failed to update MySQL\"]}, \"data\":" + thisrec.ToJson() + "}";
 					}
 				}
-
 			}
 			else if (newData.action == "Delete")
 			{

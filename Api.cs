@@ -218,7 +218,7 @@ namespace CumulusMX
 					switch (lastSegment)
 					{
 						case "dayfile":
-							await writer.WriteAsync(logfileEditor.GetDayfile(draw, start, length));
+							await writer.WriteAsync(await logfileEditor.GetDayfile(draw, start, length));
 							break;
 						case "logfile":
 							await writer.WriteAsync(logfileEditor.GetLogfile(month, draw, start, length, false));

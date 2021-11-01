@@ -1,0 +1,90 @@
+4.0.0 - b4003
+——————————————
+- Fix: GW1000 station not working correctly
+
+- New: Password and secret fields in the settings now reveal the password when they have focus
+
+- Change: dayfile name changed to dayfile-v4.txt
+- Change: SQLite database name changed to cumulusmx-v4.db
+- Change: The backup folders now have a /data sub folder to separate the config files and the data files
+
+
+4.0.0 - b4002
+——————————————
+- Fix: HTTP stations no longer require the /api/ URL prefix
+
+
+4.0.0 - b4001
+——————————————
+- Fix: Diary database, the previous diary.db file will now have messed up entries in it if you edited the diary with b4000.
+	Either delete the file before starting MX, or re-copy your existing one from MV v3.
+	(The cause was SQLite library reversing the default value of a optional switch about date storage)
+- Fix: Backups now name the backed up day file dayfile2.txt rather than dayfile.txt
+- Fix: NOAA Monthly report was broken reading the log file
+- Fix: Duplicate day file entries when the station is not responding on start-up
+
+- Fix/New: The install as a service should now work again for Windows. It *may" now also work on Linux!
+
+
+- New: Now encrypts user credentials in the cumulus.ini file
+	- This isn't meant to be a terribly secure solution, it is prevent users posting a cumulus.ini file that contains plaintext creds as diagnostics on the forum.
+	- A UniqueId.txt file is created in the main CumulusMX folder, this contains the decrypt key for the credentials. Anyone with access to this file can decrypt
+		the credentials in cumulus.ini
+
+
+- Changed: Exception logging is now standardised and much more verbose. Hopefully it will provide more meaningful diagnostics for failures
+- Changed: Internal changes, lots more code now running asynchronously including SQLite, some structural changes
+
+
+4.0.0 - b4000
+——————————————
+
+- Installing .Net 5 on Windows (if not already installed)
+	- Go to the download page https://dotnet.microsoft.com/download/dotnet
+	- Download the .NET 5.0 Runtime package for Windows (x64 most likely!)
+	- Run the downloaded file
+
+
+
+- Installing .Net 5 on Raspberry Pi - This assumes you are running Debian/Raspbian 11
+	- A utility to check how many bits your processor uses...
+		sudo apt update
+		sudo apt install lshw
+		sudo lshw | grep width
+	- Check the output, is the "width" 64 or 32 bits? You will need to know this for the install
+
+	See this web page for Microsoft's instructions https://docs.microsoft.com/en-gb/dotnet/core/install/linux-debian
+
+	- Install the Runtime on 64 bit Pi's (Pi 4 only)
+		- Before you install .NET, run the following commands to add the Microsoft package signing key to your list of trusted keys and add the package repository.
+			wget https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+			sudo dpkg -i packages-microsoft-prod.deb
+			rm packages-microsoft-prod.deb
+		- Now do the install
+			sudo apt-get update; \
+			  sudo apt-get install -y apt-transport-https && \
+			  sudo apt-get update && \
+			  sudo apt-get install -y dotnet-runtime-5.0
+
+	- Install the Runtime on 32 bit Pi's (everything other than the Pi 4)
+		wget https://dot.net/v1/dotnet-install.sh
+		chmod +x dotnet-install.sh
+		sudo ./dotnet-install.sh -c Current --install-dir /usr/share/dotnet --runtime dotnet
+		sudo echo 'export PATH=$PATH:/usr/share/dotnet' > /etc/profile.d/dotnet.sh
+		sudo chmod +x /etc/profile.d/dotnet.sh
+		export PATH=$PATH:/usr/share/dotnet
+
+	- Test the run time
+		dotnet --info
+
+	- Copy the contents of the distribution zip file to /opt/CumulusMX
+
+
+
+- Running Cumulus MX 4 on Windows
+	cd /CumulusMX
+	CumulusMX.exe
+
+- Running Cumulus MX 4 on Linux
+	cd /opt/CumulusMX
+	dotnet CumulusMX.dll

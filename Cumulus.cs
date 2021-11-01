@@ -3837,6 +3837,8 @@ namespace CumulusMX
 
 			ProgramOptions.EncryptedCreds = ini.GetValue("Program", "EncryptedCreds", false);
 
+			ProgramOptions.UpdateDayfile = ini.GetValue("Program", "UpdateDayfile", true);
+
 			ProgramOptions.WarnMultiple = ini.GetValue("Station", "WarnMultiple", true);
 			ProgramOptions.ListWebTags = ini.GetValue("Station", "ListWebTags", false);
 			SmtpOptions.Logging = ini.GetValue("SMTP", "Logging", false);
@@ -5163,6 +5165,9 @@ namespace CumulusMX
 
 			ini.SetValue("Program", "StartupDelaySecs", ProgramOptions.StartupDelaySecs);
 			ini.SetValue("Program", "StartupDelayMaxUptime", ProgramOptions.StartupDelayMaxUptime);
+
+			ini.SetValue("Program", "UpdateDayfile", ProgramOptions.UpdateDayfile);
+
 
 			ini.SetValue("Culture", "RemoveSpaceFromDateSeparator", ProgramOptions.Culture.RemoveSpaceFromDateSeparator);
 
@@ -10547,6 +10552,7 @@ namespace CumulusMX
 		public bool ListWebTags { get; set; }
 		public CultureConfig Culture { get; set; }
 		public bool EncryptedCreds { get; set; }
+		public bool UpdateDayfile { get; set; }
 	}
 
 	public class CultureConfig
