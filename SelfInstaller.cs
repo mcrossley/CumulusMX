@@ -87,7 +87,7 @@ namespace CumulusMX
 			}
 		}
 
-		public static bool InstallLinux()
+		public static bool InstallLinux(string userId)
 		{
 			try
 			{
@@ -111,7 +111,8 @@ namespace CumulusMX
 
 				var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
-				var user = Environment.UserName;
+				//var user = Environment.UserName;
+				var user = string.IsNullOrEmpty(userId) ? "root" : userId;
 
 				string[] contents = {
 					"[Unit]",
@@ -120,7 +121,7 @@ namespace CumulusMX
 					"After=network-online.target",
 					"",
 					"[Service]",
-					$"User={user}",
+					$"User={userId}",
 					$"Group={user}",
 					$"WorkingDirectory={appPath}",
 					$"ExecStart=\"{dotnetPath}\" CumulusMX.dll -service",

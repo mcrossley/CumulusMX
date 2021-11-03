@@ -1,12 +1,33 @@
 4.0.0 - b4003
 ——————————————
 - Fix: GW1000 station not working correctly
+- Fix: HTTP Ecowitt stations not decoding user temp sensors (extra did)
+- Fix: Graph data files now display correct date/time in HighCharts - I HOPE!
+- Fix: Option to edit MySQL is disabled if no MySQL log on details are provided
 
 - New: Password and secret fields in the settings now reveal the password when they have focus
+
+- NEW/CHANGE: BIG FIRST STEP in using an internal database
+	- This build now uses the SQLite database for the daily data. It still generates the dayfile, but it now never reads it again other than to load it into the database on first run
+	- The database and MX functions around it now support null values - hurrah! A baby step to general support of null values.
+	- You will see this in the dayfile editor, null values will show as blank fields. You can try deleting a value in edit.
+	- For now the first 15 fields or so are not nullable. In the next build I hope to make all dayfile data nullable.
+	- The dayfile editor (to be renamed) actually edits the database as the prime source (though it still also updates the dayfile and optionally MySQL as well)
+	- TODOs:
+		1. I think we probably need a function to clear the database table and re-import the dayfile (though deleting the whole database does this)
+		2. An export to dayfile function - if we eventually make the log files optional
+	- I'll be interested to see if anyone has issues with the performance of the database compared with the previous file + in-memory data list.
+		I expect it to be slightly slower, but hopefully not dramatically so.
 
 - Change: dayfile name changed to dayfile-v4.txt
 - Change: SQLite database name changed to cumulusmx-v4.db
 - Change: The backup folders now have a /data sub folder to separate the config files and the data files
+- Change: SQLite database cumulusmx-v4.db will now additional runtime files associated with it (-shm and -wal) these are for additional resilience and should be removed
+	on a clean shutdown of MX. If they remain it means the shutdown was not clean and will be used to recover the database if required on next start-up
+- Change: Various library updates - I intend to stay on latest versions all the time during testing
+	- MQTTnet
+	- SQLitePCLRaw
+
 
 
 4.0.0 - b4002

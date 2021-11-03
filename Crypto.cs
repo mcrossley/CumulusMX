@@ -41,7 +41,7 @@ namespace CumulusMX
 		}
 
 
-		public static string EncryptString(string plainText)
+		public static string EncryptString(string plainText, byte[] key)
 		{
 			try
 			{
@@ -49,7 +49,7 @@ namespace CumulusMX
 					return string.Empty;
 
 				using var aes = Aes.Create();
-				aes.Key = Program.InstanceId;
+				aes.Key = key;
 				var cryptoTransform = aes.CreateEncryptor(aes.Key, aes.IV);
 				var cipherText = Encrypt(plainText, cryptoTransform);
 				var data = new byte[cipherText.Length + aes.IV.Length + 1];
@@ -66,7 +66,7 @@ namespace CumulusMX
 			}
 		}
 
-		public static string DecryptString(string encryptedText)
+		public static string DecryptString(string encryptedText, byte[] key)
 		{
 			try
 			{
@@ -81,7 +81,7 @@ namespace CumulusMX
 				Array.Copy(data, ivSize + 1, encrypted, 0, encrypted.Length);
 
 				using var aes = Aes.Create();
-				aes.Key = Program.InstanceId; ;
+				aes.Key = key;
 				aes.IV = iv;
 
 				var cryptoTransform = aes.CreateDecryptor(aes.Key, aes.IV);

@@ -21,6 +21,7 @@ namespace CumulusMX
 		public static Mutex appMutex;
 		public static DateTime StartTime;
 		public static byte[] InstanceId;
+		public static bool RunningOnWindows;
 
 		public static int httpport = 8998;
 		public static bool debug = false;
@@ -28,9 +29,9 @@ namespace CumulusMX
 		private static async Task Main(string[] args)
 		{
 			StartTime = DateTime.Now;
-			var windows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+			RunningOnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
-			if (windows)
+			if (RunningOnWindows)
 			{
 				// set the working path to the exe location
 				Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
@@ -69,7 +70,7 @@ namespace CumulusMX
 			}
 
 			svcTextListener = new TextWriterTraceListener(logfile);
-			svcTextListener.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + "Starting on " + (windows ? "Windows" : "Linux"));
+			svcTextListener.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + "Starting on " + (RunningOnWindows ? "Windows" : "Linux"));
 			svcTextListener.Flush();
 
 			// Add an exit handler
@@ -118,6 +119,10 @@ namespace CumulusMX
 			// Create a unique instance ID if it does not exist
 			CheckInstanceId();
 
+			var install = false;
+			var uninstall = false;
+			var user = "";
+
 			for (int i = 0; i < args.Length; i++)
 			{
 				try
@@ -125,13 +130,13 @@ namespace CumulusMX
 					switch (args[i])
 					{
 						case "-lang" when args.Length >= i:
-						{
-							var lang = args[++i];
+							{
+								var lang = args[++i];
 
-							CultureInfo.DefaultThreadCurrentCulture = new CultureInfo(lang);
-							CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo(lang);
-							break;
-						}
+								CultureInfo.DefaultThreadCurrentCulture = new CultureInfo(lang);
+								CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo(lang);
+								break;
+							}
 						case "-port" when args.Length >= i:
 							httpport = Convert.ToInt32(args[++i]);
 							break;
@@ -144,61 +149,14 @@ namespace CumulusMX
 							Console.WriteLine("The use of the -wsport command line parameter is deprecated");
 							svcTextListener.WriteLine("The use of the -wsport command line parameter is deprecated");
 							break;
-						case "-install" when windows:
-						{
-							if (SelfInstaller.InstallWin())
-							{
-								Console.WriteLine("Cumulus MX is now installed to run as service");
-								Environment.Exit(0);
-							}
-							else
-							{
-								Console.WriteLine("Cumulus MX failed to install as service");
-								Environment.Exit(1);
-							}
-
-							break;
-						}
 						case "-install":
-							if (SelfInstaller.InstallLinux())
-							{
-								Console.WriteLine("Cumulus MX is now installed to run as service");
-								Environment.Exit(0);
-							}
-							else
-							{
-								Console.WriteLine("Cumulus MX failed to install as service");
-								Environment.Exit(1);
-							}
-
+							install = true;
 							break;
-						case "-uninstall" when windows:
-						{
-							if (SelfInstaller.UninstallWin())
-							{
-								Console.WriteLine("Cumulus MX is no longer installed to run as service");
-								Environment.Exit(0);
-							}
-							else
-							{
-								Console.WriteLine("Cumulus MX failed uninstall itself as service");
-								Environment.Exit(1);
-							}
-
-							break;
-						}
 						case "-uninstall":
-							if (SelfInstaller.UninstallLinux())
-							{
-								Console.WriteLine("Cumulus MX is no longer installed to run as service");
-								Environment.Exit(0);
-							}
-							else
-							{
-								Console.WriteLine("Cumulus MX failed uninstall itself as service");
-								Environment.Exit(1);
-							}
-
+							uninstall = true;
+							break;
+						case "-user" when args.Length >= i:
+							user = args[++i];
 							break;
 						case "-service":
 							service = true;
@@ -214,13 +172,64 @@ namespace CumulusMX
 				{
 					Usage();
 				}
+
+
+				// we want to install as a service?
+				if (install)
+				{
+					if (RunningOnWindows)
+					{
+						if (SelfInstaller.InstallWin())
+						{
+							Console.WriteLine("\nCumulus MX is now installed to run as service");
+							Environment.Exit(0);
+						}
+
+					}
+					else
+					{
+						if (SelfInstaller.InstallLinux(user))
+						{
+							Console.WriteLine("\nCumulus MX is now installed to run as service");
+							Environment.Exit(0);
+						}
+					}
+
+					Console.WriteLine("\nCumulus MX failed to install as service");
+					Environment.Exit(1);
+				}
+
+				// we want to uninstall the service?
+				if (uninstall)
+				{
+					if (RunningOnWindows)
+					{
+						if (SelfInstaller.UninstallWin())
+						{
+							Console.WriteLine("\nCumulus MX is no longer installed to run as service");
+							Environment.Exit(0);
+						}
+					}
+					else
+					{
+						if (SelfInstaller.UninstallLinux())
+						{
+							Console.WriteLine("\nCumulus MX is no longer installed to run as service");
+							Environment.Exit(0);
+						}
+					}
+
+					Console.WriteLine("\nCumulus MX failed uninstall itself as service");
+					Environment.Exit(1);
+				}
 			}
 
 			using (appMutex = new Mutex(false, "Global\\" + AppGuid))
 			{
 				// Interactive seems to be always false under mono :(
+				//TODO: Is that true under .Net?
 
-				if (windows && !Environment.UserInteractive)
+				if (RunningOnWindows && !Environment.UserInteractive)
 				{
 					// Windows and not interactive - must be a service
 					svcTextListener.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + "Running as a Windows service");
@@ -231,7 +240,7 @@ namespace CumulusMX
 				}
 				else
 				{
-					if (Environment.UserInteractive || (!windows && !service))
+					if (Environment.UserInteractive || (!RunningOnWindows && !service))
 					{
 						// Windows interactive or Linux and no service flag
 						svcTextListener.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + "Running interactively");
@@ -271,9 +280,10 @@ namespace CumulusMX
 			Console.WriteLine(" -port <http_portnum> - Sets the HTTP port Cumulus will use (default 8998)");
 			Console.WriteLine(" -lang <culture_name> - Sets the Language Cumulus will use (defaults to current user language)");
 			Console.WriteLine(" -debug               - Switches on debug and data logging from Cumulus start");
-			Console.WriteLine(" -install             - Installs Cumulus as a system service (Windows only)");
-			Console.WriteLine(" -uninstall           - Removes Cumulus as a system service (Windows only)");
-			Console.WriteLine(" -service             - Must be used when running as a mono-service (Linux only)");
+			Console.WriteLine(" -install             - Installs Cumulus as a system service (Windows or Linux)");
+			Console.WriteLine(" -uninstall           - Removes Cumulus as a system service (Windows or Linux)");
+			Console.WriteLine(" -user                - Specifies the user to run the service under (Linux only)");
+			Console.WriteLine(" -service             - Must be used when running as service (Linux only)");
 			Console.WriteLine("\nCumulus terminating");
 			Environment.Exit(1);
 		}

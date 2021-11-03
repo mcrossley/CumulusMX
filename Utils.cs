@@ -22,6 +22,13 @@ namespace CumulusMX
 			return dateTime.ToUniversalTime().ToUnixEpochDate();
 		}
 
+		// The JSON data we generate for HighCharts uses a "pseudo-UTC" timestamp
+		// This is the local time converted to the UTC timestamp *as if it were already UTC*
+		// This gets around TZ issues in HighCharts which by default accepts and displays UTC date.times
+		public static double ToGraphTime(DateTime dateTime)
+		{
+			return (dateTime - new DateTime(1970, 1, 1, 0, 0, 0)).TotalMilliseconds;
+		}
 
 		public static string ByteArrayToHexString(byte[] ba)
 		{
@@ -86,5 +93,24 @@ namespace CumulusMX
 		{
 			return date.Add(TimeSpan.ParseExact(time, "hh\\:mm", CultureInfo.InvariantCulture.DateTimeFormat));
 		}
+
+		public static int? TryParseNullInt(string val)
+		{
+			int outVal;
+			return int.TryParse(val, out outVal) ? outVal : null;
+		}
+
+		public static double? TryParseNullDouble(string val)
+		{
+			double outVal;
+			return double.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out outVal) ? outVal : null;
+		}
+
+		public static DateTime? TryParseNullTimeSpan(DateTime baseDate, string val, string format)
+		{
+			TimeSpan tim;
+			return TimeSpan.TryParseExact(val, format, CultureInfo.InvariantCulture, out tim) ? baseDate.Add(tim) : null;
+		}
+
 	}
 }

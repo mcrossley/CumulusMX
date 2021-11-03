@@ -2,27 +2,27 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace CumulusMX
 {
 	public class NOAAReports
 	{
 		private readonly Cumulus cumulus;
-		//private WeatherStation station;
+		private readonly WeatherStation station;
 		private List<string> report;
 		//private string[] report;
 		private string noaafile;
 
-		public NOAAReports(Cumulus cumulus)
-		//public NOAAReports()
+		internal NOAAReports(Cumulus cumulus, WeatherStation station)
 		{
 			this.cumulus = cumulus;
-			//this.station = station;
+			this.station = station;
 		}
 
 		public List<string> GenerateNoaaYearReport(int year)
 		{
-			NOAA noaa = new NOAA(cumulus);
+			NOAA noaa = new NOAA(cumulus, station);
 			DateTime noaats = new DateTime(year, 1, 1);
 
 			Cumulus.LogMessage("Creating NOAA yearly report");
@@ -45,13 +45,13 @@ namespace CumulusMX
 			return report;
 		}
 
-		public List<string> GenerateNoaaMonthReport(int year, int month)
+		public async Task<List<string>> GenerateNoaaMonthReport(int year, int month)
 		{
-			NOAA noaa = new NOAA(cumulus);
+			NOAA noaa = new NOAA(cumulus, station);
 			DateTime noaats = new DateTime(year, month, 1);
 
 			Cumulus.LogMessage("Creating NOAA monthly report");
-			var report = noaa.CreateMonthlyReport(noaats);
+			var report = await noaa.CreateMonthlyReport(noaats);
 			var reportName = String.Empty;
 			try
 			{
