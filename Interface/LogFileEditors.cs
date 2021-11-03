@@ -40,7 +40,7 @@ namespace CumulusMX
 			try
 			{
 				var total = await station.DatabaseAsync.ExecuteScalarAsync<int>("select count(*) from DayData");
-				var rows = await station.DatabaseAsync.QueryAsync<DayData>("select * from DayData order by Timestamp limit ?,?", start, length);
+				var rows = await station.DatabaseAsync.QueryAsync<DailyData>("select * from DayData order by Timestamp limit ?,?", start, length);
 				var json = new StringBuilder(350 * rows.Count);
 
 				json.Append("{\"draw\":" + draw);
@@ -94,7 +94,7 @@ namespace CumulusMX
 			{
 
 				// Update the MX database
-				var newRec = new DayData();
+				var newRec = new DailyData();
 				newRec.FromString(newData.data);
 
 				_ = station.Database.Update(newRec);
@@ -128,20 +128,20 @@ namespace CumulusMX
 						var updt = new StringBuilder(1024);
 
 						updt.Append($"UPDATE {cumulus.MySqlSettings.Dayfile.TableName} SET ");
-						updt.Append($"HighWindGust={newRec.HighGust.ToString(cumulus.WindFormat, invNum)},");
-						updt.Append($"HWindGBear={newRec.HighGustBearing},");
-						updt.Append($"THWindG={newRec.HighGustTime:\\'HH:mm\\'},");
-						updt.Append($"MinTemp={newRec.LowTemp.ToString(cumulus.TempFormat, invNum)},");
-						updt.Append($"TMinTemp={newRec.LowTempTime:\\'HH:mm\\'},");
-						updt.Append($"MaxTemp={newRec.HighTemp.ToString(cumulus.TempFormat, invNum)},");
-						updt.Append($"TMaxTemp={newRec.HighTempTime:\\'HH:mm\\'},");
-						updt.Append($"MinPress={newRec.LowPress.ToString(cumulus.PressFormat, invNum)},");
-						updt.Append($"TMinPress={newRec.LowPressTime:\\'HH:mm\\'},");
-						updt.Append($"MaxPress={newRec.HighPress.ToString(cumulus.PressFormat, invNum)},");
-						updt.Append($"TMaxPress={newRec.HighPressTime:\\'HH:mm\\'},");
-						updt.Append($"MaxRainRate={newRec.HighRainRate.ToString(cumulus.RainFormat, invNum)},");
-						updt.Append($"TMaxRR={newRec.HighRainRateTime:\\'HH:mm\\'},");
-						updt.Append($"TotRainFall={newRec.TotalRain.ToString(cumulus.RainFormat, invNum)},");
+						if (newRec.HighGust.HasValue) updt.Append($"HighWindGust={newRec.HighGust.Value.ToString(cumulus.WindFormat, invNum)},");
+						if (newRec.HighGustBearing.HasValue) updt.Append($"HWindGBear={newRec.HighGustBearing.Value},");
+						if (newRec.HighGustTime.HasValue) updt.Append($"THWindG={newRec.HighGustTime.Value:\\'HH:mm\\'},");
+						if (newRec.LowTemp.HasValue) updt.Append($"MinTemp={newRec.LowTemp.Value.ToString(cumulus.TempFormat, invNum)},");
+						if (newRec.LowTempTime.HasValue) updt.Append($"TMinTemp={newRec.LowTempTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighTemp.HasValue) updt.Append($"MaxTemp={newRec.HighTemp.Value.ToString(cumulus.TempFormat, invNum)},");
+						if (newRec.HighTempTime.HasValue) updt.Append($"TMaxTemp={newRec.HighTempTime.Value:\\'HH:mm\\'},");
+						if (newRec.LowPress.HasValue) updt.Append($"MinPress={newRec.LowPress.Value.ToString(cumulus.PressFormat, invNum)},");
+						if (newRec.LowPressTime.HasValue) updt.Append($"TMinPress={newRec.LowPressTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighPress.HasValue) updt.Append($"MaxPress={newRec.HighPress.Value.ToString(cumulus.PressFormat, invNum)},");
+						if (newRec.HighPressTime.HasValue) updt.Append($"TMaxPress={newRec.HighPressTime:\\'HH:mm\\'},");
+						if (newRec.HighRainRate.HasValue) updt.Append($"MaxRainRate={newRec.HighRainRate.Value.ToString(cumulus.RainFormat, invNum)},");
+						if (newRec.HighRainRateTime.HasValue) updt.Append($"TMaxRR={newRec.HighRainRateTime.Value:\\'HH:mm\\'},");
+						if (newRec.TotalRain.HasValue) updt.Append($"TotRainFall={newRec.TotalRain.Value.ToString(cumulus.RainFormat, invNum)},");
 						if (newRec.AvgTemp.HasValue) updt.Append($"AvgTemp={newRec.AvgTemp.Value.ToString(cumulus.TempFormat, invNum)},");
 						if (newRec.WindRun.HasValue) updt.Append($"TotWindRun={newRec.WindRun.Value.ToString("F1", invNum)},");
 						if (newRec.HighAvgWind.HasValue) updt.Append($"HighAvgWSpeed={newRec.HighAvgWind.Value.ToString(cumulus.WindAvgFormat, invNum)},");
@@ -173,7 +173,7 @@ namespace CumulusMX
 						if (newRec.HighSolarTime.HasValue) updt.Append($"THighSolarRad={newRec.HighSolarTime.Value:\\'HH:mm\\'},");
 						if (newRec.HighUv.HasValue) updt.Append($"HighUV={newRec.HighUv.Value.ToString(cumulus.UVFormat, invNum)},");
 						if (newRec.HighUvTime.HasValue) updt.Append($"THighUV={newRec.HighUvTime.Value:\\'HH:mm\\'},");
-						updt.Append($"HWindGBearSym='{station.CompassPoint(newRec.HighGustBearing)}',");
+						if (newRec.HighGustBearing.HasValue) updt.Append($"HWindGBearSym='{station.CompassPoint(newRec.HighGustBearing.Value)}',");
 						if (newRec.DominantWindBearing.HasValue) updt.Append($"DomWindDirSym='{station.CompassPoint(newRec.DominantWindBearing.Value)}',");
 						if (newRec.HighFeelsLike.HasValue) updt.Append($"MaxFeelsLike={newRec.HighFeelsLike.Value.ToString(cumulus.TempFormat, invNum)},");
 						if (newRec.HighFeelsLikeTime.HasValue) updt.Append($"TMaxFeelsLike={newRec.HighFeelsLikeTime.Value:\\'HH:mm\\'},");
@@ -212,7 +212,7 @@ namespace CumulusMX
 					try
 					{
 						// Update the in database  record
-						await station.DatabaseAsync.DeleteAsync<DayData>(thisRec);
+						await station.DatabaseAsync.DeleteAsync<DailyData>(thisRec);
 
 						// Update the dayfile
 						if (Program.cumulus.ProgramOptions.UpdateDayfile)

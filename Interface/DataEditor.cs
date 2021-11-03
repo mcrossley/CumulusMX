@@ -214,7 +214,7 @@ namespace CumulusMX
 			}
 
 			// Get all the dayfile records from the Database
-			var data = await station.DatabaseAsync.QueryAsync<DayData>("select * from DayData where Timestamp >= ? order by Timestamp", startDate);
+			var data = await station.DatabaseAsync.QueryAsync<DailyData>("select * from DayData where Timestamp >= ? order by Timestamp", startDate);
 
 			if (data.Count > 0)
 			{
@@ -234,74 +234,78 @@ namespace CumulusMX
 						rainThisMonth = 0;
 					}
 					// hi gust
-					if (rec.HighGust > highGustVal)
+					if (rec.HighGust.HasValue && rec.HighGust.Value > highGustVal && rec.HighGustTime.HasValue)
 					{
-						highGustVal = rec.HighGust;
-						highGustTime = rec.HighGustTime;
+						highGustVal = rec.HighGust.Value;
+						highGustTime = rec.HighGustTime.Value;
 					}
 					// hi temp
-					if (rec.HighTemp > highTempVal)
+					if (rec.HighTemp.HasValue && rec.HighTemp.Value > highTempVal && rec.HighTempTime.HasValue)
 					{
-						highTempVal = rec.HighTemp;
-						highTempTime = rec.HighTempTime;
+						highTempVal = rec.HighTemp.Value;
+						highTempTime = rec.HighTempTime.Value;
 					}
 					// lo temp
-					if (rec.LowTemp < lowTempVal)
+					if (rec.LowTemp.HasValue && rec.LowTemp.Value < lowTempVal && rec.LowTempTime.HasValue)
 					{
-						lowTempVal = rec.LowTemp;
-						lowTempTime = rec.LowTempTime;
+						lowTempVal = rec.LowTemp.Value;
+						lowTempTime = rec.LowTempTime.Value;
 					}
 					// hi min temp
-					if (rec.LowTemp > highMinTempVal)
+					if (rec.LowTemp.HasValue && rec.LowTemp.Value > highMinTempVal && rec.LowTempTime.HasValue)
 					{
-						highMinTempVal = rec.LowTemp;
-						highMinTempTime = rec.LowTempTime;
+						highMinTempVal = rec.LowTemp.Value;
+						highMinTempTime = rec.LowTempTime.Value;
 					}
 					// lo max temp
-					if (rec.HighTemp < lowMaxTempVal)
+					if (rec.HighTemp.HasValue && rec.HighTemp.Value < lowMaxTempVal && rec.HighTempTime.HasValue)
 					{
-						lowMaxTempVal = rec.HighTemp;
-						lowMaxTempTime = rec.HighTempTime;
+						lowMaxTempVal = rec.HighTemp.Value;
+						lowMaxTempTime = rec.HighTempTime.Value;
 					}
 					// hi temp range
-					if ((rec.HighTemp - rec.LowTemp) > highTempRangeVal)
+					if (rec.LowTemp.HasValue && rec.HighTemp.HasValue && (rec.HighTemp.Value - rec.LowTemp.Value) > highTempRangeVal)
 					{
-						highTempRangeVal = rec.HighTemp - rec.LowTemp;
+						highTempRangeVal = rec.HighTemp.Value - rec.LowTemp.Value;
 						highTempRangeTime = rec.Timestamp;
 					}
 					// lo temp range
-					if ((rec.HighTemp - rec.LowTemp) < lowTempRangeVal)
+					if (rec.LowTemp.HasValue && rec.HighTemp.HasValue && (rec.HighTemp.Value - rec.LowTemp.Value) < lowTempRangeVal)
 					{
-						lowTempRangeVal = rec.HighTemp - rec.LowTemp;
+						lowTempRangeVal = rec.HighTemp.Value - rec.LowTemp.Value;
 						lowTempRangeTime = rec.Timestamp;
 					}
 					// lo baro
-					if (rec.LowPress < lowBaroVal)
+					if (rec.LowPress.HasValue && rec.LowPress.Value < lowBaroVal && rec.LowPressTime.HasValue)
 					{
-						lowBaroVal = rec.LowPress;
-						lowBaroTime = rec.LowPressTime;
+						lowBaroVal = rec.LowPress.Value;
+						lowBaroTime = rec.LowPressTime.Value;
 					}
 					// hi baro
-					if (rec.HighPress > highBaroVal)
+					if (rec.HighPress.HasValue && rec.HighPress.Value > highBaroVal && rec.HighPressTime.HasValue)
 					{
-						highBaroVal = rec.HighPress;
-						highBaroTime = rec.HighPressTime;
+						highBaroVal = rec.HighPress.Value;
+						highBaroTime = rec.HighPressTime.Value;
 					}
 					// hi rain rate
-					if (rec.HighRainRate > highRainRateVal)
+					if (rec.HighRainRate.HasValue && rec.HighRainRate.Value > highRainRateVal && rec.HighRainRateTime.HasValue)
 					{
-						highRainRateVal = rec.HighRainRate;
-						highRainRateTime = rec.HighRainRateTime;
+						highRainRateVal = rec.HighRainRate.Value;
+						highRainRateTime = rec.HighRainRateTime.Value;
 					}
 					// hi rain day
-					if (rec.TotalRain > highRainDayVal)
+					if (rec.TotalRain.HasValue)
 					{
-						highRainDayVal = rec.TotalRain;
-						highRainDayTime = rec.Timestamp;
+						// monthly rain
+						rainThisMonth += rec.TotalRain.Value;
+
+						if (rec.TotalRain.Value > highRainDayVal)
+						{
+							highRainDayVal = rec.TotalRain.Value;
+							highRainDayTime = rec.Timestamp;
+						}
 					}
 
-					// monthly rain
-					rainThisMonth += rec.TotalRain;
 
 					// dry/wet period
 					if (Convert.ToInt32(rec.TotalRain * 1000) >= rainThreshold)
@@ -343,9 +347,9 @@ namespace CumulusMX
 						}
 					}
 					// hi wind run
-					if (rec.WindRun > highWindRunVal)
+					if (rec.WindRun.HasValue && rec.WindRun.Value > highWindRunVal)
 					{
-						highWindRunVal = rec.WindRun.HasValue ? rec.WindRun.Value : 0;
+						highWindRunVal = rec.WindRun.Value;
 						highWindRunTime = rec.Timestamp;
 					}
 					// hi wind
@@ -1605,7 +1609,7 @@ namespace CumulusMX
 			}
 
 			// get all the data from the database
-			var data = await station.DatabaseAsync.QueryAsync<DayData>("select * from DayData order by Timestamp");
+			var data = await station.DatabaseAsync.QueryAsync<DailyData>("select * from DayData order by Timestamp");
 
 			if (data.Count > 0)
 			{
@@ -1636,77 +1640,81 @@ namespace CumulusMX
 						rainThisMonth = 0;
 					}
 					// hi gust
-					if (data[i].HighGust > highGustVal[monthOffset])
+					if (data[i].HighGust.HasValue && data[i].HighGust.Value > highGustVal[monthOffset] && data[i].HighGustTime.HasValue)
 					{
-						highGustVal[monthOffset] = data[i].HighGust;
-						highGustTime[monthOffset] = data[i].HighGustTime;
+						highGustVal[monthOffset] = data[i].HighGust.Value;
+						highGustTime[monthOffset] = data[i].HighGustTime.Value;
 					}
 					// lo temp
-					if (data[i].LowTemp < lowTempVal[monthOffset])
+					if (data[i].LowTemp.HasValue && data[i].LowTemp.Value < lowTempVal[monthOffset] && data[i].LowTempTime.HasValue)
 					{
-						lowTempVal[monthOffset] = data[i].LowTemp;
-						lowTempTime[monthOffset] = data[i].LowTempTime;
+						lowTempVal[monthOffset] = data[i].LowTemp.Value;
+						lowTempTime[monthOffset] = data[i].LowTempTime.Value;
 					}
 					// hi min temp
-					if (data[i].LowTemp > highMinTempVal[monthOffset])
+					if (data[i].LowTemp.HasValue && data[i].LowTemp.Value > highMinTempVal[monthOffset] && data[i].LowTempTime.HasValue)
 					{
-						highMinTempVal[monthOffset] = data[i].LowTemp;
-						highMinTempTime[monthOffset] = data[i].LowTempTime;
+						highMinTempVal[monthOffset] = data[i].LowTemp.Value;
+						highMinTempTime[monthOffset] = data[i].LowTempTime.Value;
 					}
 					// hi temp
-					if (data[i].HighTemp > highTempVal[monthOffset])
+					if (data[i].HighTemp.HasValue && data[i].HighTemp > highTempVal[monthOffset] && data[i].HighTempTime.HasValue)
 					{
-						highTempVal[monthOffset] = data[i].HighTemp;
-						highTempTime[monthOffset] = data[i].HighTempTime;
+						highTempVal[monthOffset] = data[i].HighTemp.Value;
+						highTempTime[monthOffset] = data[i].HighTempTime.Value;
 					}
 					// lo max temp
-					if (data[i].HighTemp < lowMaxTempVal[monthOffset])
+					if (data[i].HighTemp.HasValue && data[i].HighTemp.Value < lowMaxTempVal[monthOffset] && data[i].HighTempTime.HasValue)
 					{
-						lowMaxTempVal[monthOffset] = data[i].HighTemp;
-						lowMaxTempTime[monthOffset] = data[i].HighTempTime;
+						lowMaxTempVal[monthOffset] = data[i].HighTemp.Value;
+						lowMaxTempTime[monthOffset] = data[i].HighTempTime.Value;
 					}
 
 					// temp ranges
 					// hi temp range
-					if ((data[i].HighTemp - data[i].LowTemp) > highTempRangeVal[monthOffset])
+					if (data[i].LowTemp.HasValue && data[i].HighTemp.HasValue && (data[i].HighTemp - data[i].LowTemp.Value) > highTempRangeVal[monthOffset])
 					{
-						highTempRangeVal[monthOffset] = data[i].HighTemp - data[i].LowTemp;
+						highTempRangeVal[monthOffset] = data[i].HighTemp.Value - data[i].LowTemp.Value;
 						highTempRangeTime[monthOffset] = loggedDate;
 					}
 					// lo temp range
-					if ((data[i].HighTemp - data[i].LowTemp) < lowTempRangeVal[monthOffset])
+					if (data[i].LowTemp.HasValue && data[i].HighTemp.HasValue && (data[i].HighTemp - data[i].LowTemp.Value) < lowTempRangeVal[monthOffset])
 					{
-						lowTempRangeVal[monthOffset] = data[i].HighTemp - data[i].LowTemp;
+						lowTempRangeVal[monthOffset] = data[i].HighTemp.Value - data[i].LowTemp.Value;
 						lowTempRangeTime[monthOffset] = loggedDate;
 					}
 
 					// lo baro
-					if (data[i].LowPress < lowBaroVal[monthOffset])
+					if (data[i].LowPress.HasValue && data[i].LowPress.Value < lowBaroVal[monthOffset] && data[i].LowPressTime.HasValue)
 					{
-						lowBaroVal[monthOffset] = data[i].LowPress;
-						lowBaroTime[monthOffset] = data[i].LowPressTime;
+						lowBaroVal[monthOffset] = data[i].LowPress.Value;
+						lowBaroTime[monthOffset] = data[i].LowPressTime.Value;
 					}
 					// hi baro
-					if (data[i].HighPress > highBaroVal[monthOffset])
+					if (data[i].HighPress.HasValue && data[i].HighPress.Value > highBaroVal[monthOffset] && data[i].HighPressTime.HasValue)
 					{
-						highBaroVal[monthOffset] = data[i].HighPress;
-						highBaroTime[monthOffset] = data[i].HighPressTime;
+						highBaroVal[monthOffset] = data[i].HighPress.Value;
+						highBaroTime[monthOffset] = data[i].HighPressTime.Value;
 					}
 					// hi rain rate
-					if (data[i].HighRainRate > highRainRateVal[monthOffset])
+					if (data[i].HighRainRate.HasValue && data[i].HighRainRate.Value > highRainRateVal[monthOffset] && data[i].HighRainRateTime.HasValue)
 					{
-						highRainRateVal[monthOffset] = data[i].HighRainRate;
-						highRainRateTime[monthOffset] = data[i].HighRainRateTime;
+						highRainRateVal[monthOffset] = data[i].HighRainRate.Value;
+						highRainRateTime[monthOffset] = data[i].HighRainRateTime.Value;
 					}
 					// hi rain day
-					if (data[i].TotalRain > highRainDayVal[monthOffset])
+					if (data[i].TotalRain.HasValue)
 					{
-						highRainDayVal[monthOffset] = data[i].TotalRain;
-						highRainDayTime[monthOffset] = loggedDate;
+						// monthly rain
+						rainThisMonth += data[i].TotalRain.Value;
+
+						if (data[i].TotalRain.Value > highRainDayVal[monthOffset])
+						{
+							highRainDayVal[monthOffset] = data[i].TotalRain.Value;
+							highRainDayTime[monthOffset] = loggedDate;
+						}
 					}
 
-					// monthly rain
-					rainThisMonth += data[i].TotalRain;
 
 					// dry/wet period
 					if (Convert.ToInt32(data[i].TotalRain * 100) >= rainThreshold)

@@ -198,9 +198,9 @@ namespace CumulusMX
 		//private readonly List<Last3HourData> Last3HourDataList = new List<Last3HourData>();
 		//private readonly List<LastHourData> LastHourDataList = new List<LastHourData>();
 		private readonly List<Last10MinWind> Last10MinWindList = new List<Last10MinWind>();
-		//		private readonly List<RecentDailyData> RecentDailyDataList = new List<RecentDailyData>();
+		//private readonly List<RecentDailyData> RecentDailyDataList = new List<RecentDailyData>();
 
-		public WeatherDataCollection weatherDataCollection = new WeatherDataCollection();
+		//public WeatherDataCollection weatherDataCollection = new WeatherDataCollection();
 
 		// Current values
 
@@ -394,7 +394,7 @@ namespace CumulusMX
 			_ = DatabaseAsync.ExecuteScalarAsync<int>("PRAGMA auto_vacuum=INCREMENTAL").Result;
 
 			Database.CreateTable<RecentData>();
-			Database.CreateTable<DayData>();
+			Database.CreateTable<DailyData>();
 
 			ReadTodayFile();
 			ReadYesterdayFile();
@@ -1487,7 +1487,7 @@ namespace CumulusMX
 
 					string stormRainStart = StartOfStorm == DateTime.MinValue ? "-----" : StartOfStorm.ToString("d");
 
-					var data = new DataStruct(cumulus, OutdoorTemperature, OutdoorHumidity, TempTotalToday / tempsamplestoday, IndoorTemperature, OutdoorDewpoint, WindChill, IndoorHumidity,
+					var data = new WebSocketData(cumulus, OutdoorTemperature, OutdoorHumidity, TempTotalToday / tempsamplestoday, IndoorTemperature, OutdoorDewpoint, WindChill, IndoorHumidity,
 						Pressure, WindLatest, WindAverage, RecentMaxGust, WindRunToday, Bearing, AvgBearing, RainToday, RainYesterday, RainMonth, RainYear, RainRate,
 						RainLastHour, HeatIndex, Humidex, ApparentTemperature, temptrendval, presstrendval, HiLoToday.HighGust, HiLoToday.HighGustTime.ToString("HH:mm"), HiLoToday.HighWind,
 						HiLoToday.HighGustBearing, cumulus.Units.WindText, BearingRangeFrom10, BearingRangeTo10, windRoseData.ToString(), HiLoToday.HighTemp, HiLoToday.LowTemp,
@@ -1511,7 +1511,7 @@ namespace CumulusMX
 
 					//var json = jss.Serialize(data);
 
-					var ser = new DataContractJsonSerializer(typeof(DataStruct));
+					var ser = new DataContractJsonSerializer(typeof(WebSocketData));
 
 					var stream = new MemoryStream();
 
@@ -1663,6 +1663,7 @@ namespace CumulusMX
 					// update heating/cooling degree days
 					UpdateDegreeDays(1);
 
+					/*
 					weatherDataCollection.Add(new WeatherData
 					{
 						//station = this,
@@ -1678,6 +1679,7 @@ namespace CumulusMX
 					{
 						weatherDataCollection.RemoveAt(0);
 					}
+					*/
 
 					if (!first_temp)
 					{
@@ -5405,7 +5407,7 @@ namespace CumulusMX
 
 			// Add a new record to the database
 			var tim = timestamp.AddDays(-1);
-			var newRec = new DayData()
+			var newRec = new DailyData()
 			{
 				Timestamp = new DateTime(tim.Year, tim.Month, tim.Day),
 				HighGust = HiLoToday.HighGust,
@@ -6758,7 +6760,7 @@ namespace CumulusMX
 			int addedEntries = 0;
 			DateTime start;
 
-			var rowsToAdd = new List<DayData>();
+			var rowsToAdd = new List<DailyData>();
 
 			Cumulus.LogMessage($"LoadDayFile: Attempting to load the day file");
 
@@ -6851,7 +6853,7 @@ namespace CumulusMX
 		}
 
 
-		public DayData ParseDayFileRec2(string data)
+		public DailyData ParseDayFileRec2(string data)
 		{
 			var st = new List<string>(data.Split(','));
 			double varDbl;
@@ -6859,7 +6861,7 @@ namespace CumulusMX
 			int idx = 0;
 			var timeFormat = "hh\\:mm";
 
-			var rec = new DayData();
+			var rec = new DailyData();
 			try
 			{
 				rec.Timestamp = Utils.ddmmyyStrToDate(st[idx++]);
@@ -10693,12 +10695,15 @@ namespace CumulusMX
 
 			StringBuilder sb = new StringBuilder("{\"dailyrain\":[", 10000);
 
-			var data = await DatabaseAsync.QueryAsync<DayData>("select Timestamp, TotalRain from DayData where Timestamp >= ? and TotalRain is not null order by Timestamp", datefrom);
+			var data = await DatabaseAsync.QueryAsync<DailyData>("select Timestamp, TotalRain from DayData where Timestamp >= ? and TotalRain is not null order by Timestamp", datefrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
-				sb.Append($"[{Utils.ToGraphTime(data[i].Timestamp)},{data[i].TotalRain.ToString(cumulus.RainFormat, invNum)}]");
-				sb.Append(',');
+				if (data[i].TotalRain.HasValue)
+				{
+					sb.Append($"[{Utils.ToGraphTime(data[i].Timestamp)},{data[i].TotalRain.Value.ToString(cumulus.RainFormat, invNum)}]");
+					sb.Append(',');
+				}
 			}
 			// remove trailing comma
 			if (data.Count > 0)
@@ -10714,7 +10719,7 @@ namespace CumulusMX
 			if (cumulus.GraphOptions.SunshineVisible)
 			{
 				var datefrom = DateTime.Now.AddDays(-cumulus.GraphDays - 1);
-				var data = await DatabaseAsync.QueryAsync<DayData>("select Timestamp, SunShineHours from Daydata where Timestamp >= ? and SunShineHours is not null order by Timestamp", datefrom);
+				var data = await DatabaseAsync.QueryAsync<DailyData>("select Timestamp, SunShineHours from Daydata where Timestamp >= ? and SunShineHours is not null order by Timestamp", datefrom);
 
 				sb.Append("\"sunhours\":[");
 				if (data.Count > 0)
@@ -10736,7 +10741,7 @@ namespace CumulusMX
 		public async Task<string> GetDailyTempGraphData()
 		{
 			var datefrom = DateTime.Now.AddDays(-cumulus.GraphDays - 1);
-			var data = await DatabaseAsync.QueryAsync<DayData>("select Timestamp, HighTemp, LowTemp, AvgTemp from DayData where Timestamp >= ? order by Timestamp", datefrom);
+			var data = await DatabaseAsync.QueryAsync<DailyData>("select Timestamp, HighTemp, LowTemp, AvgTemp from DayData where Timestamp >= ? order by Timestamp", datefrom);
 			var append = false;
 			StringBuilder sb = new StringBuilder("{");
 
@@ -10746,8 +10751,11 @@ namespace CumulusMX
 
 				for (var i = 0; i < data.Count; i++)
 				{
-					sb.Append($"[{Utils.ToGraphTime(data[i].Timestamp)},{data[i].LowTemp.ToString(cumulus.TempFormat, invNum)}]");
-					sb.Append(',');
+					if (data[i].LowTemp.HasValue)
+					{
+						sb.Append($"[{Utils.ToGraphTime(data[i].Timestamp)},{data[i].LowTemp.Value.ToString(cumulus.TempFormat, invNum)}]");
+						sb.Append(',');
+					}
 				}
 				// remove trailing comma
 				if (data.Count > 0)
@@ -10766,8 +10774,11 @@ namespace CumulusMX
 
 				for (var i = 0; i < data.Count; i++)
 				{
-					sb.Append($"[{Utils.ToGraphTime(data[i].Timestamp)},{data[i].HighTemp.ToString(cumulus.TempFormat, invNum)}]");
-					sb.Append(',');
+					if (data[i].HighTemp.HasValue)
+					{
+						sb.Append($"[{Utils.ToGraphTime(data[i].Timestamp)},{data[i].HighTemp.Value.ToString(cumulus.TempFormat, invNum)}]");
+						sb.Append(',');
+					}
 				}
 				// remove trailing comma
 				if (data.Count > 0)
@@ -10827,18 +10838,18 @@ namespace CumulusMX
 			StringBuilder humidex = new StringBuilder("[");
 
 			// Read the database and extract the data from there
-			var data = await DatabaseAsync.QueryAsync<DayData>("select * from DayData order by Timestamp");
+			var data = await DatabaseAsync.QueryAsync<DailyData>("select * from DayData order by Timestamp");
 			if (data.Count > 0)
 			{
 				for (var i = 0; i < data.Count; i++)
 				{
 					var recDate = Utils.ToGraphTime(data[i].Timestamp);
 					// lo temp
-					if (cumulus.GraphOptions.DailyMinTempVisible)
-						minTemp.Append($"[{recDate},{data[i].LowTemp.ToString(cumulus.TempFormat, invNum)}],");
+					if (cumulus.GraphOptions.DailyMinTempVisible && data[i].LowTemp.HasValue)
+						minTemp.Append($"[{recDate},{data[i].LowTemp.Value.ToString(cumulus.TempFormat, invNum)}],");
 					// hi temp
-					if (cumulus.GraphOptions.DailyMaxTempVisible)
-						maxTemp.Append($"[{recDate},{data[i].HighTemp.ToString(cumulus.TempFormat, invNum)}],");
+					if (cumulus.GraphOptions.DailyMaxTempVisible && data[i].HighTemp.HasValue)
+						maxTemp.Append($"[{recDate},{data[i].HighTemp.Value.ToString(cumulus.TempFormat, invNum)}],");
 					// avg temp
 					if (cumulus.GraphOptions.DailyAvgTempVisible && data[i].AvgTemp.HasValue)
 						avgTemp.Append($"[{recDate},{data[i].AvgTemp.Value.ToString(cumulus.TempFormat, invNum)}],");
@@ -10971,7 +10982,7 @@ namespace CumulusMX
 			StringBuilder maxWind = new StringBuilder("[");
 
 			// Read the database and extract the data from there
-			var data = await DatabaseAsync.QueryAsync<DayData>("select Timestamp, HighGust, WindRun, HighAvgWind from DayData order by Timestamp");
+			var data = await DatabaseAsync.QueryAsync<DailyData>("select Timestamp, HighGust, WindRun, HighAvgWind from DayData order by Timestamp");
 			if (data.Count > 0)
 			{
 				for (var i = 0; i < data.Count; i++)
@@ -10979,7 +10990,7 @@ namespace CumulusMX
 					var recDate = Utils.ToGraphTime(data[i].Timestamp);
 
 					// hi gust
-					maxGust.Append($"[{recDate},{data[i].HighGust.ToString(cumulus.WindFormat, invNum)}],");
+					if (data[i].HighGust.HasValue) maxGust.Append($"[{recDate},{data[i].HighGust.Value.ToString(cumulus.WindFormat, invNum)}],");
 					// hi wind run
 					if (data[i].WindRun.HasValue) windRun.Append($"[{recDate},{data[i].WindRun.Value.ToString(cumulus.WindRunFormat, invNum)}],");
 					// hi wind
@@ -11015,7 +11026,7 @@ namespace CumulusMX
 			StringBuilder rain = new StringBuilder("[");
 
 			// Read the database and extract the data from there
-			var data = await DatabaseAsync.QueryAsync<DayData>("select Timestamp, HighRainRate, Totalrain from Daydata order by Timestamp");
+			var data = await DatabaseAsync.QueryAsync<DailyData>("select Timestamp, HighRainRate, Totalrain from Daydata order by Timestamp");
 
 			if (data.Count > 0)
 			{
@@ -11025,9 +11036,11 @@ namespace CumulusMX
 					var recDate = Utils.ToGraphTime(data[i].Timestamp);
 
 					// hi rain rate
-					maxRRate.Append($"[{recDate},{data[i].HighRainRate.ToString(cumulus.RainFormat, invNum)}],");
+					if (data[i].HighRainRate.HasValue)
+						maxRRate.Append($"[{recDate},{data[i].HighRainRate.Value.ToString(cumulus.RainFormat, invNum)}],");
 					// total rain
-					rain.Append($"[{recDate},{data[i].TotalRain.ToString(cumulus.RainFormat, invNum)}],");
+					if (data[i].TotalRain.HasValue)
+					rain.Append($"[{recDate},{data[i].TotalRain.Value.ToString(cumulus.RainFormat, invNum)}],");
 				}
 				// strip trailing commas
 				maxRRate.Length--;
@@ -11058,7 +11071,7 @@ namespace CumulusMX
 
 
 			// Read the database and extract the data from there
-			var data = await DatabaseAsync.QueryAsync<DayData>("select Timestamp, LowPress, HighPress from Daydata order by Timestamp");
+			var data = await DatabaseAsync.QueryAsync<DailyData>("select Timestamp, LowPress, HighPress from Daydata order by Timestamp");
 
 			if (data.Count > 0)
 			{
@@ -11068,9 +11081,11 @@ namespace CumulusMX
 					var recDate = Utils.ToGraphTime(data[i].Timestamp);
 
 					// lo baro
-					minBaro.Append($"[{recDate},{data[i].LowPress.ToString(cumulus.PressFormat, invNum)}],");
+					if (data[i].LowPress.HasValue)
+						minBaro.Append($"[{recDate},{data[i].LowPress.Value.ToString(cumulus.PressFormat, invNum)}],");
 					// hi baro
-					maxBaro.Append($"[{recDate},{data[i].HighPress.ToString(cumulus.PressFormat, invNum)}],");
+					if (data[i].HighPress.HasValue)
+						maxBaro.Append($"[{recDate},{data[i].HighPress.Value.ToString(cumulus.PressFormat, invNum)}],");
 				}
 				// strip trailing commas
 				minBaro.Length--;
@@ -11158,7 +11173,7 @@ namespace CumulusMX
 			StringBuilder maxHum = new StringBuilder("[");
 
 			// Read the database and extract the data from there
-			var data = await DatabaseAsync.QueryAsync<DayData>("select Timestamp, LowHumidity, HighHumidity from DayData order by Timestamp");
+			var data = await DatabaseAsync.QueryAsync<DailyData>("select Timestamp, LowHumidity, HighHumidity from DayData order by Timestamp");
 
 			if (data.Count > 0)
 			{
@@ -11199,7 +11214,7 @@ namespace CumulusMX
 			StringBuilder uvi = new StringBuilder("[");
 
 			// Read the database and extract the data from there
-			var data = await DatabaseAsync.QueryAsync<DayData>("select Timestamp, SunShineHours, HighSolar, HighUv from Daydata order by Timestamp");
+			var data = await DatabaseAsync.QueryAsync<DailyData>("select Timestamp, SunShineHours, HighSolar, HighUv from Daydata order by Timestamp");
 
 			if (data.Count > 0)
 			{
@@ -11276,7 +11291,7 @@ namespace CumulusMX
 			var annualGrowingDegDays2 = 0.0;
 
 			// Read the database and extract the data from there
-			var data = await DatabaseAsync.QueryAsync<DayData>("select Timestamp, HighTemp, LowTemp from Daydata order by Timestamp");
+			var data = await DatabaseAsync.QueryAsync<DailyData>("select Timestamp, HighTemp, LowTemp from Daydata order by Timestamp");
 
 			if (data.Count > 0 && (cumulus.GraphOptions.GrowingDegreeDaysVisible1 || cumulus.GraphOptions.GrowingDegreeDaysVisible2))
 			{
@@ -11359,10 +11374,10 @@ namespace CumulusMX
 					// make all series the same year so they plot together
 					var recDate = Utils.ToGraphTime(new DateTime(plotYear, data[i].Timestamp.Month, data[i].Timestamp.Day));
 
-					if (cumulus.GraphOptions.GrowingDegreeDaysVisible1)
+					if (cumulus.GraphOptions.GrowingDegreeDaysVisible1 && data[i].LowTemp.HasValue && data[i].HighTemp.HasValue)
 					{
 						// growing degree days
-						var gdd = MeteoLib.GrowingDegreeDays(ConvertUserTempToC(data[i].HighTemp), ConvertUserTempToC(data[i].LowTemp), ConvertUserTempToC(cumulus.GrowingBase1), cumulus.GrowingCap30C);
+						var gdd = MeteoLib.GrowingDegreeDays(ConvertUserTempToC(data[i].HighTemp.Value), ConvertUserTempToC(data[i].LowTemp.Value), ConvertUserTempToC(cumulus.GrowingBase1), cumulus.GrowingCap30C);
 
 						// annual accumulation
 						annualGrowingDegDays1 += gdd;
@@ -11370,10 +11385,10 @@ namespace CumulusMX
 						growYear1.Append($"[{recDate},{annualGrowingDegDays1.ToString("F1", invNum)}],");
 					}
 
-					if (cumulus.GraphOptions.GrowingDegreeDaysVisible2)
+					if (cumulus.GraphOptions.GrowingDegreeDaysVisible2 && data[i].LowTemp.HasValue && data[i].HighTemp.HasValue)
 					{
 						// growing degree days
-						var gdd = MeteoLib.GrowingDegreeDays(ConvertUserTempToC(data[i].HighTemp), ConvertUserTempToC(data[i].LowTemp), ConvertUserTempToC(cumulus.GrowingBase2), cumulus.GrowingCap30C);
+						var gdd = MeteoLib.GrowingDegreeDays(ConvertUserTempToC(data[i].HighTemp.Value), ConvertUserTempToC(data[i].LowTemp.Value), ConvertUserTempToC(cumulus.GrowingBase2), cumulus.GrowingCap30C);
 
 						// annual accumulation
 						annualGrowingDegDays2 += gdd;
@@ -11452,7 +11467,7 @@ namespace CumulusMX
 			var options = $"\"options\":{{\"sumBase1\":{cumulus.TempSumBase1},\"sumBase2\":{cumulus.TempSumBase2},\"startMon\":{cumulus.TempSumYearStarts}}}";
 
 			// Read the day file list and extract the data from there
-			var data = await DatabaseAsync.QueryAsync<DayData>("select Timestamp, AvgTemp from DayData order by Timestamp");
+			var data = await DatabaseAsync.QueryAsync<DailyData>("select Timestamp, AvgTemp from DayData order by Timestamp");
 
 			if (data.Count > 0 && (cumulus.GraphOptions.TempSumVisible0 || cumulus.GraphOptions.TempSumVisible1 || cumulus.GraphOptions.TempSumVisible2))
 			{
@@ -11651,7 +11666,7 @@ namespace CumulusMX
 			}
 			string stormRainStart = StartOfStorm == DateTime.MinValue ? "-----" : StartOfStorm.ToString("d");
 
-			var data = new DataStruct(cumulus, OutdoorTemperature, OutdoorHumidity, TempTotalToday / tempsamplestoday, IndoorTemperature, OutdoorDewpoint, WindChill, IndoorHumidity,
+			var data = new WebSocketData(cumulus, OutdoorTemperature, OutdoorHumidity, TempTotalToday / tempsamplestoday, IndoorTemperature, OutdoorDewpoint, WindChill, IndoorHumidity,
 				Pressure, WindLatest, WindAverage, RecentMaxGust, WindRunToday, Bearing, AvgBearing, RainToday, RainYesterday, RainMonth, RainYear, RainRate,
 				RainLastHour, HeatIndex, Humidex, ApparentTemperature, temptrendval, presstrendval, HiLoToday.HighGust, HiLoToday.HighGustTime.ToString("HH:mm"), HiLoToday.HighWind,
 				HiLoToday.HighGustBearing, cumulus.Units.WindText, BearingRangeFrom10, BearingRangeTo10, windRoseData.ToString(), HiLoToday.HighTemp, HiLoToday.LowTemp,
@@ -11675,7 +11690,7 @@ namespace CumulusMX
 			try
 			{
 				using MemoryStream stream = new MemoryStream();
-				DataContractJsonSerializer ds = new DataContractJsonSerializer(typeof(DataStruct));
+				DataContractJsonSerializer ds = new DataContractJsonSerializer(typeof(WebSocketData));
 				DataContractJsonSerializerSettings s = new DataContractJsonSerializerSettings();
 				ds.WriteObject(stream, data);
 				string jsonString = Encoding.UTF8.GetString(stream.ToArray());
@@ -12195,6 +12210,8 @@ namespace CumulusMX
 		public double RainRate { get; set; }
 	}
 
+
+	/*
 	public class DayData
 	{
 		[PrimaryKey]
@@ -12423,7 +12440,7 @@ namespace CumulusMX
 		}
 
 	}
-
+	*/
 
 	public class AvgData
 	{

@@ -93,7 +93,7 @@ namespace CumulusMX
 			}
 		}
 
-		public string ProcessData(IHttpContext context, bool main = true)
+		public string ProcessData(IHttpContext context, bool main)
 		{
 			/*
 			 * Ecowitt doc:

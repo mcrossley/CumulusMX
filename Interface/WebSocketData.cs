@@ -3,11 +3,11 @@ using System.Runtime.Serialization;
 namespace CumulusMX
 {
 	[DataContract]
-	public class DataStruct // The annotations on this class are so it can be serialised as JSON
+	public class WebSocketData // The annotations on this class are so it can be serialised as JSON
 	{
 		private readonly Cumulus cumulus;
 
-		public DataStruct(Cumulus cumulus, double outdoorTemp, int outdoorHum, double avgTempToday, double indoorTemp, double outdoorDewpoint, double windChill,
+		public WebSocketData(Cumulus cumulus, double outdoorTemp, int outdoorHum, double avgTempToday, double indoorTemp, double outdoorDewpoint, double windChill,
 							int indoorHum, double pressure, double windLatest, double windAverage, double recentmaxgust, double windRunToday, int bearing, int avgbearing,
 							double rainToday, double rainYesterday, double rainMonth, double rainYear, double rainRate, double rainLastHour, double heatIndex, double humidex,
 							double appTemp, double tempTrend, double pressTrend, double highGustToday, string highGustTodayTime, double highWindToday, int highGustBearingToday,

@@ -251,7 +251,7 @@ namespace CumulusMX
 			try
 			{
 				var toDate = thedate.AddMonths(1);
-				var rows = await station.DatabaseAsync.QueryAsync<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", thedate, toDate);
+				var rows = await station.DatabaseAsync.QueryAsync<DailyData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", thedate, toDate);
 
 				foreach (var row in rows)
 				{
@@ -267,8 +267,8 @@ namespace CumulusMX
 					// haven't had this entry yet
 
 					// max temp
-					dayList[daynumber].maxtemp = row.HighTemp;
-					dayList[daynumber].maxtemptimestamp = row.HighTempTime;
+					dayList[daynumber].maxtemp = row.HighTemp.HasValue ? row.HighTemp.Value : -999;
+					dayList[daynumber].maxtemptimestamp = row.HighTempTime.HasValue ? row.HighTempTime.Value : DateTime.MinValue;
 					if (dayList[daynumber].maxtemp > maxtemp)
 					{
 						maxtemp = dayList[daynumber].maxtemp;
@@ -284,8 +284,8 @@ namespace CumulusMX
 					}
 
 					// min temp
-					dayList[daynumber].mintemp = row.LowTemp;
-					dayList[daynumber].mintemptimestamp = row.LowTempTime;
+					dayList[daynumber].mintemp = row.LowTemp.HasValue ? row.LowTemp.Value : 999;
+					dayList[daynumber].mintemptimestamp = row.LowTempTime.HasValue ? row.LowTempTime.Value : DateTime.MinValue;
 					if (dayList[daynumber].mintemp < mintemp)
 					{
 						mintemp = dayList[daynumber].mintemp;
@@ -328,8 +328,8 @@ namespace CumulusMX
 						if (row.HeatingDegreeDays.HasValue)
 						{
 							// read HDD from dayfile.txt
-							dayList[daynumber].heatingdegdays = row.HeatingDegreeDays.Value;
-							totalheating += row.HeatingDegreeDays.Value;
+							dayList[daynumber].heatingdegdays = row.HeatingDegreeDays.HasValue ? row.HeatingDegreeDays.Value : 0;
+							totalheating += dayList[daynumber].heatingdegdays;
 						}
 						else if (meantemp < cumulus.NOAAconf.HeatThreshold)
 						{
@@ -359,8 +359,8 @@ namespace CumulusMX
 					}
 
 					// rain
-					dayList[daynumber].rain = row.TotalRain;
-					totalrain += row.TotalRain;
+					dayList[daynumber].rain = row.TotalRain.HasValue ? row.TotalRain.Value : 0;
+					totalrain += row.TotalRain.HasValue ? row.TotalRain.Value : 0;
 					if (dayList[daynumber].rain > maxrain)
 					{
 						maxrain = dayList[daynumber].rain;
@@ -381,8 +381,8 @@ namespace CumulusMX
 					}
 
 					// high wind speed
-					dayList[daynumber].highwindspeed = row.HighGust;
-					dayList[daynumber].highwindtimestamp = row.HighGustTime;
+					dayList[daynumber].highwindspeed = row.HighGust.HasValue ? row.HighGust.Value : 0;
+					dayList[daynumber].highwindtimestamp = row.HighGust.HasValue ? row.HighGustTime.Value : DateTime.MinValue;
 					if (dayList[daynumber].highwindspeed > highwind)
 					{
 						highwind = dayList[daynumber].highwindspeed;
