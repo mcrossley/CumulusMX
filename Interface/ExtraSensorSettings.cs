@@ -17,7 +17,7 @@ namespace CumulusMX
 
 		public string GetAlpacaFormData()
 		{
-			var indoor = new JsonExtraSensorAirLinkDevice()
+			var indoor = new AirLinkDeviceJson()
 			{
 				enabled = cumulus.AirLinkInEnabled,
 				ipAddress = cumulus.AirLinkInIPAddr,
@@ -25,7 +25,7 @@ namespace CumulusMX
 				stationId = cumulus.AirLinkInStationId
 			};
 
-			var outdoor = new JsonExtraSensorAirLinkDevice()
+			var outdoor = new AirLinkDeviceJson()
 			{
 				enabled = cumulus.AirLinkOutEnabled,
 				ipAddress = cumulus.AirLinkOutIPAddr,
@@ -33,7 +33,7 @@ namespace CumulusMX
 				stationId = cumulus.AirLinkOutStationId
 			};
 
-			var airlink = new JsonExtraSensorAirLinkSettings()
+			var airlink = new AirLinkSettingsJson()
 			{
 				isNode = cumulus.AirLinkIsNode,
 				apiKey = cumulus.AirLinkApiKey,
@@ -43,7 +43,7 @@ namespace CumulusMX
 				outdoor = outdoor
 			};
 
-			var ecowitt = new JsonExtraSensorEcowittAmbient()
+			var ecowitt = new EcowittAmbientJson()
 			{
 				useSolar = cumulus.EcowittExtraUseSolar,
 				useUv = cumulus.EcowittExtraUseUv,
@@ -58,7 +58,7 @@ namespace CumulusMX
 				useLeak = cumulus.EcowittExtraUseLeak
 			};
 
-			var ambient = new JsonExtraSensorEcowittAmbient()
+			var ambient = new EcowittAmbientJson()
 			{
 				useSolar = cumulus.AmbientExtraUseSolar,
 				useUv = cumulus.AmbientExtraUseUv,
@@ -72,7 +72,7 @@ namespace CumulusMX
 				useLeak = cumulus.AmbientExtraUseLeak
 			};
 
-			var httpStation = new JsonExtraSensorHttp()
+			var httpStation = new HttpStationsJson()
 			{
 				ecowitt = ecowitt,
 				ambient = ambient
@@ -86,12 +86,12 @@ namespace CumulusMX
 				httpStation.extraStation = -1;
 
 
-			var bl = new JsonExtraSensorBlakeLarsen()
+			var bl = new BlakeLarsenJson()
 			{
 				enabled = cumulus.UseBlakeLarsen
 			};
 
-			var rg11port1 = new JsonExtraSensorRG11device()
+			var rg11port1 = new RG11devicejson()
 			{
 				enabled = cumulus.RG11Enabled,
 				commPort = cumulus.RG11Port,
@@ -100,7 +100,7 @@ namespace CumulusMX
 				dtrMode = cumulus.RG11TBRmode
 			};
 
-			var rg11port2 = new JsonExtraSensorRG11device()
+			var rg11port2 = new RG11devicejson()
 			{
 				enabled = cumulus.RG11Enabled2,
 				commPort = cumulus.RG11Port2,
@@ -109,19 +109,19 @@ namespace CumulusMX
 				dtrMode = cumulus.RG11TBRmode2
 			};
 
-			var rg11 = new JsonExtraSensorRG11()
+			var rg11 = new RG11Json()
 			{
 				port1 = rg11port1,
 				port2 = rg11port2
 			};
 
-			var aq = new JsonExtraSensorAirQuality()
+			var aq = new AirQualityJson()
 			{
 				primaryaqsensor = cumulus.StationOptions.PrimaryAqSensor,
 				aqi = cumulus.airQualityIndex,
 			};
 
-			var data = new JsonExtraSensorSettings()
+			var data = new SettingsJson()
 			{
 				accessible = cumulus.ProgramOptions.EnableAccessibility,
 				airquality = aq,
@@ -138,7 +138,7 @@ namespace CumulusMX
 		{
 			var errorMsg = "";
 			var json = "";
-			JsonExtraSensorSettings settings;
+			SettingsJson settings;
 			context.Response.StatusCode = 200;
 
 			try
@@ -149,7 +149,7 @@ namespace CumulusMX
 				json = WebUtility.UrlDecode(data[5..]);
 
 				// de-serialize it to the settings structure
-				settings = json.FromJson<JsonExtraSensorSettings>();
+				settings = json.FromJson<SettingsJson>();
 			}
 			catch (Exception ex)
 			{
@@ -345,83 +345,85 @@ namespace CumulusMX
 
 			return context.Response.StatusCode == 200 ? "success" : errorMsg;
 		}
-	}
-
-	public class JsonExtraSensorSettings
-	{
-		public bool accessible { get; set; }
-		public JsonExtraSensorAirQuality airquality { get; set; }
-		public JsonExtraSensorAirLinkSettings airLink { get; set; }
-		public JsonExtraSensorHttp httpSensors { get; set; }
-		public JsonExtraSensorBlakeLarsen blakeLarsen { get; set; }
-		public JsonExtraSensorRG11 rg11 { get; set; }
-	}
-
-	public class JsonExtraSensorAirQuality
-	{
-		public int primaryaqsensor { get; set; }
-		public int aqi { get; set; }
-	}
-
-	public class JsonExtraSensorAirLinkSettings
-	{
-		public bool isNode { get; set; }
-		public string apiKey { get; set; }
-		public string apiSecret { get; set; }
-		public bool autoUpdateIp { get; set; }
-		public JsonExtraSensorAirLinkDevice indoor { get; set; }
-		public JsonExtraSensorAirLinkDevice outdoor { get; set; }
-	}
-
-	public class JsonExtraSensorAirLinkDevice
-	{
-		public bool enabled { get; set; }
-		public string ipAddress { get; set; }
-		public string hostname { get; set; }
-		public int stationId { get; set; }
-	}
-
-	public class JsonExtraSensorHttp
-	{
-		public int extraStation { get; set; }
-		public JsonExtraSensorEcowittAmbient ecowitt { get; set; }
-		public JsonExtraSensorEcowittAmbient ambient { get; set; }
-	}
-
-	public class JsonExtraSensorEcowittAmbient
-	{
-		public bool useSolar { get; set; }
-		public bool useUv { get; set; }
-		public bool useTempHum { get; set; }
-		//public bool useSoilTemp { get; set; }
-		public bool useSoilMoist { get; set; }
-		public bool useLeafWet { get; set; }
-		public bool useUserTemp { get; set; }
-		public bool useAQI { get; set; }
-		public bool useCo2 { get; set; }
-		public bool useLightning { get; set; }
-		public bool useLeak { get; set; }
-	}
 
 
-	public class JsonExtraSensorBlakeLarsen
-	{
-		public bool enabled { get; set; }
-	}
 
-	public class JsonExtraSensorRG11
-	{
-		public JsonExtraSensorRG11device port1 { get; set; }
-		public JsonExtraSensorRG11device port2 { get; set; }
-	}
+		private class SettingsJson
+		{
+			public bool accessible { get; set; }
+			public AirQualityJson airquality { get; set; }
+			public AirLinkSettingsJson airLink { get; set; }
+			public HttpStationsJson httpSensors { get; set; }
+			public BlakeLarsenJson blakeLarsen { get; set; }
+			public RG11Json rg11 { get; set; }
+		}
 
-	public class JsonExtraSensorRG11device
-	{
-		public bool enabled { get; set; }
-		public string commPort { get; set; }
-		public bool tipMode { get; set; }
-		public double tipSize { get; set; }
-		public bool ignoreFirst { get; set; }
-		public bool dtrMode { get; set; }
+		private class AirQualityJson
+		{
+			public int primaryaqsensor { get; set; }
+			public int aqi { get; set; }
+		}
+
+		private class AirLinkSettingsJson
+		{
+			public bool isNode { get; set; }
+			public string apiKey { get; set; }
+			public string apiSecret { get; set; }
+			public bool autoUpdateIp { get; set; }
+			public AirLinkDeviceJson indoor { get; set; }
+			public AirLinkDeviceJson outdoor { get; set; }
+		}
+
+		private class AirLinkDeviceJson
+		{
+			public bool enabled { get; set; }
+			public string ipAddress { get; set; }
+			public string hostname { get; set; }
+			public int stationId { get; set; }
+		}
+
+		private class HttpStationsJson
+		{
+			public int extraStation { get; set; }
+			public EcowittAmbientJson ecowitt { get; set; }
+			public EcowittAmbientJson ambient { get; set; }
+		}
+
+		private class EcowittAmbientJson
+		{
+			public bool useSolar { get; set; }
+			public bool useUv { get; set; }
+			public bool useTempHum { get; set; }
+			//public bool useSoilTemp { get; set; }
+			public bool useSoilMoist { get; set; }
+			public bool useLeafWet { get; set; }
+			public bool useUserTemp { get; set; }
+			public bool useAQI { get; set; }
+			public bool useCo2 { get; set; }
+			public bool useLightning { get; set; }
+			public bool useLeak { get; set; }
+		}
+
+
+		private class BlakeLarsenJson
+		{
+			public bool enabled { get; set; }
+		}
+
+		private class RG11Json
+		{
+			public RG11devicejson port1 { get; set; }
+			public RG11devicejson port2 { get; set; }
+		}
+
+		private class RG11devicejson
+		{
+			public bool enabled { get; set; }
+			public string commPort { get; set; }
+			public bool tipMode { get; set; }
+			public double tipSize { get; set; }
+			public bool ignoreFirst { get; set; }
+			public bool dtrMode { get; set; }
+		}
 	}
 }

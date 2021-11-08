@@ -3826,7 +3826,7 @@ namespace CumulusMX
 			if (ProgramOptions.Culture.RemoveSpaceFromDateSeparator && CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(" "))
 			{
 				// get the existing culture
-				var newCulture = CultureInfo.CurrentCulture;
+				var newCulture = (CultureInfo)CultureInfo.CurrentCulture.Clone();
 				// change the date separator
 				newCulture.DateTimeFormat.DateSeparator = CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Replace(" ", "");
 				// set current thread culture
@@ -3838,6 +3838,7 @@ namespace CumulusMX
 			ProgramOptions.EncryptedCreds = ini.GetValue("Program", "EncryptedCreds", false);
 
 			ProgramOptions.UpdateDayfile = ini.GetValue("Program", "UpdateDayfile", true);
+			ProgramOptions.UpdateLogfile = ini.GetValue("Program", "UpdateLogfile", true);
 
 			ProgramOptions.WarnMultiple = ini.GetValue("Station", "WarnMultiple", true);
 			ProgramOptions.ListWebTags = ini.GetValue("Station", "ListWebTags", false);
@@ -5170,6 +5171,7 @@ namespace CumulusMX
 			ini.SetValue("Program", "StartupDelayMaxUptime", ProgramOptions.StartupDelayMaxUptime);
 
 			ini.SetValue("Program", "UpdateDayfile", ProgramOptions.UpdateDayfile);
+			ini.SetValue("Program", "UpdateLogfile", ProgramOptions.UpdateLogfile);
 
 
 			ini.SetValue("Culture", "RemoveSpaceFromDateSeparator", ProgramOptions.Culture.RemoveSpaceFromDateSeparator);
@@ -6820,6 +6822,44 @@ namespace CumulusMX
 			LogMessage("DoLogFile: Writing log entry for " + timestamp);
 			LogDebugMessage("DoLogFile: max gust: " + station.RecentMaxGust.ToString(WindFormat));
 			station.CurrentSolarMax = AstroLib.SolarMax(timestamp, Longitude, Latitude, station.AltitudeM(Altitude), out station.SolarElevation, RStransfactor, BrasTurbidity, SolarCalc);
+
+
+			var newRec = new LogData()
+			{
+				Timestamp = timestamp,
+				Temp = station.OutdoorTemperature,
+				Humidity = station.OutdoorHumidity,
+				DewPoint = station.OutdoorDewpoint,
+				WindAvg = station.WindAverage,
+				WindGust10m = station.RecentMaxGust,
+				WindAvgDir = station.AvgBearing,
+				RainRate = station.RainRate,
+				RainToday = station.RainToday,
+				Pressure = station.Pressure,
+				RainCounter = station.Raincounter,
+				InsideTemp = station.IndoorTemperature,
+				InsideHumidity = station.IndoorHumidity,
+				WindLatest = station.WindLatest,
+				WindChill = station.WindChill,
+				HeatIndex = station.HeatIndex,
+				UV = station.UV,
+				SolarRad = (int)station.SolarRad,
+				ET = station.ET,
+				AnnualET = station.AnnualETTotal,
+				Apparent = station.ApparentTemperature,
+				SolarMax = (int)station.CurrentSolarMax,
+				Sunshine = station.SunshineHours,
+				WindDir = station.Bearing,
+				RG11Rain = station.RG11RainToday,
+				RainMidnight = station.RainSinceMidnight,
+				FeelsLike = station.FeelsLike,
+				Humidex = station.Humidex
+			};
+
+			_ = await station.DatabaseAsync.InsertOrReplaceAsync(newRec);
+
+
+
 			var filename = GetLogFileName(timestamp);
 			var sep = ",";
 
@@ -10556,6 +10596,7 @@ namespace CumulusMX
 		public CultureConfig Culture { get; set; }
 		public bool EncryptedCreds { get; set; }
 		public bool UpdateDayfile { get; set; }
+		public bool UpdateLogfile { get; set; }
 	}
 
 	public class CultureConfig
@@ -11013,44 +11054,5 @@ namespace CumulusMX
 		public string TableName { get; set; }
 		public string Command { get; set; }
 		public int Interval { get; set; }
-	}
-
-	public class NOAAconfig
-	{
-		public string Name { get; set; }
-		public string City { get; set; }
-		public string State { get; set; }
-		public string MonthFile { get; set; }
-		public string YearFile { get; set; }
-		public bool Use12hour { get; set; }
-		public bool UseUtf8 { get; set; }
-		public bool UseMinMaxAvg { get; set; }
-		public bool UseDotDecimal { get; set; }
-		public bool Create { get; set; }
-		public bool AutoFtp { get; set; }
-		public bool AutoCopy { get; set; }
-		public bool NeedFtp { get; set; }
-		public bool NeedCopy { get; set; }
-		public string FtpFolder { get; set; }
-		public string CopyFolder { get; set; }
-		public double[] TempNorms { get; set; }
-		public double[] RainNorms { get; set; }
-		public double HeatThreshold { get; set; }
-		public double CoolThreshold { get; set; }
-		public double MaxTempComp1 { get; set; }
-		public double MaxTempComp2 { get; set; }
-		public double MinTempComp1 { get; set; }
-		public double MinTempComp2 { get; set; }
-		public double RainComp1 { get; set; }
-		public double RainComp2 { get; set; }
-		public double RainComp3 { get; set; }
-		public string LatestMonthReport { get; set; }
-		public string LatestYearReport { get; set; }
-
-		public NOAAconfig()
-		{
-			TempNorms = new double[13];
-			RainNorms = new double[13];
-		}
 	}
 }

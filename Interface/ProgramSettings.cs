@@ -20,7 +20,7 @@ namespace CumulusMX
 		public string GetAlpacaFormData()
 		{
 			// Build the settings data, convert to JSON, and return it
-			var startup = new JsonProgramSettingsStartupOptions()
+			var startup = new StartupOptionsJson()
 			{
 				startuphostping = cumulus.ProgramOptions.StartupPingHost,
 				startuppingescape = cumulus.ProgramOptions.StartupPingEscapeTime,
@@ -28,7 +28,7 @@ namespace CumulusMX
 				startupdelaymaxuptime = cumulus.ProgramOptions.StartupDelayMaxUptime
 			};
 
-			var logging = new JsonProgramSettingsLoggingOptions()
+			var logging = new LoggingOptionsJson()
 			{
 				debuglogging = cumulus.ProgramOptions.DebugLogging,
 				datalogging = cumulus.ProgramOptions.DataLogging,
@@ -37,18 +37,18 @@ namespace CumulusMX
 				spikelogging = cumulus.ErrorLogSpikeRemoval
 			};
 
-			var options = new JsonProgramSettingsGeneralOptions()
+			var options = new GeneralOptionsJson()
 			{
 				stopsecondinstance = cumulus.ProgramOptions.WarnMultiple,
 				listwebtags = cumulus.ProgramOptions.ListWebTags
 			};
 
-			var culture = new JsonProgramSettingsCultureOptions()
+			var culture = new CultureOptionsJson()
 			{
 				removespacefromdateseparator = cumulus.ProgramOptions.Culture.RemoveSpaceFromDateSeparator
 			};
 
-			var settings = new JsonProgramSettings()
+			var settings = new SettingsJson()
 			{
 				accessible = cumulus.ProgramOptions.EnableAccessibility,
 				startup = startup,
@@ -65,7 +65,7 @@ namespace CumulusMX
 		{
 			var errorMsg = "";
 			var json = "";
-			JsonProgramSettings settings;
+			SettingsJson settings;
 			context.Response.StatusCode = 200;
 
 			// get the response
@@ -79,7 +79,7 @@ namespace CumulusMX
 				json = WebUtility.UrlDecode(data[5..]);
 
 				// de-serialize it to the settings structure
-				settings = JsonSerializer.DeserializeFromString<JsonProgramSettings>(json);
+				settings = JsonSerializer.DeserializeFromString<SettingsJson>(json);
 			}
 			catch (Exception ex)
 			{
@@ -149,40 +149,43 @@ namespace CumulusMX
 
 			return context.Response.StatusCode == 200 ? "success" : errorMsg;
 		}
-	}
 
-	public class JsonProgramSettings
-	{
-		public bool accessible { get; set; }
-		public JsonProgramSettingsStartupOptions startup { get; set; }
-		public JsonProgramSettingsLoggingOptions logging { get; set; }
-		public JsonProgramSettingsGeneralOptions options { get; set; }
-		public JsonProgramSettingsCultureOptions culture { get; set; }
-	}
+		private class SettingsJson
+		{
+			public bool accessible { get; set; }
+			public StartupOptionsJson startup { get; set; }
+			public LoggingOptionsJson logging { get; set; }
+			public GeneralOptionsJson options { get; set; }
+			public CultureOptionsJson culture { get; set; }
+		}
 
-	public class JsonProgramSettingsStartupOptions
-	{
-		public string startuphostping { get; set; }
-		public int startuppingescape { get; set; }
-		public int startupdelay { get; set; }
-		public int startupdelaymaxuptime { get; set; }
-	}
+		private class StartupOptionsJson
+		{
+			public string startuphostping { get; set; }
+			public int startuppingescape { get; set; }
+			public int startupdelay { get; set; }
+			public int startupdelaymaxuptime { get; set; }
+		}
 
-	public class JsonProgramSettingsLoggingOptions
-	{
-		public bool debuglogging { get; set; }
-		public bool datalogging { get; set; }
-		public bool ftplogging { get; set; }
-		public bool emaillogging { get; set; }
-		public bool spikelogging { get; set; }
-	}
-	public class JsonProgramSettingsGeneralOptions
-	{
-		public bool stopsecondinstance { get; set; }
-		public bool listwebtags { get; set; }
-	}
-	public class JsonProgramSettingsCultureOptions
-	{
-		public bool removespacefromdateseparator { get; set; }
+		private class LoggingOptionsJson
+		{
+			public bool debuglogging { get; set; }
+			public bool datalogging { get; set; }
+			public bool ftplogging { get; set; }
+			public bool emaillogging { get; set; }
+			public bool spikelogging { get; set; }
+		}
+
+		private class GeneralOptionsJson
+		{
+			public bool stopsecondinstance { get; set; }
+			public bool listwebtags { get; set; }
+		}
+
+		private class CultureOptionsJson
+		{
+			public bool removespacefromdateseparator { get; set; }
+		}
+
 	}
 }

@@ -138,9 +138,9 @@ namespace CumulusMX
 			double depth;
 			try
 			{
-				var result = cumulus.DiaryDB.Query<DiaryDataEditor.DiaryData>("SELECT * FROM DiaryData WHERE Date(Timestamp) = ?", day.ToString("yyyy-MM-dd"));
+				var result = cumulus.DiaryDB.QueryScalars<double>("SELECT snowDepth FROM DiaryData WHERE Date(Timestamp) = ?", day.Date);
 
-				depth = result.Count == 1 ? result[0].snowDepth : 0;
+				depth = result.Count == 1 ? result[0] : 0;
 			}
 			catch(Exception ex)
 			{
@@ -155,9 +155,9 @@ namespace CumulusMX
 			int lying;
 			try
 			{
-				var result = cumulus.DiaryDB.Query<DiaryDataEditor.DiaryData>("SELECT * FROM DiaryData WHERE Date(Timestamp) = ?", day.ToString("yyyy-MM-dd"));
+				var result = cumulus.DiaryDB.QueryScalars<int>("SELECT snowLying FROM DiaryData WHERE Date(Timestamp) = ?", day.Date);
 
-				lying = result.Count == 1 ? result[0].snowLying : 0;
+				lying = result.Count == 1 ? result[0] : 0;
 			}
 			catch (Exception ex)
 			{
@@ -172,9 +172,9 @@ namespace CumulusMX
 			int falling;
 			try
 			{
-				var result = cumulus.DiaryDB.Query<DiaryDataEditor.DiaryData>("SELECT * FROM DiaryData WHERE Date(Timestamp) = ?", day.ToString("yyyy-MM-dd"));
+				var result = cumulus.DiaryDB.QueryScalars<int>("SELECT snowFalling FROM DiaryData WHERE Date(Timestamp) = ?", day.Date);
 
-				falling = result.Count == 1 ? result[0].snowFalling : 0;
+				falling = result.Count == 1 ? result[0] : 0;
 			}
 			catch (Exception ex)
 			{

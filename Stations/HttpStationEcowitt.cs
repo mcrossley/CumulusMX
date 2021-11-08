@@ -901,6 +901,7 @@ namespace CumulusMX
 			lowBatt = lowBatt || (data["wh65batt"] != null && data["wh65batt"] == "1");
 			lowBatt = lowBatt || (data["wh68batt"] != null && Convert.ToDouble(data["wh68batt"], invNum) <= 1.2);
 			lowBatt = lowBatt || (data["wh80batt"] != null && Convert.ToDouble(data["wh80batt"], invNum) <= 1.2);
+			lowBatt = lowBatt || (data["wh90batt"] != null && Convert.ToDouble(data["wh90batt"], invNum) <= 1.2);
 			for (var i = 1; i < 5; i++)
 			{
 				lowBatt = lowBatt || (data["batt" + i]     != null && data["batt" + i] == "1");

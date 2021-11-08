@@ -22,7 +22,7 @@ namespace CumulusMX
 		{
 			var errorMsg = "";
 			var json = "";
-			JsonInternetSettingsData settings;
+			DataJson settings;
 
 			context.Response.StatusCode = 200;
 
@@ -34,7 +34,7 @@ namespace CumulusMX
 				json = WebUtility.UrlDecode(data[5..]);
 
 				// de-serialize it to the settings structure
-				settings = json.FromJson<JsonInternetSettingsData>();
+				settings = json.FromJson<DataJson>();
 			}
 			catch (Exception ex)
 			{
@@ -341,21 +341,21 @@ namespace CumulusMX
 		{
 			// Build the settings data, convert to JSON, and return it
 
-			var websettingsadvanced = new JsonInternetSettingsWebsiteAdvanced()
+			var websettingsadvanced = new WebsiteAdvancedJson()
 			{
 				activeftp = cumulus.FtpOptions.ActiveMode,
 				disableftpsepsv = cumulus.FtpOptions.DisableEPSV,
 				disableftpsexplicit = cumulus.FtpOptions.DisableExplicit
 			};
 
-			var websettingsgeneral = new JsonInternetSettingsWebSettingsGeneral()
+			var websettingsgeneral = new WebSettingsGeneralJson()
 			{
 				ftpdelete = cumulus.DeleteBeforeUpload,
 				ftprename = cumulus.FTPRename,
 				utf8encode = cumulus.UTF8encode,
 			};
 
-			var websitesettings = new JsonInternetSettingsWebsite()
+			var websitesettings = new WebsiteJson()
 			{
 				localcopy = cumulus.FtpOptions.LocalCopyEnabled,
 				localcopyfolder = cumulus.FtpOptions.LocalCopyFolder,
@@ -372,22 +372,22 @@ namespace CumulusMX
 				advanced = websettingsadvanced
 			};
 
-			var websettingsintervalstd = new JsonInternetSettingsWebSettingsIntervalFiles()
+			var websettingsintervalstd = new IntervalFilesjson()
 			{
-				files = new JsonInternetSettingsFileSettings[cumulus.StdWebFiles.Length]
+				files = new FileSettingsjson[cumulus.StdWebFiles.Length]
 			};
 
-			var websettingsintervalgraph = new JsonInternetSettingsWebSettingsIntervalFiles()
+			var websettingsintervalgraph = new IntervalFilesjson()
 			{
-				files = new JsonInternetSettingsFileSettings[cumulus.GraphDataFiles.Length]
+				files = new FileSettingsjson[cumulus.GraphDataFiles.Length]
 			};
 
-			var websettingsintervaleodgraph = new JsonInternetSettingsWebSettingsIntervalFiles()
+			var websettingsintervaleodgraph = new IntervalFilesjson()
 			{
-				files = new JsonInternetSettingsFileSettings[cumulus.GraphDataEodFiles.Length]
+				files = new FileSettingsjson[cumulus.GraphDataEodFiles.Length]
 			};
 
-			var websettingsinterval = new JsonInternetSettingsWebSettingsInterval()
+			var websettingsinterval = new WebSettingsIntervalJson()
 			{
 				enabled = cumulus.WebIntervalEnabled,
 				enableintervalftp = cumulus.FtpOptions.IntervalEnabled,
@@ -399,7 +399,7 @@ namespace CumulusMX
 
 			for (var i = 0; i < cumulus.StdWebFiles.Length; i++)
 			{
-				websettingsinterval.stdfiles.files[i] = new JsonInternetSettingsFileSettings()
+				websettingsinterval.stdfiles.files[i] = new FileSettingsjson()
 				{
 					filename = cumulus.StdWebFiles[i].LocalFileName,
 					create = cumulus.StdWebFiles[i].Create,
@@ -410,7 +410,7 @@ namespace CumulusMX
 
 			for (var i =0; i < cumulus.GraphDataFiles.Length; i++)
 			{
-				websettingsinterval.graphfiles.files[i] = new JsonInternetSettingsFileSettings()
+				websettingsinterval.graphfiles.files[i] = new FileSettingsjson()
 				{
 					filename = cumulus.GraphDataFiles[i].LocalFileName,
 					create = cumulus.GraphDataFiles[i].Create,
@@ -421,7 +421,7 @@ namespace CumulusMX
 
 			for (var i = 0; i < cumulus.GraphDataEodFiles.Length; i++)
 			{
-				websettingsinterval.graphfileseod.files[i] = new JsonInternetSettingsFileSettings()
+				websettingsinterval.graphfileseod.files[i] = new FileSettingsjson()
 				{
 					filename = cumulus.GraphDataEodFiles[i].LocalFileName,
 					create = cumulus.GraphDataEodFiles[i].Create,
@@ -430,17 +430,17 @@ namespace CumulusMX
 				};
 			}
 
-			var websettingsrealtime = new JsonInternetSettingsWebSettingsRealtime()
+			var websettingsrealtime = new RealtimeJson()
 			{
 				enabled = cumulus.RealtimeIntervalEnabled,
 				enablerealtimeftp = cumulus.FtpOptions.RealtimeEnabled,
 				realtimeinterval = cumulus.RealtimeInterval / 1000,
-				files = new JsonInternetSettingsFileSettings[cumulus.RealtimeFiles.Length]
+				files = new FileSettingsjson[cumulus.RealtimeFiles.Length]
 			};
 
 			for (var i = 0; i < cumulus.RealtimeFiles.Length; i++)
 			{
-				websettingsrealtime.files[i] = new JsonInternetSettingsFileSettings()
+				websettingsrealtime.files[i] = new FileSettingsjson()
 				{
 					filename = cumulus.RealtimeFiles[i].LocalFileName,
 					create = cumulus.RealtimeFiles[i].Create,
@@ -449,14 +449,14 @@ namespace CumulusMX
 				};
 			}
 
-			var websettings = new JsonInternetSettingsWebSettings()
+			var websettings = new WebSettingsJson()
 			{
 				stdwebsite = false,
 				interval = websettingsinterval,
 				realtime = websettingsrealtime
 			};
 
-			var externalprograms = new JsonInternetSettingsExternalPrograms()
+			var externalprograms = new ExternalProgramsJson()
 			{
 				dailyprogram = cumulus.DailyProgram,
 				dailyprogramparams = cumulus.DailyParams,
@@ -466,20 +466,20 @@ namespace CumulusMX
 				realtimeprogramparams = cumulus.RealtimeParams
 			};
 
-			var mqttUpdate = new JsonInternetSettingsMqttDataupdate()
+			var mqttUpdate = new MqttDataupdateJson()
 			{
 				enabled = cumulus.MQTT.EnableDataUpdate,
 				template = cumulus.MQTT.UpdateTemplate
 			};
 
-			var mqttInterval = new JsonInternetSettingsMqttInterval()
+			var mqttInterval = new MqttIntervalJson()
 			{
 				enabled = cumulus.MQTT.EnableInterval,
 				time = cumulus.MQTT.IntervalTime,
 				template = cumulus.MQTT.IntervalTemplate
 			};
 
-			var mqttsettings = new JsonInternetSettingsMqtt()
+			var mqttsettings = new MqttJson()
 			{
 				server = cumulus.MQTT.Server,
 				port = cumulus.MQTT.Port,
@@ -490,7 +490,7 @@ namespace CumulusMX
 				interval = mqttInterval
 			};
 
-			var moonimagesettings = new JsonInternetSettingsMoonImage()
+			var moonimagesettings = new MoonImageJson()
 			{
 				enabled = cumulus.MoonImage.Enabled,
 				includemoonimage = cumulus.MoonImage.Ftp,
@@ -500,7 +500,7 @@ namespace CumulusMX
 				copydest = cumulus.MoonImage.CopyDest
 			};
 
-			var httpproxy = new JsonInternetSettingsHTTPproxySettings()
+			var httpproxy = new HTTPproxySettingsJson()
 			{
 				password = cumulus.HTTPProxyPassword,
 				port = cumulus.HTTPProxyPort,
@@ -508,9 +508,9 @@ namespace CumulusMX
 				user = cumulus.HTTPProxyUser
 			};
 
-			var proxy = new JsonInternetSettingsProxySettings() { httpproxy = httpproxy };
+			var proxy = new ProxySettingsJson() { httpproxy = httpproxy };
 
-			var email = new JsonEmailSettings()
+			var email = new EmailSettingsJson()
 			{
 				enabled = cumulus.SmtpOptions.Enabled,
 				server = cumulus.SmtpOptions.Server,
@@ -521,13 +521,13 @@ namespace CumulusMX
 				password = cumulus.SmtpOptions.Password
 			};
 
-			var misc = new JsonInternetSettingsMisc()
+			var misc = new MiscJson()
 			{
 				forumurl = cumulus.ForumURL,
 				webcamurl = cumulus.WebcamURL
 			};
 
-			var data = new JsonInternetSettingsData()
+			var data = new DataJson()
 			{
 				accessible = cumulus.ProgramOptions.EnableAccessibility,
 				website = websitesettings,
@@ -636,168 +636,169 @@ namespace CumulusMX
 			}
 			return "success";
 		}
-	}
-
-	public class JsonInternetSettingsData
-	{
-		public bool accessible { get; set; }
-		public JsonInternetSettingsWebsite website { get; set; }
-		public JsonInternetSettingsWebSettings websettings { get; set; }
-		public JsonInternetSettingsExternalPrograms externalprograms { get; set; }
-		public JsonInternetSettingsMqtt mqtt { get; set; }
-		public JsonInternetSettingsMoonImage moonimage { get; set; }
-		public JsonInternetSettingsProxySettings proxies { get; set; }
-		public JsonEmailSettings emailsettings { get; set; }
-		public JsonInternetSettingsMisc misc { get; set; }
-	}
-
-	public class JsonInternetSettingsWebsiteAdvanced
-	{
-		public bool activeftp { get; set; }
-		public bool disableftpsepsv { get; set; }
-		public bool disableftpsexplicit { get; set; }
-	}
-
-	public class JsonInternetSettingsWebsite
-	{
-		public bool localcopy { get; set; }
-		public string localcopyfolder { get; set; }
-		public bool enabled { get; set; }
-		public string hostname { get; set; }
-		public int ftpport { get; set; }
-		public int sslftp { get; set; }
-		public string directory { get; set; }
-		public string username { get; set; }
-		public string password { get; set; }
-		public string sshAuth { get; set; }
-		public string pskFile { get; set; }
-		public JsonInternetSettingsWebSettingsGeneral general { get; set; }
-		public JsonInternetSettingsWebsiteAdvanced advanced { get; set; }
-	}
-
-	public class JsonInternetSettingsWebSettings
-	{
-		public bool stdwebsite { get; set; }
-		public JsonInternetSettingsWebSettingsInterval interval { get; set; }
-		public JsonInternetSettingsWebSettingsRealtime realtime { get; set; }
-
-	}
-
-	public class JsonInternetSettingsWebSettingsGeneral
-	{
-		public bool ftprename { get; set; }
-		public bool ftpdelete { get; set; }
-		public bool utf8encode { get; set; }
-	}
-
-	public class JsonInternetSettingsFileSettings
-	{
-		public string filename { get; set; }
-		public bool create { get; set; }
-		public bool ftp { get; set; }
-		public bool copy { get; set; }
-	}
-
-	public class JsonInternetSettingsWebSettingsInterval
-	{
-		public bool enabled { get; set; }
-		public bool enableintervalftp { get; set; }
-		public bool enablecopy { get; set; }
-		public int ftpinterval { get; set; }
-		public JsonInternetSettingsWebSettingsIntervalFiles stdfiles { get; set; }
-		public JsonInternetSettingsWebSettingsIntervalFiles graphfiles { get; set; }
-		public JsonInternetSettingsWebSettingsIntervalFiles graphfileseod { get; set; }
-	}
-
-	public class JsonInternetSettingsWebSettingsIntervalFiles
-	{
-		public JsonInternetSettingsFileSettings[] files { get; set; }
-
-	}
-
-	public class JsonInternetSettingsWebSettingsRealtime
-	{
-		public bool enabled { get; set; }
-		public bool enablerealtimeftp { get; set; }
-		//public bool enablecopy { get; set; }
-		public int realtimeinterval { get; set; }
-		public JsonInternetSettingsFileSettings[] files { get; set; }
-	}
-
-	public class JsonInternetSettingsExternalPrograms
-	{
-		public string program { get; set; }
-		public string programparams { get; set; }
-		public string realtimeprogram { get; set; }
-		public string realtimeprogramparams { get; set; }
-		public string dailyprogram { get; set; }
-		public string dailyprogramparams { get; set; }
-	}
-
-	public class JsonInternetSettingsMqtt
-	{
-		public string server { get; set; }
-		public int port { get; set; }
-		public bool useTls { get; set; }
-		public string username { get; set; }
-		public string password { get; set; }
-		public JsonInternetSettingsMqttDataupdate dataUpdate { get; set; }
-		public JsonInternetSettingsMqttInterval interval { get; set; }
-	}
-
-	public class JsonInternetSettingsMqttDataupdate
-	{
-		public bool enabled { get; set; }
-		public string template { get; set; }
-	}
-
-	public class JsonInternetSettingsMqttInterval
-	{
-		public bool enabled { get; set; }
-		public int time { get; set; }
-		public string topic { get; set; }
-		public string template { get; set; }
-		public bool retained { get; set; }
-	}
-
-	public class JsonInternetSettingsMoonImage
-	{
-		public bool enabled { get; set; }
-		public bool includemoonimage { get; set; }
-		public int size { get; set; }
-		public string ftpdest { get; set; }
-		public bool copyimage { get; set; }
-		public string copydest { get; set; }
-	}
 
 
-	public class JsonInternetSettingsProxySettings
-	{
-		public JsonInternetSettingsHTTPproxySettings httpproxy { get; set; }
-	}
+		private class DataJson
+		{
+			public bool accessible { get; set; }
+			public WebsiteJson website { get; set; }
+			public WebSettingsJson websettings { get; set; }
+			public ExternalProgramsJson externalprograms { get; set; }
+			public MqttJson mqtt { get; set; }
+			public MoonImageJson moonimage { get; set; }
+			public ProxySettingsJson proxies { get; set; }
+			public EmailSettingsJson emailsettings { get; set; }
+			public MiscJson misc { get; set; }
+		}
 
-	public class JsonInternetSettingsHTTPproxySettings
-	{
-		public string proxy { get; set; }
-		public int port { get; set; }
-		public string user { get; set; }
-		public string password { get; set; }
-	}
+		private class WebsiteAdvancedJson
+		{
+			public bool activeftp { get; set; }
+			public bool disableftpsepsv { get; set; }
+			public bool disableftpsexplicit { get; set; }
+		}
 
-	public class JsonEmailSettings
-	{
-		public bool enabled { get; set; }
-		public string server { get; set; }
-		public int port { get; set; }
-		public int ssloption { get; set; }
-		public bool authenticate { get; set; }
-		public string user { get; set; }
-		public string password { get; set; }
-	}
+		private class WebsiteJson
+		{
+			public bool localcopy { get; set; }
+			public string localcopyfolder { get; set; }
+			public bool enabled { get; set; }
+			public string hostname { get; set; }
+			public int ftpport { get; set; }
+			public int sslftp { get; set; }
+			public string directory { get; set; }
+			public string username { get; set; }
+			public string password { get; set; }
+			public string sshAuth { get; set; }
+			public string pskFile { get; set; }
+			public WebSettingsGeneralJson general { get; set; }
+			public WebsiteAdvancedJson advanced { get; set; }
+		}
 
-	public class JsonInternetSettingsMisc
-	{
-		public string forumurl { get; set; }
-		public string webcamurl { get; set; }
+		private class WebSettingsJson
+		{
+			public bool stdwebsite { get; set; }
+			public WebSettingsIntervalJson interval { get; set; }
+			public RealtimeJson realtime { get; set; }
+
+		}
+
+		private class WebSettingsGeneralJson
+		{
+			public bool ftprename { get; set; }
+			public bool ftpdelete { get; set; }
+			public bool utf8encode { get; set; }
+		}
+
+		private class FileSettingsjson
+		{
+			public string filename { get; set; }
+			public bool create { get; set; }
+			public bool ftp { get; set; }
+			public bool copy { get; set; }
+		}
+
+		private class WebSettingsIntervalJson
+		{
+			public bool enabled { get; set; }
+			public bool enableintervalftp { get; set; }
+			public bool enablecopy { get; set; }
+			public int ftpinterval { get; set; }
+			public IntervalFilesjson stdfiles { get; set; }
+			public IntervalFilesjson graphfiles { get; set; }
+			public IntervalFilesjson graphfileseod { get; set; }
+		}
+
+		private class IntervalFilesjson
+		{
+			public FileSettingsjson[] files { get; set; }
+
+		}
+
+		private class RealtimeJson
+		{
+			public bool enabled { get; set; }
+			public bool enablerealtimeftp { get; set; }
+			//public bool enablecopy { get; set; }
+			public int realtimeinterval { get; set; }
+			public FileSettingsjson[] files { get; set; }
+		}
+
+		private class ExternalProgramsJson
+		{
+			public string program { get; set; }
+			public string programparams { get; set; }
+			public string realtimeprogram { get; set; }
+			public string realtimeprogramparams { get; set; }
+			public string dailyprogram { get; set; }
+			public string dailyprogramparams { get; set; }
+		}
+
+		private class MqttJson
+		{
+			public string server { get; set; }
+			public int port { get; set; }
+			public bool useTls { get; set; }
+			public string username { get; set; }
+			public string password { get; set; }
+			public MqttDataupdateJson dataUpdate { get; set; }
+			public MqttIntervalJson interval { get; set; }
+		}
+
+		private class MqttDataupdateJson
+		{
+			public bool enabled { get; set; }
+			public string template { get; set; }
+		}
+
+		private class MqttIntervalJson
+		{
+			public bool enabled { get; set; }
+			public int time { get; set; }
+			public string topic { get; set; }
+			public string template { get; set; }
+			public bool retained { get; set; }
+		}
+
+		private class MoonImageJson
+		{
+			public bool enabled { get; set; }
+			public bool includemoonimage { get; set; }
+			public int size { get; set; }
+			public string ftpdest { get; set; }
+			public bool copyimage { get; set; }
+			public string copydest { get; set; }
+		}
+
+		private class ProxySettingsJson
+		{
+			public HTTPproxySettingsJson httpproxy { get; set; }
+		}
+
+		private class HTTPproxySettingsJson
+		{
+			public string proxy { get; set; }
+			public int port { get; set; }
+			public string user { get; set; }
+			public string password { get; set; }
+		}
+
+		private class EmailSettingsJson
+		{
+			public bool enabled { get; set; }
+			public string server { get; set; }
+			public int port { get; set; }
+			public int ssloption { get; set; }
+			public bool authenticate { get; set; }
+			public string user { get; set; }
+			public string password { get; set; }
+		}
+
+		private class MiscJson
+		{
+			public string forumurl { get; set; }
+			public string webcamurl { get; set; }
+		}
+
 	}
 }

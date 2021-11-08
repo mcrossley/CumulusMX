@@ -72,8 +72,12 @@ namespace CumulusMX
 			CMD_READ_SENSOR_ID_NEW = 0x3C,
 			CMD_WRITE_REBOOT = 0x40,// system reset
 			CMD_WRITE_RESET = 0x41,// system default setting reset
+			CMD_READ_CUSTOMIZED_PATH = 0x51,
+			CMD_WRITE_CUSTOMIZED_PATH = 0x52,
 			CMD_GET_CO2_OFFSET = 0x53,
-			CMD_SET_CO2_OFFSET = 0x54
+			CMD_SET_CO2_OFFSET = 0x54,
+			CMD_READ_RSTRAIN_TIME = 0x55,// read rain reset time
+			CMD_WRITE_RSTRAIN_TIME = 0x56// write back rain reset time
 		}
 
 		private enum CommandRespSize : int
@@ -117,7 +121,9 @@ namespace CumulusMX
 			CMD_WRITE_SENSOR_ID = bytes1,
 			CMD_WRITE_REBOOT = bytes1,
 			CMD_WRITE_RESET = bytes1,
-			CMD_READ_SENSOR_ID_NEW = bytes2
+			CMD_READ_SENSOR_ID_NEW = bytes2,
+			CMD_READ_RSTRAIN_TIME = bytes1,
+			CMD_WRITE_RSTRAIN_TIME = bytes1
 		}
 
 		[Flags] private enum SigSen : byte
@@ -229,8 +235,9 @@ namespace CumulusMX
 			Wh35Ch4,		// 43
 			Wh35Ch5,		// 44
 			Wh35Ch6,		// 45
-			Wh35Ch7,		// 46
-			Wh35Ch8			// 47
+			Wh35Ch7,        // 46
+			Wh35Ch8,        // 47
+			Wh90            // 48
 		};
 
 		public GW1000Station(Cumulus cumulus) : base(cumulus)
@@ -478,7 +485,7 @@ namespace CumulusMX
 				client.EnableBroadcast = true;
 				client.Send(sendBytes, sendBytes.Length, sendEp);
 
-				string[] namesToCheck = { "GW1000", "WH2650", "EasyWeather", "AMBWeather", "WS1900", "WN1900" };
+				//string[] namesToCheck = { "GW1000", "WH2650", "EasyWeather", "AMBWeather", "WS1900", "WN1900" };
 
 				do
 				{
@@ -497,7 +504,8 @@ namespace CumulusMX
 						Array.Copy(receivedBytes, 5, macArr, 0, 6);
 						var macHex = BitConverter.ToString(macArr).Replace('-', ':');
 
-						if (namesToCheck.Any((name.Split('-')[0]).StartsWith) && ipAddr.Split('.', StringSplitOptions.RemoveEmptyEntries).Length == 4)
+						//if (namesToCheck.Any((name.Split('-')[0]).StartsWith) && ipAddr.Split('.', StringSplitOptions.RemoveEmptyEntries).Length == 4)
+						if (ipAddr.Split('.', StringSplitOptions.RemoveEmptyEntries).Length == 4)
 						{
 							IPAddress ipAddr2;
 							if (IPAddress.TryParse(ipAddr, out ipAddr2))
@@ -743,6 +751,7 @@ namespace CumulusMX
 
 					case string wh34 when wh34.StartsWith("WH34"):  // ch 1-8
 					case string wh35 when wh35.StartsWith("WH35"):  // ch 1-8
+					case "WH90":
 						battV = data[battPos] * 0.02;
 						batt = $"{battV:f1}V ({TestBattery10(data[battPos])})";  // volts/10, low = 1.2V
 						break;
@@ -873,7 +882,7 @@ namespace CumulusMX
 								idx += 2;
 								break;
 							case 0x05: //Heat index (℃)
-									   // cumulus calculates this
+								// cumulus calculates this
 								idx += 2;
 								break;
 							case 0x06: //Indoor Humidity(%)
@@ -900,13 +909,13 @@ namespace CumulusMX
 								windSpeedLast = ConvertWindMSToUser(ConvertBigEndianUInt16(data, idx) / 10.0);
 								idx += 2;
 								break;
-							case 0x0C: // Gust speed (m/s)
+							case 0x0C: //Gust speed (m/s)
 								gustLast = ConvertWindMSToUser(ConvertBigEndianUInt16(data, idx) / 10.0);
 								gustLastCal = gustLast * cumulus.Calib.WindGust.Mult;
 								idx += 2;
 								break;
 							case 0x0D: //Rain Event (mm)
-									   //TODO: add rain event total
+								StormRain = ConvertRainMMToUser(ConvertBigEndianUInt32(data, idx) / 10.0);
 								idx += 2;
 								break;
 							case 0x0E: //Rain Rate (mm/h)
@@ -933,7 +942,7 @@ namespace CumulusMX
 								idx += 4;
 								break;
 							case 0x15: //Light (lux)
-									   // Save the Lux value
+								// Save the Lux value
 								LightValue = ConvertBigEndianUInt32(data, idx) / 10.0;
 								// convert Lux to W/m² - approximately!
 								DoSolarRad((int)(LightValue * cumulus.LuxToWM2), dateTime);
@@ -993,7 +1002,7 @@ namespace CumulusMX
 							case 0x45: //Soil Temperature14 (℃)
 							case 0x47: //Soil Temperature15 (℃)
 							case 0x49: //Soil Temperature16 (℃)
-									   // figure out the channel number
+								// figure out the channel number
 								chan = data[idx - 1] - 0x2B + 2; // -> 2,4,6,8...
 								chan /= 2; // -> 1,2,3,4...
 								tempInt16 = ConvertBigEndianInt16(data, idx);
@@ -1016,7 +1025,7 @@ namespace CumulusMX
 							case 0x46: //Soil Moisture14 (%)
 							case 0x48: //Soil Moisture15 (%)
 							case 0x4A: //Soil Moisture16 (%)
-									   // figure out the channel number
+								// figure out the channel number
 								chan = data[idx - 1] - 0x2C + 2; // -> 2,4,6,8...
 								chan /= 2; // -> 1,2,3,4...
 								DoSoilMoisture(data[idx], chan);
@@ -1586,6 +1595,8 @@ namespace CumulusMX
 
 		private static string TestBattery3(byte value)
 		{
+			if (value == 6)
+				return "DC";
 			return value > 1 ? "OK" : "Low";
 		}
 

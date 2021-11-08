@@ -5,7 +5,7 @@ using SQLite;
 
 namespace CumulusMX
 {
-	public class DailyData
+	public class DayData
 	{
 		[PrimaryKey]
 		public DateTime Timestamp { get; set; }         // 0  Date
@@ -62,7 +62,7 @@ namespace CumulusMX
 		public DateTime? HighHumidexTime { get; set; }  // 51  Time of high Humidex
 		public double? ChillHours { get; set; }         // 52  Total chill hours
 
-		public override string ToString()
+		public string ToCSV()
 		{
 			var invNum = CultureInfo.InvariantCulture.NumberFormat;
 			var invDate = CultureInfo.InvariantCulture.NumberFormat;
@@ -70,33 +70,33 @@ namespace CumulusMX
 
 			var sb = new StringBuilder(350);
 			sb.Append(Timestamp.ToString("'\"'dd/MM/yy'\"'", invDate)).Append(',');
-			if (HighGust.HasValue) sb.Append(HighGust.Value.ToString(Program.cumulus.WindFormat, invNum));
+			if (HighGust.HasValue) sb.Append(HighGust.Value.ToString(Program.cumulus.WindFormat, invNum)); else sb.Append("\"\"");
 			sb.Append(',');
-			if (HighGustBearing.HasValue) sb.Append(HighGustBearing.Value);
+			if (HighGustBearing.HasValue) sb.Append(HighGustBearing.Value); else sb.Append("\"\"");
 			sb.Append(',');
-			if (HighGustTime.HasValue) sb.Append(HighGustTime.Value.ToString(timForm, invDate));
+			if (HighGustTime.HasValue) sb.Append(HighGustTime.Value.ToString(timForm, invDate)); else sb.Append("\"\"");
 			sb.Append(',');
-			if (LowTemp.HasValue) sb.Append(LowTemp.Value.ToString(Program.cumulus.TempFormat, invNum));
+			if (LowTemp.HasValue) sb.Append(LowTemp.Value.ToString(Program.cumulus.TempFormat, invNum)); else sb.Append("\"\"");
 			sb.Append(',');
-			if (LowTempTime.HasValue) sb.Append(LowTempTime.Value.ToString(timForm, invDate));
+			if (LowTempTime.HasValue) sb.Append(LowTempTime.Value.ToString(timForm, invDate)); else sb.Append("\"\"");
 			sb.Append(',');
-			if (HighTemp.HasValue) sb.Append(HighTemp.Value.ToString(Program.cumulus.TempFormat, invNum));
+			if (HighTemp.HasValue) sb.Append(HighTemp.Value.ToString(Program.cumulus.TempFormat, invNum)); else sb.Append("\"\"");
 			sb.Append(',');
-			if (HighTempTime.HasValue) sb.Append(HighTempTime.Value.ToString(timForm, invDate));
+			if (HighTempTime.HasValue) sb.Append(HighTempTime.Value.ToString(timForm, invDate)); else sb.Append("\"\"");
 			sb.Append(',');
-			if (LowPress.HasValue) sb.Append(LowPress.Value.ToString(Program.cumulus.PressFormat, invNum));
+			if (LowPress.HasValue) sb.Append(LowPress.Value.ToString(Program.cumulus.PressFormat, invNum)); else sb.Append("\"\"");
 			sb.Append(',');
-			if (LowPressTime.HasValue) sb.Append(LowPressTime.Value.ToString(timForm, invDate));
+			if (LowPressTime.HasValue) sb.Append(LowPressTime.Value.ToString(timForm, invDate)); else sb.Append("\"\"");
 			sb.Append(',');
-			if (HighPress.HasValue) sb.Append(HighPress.Value.ToString(Program.cumulus.PressFormat, invNum));
+			if (HighPress.HasValue) sb.Append(HighPress.Value.ToString(Program.cumulus.PressFormat, invNum)); else sb.Append("\"\"");
 			sb.Append(',');
-			if (HighPressTime.HasValue) sb.Append(HighPressTime.Value.ToString(timForm, invDate));
+			if (HighPressTime.HasValue) sb.Append(HighPressTime.Value.ToString(timForm, invDate)); else sb.Append("\"\"");
 			sb.Append(',');
-			if (HighRainRate.HasValue) sb.Append(HighRainRate.Value.ToString(Program.cumulus.RainFormat, invNum));
+			if (HighRainRate.HasValue) sb.Append(HighRainRate.Value.ToString(Program.cumulus.RainFormat, invNum)); else sb.Append("\"\"");
 			sb.Append(',');
-			if (HighRainRateTime.HasValue) sb.Append(HighRainRateTime.Value.ToString(timForm, invDate));
+			if (HighRainRateTime.HasValue) sb.Append(HighRainRateTime.Value.ToString(timForm, invDate)); else sb.Append("\"\"");
 			sb.Append(',');
-			if (TotalRain.HasValue) sb.Append(TotalRain.Value.ToString(Program.cumulus.RainFormat, invNum));
+			if (TotalRain.HasValue) sb.Append(TotalRain.Value.ToString(Program.cumulus.RainFormat, invNum)); else sb.Append("\"\"");
 			sb.Append(',');
 			if (AvgTemp.HasValue) sb.Append(AvgTemp.Value.ToString(Program.cumulus.TempFormat, invNum)); else sb.Append("\"\"");
 			sb.Append(',');
@@ -179,69 +179,66 @@ namespace CumulusMX
 
 		public bool FromString(string[] data)
 		{
-			var invNum = CultureInfo.InvariantCulture.NumberFormat;
 			var invDate = CultureInfo.InvariantCulture.NumberFormat;
 			var timForm = "hh\\:mm";
 
-			if (data.Length != Cumulus.DayfileFields)
-			{
-				Cumulus.LogMessage($"Error parsing dayfile fields. Expected {Cumulus.DayfileFields}, got {data.Length}");
-				return false;
-			}
+			// Make sure we always have the correct number of fields
+			var data2 = new string[Cumulus.DayfileFields];
+			Array.Copy(data, data2, data.Length);
 
-			Timestamp = DateTime.ParseExact(data[0], "dd/MM/yy", invDate);
-			HighGust = Utils.TryParseNullDouble(data[1]);
-			HighGustBearing = Utils.TryParseNullInt(data[2]);
-			HighGustTime = Utils.TryParseNullTimeSpan(Timestamp, data[3], timForm);
-			LowTemp = double.Parse(data[4], invNum);
-			LowTempTime = Timestamp.Add(TimeSpan.ParseExact(data[5], timForm, invDate));
-			HighTemp = double.Parse(data[6], invNum);
-			HighTempTime = Timestamp.Add(TimeSpan.ParseExact(data[7], timForm, invDate));
-			LowPress = double.Parse(data[8], invNum);
-			LowPressTime = Timestamp.Add(TimeSpan.ParseExact(data[9], timForm, invDate));
-			HighPress = double.Parse(data[10], invNum);
-			HighPressTime = Timestamp.Add(TimeSpan.ParseExact(data[11], timForm, invDate));
-			HighRainRate = double.Parse(data[12], invNum);
-			HighRainRateTime = Timestamp.Add(TimeSpan.ParseExact(data[13], timForm, invDate));
-			TotalRain = double.Parse(data[14], invNum);
-			AvgTemp = Utils.TryParseNullDouble(data[15]);
-			WindRun = Utils.TryParseNullDouble(data[16]);
-			HighAvgWind = Utils.TryParseNullDouble(data[17]);
-			HighAvgWindTime = Utils.TryParseNullTimeSpan(Timestamp, data[18], timForm);
-			LowHumidity = Utils.TryParseNullInt(data[19]);
-			LowHumidityTime = Utils.TryParseNullTimeSpan(Timestamp, data[20], timForm);
-			HighHumidity = Utils.TryParseNullInt(data[21]);
-			HighHumidityTime = Utils.TryParseNullTimeSpan(Timestamp, data[22], timForm);
-			ET = Utils.TryParseNullDouble(data[23]);
-			SunShineHours = Utils.TryParseNullDouble(data[24]);
-			HighHeatIndex = Utils.TryParseNullDouble(data[25]);
-			HighHeatIndexTime = Utils.TryParseNullTimeSpan(Timestamp, data[26], timForm);
-			HighAppTemp = Utils.TryParseNullDouble(data[27]);
-			HighAppTempTime = Utils.TryParseNullTimeSpan(Timestamp, data[28], timForm);
-			LowAppTemp = Utils.TryParseNullDouble(data[29]);
-			LowAppTempTime = Utils.TryParseNullTimeSpan(Timestamp, data[30], timForm);
-			HighHourlyRain = Utils.TryParseNullDouble(data[31]);
-			HighHourlyRainTime = Utils.TryParseNullTimeSpan(Timestamp, data[32], timForm);
-			LowWindChill = Utils.TryParseNullDouble(data[33]);
-			LowWindChillTime = Utils.TryParseNullTimeSpan(Timestamp, data[34], timForm);
-			HighDewPoint = Utils.TryParseNullDouble(data[35]);
-			HighDewPointTime = Utils.TryParseNullTimeSpan(Timestamp, data[36], timForm);
-			LowDewPoint = Utils.TryParseNullDouble(data[37]);
-			LowDewPointTime = Utils.TryParseNullTimeSpan(Timestamp, data[38], timForm);
-			DominantWindBearing = Utils.TryParseNullInt(data[39]);
-			HeatingDegreeDays = Utils.TryParseNullDouble(data[40]);
-			CoolingDegreeDays = Utils.TryParseNullDouble(data[41]);
-			HighSolar = Utils.TryParseNullInt(data[42]);
-			HighSolarTime = Utils.TryParseNullTimeSpan(Timestamp, data[43], timForm);
-			HighUv = Utils.TryParseNullDouble(data[44]);
-			HighUvTime = Utils.TryParseNullTimeSpan(Timestamp, data[45], timForm);
-			HighFeelsLike = Utils.TryParseNullDouble(data[46]);
-			HighFeelsLikeTime = Utils.TryParseNullTimeSpan(Timestamp, data[47], timForm);
-			LowFeelsLike = Utils.TryParseNullDouble(data[48]);
-			LowFeelsLikeTime = Utils.TryParseNullTimeSpan(Timestamp, data[49], timForm);
-			HighHumidex = Utils.TryParseNullDouble(data[50]);
-			HighHumidexTime = Utils.TryParseNullTimeSpan(Timestamp, data[51], timForm);
-			ChillHours = Utils.TryParseNullDouble(data[52]);
+			Timestamp = DateTime.ParseExact(data2[0], "dd/MM/yy", invDate);
+			HighGust = Utils.TryParseNullDouble(data2[1]);
+			HighGustBearing = Utils.TryParseNullInt(data2[2]);
+			HighGustTime = Utils.TryParseNullTimeSpan(Timestamp, data2[3], timForm);
+			LowTemp = Utils.TryParseNullDouble(data2[4]);
+			LowTempTime = Utils.TryParseNullTimeSpan(Timestamp, data2[5], timForm);
+			HighTemp = Utils.TryParseNullDouble(data2[6]);
+			HighTempTime = Utils.TryParseNullTimeSpan(Timestamp, data2[7], timForm);
+			LowPress = Utils.TryParseNullDouble(data2[8]);
+			LowPressTime = Utils.TryParseNullTimeSpan(Timestamp, data2[9], timForm);
+			HighPress = Utils.TryParseNullDouble(data2[10]);
+			HighPressTime = Utils.TryParseNullTimeSpan(Timestamp, data2[11], timForm);
+			HighRainRate = Utils.TryParseNullDouble(data2[12]);
+			HighRainRateTime = Utils.TryParseNullTimeSpan(Timestamp, data2[13], timForm);
+			TotalRain = Utils.TryParseNullDouble(data2[14]);
+			AvgTemp = Utils.TryParseNullDouble(data2[15]);
+			WindRun = Utils.TryParseNullDouble(data2[16]);
+			HighAvgWind = Utils.TryParseNullDouble(data2[17]);
+			HighAvgWindTime = Utils.TryParseNullTimeSpan(Timestamp, data2[18], timForm);
+			LowHumidity = Utils.TryParseNullInt(data2[19]);
+			LowHumidityTime = Utils.TryParseNullTimeSpan(Timestamp, data2[20], timForm);
+			HighHumidity = Utils.TryParseNullInt(data2[21]);
+			HighHumidityTime = Utils.TryParseNullTimeSpan(Timestamp, data2[22], timForm);
+			ET = Utils.TryParseNullDouble(data2[23]);
+			SunShineHours = Utils.TryParseNullDouble(data2[24]);
+			HighHeatIndex = Utils.TryParseNullDouble(data2[25]);
+			HighHeatIndexTime = Utils.TryParseNullTimeSpan(Timestamp, data2[26], timForm);
+			HighAppTemp = Utils.TryParseNullDouble(data2[27]);
+			HighAppTempTime = Utils.TryParseNullTimeSpan(Timestamp, data2[28], timForm);
+			LowAppTemp = Utils.TryParseNullDouble(data2[29]);
+			LowAppTempTime = Utils.TryParseNullTimeSpan(Timestamp, data2[30], timForm);
+			HighHourlyRain = Utils.TryParseNullDouble(data2[31]);
+			HighHourlyRainTime = Utils.TryParseNullTimeSpan(Timestamp, data2[32], timForm);
+			LowWindChill = Utils.TryParseNullDouble(data2[33]);
+			LowWindChillTime = Utils.TryParseNullTimeSpan(Timestamp, data2[34], timForm);
+			HighDewPoint = Utils.TryParseNullDouble(data2[35]);
+			HighDewPointTime = Utils.TryParseNullTimeSpan(Timestamp, data2[36], timForm);
+			LowDewPoint = Utils.TryParseNullDouble(data2[37]);
+			LowDewPointTime = Utils.TryParseNullTimeSpan(Timestamp, data2[38], timForm);
+			DominantWindBearing = Utils.TryParseNullInt(data2[39]);
+			HeatingDegreeDays = Utils.TryParseNullDouble(data2[40]);
+			CoolingDegreeDays = Utils.TryParseNullDouble(data2[41]);
+			HighSolar = Utils.TryParseNullInt(data2[42]);
+			HighSolarTime = Utils.TryParseNullTimeSpan(Timestamp, data2[43], timForm);
+			HighUv = Utils.TryParseNullDouble(data2[44]);
+			HighUvTime = Utils.TryParseNullTimeSpan(Timestamp, data2[45], timForm);
+			HighFeelsLike = Utils.TryParseNullDouble(data2[46]);
+			HighFeelsLikeTime = Utils.TryParseNullTimeSpan(Timestamp, data2[47], timForm);
+			LowFeelsLike = Utils.TryParseNullDouble(data2[48]);
+			LowFeelsLikeTime = Utils.TryParseNullTimeSpan(Timestamp, data2[49], timForm);
+			HighHumidex = Utils.TryParseNullDouble(data2[50]);
+			HighHumidexTime = Utils.TryParseNullTimeSpan(Timestamp, data2[51], timForm);
+			ChillHours = Utils.TryParseNullDouble(data2[52]);
 
 			return true;
 		}

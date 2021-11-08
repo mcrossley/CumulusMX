@@ -20,7 +20,7 @@ namespace CumulusMX
 		public string UpdateConfig(IHttpContext context)
 		{
 			var json = "";
-			JsonCalibrationSettingsData settings;
+			DataJson settings;
 			var invC = new CultureInfo("");
 
 			try
@@ -30,7 +30,7 @@ namespace CumulusMX
 				json = WebUtility.UrlDecode(data[5..]);
 
 				// de-serialize it to the settings structure
-				settings = json.FromJson<JsonCalibrationSettingsData>();
+				settings = json.FromJson<DataJson>();
 			}
 			catch (Exception ex)
 			{
@@ -111,7 +111,7 @@ namespace CumulusMX
 
 		public string GetAlpacaFormData()
 		{
-			var pressure = new JsonCalibrationSettingsPress()
+			var pressure = new PressJson()
 			{
 				offset = cumulus.Calib.Press.Offset,
 				multiplier = cumulus.Calib.Press.Mult,
@@ -120,7 +120,7 @@ namespace CumulusMX
 				limitmin = cumulus.Limit.PressLow
 			};
 
-			var temp = new JsonCalibrationSettingsTemp()
+			var temp = new TempJson()
 			{
 				offset = cumulus.Calib.Temp.Offset,
 				multiplier = cumulus.Calib.Temp.Mult,
@@ -130,12 +130,12 @@ namespace CumulusMX
 				limitmin = cumulus.Limit.TempLow,
 			};
 
-			var tempin = new JsonCalibrationSettingsTempIn()
+			var tempin = new TempInJson()
 			{
 				offset = cumulus.Calib.InTemp.Offset
 			};
 
-			var hum = new JsonCalibrationSettingsHum()
+			var hum = new HumidityJson()
 			{
 				offset = (int)cumulus.Calib.Hum.Offset,
 				multiplier = cumulus.Calib.Hum.Mult,
@@ -143,55 +143,55 @@ namespace CumulusMX
 				spike = cumulus.Spike.HumidityDiff
 			};
 
-			var windspd = new JsonCalibrationSettingsWindSpd()
+			var windspd = new WindSpeedJson()
 			{
 				multiplier = cumulus.Calib.WindSpeed.Mult,
 				spike = cumulus.Spike.WindDiff
 			};
 
-			var gust = new JsonCalibrationSettingsGust()
+			var gust = new GustSpeedJson()
 			{
 				multiplier = cumulus.Calib.WindGust.Mult,
 				spike = cumulus.Spike.GustDiff,
 				limitmax = cumulus.Limit.WindHigh
 			};
 
-			var winddir = new JsonCalibrationSettingsDir()
+			var winddir = new DirectionJson()
 			{
 				offset = (int)cumulus.Calib.WindDir.Offset
 			};
 
-			var rain = new JsonCalibrationSettingsRain()
+			var rain = new Rainjson()
 			{
 				multiplier = cumulus.Calib.Rain.Mult,
 				spikehour = cumulus.Spike.MaxHourlyRain,
 				spikerate = cumulus.Spike.MaxRainRate
 			};
 
-			var solar = new JsonCalibrationSettingsOffMult()
+			var solar = new OffsetMultJson()
 			{
 				offset = cumulus.Calib.Solar.Offset,
 				multiplier = cumulus.Calib.Solar.Mult
 			};
 
-			var uv = new JsonCalibrationSettingsOffMult()
+			var uv = new OffsetMultJson()
 			{
 				offset = cumulus.Calib.UV.Offset,
 				multiplier = cumulus.Calib.UV.Mult
 			};
 
-			var wetbulb = new JsonCalibrationSettingsOffMult()
+			var wetbulb = new OffsetMultJson()
 			{
 				offset = cumulus.Calib.WetBulb.Offset,
 				multiplier = cumulus.Calib.WetBulb.Mult
 			};
 
-			var dewpt = new JsonCalibrationSettingsDew()
+			var dewpt = new DewpointJson()
 			{
 				limitmax = cumulus.Limit.DewHigh
 			};
 
-			var data = new JsonCalibrationSettingsData()
+			var data = new DataJson()
 			{
 				accessible = cumulus.ProgramOptions.EnableAccessibility,
 				pressure = pressure,
@@ -210,91 +210,93 @@ namespace CumulusMX
 
 			return data.ToJson();
 		}
-	}
-
-	public class JsonCalibrationSettingsData
-	{
-		public bool accessible { get; set; }
-		public JsonCalibrationSettingsPress pressure { get; set; }
-		public JsonCalibrationSettingsTemp temp { get; set; }
-		public JsonCalibrationSettingsTempIn tempin { get; set; }
-		public JsonCalibrationSettingsHum hum { get; set; }
-		public JsonCalibrationSettingsWindSpd windspd { get; set; }
-		public JsonCalibrationSettingsGust gust { get; set; }
-		public JsonCalibrationSettingsDir winddir { get; set; }
-		public JsonCalibrationSettingsRain rain { get; set; }
-		public JsonCalibrationSettingsOffMult solar { get; set; }
-		public JsonCalibrationSettingsOffMult uv { get; set; }
-		public JsonCalibrationSettingsOffMult wetbulb { get; set; }
-		public JsonCalibrationSettingsDew dewpt { get; set; }
-	}
 
 
-	public class JsonCalibrationSettingsPress
-	{
-		public double offset { get; set; }
-		public double multiplier { get; set; }
-		public double spike { get; set; }
-		public double limitmin { get; set; }
-		public double limitmax { get; set; }
-	}
+		private class DataJson
+		{
+			public bool accessible { get; set; }
+			public PressJson pressure { get; set; }
+			public TempJson temp { get; set; }
+			public TempInJson tempin { get; set; }
+			public HumidityJson hum { get; set; }
+			public WindSpeedJson windspd { get; set; }
+			public GustSpeedJson gust { get; set; }
+			public DirectionJson winddir { get; set; }
+			public Rainjson rain { get; set; }
+			public OffsetMultJson solar { get; set; }
+			public OffsetMultJson uv { get; set; }
+			public OffsetMultJson wetbulb { get; set; }
+			public DewpointJson dewpt { get; set; }
+		}
 
-	public class JsonCalibrationSettingsTemp
-	{
-		public double offset { get; set; }
-		public double multiplier { get; set; }
-		public double multiplier2 { get; set; }
-		public double spike { get; set; }
-		public double limitmin { get; set; }
-		public double limitmax { get; set; }
-	}
 
-	public class JsonCalibrationSettingsTempIn
-	{
-		public double offset { get; set; }
-	}
+		private class PressJson
+		{
+			public double offset { get; set; }
+			public double multiplier { get; set; }
+			public double spike { get; set; }
+			public double limitmin { get; set; }
+			public double limitmax { get; set; }
+		}
 
-	public class JsonCalibrationSettingsHum
-	{
-		public int offset { get; set; }
-		public double multiplier { get; set; }
-		public double multiplier2 { get; set; }
-		public double spike { get; set; }
-	}
+		private class TempJson
+		{
+			public double offset { get; set; }
+			public double multiplier { get; set; }
+			public double multiplier2 { get; set; }
+			public double spike { get; set; }
+			public double limitmin { get; set; }
+			public double limitmax { get; set; }
+		}
 
-	public class JsonCalibrationSettingsWindSpd
-	{
-		public double multiplier { get; set; }
-		public double spike { get; set; }
-	}
+		private class TempInJson
+		{
+			public double offset { get; set; }
+		}
 
-	public class JsonCalibrationSettingsGust
-	{
-		public double multiplier { get; set; }
-		public double spike { get; set; }
-		public double limitmax { get; set; }
-	}
+		private class HumidityJson
+		{
+			public int offset { get; set; }
+			public double multiplier { get; set; }
+			public double multiplier2 { get; set; }
+			public double spike { get; set; }
+		}
 
-	public class JsonCalibrationSettingsDir
-	{
-		public int offset { get; set; }
-	}
+		private class WindSpeedJson
+		{
+			public double multiplier { get; set; }
+			public double spike { get; set; }
+		}
 
-	public class JsonCalibrationSettingsRain
-	{
-		public double multiplier { get; set; }
-		public double spikerate { get; set; }
-		public double spikehour { get; set; }
-	}
+		private class GustSpeedJson
+		{
+			public double multiplier { get; set; }
+			public double spike { get; set; }
+			public double limitmax { get; set; }
+		}
 
-	public class JsonCalibrationSettingsDew
-	{
-		public double limitmax { get; set; }
-	}
+		private class DirectionJson
+		{
+			public int offset { get; set; }
+		}
 
-	public class JsonCalibrationSettingsOffMult
-	{
-		public double offset { get; set; }
-		public double multiplier { get; set; }
+		private class Rainjson
+		{
+			public double multiplier { get; set; }
+			public double spikerate { get; set; }
+			public double spikehour { get; set; }
+		}
+
+		private class DewpointJson
+		{
+			public double limitmax { get; set; }
+		}
+
+		private class OffsetMultJson
+		{
+			public double offset { get; set; }
+			public double multiplier { get; set; }
+		}
+
 	}
 }

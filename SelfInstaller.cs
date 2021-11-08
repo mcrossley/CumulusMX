@@ -28,6 +28,8 @@ namespace CumulusMX
 					return false;
 				}
 
+				Console.WriteLine("Installing as a Windows Service...");
+
 				// sc create CumulusMX binpath=C:\CumulusMX\CumulusMX.dll start= delayed-auto depend= LanmanWorkstation
 
 				var path = AppDomain.CurrentDomain.BaseDirectory + "\\CumulusMX.exe";
@@ -73,6 +75,8 @@ namespace CumulusMX
 					return false;
 				}
 
+				Console.WriteLine("Uninstalling as a Windows Service...");
+
 				// sc delete CumulusMX
 
 				if (RunCommand("sc.exe", "delete CumulusMX") == 0)
@@ -97,6 +101,11 @@ namespace CumulusMX
 					return false;
 				}
 
+				var user = string.IsNullOrEmpty(userId) ? "root" : userId;
+
+				Console.WriteLine($"Installing as a systemctld service using userid {user}...");
+
+
 				// does the service file exist already?
 				if (File.Exists(serviceFile))
 				{
@@ -111,17 +120,15 @@ namespace CumulusMX
 
 				var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
-				//var user = Environment.UserName;
-				var user = string.IsNullOrEmpty(userId) ? "root" : userId;
 
 				string[] contents = {
 					"[Unit]",
 					"Description=CumulusMX service",
-					"Documentation=https://cumuluswiki.org/a/Main_Page",
+					"Documentation=https://cumuluswiki.org/a/Main_Page https://cumulus.hosiene.co.uk/",
 					"After=network-online.target",
 					"",
 					"[Service]",
-					$"User={userId}",
+					$"User={user}",
 					$"Group={user}",
 					$"WorkingDirectory={appPath}",
 					$"ExecStart=\"{dotnetPath}\" CumulusMX.dll -service",
@@ -149,8 +156,8 @@ namespace CumulusMX
 			{
 				if (!IsElevated())
 				{
-					//Console.WriteLine("You must run the service uninstall process as an elevated user - 'Run as Administrator'");
-					//return false;
+					Console.WriteLine("You must run the service uninstall process as an elevated user - 'Run as Administrator'");
+					return false;
 				}
 
 				// stop and disable the service if it is running

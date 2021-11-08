@@ -15,11 +15,11 @@ namespace CumulusMX
 			this.cumulus = cumulus;
 		}
 
-		public string GetAlarmSettings()
+		public string GetSettings()
 		{
 			//var InvC = new CultureInfo("");
 
-			var alarmUnits = new JsonAlarmUnits()
+			var alarmUnits = new UnitsJson()
 			{
 				tempUnits = cumulus.Units.TempText,
 				pressUnits = cumulus.Units.PressText,
@@ -27,9 +27,9 @@ namespace CumulusMX
 				windUnits = cumulus.Units.WindText
 			};
 
-			var data = new JsonAlarmSettingsData()
+			var data = new DataJson()
 			{
-				tempBelow = new JsonAlarmValues()
+				tempBelow = new ValuesJson()
 				{
 					Enabled = cumulus.LowTempAlarm.Enabled,
 					Val = cumulus.LowTempAlarm.Value,
@@ -40,7 +40,7 @@ namespace CumulusMX
 					Latches = cumulus.LowTempAlarm.Latch,
 					LatchHrs = cumulus.LowTempAlarm.LatchHours
 				},
-				tempAbove = new JsonAlarmValues()
+				tempAbove = new ValuesJson()
 				{
 					Enabled = cumulus.HighTempAlarm.Enabled,
 					Val = cumulus.HighTempAlarm.Value,
@@ -51,7 +51,7 @@ namespace CumulusMX
 					Latches = cumulus.HighTempAlarm.Latch,
 					LatchHrs = cumulus.HighTempAlarm.LatchHours
 				},
-				tempChange = new JsonAlarmValues()
+				tempChange = new ValuesJson()
 				{
 					Enabled = cumulus.TempChangeAlarm.Enabled,
 					Val = cumulus.TempChangeAlarm.Value,
@@ -62,7 +62,7 @@ namespace CumulusMX
 					Latches = cumulus.TempChangeAlarm.Latch,
 					LatchHrs = cumulus.TempChangeAlarm.LatchHours
 				},
-				pressBelow = new JsonAlarmValues()
+				pressBelow = new ValuesJson()
 				{
 					Enabled = cumulus.LowPressAlarm.Enabled,
 					Val = cumulus.LowPressAlarm.Value,
@@ -73,7 +73,7 @@ namespace CumulusMX
 					Latches = cumulus.LowPressAlarm.Latch,
 					LatchHrs = cumulus.LowPressAlarm.LatchHours
 				},
-				pressAbove = new JsonAlarmValues()
+				pressAbove = new ValuesJson()
 				{
 					Enabled = cumulus.HighPressAlarm.Enabled,
 					Val = cumulus.HighPressAlarm.Value,
@@ -84,7 +84,7 @@ namespace CumulusMX
 					Latches = cumulus.HighPressAlarm.Latch,
 					LatchHrs = cumulus.HighPressAlarm.LatchHours
 				},
-				pressChange = new JsonAlarmValues()
+				pressChange = new ValuesJson()
 				{
 					Enabled = cumulus.PressChangeAlarm.Enabled,
 					Val = cumulus.PressChangeAlarm.Value,
@@ -95,7 +95,7 @@ namespace CumulusMX
 					Latches = cumulus.PressChangeAlarm.Latch,
 					LatchHrs = cumulus.PressChangeAlarm.LatchHours
 				},
-				rainAbove = new JsonAlarmValues()
+				rainAbove = new ValuesJson()
 				{
 					Enabled = cumulus.HighRainTodayAlarm.Enabled,
 					Val = cumulus.HighRainTodayAlarm.Value,
@@ -106,7 +106,7 @@ namespace CumulusMX
 					Latches = cumulus.HighRainTodayAlarm.Latch,
 					LatchHrs = cumulus.HighRainTodayAlarm.LatchHours
 				},
-				rainRateAbove = new JsonAlarmValues()
+				rainRateAbove = new ValuesJson()
 				{
 					Enabled = cumulus.HighRainRateAlarm.Enabled,
 					Val = cumulus.HighRainRateAlarm.Value,
@@ -117,7 +117,7 @@ namespace CumulusMX
 					Latches = cumulus.HighRainRateAlarm.Latch,
 					LatchHrs = cumulus.HighRainRateAlarm.LatchHours
 				},
-				gustAbove = new JsonAlarmValues()
+				gustAbove = new ValuesJson()
 				{
 					Enabled = cumulus.HighGustAlarm.Enabled,
 					Val = cumulus.HighGustAlarm.Value,
@@ -128,7 +128,7 @@ namespace CumulusMX
 					Latches = cumulus.HighGustAlarm.Latch,
 					LatchHrs = cumulus.HighGustAlarm.LatchHours
 				},
-				windAbove = new JsonAlarmValues()
+				windAbove = new ValuesJson()
 				{
 					Enabled = cumulus.HighWindAlarm.Enabled,
 					Val = cumulus.HighWindAlarm.Value,
@@ -139,7 +139,7 @@ namespace CumulusMX
 					Latches = cumulus.HighWindAlarm.Latch,
 					LatchHrs = cumulus.HighWindAlarm.LatchHours
 				},
-				contactLost = new JsonAlarmValues()
+				contactLost = new ValuesJson()
 				{
 					Enabled = cumulus.SensorAlarm.Enabled,
 					SoundEnabled = cumulus.SensorAlarm.Sound,
@@ -150,7 +150,7 @@ namespace CumulusMX
 					LatchHrs = cumulus.SensorAlarm.LatchHours,
 					Threshold = cumulus.SensorAlarm.TriggerThreshold
 				},
-				dataStopped = new JsonAlarmValues()
+				dataStopped = new ValuesJson()
 				{
 					Enabled = cumulus.DataStoppedAlarm.Enabled,
 					SoundEnabled = cumulus.DataStoppedAlarm.Sound,
@@ -161,7 +161,7 @@ namespace CumulusMX
 					LatchHrs = cumulus.DataStoppedAlarm.LatchHours,
 					Threshold = cumulus.DataStoppedAlarm.TriggerThreshold
 				},
-				batteryLow = new JsonAlarmValues()
+				batteryLow = new ValuesJson()
 				{
 					Enabled = cumulus.BatteryLowAlarm.Enabled,
 					SoundEnabled = cumulus.BatteryLowAlarm.Sound,
@@ -172,7 +172,7 @@ namespace CumulusMX
 					LatchHrs = cumulus.BatteryLowAlarm.LatchHours,
 					Threshold = cumulus.BatteryLowAlarm.TriggerThreshold
 				},
-				spike = new JsonAlarmValues()
+				spike = new ValuesJson()
 				{
 					Enabled = cumulus.SpikeAlarm.Enabled,
 					SoundEnabled = cumulus.SpikeAlarm.Sound,
@@ -183,7 +183,7 @@ namespace CumulusMX
 					LatchHrs = cumulus.SpikeAlarm.LatchHours,
 					Threshold = cumulus.SpikeAlarm.TriggerThreshold
 				},
-				upgrade = new JsonAlarmValues()
+				upgrade = new ValuesJson()
 				{
 					Enabled = cumulus.UpgradeAlarm.Enabled,
 					SoundEnabled = cumulus.UpgradeAlarm.Sound,
@@ -193,7 +193,7 @@ namespace CumulusMX
 					Latches = cumulus.UpgradeAlarm.Latch,
 					LatchHrs = cumulus.UpgradeAlarm.LatchHours
 				},
-				httpUpload = new JsonAlarmValues()
+				httpUpload = new ValuesJson()
 				{
 					Enabled = cumulus.HttpUploadAlarm.Enabled,
 					SoundEnabled = cumulus.HttpUploadAlarm.Sound,
@@ -204,7 +204,7 @@ namespace CumulusMX
 					LatchHrs = cumulus.HttpUploadAlarm.LatchHours,
 					Threshold = cumulus.HttpUploadAlarm.TriggerThreshold
 				},
-				mySqlUpload = new JsonAlarmValues()
+				mySqlUpload = new ValuesJson()
 				{
 					Enabled = cumulus.MySqlUploadAlarm.Enabled,
 					SoundEnabled = cumulus.MySqlUploadAlarm.Sound,
@@ -217,14 +217,14 @@ namespace CumulusMX
 				}
 			};
 
-			var email = new JsonAlarmEmail()
+			var email = new EmailJson()
 			{
 				fromEmail = cumulus.AlarmFromEmail,
 				destEmail = cumulus.AlarmDestEmail.Join(";"),
 				useHtml = cumulus.AlarmEmailHtml
 			};
 
-			var retObject = new JsonAlarmSettings()
+			var retObject = new SettingsJson()
 			{
 				data = data,
 				units = alarmUnits,
@@ -234,11 +234,11 @@ namespace CumulusMX
 			return retObject.ToJson();
 		}
 
-		public string UpdateAlarmSettings(IHttpContext context)
+		public string UpdateSettings(IHttpContext context)
 		{
 			var json = "";
-			JsonAlarmSettings result;
-			JsonAlarmSettingsData settings;
+			SettingsJson result;
+			DataJson settings;
 
 			try
 			{
@@ -251,7 +251,7 @@ namespace CumulusMX
 				//var settings = JsonConvert.DeserializeObject<JsonAlarmSettingsData>(json);
 				//var settings = JsonSerializer.DeserializeFromString<JsonAlarmSettingsData>(json);
 
-				result = json.FromJson<JsonAlarmSettings>();
+				result = json.FromJson<SettingsJson>();
 				settings = result.data;
 			}
 			catch (Exception ex)
@@ -473,7 +473,7 @@ namespace CumulusMX
 				// Start at char 5 to skip the "json:" prefix
 				var json = WebUtility.UrlDecode(data);
 
-				var result = json.FromJson<JsonAlarmEmail>();
+				var result = json.FromJson<EmailJson>();
 				// process the settings
 				Cumulus.LogMessage("Sending test email...");
 
@@ -522,61 +522,60 @@ namespace CumulusMX
 
 			return "success";
 		}
-	}
 
-	public class JsonAlarmSettingsData
-	{
-		public JsonAlarmValues tempBelow { get; set; }
-		public JsonAlarmValues tempAbove { get; set; }
-		public JsonAlarmValues tempChange { get; set; }
-		public JsonAlarmValues pressBelow { get; set; }
-		public JsonAlarmValues pressAbove { get; set; }
-		public JsonAlarmValues pressChange { get; set; }
-		public JsonAlarmValues rainAbove { get; set; }
-		public JsonAlarmValues rainRateAbove { get; set; }
-		public JsonAlarmValues gustAbove { get; set; }
-		public JsonAlarmValues windAbove { get; set; }
-		public JsonAlarmValues contactLost { get; set; }
-		public JsonAlarmValues dataStopped { get; set; }
-		public JsonAlarmValues batteryLow { get; set; }
-		public JsonAlarmValues spike { get; set; }
-		public JsonAlarmValues upgrade { get; set; }
-		public JsonAlarmValues httpUpload { get; set; }
-		public JsonAlarmValues mySqlUpload { get; set; }
-	}
+		private class DataJson
+		{
+			public ValuesJson tempBelow { get; set; }
+			public ValuesJson tempAbove { get; set; }
+			public ValuesJson tempChange { get; set; }
+			public ValuesJson pressBelow { get; set; }
+			public ValuesJson pressAbove { get; set; }
+			public ValuesJson pressChange { get; set; }
+			public ValuesJson rainAbove { get; set; }
+			public ValuesJson rainRateAbove { get; set; }
+			public ValuesJson gustAbove { get; set; }
+			public ValuesJson windAbove { get; set; }
+			public ValuesJson contactLost { get; set; }
+			public ValuesJson dataStopped { get; set; }
+			public ValuesJson batteryLow { get; set; }
+			public ValuesJson spike { get; set; }
+			public ValuesJson upgrade { get; set; }
+			public ValuesJson httpUpload { get; set; }
+			public ValuesJson mySqlUpload { get; set; }
+		}
+		private class ValuesJson
+		{
+			public bool Enabled { get; set; }
+			public double Val { get; set; }
+			public bool SoundEnabled { get; set; }
+			public string Sound { get; set; }
+			public bool Notify { get; set; }
+			public bool Email { get; set; }
+			public bool Latches { get; set; }
+			public int LatchHrs { get; set; }
+			public int Threshold { get; set; }
+		}
 
-	public class JsonAlarmValues
-	{
-		public bool Enabled { get; set; }
-		public double Val { get; set; }
-		public bool SoundEnabled { get; set; }
-		public string Sound { get; set; }
-		public bool Notify { get; set; }
-		public bool Email { get; set; }
-		public bool Latches { get; set; }
-		public int LatchHrs { get; set; }
-		public int Threshold { get; set; }
-	}
+		private class EmailJson
+		{
+			public string fromEmail { get; set; }
+			public string destEmail { get; set; }
+			public bool useHtml { get; set; }
+		}
 
-	public class JsonAlarmEmail
-	{
-		public string fromEmail { get; set; }
-		public string destEmail { get; set; }
-		public bool useHtml { get; set; }
-	}
+		private class UnitsJson
+		{
+			public string tempUnits { get; set; }
+			public string pressUnits { get; set; }
+			public string rainUnits { get; set; }
+			public string windUnits { get; set; }
+		}
 
-	public class JsonAlarmUnits
-	{
-		public string tempUnits { get; set; }
-		public string pressUnits { get; set; }
-		public string rainUnits { get; set; }
-		public string windUnits { get; set; }
-	}
-
-	public class JsonAlarmSettings
-	{
-		public JsonAlarmSettingsData data { get; set; }
-		public JsonAlarmUnits units { get; set; }
-		public JsonAlarmEmail email { get; set; }
+		private class SettingsJson
+		{
+			public DataJson data { get; set; }
+			public UnitsJson units { get; set; }
+			public EmailJson email { get; set; }
+		}
 	}
 }

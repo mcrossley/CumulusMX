@@ -182,8 +182,5 @@ namespace CumulusMX
 			public int snowLying { get; set; }
 			public double snowDepth { get; set; }
 		}
-
 	}
-
-
 }

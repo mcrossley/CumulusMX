@@ -25,9 +25,9 @@ namespace CumulusMX
 		// The JSON data we generate for HighCharts uses a "pseudo-UTC" timestamp
 		// This is the local time converted to the UTC timestamp *as if it were already UTC*
 		// This gets around TZ issues in HighCharts which by default accepts and displays UTC date.times
-		public static double ToGraphTime(DateTime dateTime)
+		public static long ToGraphTime(DateTime dateTime)
 		{
-			return (dateTime - new DateTime(1970, 1, 1, 0, 0, 0)).TotalMilliseconds;
+			return (long)(dateTime - new DateTime(1970, 1, 1, 0, 0, 0)).TotalMilliseconds;
 		}
 
 		public static string ByteArrayToHexString(byte[] ba)
@@ -96,8 +96,9 @@ namespace CumulusMX
 
 		public static int? TryParseNullInt(string val)
 		{
-			int outVal;
-			return int.TryParse(val, out outVal) ? outVal : null;
+			double outVal;
+			// we allow for a decimal, because log files someties get mangled in Excel etc!
+			return double.TryParse(val, out outVal) ? Convert.ToInt32(outVal) : null;
 		}
 
 		public static double? TryParseNullDouble(string val)

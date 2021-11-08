@@ -251,7 +251,7 @@ namespace CumulusMX
 			try
 			{
 				var toDate = thedate.AddMonths(1);
-				var rows = await station.DatabaseAsync.QueryAsync<DailyData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", thedate, toDate);
+				var rows = await station.DatabaseAsync.QueryAsync<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", thedate, toDate);
 
 				foreach (var row in rows)
 				{
@@ -1223,6 +1223,45 @@ namespace CumulusMX
 
 			output.Add(repLine.ToString());
 			return output;
+		}
+	}
+
+	public class NOAAconfig
+	{
+		public string Name { get; set; }
+		public string City { get; set; }
+		public string State { get; set; }
+		public string MonthFile { get; set; }
+		public string YearFile { get; set; }
+		public bool Use12hour { get; set; }
+		public bool UseUtf8 { get; set; }
+		public bool UseMinMaxAvg { get; set; }
+		public bool UseDotDecimal { get; set; }
+		public bool Create { get; set; }
+		public bool AutoFtp { get; set; }
+		public bool AutoCopy { get; set; }
+		public bool NeedFtp { get; set; }
+		public bool NeedCopy { get; set; }
+		public string FtpFolder { get; set; }
+		public string CopyFolder { get; set; }
+		public double[] TempNorms { get; set; }
+		public double[] RainNorms { get; set; }
+		public double HeatThreshold { get; set; }
+		public double CoolThreshold { get; set; }
+		public double MaxTempComp1 { get; set; }
+		public double MaxTempComp2 { get; set; }
+		public double MinTempComp1 { get; set; }
+		public double MinTempComp2 { get; set; }
+		public double RainComp1 { get; set; }
+		public double RainComp2 { get; set; }
+		public double RainComp3 { get; set; }
+		public string LatestMonthReport { get; set; }
+		public string LatestYearReport { get; set; }
+
+		public NOAAconfig()
+		{
+			TempNorms = new double[13];
+			RainNorms = new double[13];
 		}
 	}
 }

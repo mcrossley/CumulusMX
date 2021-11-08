@@ -78,7 +78,7 @@ namespace CumulusMX
 							await writer.WriteAsync(await dataEditor.GetRecordsDayFile("alltime"));
 							break;
 						case "alltimerecordslogfile.json":
-							await writer.WriteAsync(dataEditor.GetRecordsLogFile("alltime"));
+							await writer.WriteAsync(await dataEditor.GetRecordsLogFile("alltime"));
 							break;
 						case "monthlyrecords.json":
 							await writer.WriteAsync(dataEditor.GetMonthlyRecData());
@@ -96,7 +96,7 @@ namespace CumulusMX
 							await writer.WriteAsync(await dataEditor.GetRecordsDayFile("thismonth"));
 							break;
 						case "thismonthrecordslogfile.json":
-							await writer.WriteAsync(dataEditor.GetRecordsLogFile("thismonth"));
+							await writer.WriteAsync(await dataEditor.GetRecordsLogFile("thismonth"));
 							break;
 						case "thisyearrecords.json":
 							await writer.WriteAsync(dataEditor.GetThisYearRecData());
@@ -105,7 +105,7 @@ namespace CumulusMX
 							await writer.WriteAsync(await dataEditor .GetRecordsDayFile("thisyear"));
 							break;
 						case "thisyearrecordslogfile.json":
-							await writer.WriteAsync(dataEditor.GetRecordsLogFile("thisyear"));
+							await writer.WriteAsync(await dataEditor .GetRecordsLogFile("thisyear"));
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
@@ -221,10 +221,10 @@ namespace CumulusMX
 							await writer.WriteAsync(await logfileEditor.GetDayfile(draw, start, length));
 							break;
 						case "logfile":
-							await writer.WriteAsync(logfileEditor.GetLogfile(month, draw, start, length, false));
+							await writer.WriteAsync(await logfileEditor.GetLogfile(month, draw, start, length, false));
 							break;
 						case "extralogfile":
-							await writer.WriteAsync(logfileEditor.GetLogfile(month, draw, start, length, true));
+							await writer.WriteAsync(await logfileEditor.GetLogfile(month, draw, start, length, true));
 							break;
 						case "currentdata":
 							await writer.WriteAsync(Station.GetCurrentData());
@@ -901,7 +901,7 @@ namespace CumulusMX
 							await writer.WriteAsync(mySqlSettings.GetAlpacaFormData());
 							break;
 						case "alarms.json":
-							await writer.WriteAsync(alarmSettings.GetAlarmSettings());
+							await writer.WriteAsync(alarmSettings.GetSettings());
 							break;
 						case "wizard.json":
 							await writer.WriteAsync(wizard.GetAlpacaFormData());
@@ -966,7 +966,7 @@ namespace CumulusMX
 							await writer.WriteAsync(mySqlSettings.CreateRealtimeSQL(HttpContext));
 							break;
 						case "updatealarmconfig.json":
-							await writer.WriteAsync(alarmSettings.UpdateAlarmSettings(HttpContext));
+							await writer.WriteAsync(alarmSettings.UpdateSettings(HttpContext));
 							break;
 						case "ftpnow.json":
 							await writer.WriteAsync(stationSettings.FtpNow(HttpContext));

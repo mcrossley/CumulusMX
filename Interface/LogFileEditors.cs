@@ -40,7 +40,7 @@ namespace CumulusMX
 			try
 			{
 				var total = await station.DatabaseAsync.ExecuteScalarAsync<int>("select count(*) from DayData");
-				var rows = await station.DatabaseAsync.QueryAsync<DailyData>("select * from DayData order by Timestamp limit ?,?", start, length);
+				var rows = await station.DatabaseAsync.QueryAsync<DayData>("select * from DayData order by Timestamp limit ?,?", start, length);
 				var json = new StringBuilder(350 * rows.Count);
 
 				json.Append("{\"draw\":" + draw);
@@ -53,7 +53,7 @@ namespace CumulusMX
 				foreach (var row in rows)
 				{
 					json.Append($"[{lineNum++},");
-					json.Append(row.ToString());
+					json.Append(row.ToCSV());
 					json.Append("],");
 				}
 
@@ -83,18 +83,11 @@ namespace CumulusMX
 
 			var newData = text.FromJson<DayFileEditor>();
 
-
-
-			// read dayfile into a List
-			var lines = File.ReadAllLines(cumulus.DayFileName).ToList();
-
-			var lineNum = newData.line - 1; // our List is zero relative
-
 			if (newData.action == "Edit")
 			{
 
 				// Update the MX database
-				var newRec = new DailyData();
+				var newRec = new DayData();
 				newRec.FromString(newData.data);
 
 				_ = station.Database.Update(newRec);
@@ -102,8 +95,23 @@ namespace CumulusMX
 				// Update the dayfile
 				if (Program.cumulus.ProgramOptions.UpdateDayfile)
 				{
+					// read dayfile into a List
+					var lines = File.ReadAllLines(cumulus.DayFileName).ToList();
+
+					var lineNum = 0;
+
+					// Find the line using the date string
+					foreach (var line in lines)
+					{
+						if (line.Contains(newData.data[0]))
+							break;
+
+						lineNum++;
+					}
+
+					var orgLine = lines[lineNum];
+
 					// replace the edited line
-					//var orgLine = lines[lineNum];
 					var newLine = string.Join(",", newData.data);
 
 					lines[lineNum] = newLine;
@@ -202,27 +210,55 @@ namespace CumulusMX
 			}
 			else if (newData.action == "Delete")
 			{
-				// Just double check we are deleting the correct line - see if the dates match
-				var lineData = lines[lineNum].Split(',');
-				if (lineData[0] == newData.data[0])
+				// Update the MX database
+				var newRec = new DayData();
+				newRec.FromString(newData.data);
+
+				_ = station.Database.Delete(newRec);
+
+
+				// Update the dayfile
+				if (Program.cumulus.ProgramOptions.UpdateDayfile)
 				{
+					// read dayfile into a List
+					var lines = File.ReadAllLines(cumulus.DayFileName).ToList();
+					var lineNum = 0;
+
+					// Find the line using the timestamp
+					foreach (var line in lines)
+					{
+						if (line.Contains(newData.data[1]))
+							break;
+
+						lineNum++;
+					}
+
+					var orgLine = lines[lineNum];
+
+					// update the dayfile
+					lines.RemoveAt(lineNum);
+
+					// write dayfile back again
+					File.WriteAllLines(cumulus.DayFileName, lines);
+				}
+
+				// Update the MySQL record
+				if (!string.IsNullOrEmpty(cumulus.MySqlConnSettings.Server) &&
+					!string.IsNullOrEmpty(cumulus.MySqlConnSettings.UserID) &&
+					!string.IsNullOrEmpty(cumulus.MySqlConnSettings.Password) &&
+					!string.IsNullOrEmpty(cumulus.MySqlConnSettings.Database) &&
+					cumulus.MySqlSettings.UpdateOnEdit
+					)
+				{
+
 					var thisRec = new List<string>(newData.data);
 					thisRec.Insert(0, newData.line.ToString());
 
 					try
 					{
 						// Update the in database  record
-						await station.DatabaseAsync.DeleteAsync<DailyData>(thisRec);
+						await station.DatabaseAsync.DeleteAsync<DayData>(thisRec);
 
-						// Update the dayfile
-						if (Program.cumulus.ProgramOptions.UpdateDayfile)
-						{
-							// update the dayfile
-							lines.RemoveAt(lineNum);
-
-							// write dayfile back again
-							File.WriteAllLines(cumulus.DayFileName, lines);
-						}
 					}
 					catch (Exception ex)
 					{
@@ -231,12 +267,6 @@ namespace CumulusMX
 						context.Response.StatusCode = 500;
 						return "{\"errors\":{\"Logfile\":[\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 					}
-				}
-				else
-				{
-					Cumulus.LogMessage($"EditDayFile: Entry deletion failed. Line to delete does not match the file contents");
-					context.Response.StatusCode = 500;
-					return "{\"errors\":{\"Logfile\":[\"<br>Failed, line to delete does not match the file contents\"]}}";
 				}
 			}
 			else
@@ -272,31 +302,25 @@ namespace CumulusMX
 		/// <param name="length"></param>
 		/// <param name="extra"></param>
 		/// <returns>JSON encoded section of the log file as a string</returns>
-		internal string GetLogfile(string date, string draw, int start, int length, bool extra)
+		internal async Task<string> GetLogfile(string date, string draw, int start, int length, bool extra)
 		{
 			try
 			{
-				// date will (hopefully) be in format "m-yyyy" or "mm-yyyy"
-				int month = Convert.ToInt32(date.Split('-')[0]);
-				int year = Convert.ToInt32(date.Split('-')[1]);
+				// date will be in format "dd-mm-yyyy"
+				var dayArr = date.Split('-');
 
 				// Get a time stamp, use 15th day to avoid wrap issues
-				var ts = new DateTime(year, month, 15);
+				var ts = new DateTime(int.Parse(dayArr[2]), int.Parse(dayArr[1]), int.Parse(dayArr[0]));
+				var ts1 = ts.AddDays(1);
 
 				var logfile = extra ? cumulus.GetExtraLogFileName(ts) : cumulus.GetLogFileName(ts);
 				var numFields = extra ? Cumulus.NumExtraLogFileFields : Cumulus.NumLogFileFields;
 
-				if (!File.Exists(logfile))
-				{
-					Cumulus.LogMessage($"GetLogFile: Error, file does not exist: {logfile}");
-					return "";
-				}
 
-				var allLines = File.ReadAllLines(logfile);
-				var total = allLines.Length;
-				var lines = allLines.Skip(start).Take(length);
+				var total = await station.DatabaseAsync.ExecuteScalarAsync<int>("select count(*) from LogData where Timestamp >= ? and Timestamp < ?", ts, ts1);
+				var rows = await station.DatabaseAsync.QueryAsync<LogData>("select * from LogData where Timestamp >= ? and Timestamp < ? order by Timestamp limit ?,?", ts, ts1, start, length);
+				var json = new StringBuilder(350 * rows.Count);
 
-				var json = new StringBuilder(220 * lines.Count());
 
 				json.Append("{\"draw\":");
 				json.Append(draw);
@@ -308,30 +332,10 @@ namespace CumulusMX
 
 				var lineNum = start + 1; // Start is zero relative
 
-				foreach (var line in lines)
+				foreach (var row in rows)
 				{
-					var fields = line.Split(',');
-					json.Append($"[{lineNum++},");
-					for (var i = 0; i < numFields; i++)
-					{
-						if (i < fields.Length)
-						{
-							// field exists
-							json.Append('"');
-							json.Append(fields[i]);
-							json.Append('"');
-						}
-						else
-						{
-							// add padding
-							json.Append("\" \"");
-						}
-
-						if (i < numFields - 1)
-						{
-							json.Append(',');
-						}
-					}
+					json.Append('[');
+					json.Append(row.ToCSV());
 					json.Append("],");
 				}
 
@@ -361,44 +365,67 @@ namespace CumulusMX
 
 			var newData = text.FromJson<DatalogEditor>();
 
-			// date will (hopefully) be in format "m-yyyy" or "mm-yyyy"
-			int month = Convert.ToInt32(newData.month.Split('-')[0]);
-			int year = Convert.ToInt32(newData.month.Split('-')[1]);
-
-			// Get a timestamp, use 15th day to avoid wrap issues
-			var ts = new DateTime(year, month, 15);
-
-			var logfile = (newData.extra ? cumulus.GetExtraLogFileName(ts) : cumulus.GetLogFileName(ts));
-
-			// read the log file into a List
-			var lines = File.ReadAllLines(logfile).ToList();
-
-			var lineNum = newData.line - 1; // our List is zero relative
 
 			if (newData.action == "Edit")
 			{
-				// replace the edited line
-				var orgLine = lines[lineNum];
-				var newLine = String.Join(",", newData.data);
 
-				lines[lineNum] = newLine;
-
-				try
+				// Update the MX database
+				if (newData.extra)
 				{
-					// write logfile back again
-					File.WriteAllLines(logfile, lines);
-					Cumulus.LogMessage($"EditDataLog: Changed Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-					Cumulus.LogMessage($"EditDataLog: Changed Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+					//TODO: Extra log file data
 				}
-				catch (Exception ex)
+				else
 				{
-					cumulus.LogExceptionMessage(ex, "EditDataLog: Failed, error");
-					Cumulus.LogMessage("EditDataLog: Data received - " + newLine);
-					context.Response.StatusCode = 500;
+					var newRec = new LogData();
+					newRec.FromString(newData.data);
 
-					return "{\"errors\":{\"Logfile\":[\"<br>Failed to update, error = " + ex.Message + "\"]}}";
+					_ = station.Database.Update(newRec);
 				}
 
+
+				// Update the dayfile
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var logDate = Utils.FromUnixTime(long.Parse(newData.data[1]));
+
+					var logfile = (newData.extra ? cumulus.GetExtraLogFileName(logDate) : cumulus.GetLogFileName(logDate));
+
+					// read the log file into a List
+					var lines = File.ReadAllLines(logfile).ToList();
+					var lineNum = 0;
+
+					// Find the line using the timestamp
+					foreach (var line in lines)
+					{
+						if (line.Contains(newData.data[1]))
+							break;
+
+						lineNum++;
+					}
+
+
+					// replace the edited line
+					var orgLine = lines[lineNum];
+					var newLine = String.Join(",", newData.data);
+
+					lines[lineNum] = newLine;
+
+					try
+					{
+						// write logfile back again
+						File.WriteAllLines(logfile, lines);
+						Cumulus.LogMessage($"EditDataLog: Changed Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						Cumulus.LogMessage($"EditDataLog: Changed Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "EditDataLog: Failed, error");
+						Cumulus.LogMessage("EditDataLog: Data received - " + newLine);
+						context.Response.StatusCode = 500;
+
+						//return "{\"errors\":{\"Logfile\":[\"<br>Failed to update, error = " + ex.Message + "\"]}}";
+					}
+				}
 
 
 				// Update the MySQL record
@@ -413,6 +440,7 @@ namespace CumulusMX
 					if (!newData.extra)
 					{
 						var updateStr = "";
+						var newLine = String.Join(",", newData.data);
 
 						try
 						{
@@ -474,33 +502,55 @@ namespace CumulusMX
 			}
 			else if (newData.action == "Delete")
 			{
-				// Just double check we are deleting the correct line - see if the dates match
-				var lineData = lines[lineNum].Split(',');
-				if (lineData[1] == newData.data[1])
+				// Update the MX database
+				if (newData.extra)
 				{
-					var thisrec = new List<string>(newData.data);
-					thisrec.Insert(0, newData.line.ToString());
+					//TODO: Extra log file data
+				}
+				else
+				{
+					var newRec = new LogData();
+					newRec.FromString(newData.data);
 
+					_ = station.Database.Delete(newRec);
+				}
+
+
+				// Update the log file
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var logDate = Utils.FromUnixTime(long.Parse(newData.data[1]));
+
+					var logfile = (newData.extra ? cumulus.GetExtraLogFileName(logDate) : cumulus.GetLogFileName(logDate));
+
+					// read the log file into a List
+					var lines = File.ReadAllLines(logfile).ToList();
+					var lineNum = 0;
+
+					// Find the line using the timestamp
+					foreach (var line in lines)
+					{
+						if (line.Contains(newData.data[1]))
+							break;
+
+						lineNum++;
+					}
+
+					var orgLine = lines[lineNum];
 					try
 					{
 						lines.RemoveAt(lineNum);
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditDataLog: Entry deleted - " + thisrec.ToJson());
+						Cumulus.LogMessage($"EditDataLog: Entry deleted - {orgLine}");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditDataLog: Entry deletion failed. Error");
-						Cumulus.LogMessage($"EditDataLog: Entry data = - " + thisrec.ToJson());
+						Cumulus.LogMessage($"EditDataLog: Entry data = - {orgLine}");
 						context.Response.StatusCode = 500;
 						return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 					}
-				}
-				else
-				{
-					Cumulus.LogMessage($"EditDataLog: Entry deletion failed. Line to delete does not match the file contents");
-					context.Response.StatusCode = 500;
-					return "{\"errors\":{\"Logfile\":[\"Failed, line to delete does not match the file contents\"]}}";
 				}
 			}
 
