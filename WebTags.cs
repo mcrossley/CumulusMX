@@ -196,7 +196,7 @@ namespace CumulusMX
 		}
 
 
-		private static DateTime GetRecentTs(Dictionary<string,string> tagParams)
+		private DateTime GetRecentTs(Dictionary<string,string> tagParams)
 		{
 			var daysagostr = tagParams.Get("d");
 			var hoursagostr = tagParams.Get("h");
@@ -242,7 +242,7 @@ namespace CumulusMX
 			return DateTime.Now.AddMinutes(-minsago);
 		}
 
-		private static int GetMonthParam(Dictionary<string,string> tagParams)
+		private int GetMonthParam(Dictionary<string,string> tagParams)
 		{
 			int month;
 			var monthstr = tagParams.Get("mon");

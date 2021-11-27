@@ -205,7 +205,7 @@ namespace CumulusMX
 		/// <param name="s"></param>
 		/// <param name="csum"></param>
 		/// <returns></returns>
-		private static bool WM918valid(List<int> s, out int csum)
+		private bool WM918valid(List<int> s, out int csum)
 		{
 			bool result;
 

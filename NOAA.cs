@@ -9,7 +9,7 @@ namespace CumulusMX
 {
 	internal class NOAA
 	{
-		private struct Tdaysummary
+		internal struct Tdaysummary
 		{
 			public bool valid;
 			public double meantemp;
@@ -122,48 +122,34 @@ namespace CumulusMX
 
 		private double GetAverageWindSpeed(int month, int year, out int domdir)
 		{
-			int linenum = 0;
 			int windsamples = 0;
 			double avgwindspeed;
 			double totalwinddirX = 0;
 			double totalwinddirY = 0;
 			double totalwindspeed = 0;
 
-			// Use the second of the month to allow for 9am roll-over
-			var logFile = cumulus.GetLogFileName(new DateTime(year, month, 2));
-			if (File.Exists(logFile))
+			var start = new DateTime(year, month, 1);
+			var end = start.AddMonths(1);
+			try
 			{
-				var idx = 0;
-				var st = new List<string>();
-				try
-				{
-					var lines = File.ReadAllLines(logFile);
-					linenum = 0;
-					windsamples = 0;
+				var rows = station.Database.Query<DbWindAvgDir>("select WindAvg, WindAvgDir from LogData where Timestamp >= ? and Timestamp < ?", start, end);
 
-					foreach (var line in lines)
-					{
-						// now process each record in the file
+				windsamples = 0;
 
-						linenum++;
-						st = new List<string>(line.Split(','));
-						idx = 5;
-						double windspeed = Convert.ToSingle(st[idx], invNum);
-						// add in wind speed sample for whole month
-						windsamples++;
-						totalwindspeed += windspeed;
-						// add in direction if not done already
-						idx = 7;
-						var winddir = Convert.ToInt32(st[idx]);
-						totalwinddirX += (windspeed * Math.Sin((winddir * (Math.PI / 180))));
-						totalwinddirY += (windspeed * Math.Cos((winddir * (Math.PI / 180))));
-					}
-				}
-				catch (Exception e)
+				foreach (var row in rows)
 				{
-					Cumulus.LogMessage($"Error at line {linenum}, column {idx}, value '{(st.Count >= idx ? st[idx] : "")}' of {logFile} : {e}");
-					Cumulus.LogMessage("Please edit the file to correct the error");
+					// now process each record in the file
+
+					// add in wind speed sample for whole month
+					windsamples++;
+					totalwindspeed += row.WindAvg;
+					totalwinddirX += row.WindAvg * Math.Sin(row.WindAvgDir * (Math.PI / 180));
+					totalwinddirY += (row.WindAvg * Math.Cos(row.WindAvgDir * (Math.PI / 180)));
 				}
+			}
+			catch (Exception e)
+			{
+				cumulus.LogExceptionMessage(e, $"Error processing the average wind speeds");
 			}
 			if (windsamples > 0)
 			{
@@ -256,15 +242,6 @@ namespace CumulusMX
 				foreach (var row in rows)
 				{
 					int daynumber = row.Timestamp.Day;
-
-					if (dayList[daynumber].valid)
-					{
-						// already had this date - error!
-						Cumulus.LogMessage($"Duplicate entry in the DayData table: {row.Timestamp.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture.DateTimeFormat)}. Please correct this by editing the database");
-						continue;
-					}
-
-					// haven't had this entry yet
 
 					// max temp
 					dayList[daynumber].maxtemp = row.HighTemp.HasValue ? row.HighTemp.Value : -999;
@@ -395,6 +372,9 @@ namespace CumulusMX
 						dayList[daynumber].winddomdir = row.DominantWindBearing.Value;
 					}
 
+					// do the wind average for the day...
+					CalculateDayWindAverages(row.Timestamp.Date, ref dayList);
+
 					daycount++;
 					dayList[daynumber].valid = true;
 				}
@@ -405,69 +385,6 @@ namespace CumulusMX
 				Cumulus.LogMessage("Please edit the file to correct the error");
 			}
 
-			// Calculate average wind speed from log file
-			// Use the second of the month in case of 9am roll-over
-			var logFile = cumulus.GetLogFileName(new DateTime(thedate.Year, thedate.Month, 2));
-
-			if (File.Exists(logFile))
-			{
-				var idx = 0;
-				int daynumber = 1;
-				int linenum = 1;
-				List<string> st = new List<string>();
-
-				try
-				{
-					linenum = 0;
-					var lines = File.ReadAllLines(logFile);
-
-					foreach (var line in lines)
-					{
-						// now process each record in the file
-						linenum++;
-						st = new List<string>(line.Split(','));
-
-						DateTime entrydate = Utils.FromUnixTime(int.Parse(st[1]));
-
-						entrydate = entrydate.AddHours(cumulus.GetHourInc(entrydate));
-
-						daynumber = entrydate.Day;
-
-						if (!dayList[daynumber].valid)
-							continue;
-
-						idx = 5;
-						double windspeed = double.Parse(st[idx]);
-
-						// add in wind speed sample for this day
-						dayList[daynumber].windsamples++;
-						dayList[daynumber].totalwindspeed += windspeed;
-
-						// add in wind speed sample for whole month
-						windsamples++;
-						totalwindspeed += windspeed;
-
-						// add in direction if (not done already
-						if (dayList[daynumber].winddomdir == 0)
-						{
-							idx = 7;
-							int winddir = Convert.ToInt32(st[idx]);
-							dayList[daynumber].totalwinddirX += (windspeed * Math.Sin(Trig.DegToRad(winddir)));
-							dayList[daynumber].totalwinddirY += (windspeed * Math.Cos(Trig.DegToRad(winddir)));
-						}
-					}
-				}
-				catch (Exception ex)
-				{
-					Cumulus.LogMessage($"Error at line {linenum}, column {idx}, value '{(st.Count >= idx ? st[idx] : "")}' of {logFile} : {ex}");
-					Cumulus.LogMessage("Please edit the file to correct the error");
-					// set the days after this error as invalid
-					for (var i = daynumber; i < dayList.Length - 1; i++)
-					{
-						dayList[i].valid = false;
-					}
-				}
-			}
 
 			double avgwindspeed;
 			if (windsamples > 0)
@@ -495,8 +412,9 @@ namespace CumulusMX
 					{
 						try
 						{
-							dayList[i].winddomdir = CalcAvgBearing(dayList[i].totalwinddirX, dayList[i].totalwinddirY);// 90 - (int)Math.Floor(RadToDeg(Math.Atan2(DayList[i].totalwinddirY, DayList[i].totalwinddirX)));
-								//(int)Math.Floor(RadToDeg(Math.Atan(DayList[i].totalwinddirY / DayList[i].totalwinddirX)));
+							dayList[i].winddomdir = CalcAvgBearing(dayList[i].totalwinddirX, dayList[i].totalwinddirY);
+							// 90 - (int)Math.Floor(RadToDeg(Math.Atan2(DayList[i].totalwinddirY, DayList[i].totalwinddirX)));
+							//(int)Math.Floor(RadToDeg(Math.Atan(DayList[i].totalwinddirY / DayList[i].totalwinddirX)));
 						}
 						catch
 						{
@@ -692,7 +610,60 @@ namespace CumulusMX
 			return output;
 		}
 
-		public List<string> CreateYearlyReport(DateTime thedate)
+
+		public void CalculateDayWindAverages(DateTime thedate, ref Tdaysummary[] dayList)
+		{
+			// Calculate average wind speed from log file
+
+			int daynumber = 1;
+			int windsamples = 0;
+			double totalwindspeed = 0;
+
+			var start = thedate.AddHours(cumulus.GetHourInc(thedate));
+			var end = thedate.AddDays(1);
+			end = end.AddHours(cumulus.GetHourInc(end));
+
+			try
+			{
+				var rows = station.Database.Query<DbTimeWindAvgDir>("select Timestamp, WindAvg, WindAvgDir from LogData where Timestamp >= ? and Timestamp < ?", start, end);
+
+				foreach (var row in rows)
+				{
+					var entrydate = row.Timestamp.AddHours(cumulus.GetHourInc(row.Timestamp));
+
+					daynumber = entrydate.Day;
+
+
+					// add in wind speed sample for this day
+					dayList[daynumber].windsamples++;
+					dayList[daynumber].totalwindspeed += row.WindAvg;
+
+					// add in wind speed sample for whole month
+					windsamples++;
+					totalwindspeed += row.WindAvg;
+
+					// add in direction if (not done already
+					if (dayList[daynumber].winddomdir == 0)
+					{
+						dayList[daynumber].totalwinddirX += (row.WindAvg * Math.Sin(Trig.DegToRad(row.WindAvgDir)));
+						dayList[daynumber].totalwinddirY += (row.WindAvg * Math.Cos(Trig.DegToRad(row.WindAvgDir)));
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				cumulus.LogExceptionMessage(ex, $"Error processing average wind for day {start}");
+
+				// set the days after this error as invalid
+				for (var i = daynumber; i < dayList.Length - 1; i++)
+				{
+					dayList[i].valid = false;
+				}
+			}
+		}
+
+
+		public async Task<List<string>> CreateYearlyReport(DateTime thedate)
 		{
 			var output = new List<string>();
 
@@ -769,84 +740,83 @@ namespace CumulusMX
 			}
 			try
 			{
-				using FileStream fs = new FileStream(cumulus.DayFileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-				using var sr = new StreamReader(fs);
-				do
-				{
-					var line = sr.ReadLine();
-					linenum++;
-					var st = new List<string>(line.Split(','));
-					string dateStr = st[0];
-					var dat = Utils.ddmmyyStrToDate(dateStr);
-					if (dat.Year != year)
-						continue;
+				var rows = await station.DatabaseAsync.QueryAsync<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ?", thedate, thedate.AddYears(1));
 
-					// entry is for this year
-					var day = dat.Day;
-					month = dat.Month;
-					var maxval = Convert.ToDouble(st[6], invNum);
-					var minval = Convert.ToDouble(st[4], invNum);
-					MonthList[month].totalmaxtemp += maxval;
-					MonthList[month].totalmintemp += minval;
-					var meantemp = cumulus.NOAAconf.UseMinMaxAvg ? (maxval + minval) / 2.0 : Convert.ToDouble(st[15], invNum);
-					MonthList[month].valid = true;
-					MonthList[month].samples++;
-					MonthList[month].totaltemp += meantemp;
-					// Max temp?
-					if (maxval > MonthList[month].maxtemp)
+				foreach (var row in rows)
+				{
+
+					var day = row.Timestamp.Day;
+					month = row.Timestamp.Month;
+					double meantemp = -999.0;
+
+					if (row.HighTemp.HasValue && row.LowTemp.HasValue)
 					{
-						MonthList[month].maxtemp = maxval;
-						MonthList[month].maxtempday = day;
-					}
-					if (GreaterThanOrEqual(maxval, cumulus.NOAAconf.MaxTempComp1))
-					{
-						MonthList[month].maxtempcount1++;
-					}
-					if (LessThanOrEqual(maxval, cumulus.NOAAconf.MaxTempComp2))
-					{
-						MonthList[month].maxtempcount2++;
-					}
-					// Min temp?
-					if (minval < MonthList[month].mintemp)
-					{
-						MonthList[month].mintemp = minval;
-						MonthList[month].mintempday = day;
-					}
-					if (LessThanOrEqual(minval, cumulus.NOAAconf.MinTempComp1))
-					{
-						MonthList[month].mintempcount1++;
-					}
-					if (LessThanOrEqual(minval, cumulus.NOAAconf.MinTempComp2))
-					{
-						MonthList[month].mintempcount2++;
+						MonthList[month].totalmaxtemp += row.HighTemp.Value;
+						MonthList[month].totalmintemp += row.LowTemp.Value;
+
+						meantemp = cumulus.NOAAconf.UseMinMaxAvg ? (row.HighTemp.Value + row.LowTemp.Value) / 2.0 : row.AvgTemp.Value;
+
+						MonthList[month].valid = true;
+						MonthList[month].samples++;
+						MonthList[month].totaltemp += meantemp;
+
+						// Max temp?
+						if (row.HighTemp.Value > MonthList[month].maxtemp)
+						{
+							MonthList[month].maxtemp = row.HighTemp.Value;
+							MonthList[month].maxtempday = day;
+						}
+						if (GreaterThanOrEqual(row.HighTemp.Value, cumulus.NOAAconf.MaxTempComp1))
+						{
+							MonthList[month].maxtempcount1++;
+						}
+						if (LessThanOrEqual(row.HighTemp.Value, cumulus.NOAAconf.MaxTempComp2))
+						{
+							MonthList[month].maxtempcount2++;
+						}
+						// Min temp?
+						if (row.LowTemp.Value < MonthList[month].mintemp)
+						{
+							MonthList[month].mintemp = row.LowTemp.Value;
+							MonthList[month].mintempday = day;
+						}
+						if (LessThanOrEqual(row.LowTemp.Value, cumulus.NOAAconf.MinTempComp1))
+						{
+							MonthList[month].mintempcount1++;
+						}
+						if (LessThanOrEqual(row.LowTemp.Value, cumulus.NOAAconf.MinTempComp2))
+						{
+							MonthList[month].mintempcount2++;
+						}
 					}
 					// heating degree days
-					if ((st.Count > 40) && (st[40].Length > 0))
+					if (row.HeatingDegreeDays.HasValue)
 					{
 						// read HDD from dayfile.txt
-						MonthList[month].heatingdegdays = MonthList[month].heatingdegdays + Convert.ToDouble(st[40], invNum);
-						totalheating += Convert.ToDouble(st[40], invNum);
+						MonthList[month].heatingdegdays += row.HeatingDegreeDays.Value;
+						totalheating += row.HeatingDegreeDays.Value;
 					}
-					else if (meantemp < cumulus.NOAAconf.HeatThreshold)
+					else if (meantemp > -999 && meantemp < cumulus.NOAAconf.HeatThreshold)
 					{
 						MonthList[month].heatingdegdays = MonthList[month].heatingdegdays + cumulus.NOAAconf.HeatThreshold - meantemp;
 						totalheating += cumulus.NOAAconf.HeatThreshold - meantemp;
 					}
 					// cooling degree days
-					if ((st.Count > 41) && (st[41].Length > 0))
+					if (row.CoolingDegreeDays.HasValue)
 					{
 						// read HDD from dayfile.txt
-						MonthList[month].coolingdegdays = MonthList[month].coolingdegdays + Convert.ToDouble(st[41], invNum);
-						totalcooling += Convert.ToDouble(st[41], invNum);
+						MonthList[month].coolingdegdays += row.CoolingDegreeDays.Value;
+						totalcooling += (row.CoolingDegreeDays.Value);
 					}
-					else if (meantemp > cumulus.NOAAconf.CoolThreshold)
+					else if (meantemp > -999 && meantemp > cumulus.NOAAconf.CoolThreshold)
 					{
 						MonthList[month].coolingdegdays = MonthList[month].coolingdegdays + meantemp - cumulus.NOAAconf.CoolThreshold;
 						totalcooling += meantemp - cumulus.NOAAconf.CoolThreshold;
 					}
 					// Rain days
-					var rainvalue = Convert.ToDouble(st[14], invNum);
-					MonthList[month].totrain = MonthList[month].totrain + rainvalue;
+
+					var rainvalue = row.TotalRain.HasValue ? row.TotalRain.Value : 0;
+					MonthList[month].totrain += rainvalue;
 					if (GreaterThanOrEqual(rainvalue, cumulus.NOAAconf.RainComp1))
 					{
 						MonthList[month].raincount1++;
@@ -866,12 +836,12 @@ namespace CumulusMX
 						MonthList[month].maxrainday = day;
 					}
 					// Max Gust?
-					if (Convert.ToDouble(st[1]) > MonthList[month].highwindspeed)
+					if (row.HighGust.HasValue && row.HighGust.Value > MonthList[month].highwindspeed)
 					{
-						MonthList[month].highwindspeed = Convert.ToDouble(st[1], invNum);
+						MonthList[month].highwindspeed = row.HighGust.Value;
 						MonthList[month].highwindday = day;
 					}
-				} while (!(sr.EndOfStream));
+				}
 			}
 			catch (Exception ex)
 			{
@@ -1224,6 +1194,20 @@ namespace CumulusMX
 			output.Add(repLine.ToString());
 			return output;
 		}
+
+		private class DbWindAvgDir
+		{
+			public double WindAvg { get; set; }
+			public int WindAvgDir { get; set; }
+		}
+
+		private class DbTimeWindAvgDir
+		{
+			public DateTime Timestamp { get; set; }
+			public double WindAvg { get; set; }
+			public int WindAvgDir { get; set; }
+		}
+
 	}
 
 	public class NOAAconfig

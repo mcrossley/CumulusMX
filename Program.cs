@@ -31,11 +31,8 @@ namespace CumulusMX
 			StartTime = DateTime.Now;
 			RunningOnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
-			if (RunningOnWindows)
-			{
-				// set the working path to the exe location
-				Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
-			}
+			// force the current folder to be CumulusMX folder
+			Directory.SetCurrentDirectory(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
 
 			try
 			{
@@ -83,7 +80,7 @@ namespace CumulusMX
 					cumulus.Stop();
 					svcTextListener.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + "Cumulus has shutdown");
 					svcTextListener.Flush();
-					Console.ForegroundColor = ConsoleColor.Red;
+					Console.ForegroundColor = ConsoleColor.Yellow;
 					Console.WriteLine("Cumulus stopped");
 					Console.ResetColor();
 					exitSystem = true;

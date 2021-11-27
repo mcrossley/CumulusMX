@@ -195,6 +195,8 @@ namespace CumulusMX
 
 		//public Dataunits Units;
 
+		public const int DefaultHiVal = -9999;
+		public const int DefaultLoVal = 9999;
 
 		public const int DayfileFields = 53;
 
@@ -759,6 +761,11 @@ namespace CumulusMX
 			Program.svcTextListener.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + "Creating main MX log file - " + loggingfile);
 			Program.svcTextListener.Flush();
 
+			if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			{
+				// on Linux the default listener writes everything to the syslog :(
+				Trace.Listeners.Remove("Default");
+			}
 			TextWriterTraceListener myTextListener = new TextWriterTraceListener(loggingfile, "MXlog");
 			Trace.Listeners.Add(myTextListener);
 			Trace.AutoFlush = true;
@@ -829,10 +836,7 @@ namespace CumulusMX
 			// Check if all the folders required by CMX exist, if not create them
 			CreateRequiredFolders();
 
-			// find the data folder
-			//datapath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + DirectorySeparator + "Cumulus" + DirectorySeparator;
-
-			Datapath = "data" + DirectorySeparator;
+			Datapath = "datav4" + DirectorySeparator;
 			backupPath = "backup" + DirectorySeparator;
 			ReportPath = "Reports" + DirectorySeparator;
 			var WebPath = "web" + DirectorySeparator;
@@ -1414,7 +1418,7 @@ namespace CumulusMX
 			Api.alarmSettings = new AlarmSettings(this);
 			Api.mySqlSettings = new MysqlSettings(this);
 			Api.dataEditor = new DataEditor(this);
-			Api.logfileEditor = new LogFileEditors(this);
+			Api.logfileEditor = new DataEditors(this);
 			Api.tagProcessor = new ApiTagProcessor(this);
 			Api.wizard = new Wizard(this);
 
@@ -3934,7 +3938,7 @@ namespace CumulusMX
 			StationOptions.AnemometerHeightM = ini.GetValue("Station", "AnemometerHeightM", 3);
 
 			StationOptions.Humidity98Fix = ini.GetValue("Station", "Humidity98Fix", false);
-			StationOptions.UseWind10MinAve = ini.GetValue("Station", "Wind10MinAverage", false);
+			StationOptions.CalcWind10MinAve = ini.GetValue("Station", "Wind10MinAverage", false);
 			StationOptions.UseSpeedForAvgCalc = ini.GetValue("Station", "UseSpeedForAvgCalc", false);
 
 			StationOptions.AvgBearingMinutes = ini.GetValue("Station", "AvgBearingMinutes", 10);
@@ -5110,7 +5114,7 @@ namespace CumulusMX
 			TempSumBase1 = ini.GetValue("TempSum", "BaseTemperature1", GrowingBase1);
 			TempSumBase2 = ini.GetValue("TempSum", "BaseTemperature2", GrowingBase2);
 
-			// de we need to decrypt creds? Only if we a re using cumulus1/3 ini file
+			// do we need to decrypt creds?
 			if (ProgramOptions.EncryptedCreds)
 			{
 				WllApiKey = Crypto.DecryptString(WllApiKey, Program.InstanceId);
@@ -5124,7 +5128,8 @@ namespace CumulusMX
 				AWEKAS.PW = Crypto.DecryptString(AWEKAS.PW, Program.InstanceId);
 				WindGuru.PW = Crypto.DecryptString(WindGuru.PW, Program.InstanceId);
 				WCloud.PW = Crypto.DecryptString(WCloud.PW, Program.InstanceId);
-				//Twitter.PW = CredentialsStore.DecryptString(Twitter.PW);
+				//Twitter.PW = Crypto.DecryptString(Twitter.PW);
+				//Twitter.OauthTokenSecret =Crypto.DecryptString(Twitter.OauthTokenSecret);
 				PWS.PW = Crypto.DecryptString(PWS.PW, Program.InstanceId);
 				WOW.PW = Crypto.DecryptString(WOW.PW, Program.InstanceId);
 				APRS.PW = Crypto.DecryptString(AirLinkApiKey, Program.InstanceId);
@@ -5193,7 +5198,7 @@ namespace CumulusMX
 			ini.SetValue("Station", "AnemometerHeightM", StationOptions.AnemometerHeightM);
 
 			ini.SetValue("Station", "Humidity98Fix", StationOptions.Humidity98Fix);
-			ini.SetValue("Station", "Wind10MinAverage", StationOptions.UseWind10MinAve);
+			ini.SetValue("Station", "Wind10MinAverage", StationOptions.CalcWind10MinAve);
 			ini.SetValue("Station", "UseSpeedForAvgCalc", StationOptions.UseSpeedForAvgCalc);
 			ini.SetValue("Station", "AvgBearingMinutes", StationOptions.AvgBearingMinutes);
 			ini.SetValue("Station", "AvgSpeedMinutes", StationOptions.AvgSpeedMinutes);
@@ -5562,11 +5567,11 @@ namespace CumulusMX
 			ini.SetValue("WeatherCloud", "LeafWetnessSensor", WCloud.LeafWetnessSensor);
 
 			//ini.SetValue("Twitter", "User", Twitter.ID);
-			//ini.SetValue("Twitter", "Password", Encrypt.EncryptString(Twitter.PW));
+			//ini.SetValue("Twitter", "Password", Crypto.EncryptString(Twitter.PW));
 			//ini.SetValue("Twitter", "Enabled", Twitter.Enabled);
 			//ini.SetValue("Twitter", "Interval", Twitter.Interval);
 			//ini.SetValue("Twitter", "OauthToken", Twitter.OauthToken);
-			//ini.SetValue("Twitter", "OauthTokenSecret", Twitter.OauthTokenSecret);
+			//ini.SetValue("Twitter", "OauthTokenSecret", Crypto.EncryptString(Twitter.OauthTokenSecret));
 			//ini.SetValue("Twitter", "TwitterSendLocation", Twitter.SendLocation);
 
 			ini.SetValue("PWSweather", "ID", PWS.ID);
@@ -6824,7 +6829,7 @@ namespace CumulusMX
 			station.CurrentSolarMax = AstroLib.SolarMax(timestamp, Longitude, Latitude, station.AltitudeM(Altitude), out station.SolarElevation, RStransfactor, BrasTurbidity, SolarCalc);
 
 
-			var newRec = new LogData()
+			var newRec = new IntervalData()
 			{
 				Timestamp = timestamp,
 				Temp = station.OutdoorTemperature,
@@ -6945,7 +6950,9 @@ namespace CumulusMX
 					LogMessage("DoLogFile: We have buffered MySQL commands to send, checking connection to server...");
 					if (MySqlCheckConnection())
 					{
+						Thread.Sleep(500);
 						LogMessage("DoLogFile: MySQL server connection OK, trying to send the buffered commands...");
+
 						try
 						{
 							MySqlCommandSync(MySqlFailedList, "Buffered");
@@ -7413,7 +7420,7 @@ namespace CumulusMX
 				string foldername = timestamp.ToString("yyyyMMddHHmmss");
 
 				foldername = dirpath + foldername + DirectorySeparator;
-				string datafolder = foldername + "data" + DirectorySeparator;
+				string datafolder = foldername + "datav4" + DirectorySeparator;
 
 				LogMessage("BackupData: Creating backup folder " + foldername);
 
@@ -7462,7 +7469,18 @@ namespace CumulusMX
 					CopyBackupFile(diaryfile, diarybackup);
 					CopyBackupFile("Cumulus.ini", configbackup);
 					CopyBackupFile("UniqueId.txt", uniquebackup);
-					CopyBackupFile(dbfile, dbBackup);
+					if (daily)
+					{
+						// for daily backup the db is in use, so use an aync online backup
+						station.DatabaseAsync.BackupAsync(dbBackup);
+					}
+					else
+					{
+						// start-up backup - the db is not yet in use, do a file copy including any recovery files
+						CopyBackupFile(dbfile, dbBackup);
+						CopyBackupFile(dbfile + "-shm", dbBackup + "-shm");
+						CopyBackupFile(dbfile + "-wal", dbBackup + "-wal");
+					}
 					CopyBackupFile(extraFile, extraBackup);
 					CopyBackupFile(AirLinkFile, AirLinkBackup);
 					// Do not do this extra backup between 00:00 & Roll-over hour on the first of the month
@@ -8234,199 +8252,206 @@ namespace CumulusMX
 					return;
 				}
 
-				using (SftpClient conn = new SftpClient(connectionInfo))
+				try
 				{
-					try
+					using (SftpClient conn = new SftpClient(connectionInfo))
 					{
-						LogFtpDebugMessage($"SFTP[Int]: CumulusMX Connecting to {FtpOptions.Hostname} on port {FtpOptions.Port}");
-						conn.Connect();
-						if (ServicePointManager.DnsRefreshTimeout == 0)
+						try
 						{
-							ServicePointManager.DnsRefreshTimeout = 120000; // two minutes default
-						}
-					}
-					catch (Exception ex)
-					{
-						LogExceptionMessage(ex, "SFTP[Int]: Error connecting SFTP", true);
-						if ((uint)ex.HResult == 0x80004005) // Could not resolve host
-						{
-							// Disable the DNS cache for the next query
-							ServicePointManager.DnsRefreshTimeout = 0;
-						}
-						return;
-					}
-
-					if (conn.IsConnected)
-					{
-						if (NOAAconf.NeedFtp)
-						{
-							try
+							LogFtpDebugMessage($"SFTP[Int]: CumulusMX Connecting to {FtpOptions.Hostname} on port {FtpOptions.Port}");
+							conn.Connect();
+							if (ServicePointManager.DnsRefreshTimeout == 0)
 							{
-								// upload NOAA reports
-								LogFtpDebugMessage("SFTP[Int]: Uploading NOAA reports");
-
-								var uploadfile = ReportPath + NOAAconf.LatestMonthReport;
-								var remotefile = NOAAconf.FtpFolder + '/' + NOAAconf.LatestMonthReport;
-
-								UploadFile(conn, uploadfile, remotefile, -1);
-
-								uploadfile = ReportPath + NOAAconf.LatestYearReport;
-								remotefile = NOAAconf.FtpFolder + '/' + NOAAconf.LatestYearReport;
-
-								UploadFile(conn, uploadfile, remotefile, -1);
-
-								LogFtpDebugMessage("SFTP[Int]: Done uploading NOAA reports");
+								ServicePointManager.DnsRefreshTimeout = 120000; // two minutes default
 							}
-							catch (Exception e)
+						}
+						catch (Exception ex)
+						{
+							LogExceptionMessage(ex, "SFTP[Int]: Error connecting SFTP", true);
+							if ((uint)ex.HResult == 0x80004005) // Could not resolve host
 							{
-								LogExceptionMessage(e, "SFTP[Int]: Error uploading file", true);
+								// Disable the DNS cache for the next query
+								ServicePointManager.DnsRefreshTimeout = 0;
 							}
-							NOAAconf.NeedFtp = false;
+							return;
 						}
 
-						LogFtpDebugMessage("SFTP[Int]: Uploading extra files");
-						// Extra files
-						for (int i = 0; i < numextrafiles; i++)
+						if (conn.IsConnected)
 						{
-							var uploadfile = ExtraFiles[i].local;
-							var remotefile = ExtraFiles[i].remote;
-
-							if ((uploadfile.Length > 0) &&
-								(remotefile.Length > 0) &&
-								!ExtraFiles[i].realtime &&
-								(!ExtraFiles[i].endofday || EODfilesNeedFTP == ExtraFiles[i].endofday) && // Either, it's not flagged as an EOD file, OR: It is flagged as EOD and EOD FTP is required
-								ExtraFiles[i].FTP)
+							if (NOAAconf.NeedFtp)
 							{
-								// For EOD files, we want the previous days log files since it is now just past the day roll-over time. Makes a difference on month roll-over
-								var logDay = ExtraFiles[i].endofday ? DateTime.Now.AddDays(-1) : DateTime.Now;
-
-								uploadfile = GetUploadFilename(uploadfile, logDay);
-
-								if (File.Exists(uploadfile))
+								try
 								{
-									remotefile = GetRemoteFileName(remotefile, logDay);
+									// upload NOAA reports
+									LogFtpDebugMessage("SFTP[Int]: Uploading NOAA reports");
 
-									// all checks OK, file needs to be uploaded
-									if (ExtraFiles[i].process)
+									var uploadfile = ReportPath + NOAAconf.LatestMonthReport;
+									var remotefile = NOAAconf.FtpFolder + '/' + NOAAconf.LatestMonthReport;
+
+									UploadFile(conn, uploadfile, remotefile, -1);
+
+									uploadfile = ReportPath + NOAAconf.LatestYearReport;
+									remotefile = NOAAconf.FtpFolder + '/' + NOAAconf.LatestYearReport;
+
+									UploadFile(conn, uploadfile, remotefile, -1);
+
+									LogFtpDebugMessage("SFTP[Int]: Done uploading NOAA reports");
+								}
+								catch (Exception e)
+								{
+									LogExceptionMessage(e, "SFTP[Int]: Error uploading file", true);
+								}
+								NOAAconf.NeedFtp = false;
+							}
+
+							LogFtpDebugMessage("SFTP[Int]: Uploading extra files");
+							// Extra files
+							for (int i = 0; i < numextrafiles; i++)
+							{
+								var uploadfile = ExtraFiles[i].local;
+								var remotefile = ExtraFiles[i].remote;
+
+								if ((uploadfile.Length > 0) &&
+									(remotefile.Length > 0) &&
+									!ExtraFiles[i].realtime &&
+									(!ExtraFiles[i].endofday || EODfilesNeedFTP == ExtraFiles[i].endofday) && // Either, it's not flagged as an EOD file, OR: It is flagged as EOD and EOD FTP is required
+									ExtraFiles[i].FTP)
+								{
+									// For EOD files, we want the previous days log files since it is now just past the day roll-over time. Makes a difference on month roll-over
+									var logDay = ExtraFiles[i].endofday ? DateTime.Now.AddDays(-1) : DateTime.Now;
+
+									uploadfile = GetUploadFilename(uploadfile, logDay);
+
+									if (File.Exists(uploadfile))
 									{
-										// we've already processed the file
-										uploadfile += "tmp";
+										remotefile = GetRemoteFileName(remotefile, logDay);
+
+										// all checks OK, file needs to be uploaded
+										if (ExtraFiles[i].process)
+										{
+											// we've already processed the file
+											uploadfile += "tmp";
+										}
+
+										try
+										{
+											UploadFile(conn, uploadfile, remotefile, -1);
+										}
+										catch (Exception e)
+										{
+											LogExceptionMessage(e, $"SFTP[Int]: Error uploading Extra web file #{i} [{uploadfile}]", true);
+										}
 									}
+									else
+									{
+										LogFtpMessage($"SFTP[Int]: Extra web file #{i} [{uploadfile}] not found!");
+									}
+								}
+							}
+							if (EODfilesNeedFTP)
+							{
+								EODfilesNeedFTP = false;
+							}
+							LogFtpDebugMessage("SFTP[Int]: Done uploading extra files");
+
+							// standard files
+							LogFtpDebugMessage("SFTP[Int]: Uploading standard web files");
+							for (var i = 0; i < StdWebFiles.Length; i++)
+							{
+								if (StdWebFiles[i].FTP && StdWebFiles[i].FtpRequired)
+								{
+									try
+									{
+										var localFile = StdWebFiles[i].LocalPath + StdWebFiles[i].LocalFileName;
+										var remotefile = remotePath + StdWebFiles[i].RemoteFileName;
+										UploadFile(conn, localFile, remotefile, -1);
+									}
+									catch (Exception e)
+									{
+										LogFtpMessage($"SFTP[Int]: Error uploading standard data file [{StdWebFiles[i].LocalFileName}]");
+										LogFtpMessage($"SFTP[Int]: Error = {e}");
+									}
+								}
+							}
+							LogFtpDebugMessage("SFTP[Int]: Done uploading standard web files");
+
+							LogFtpDebugMessage("SFTP[Int]: Uploading graph data files");
+
+							for (int i = 0; i < GraphDataFiles.Length; i++)
+							{
+								if (GraphDataFiles[i].FTP && GraphDataFiles[i].FtpRequired)
+								{
+									var uploadfile = GraphDataFiles[i].LocalPath + GraphDataFiles[i].LocalFileName;
+									var remotefile = remotePath + GraphDataFiles[i].RemoteFileName;
 
 									try
 									{
 										UploadFile(conn, uploadfile, remotefile, -1);
+										// The config files only need uploading once per change
+										if (GraphDataFiles[i].LocalFileName == "availabledata.json" ||
+											GraphDataFiles[i].LocalFileName == "graphconfig.json")
+										{
+											GraphDataFiles[i].FtpRequired = false;
+										}
 									}
 									catch (Exception e)
 									{
-										LogExceptionMessage(e, $"SFTP[Int]: Error uploading Extra web file #{i} [{uploadfile}]", true);
+										LogFtpMessage($"SFTP[Int]: Error uploading graph data file [{uploadfile}]");
+										LogFtpMessage($"SFTP[Int]: Error = {e}");
 									}
 								}
-								else
-								{
-									LogFtpMessage($"SFTP[Int]: Extra web file #{i} [{uploadfile}] not found!");
-								}
 							}
-						}
-						if (EODfilesNeedFTP)
-						{
-							EODfilesNeedFTP = false;
-						}
-						LogFtpDebugMessage("SFTP[Int]: Done uploading extra files");
+							LogFtpDebugMessage("SFTP[Int]: Done uploading graph data files");
 
-						// standard files
-						LogFtpDebugMessage("SFTP[Int]: Uploading standard web files");
-						for (var i = 0; i < StdWebFiles.Length; i++)
-						{
-							if (StdWebFiles[i].FTP && StdWebFiles[i].FtpRequired)
+							LogFtpMessage("SFTP[Int]: Uploading daily graph data files");
+							for (int i = 0; i < GraphDataEodFiles.Length; i++)
 							{
-								try
+								if (GraphDataEodFiles[i].FTP && GraphDataEodFiles[i].FtpRequired)
 								{
-									var localFile = StdWebFiles[i].LocalPath + StdWebFiles[i].LocalFileName;
-									var remotefile = remotePath + StdWebFiles[i].RemoteFileName;
-									UploadFile(conn, localFile, remotefile, -1);
-								}
-								catch (Exception e)
-								{
-									LogFtpMessage($"SFTP[Int]: Error uploading standard data file [{StdWebFiles[i].LocalFileName}]");
-									LogFtpMessage($"SFTP[Int]: Error = {e}");
-								}
-							}
-						}
-						LogFtpDebugMessage("SFTP[Int]: Done uploading standard web files");
-
-						LogFtpDebugMessage("SFTP[Int]: Uploading graph data files");
-
-						for (int i = 0; i < GraphDataFiles.Length; i++)
-						{
-							if (GraphDataFiles[i].FTP && GraphDataFiles[i].FtpRequired)
-							{
-								var uploadfile = GraphDataFiles[i].LocalPath + GraphDataFiles[i].LocalFileName;
-								var remotefile = remotePath + GraphDataFiles[i].RemoteFileName;
-
-								try
-								{
-									UploadFile(conn, uploadfile, remotefile, -1);
-									// The config files only need uploading once per change
-									if (GraphDataFiles[i].LocalFileName == "availabledata.json" ||
-										GraphDataFiles[i].LocalFileName == "graphconfig.json")
+									var uploadfile = GraphDataEodFiles[i].LocalPath + GraphDataEodFiles[i].LocalFileName;
+									var remotefile = remotePath + GraphDataEodFiles[i].RemoteFileName;
+									try
 									{
-										GraphDataFiles[i].FtpRequired = false;
+										UploadFile(conn, uploadfile, remotefile, -1);
+										// Uploaded OK, reset the upload required flag
+										GraphDataEodFiles[i].FtpRequired = false;
+									}
+									catch (Exception e)
+									{
+										LogFtpMessage($"SFTP[Int]: Error uploading daily graph data file [{uploadfile}]");
+										LogFtpMessage($"SFTP[Int]: Error = {e}");
 									}
 								}
-								catch (Exception e)
-								{
-									LogFtpMessage($"SFTP[Int]: Error uploading graph data file [{uploadfile}]");
-									LogFtpMessage($"SFTP[Int]: Error = {e}");
-								}
 							}
-						}
-						LogFtpDebugMessage("SFTP[Int]: Done uploading graph data files");
+							LogFtpMessage("SFTP[Int]: Done uploading daily graph data files");
 
-						LogFtpMessage("SFTP[Int]: Uploading daily graph data files");
-						for (int i = 0; i < GraphDataEodFiles.Length; i++)
-						{
-							if (GraphDataEodFiles[i].FTP && GraphDataEodFiles[i].FtpRequired)
+							if (MoonImage.Ftp && MoonImage.ReadyToFtp)
 							{
-								var uploadfile = GraphDataEodFiles[i].LocalPath + GraphDataEodFiles[i].LocalFileName;
-								var remotefile = remotePath + GraphDataEodFiles[i].RemoteFileName;
 								try
 								{
-									UploadFile(conn, uploadfile, remotefile, -1);
-									// Uploaded OK, reset the upload required flag
-									GraphDataEodFiles[i].FtpRequired = false;
+									LogFtpMessage("SFTP[Int]: Uploading Moon image file");
+									UploadFile(conn, "web" + DirectorySeparator + "moon.png", remotePath + MoonImage.FtpDest, -1);
+									LogFtpMessage("SFTP[Int]: Done uploading Moon image file");
+									// clear the image ready for FTP flag, only upload once an hour
+									MoonImage.ReadyToFtp = false;
 								}
 								catch (Exception e)
 								{
-									LogFtpMessage($"SFTP[Int]: Error uploading daily graph data file [{uploadfile}]");
-									LogFtpMessage($"SFTP[Int]: Error = {e}");
+									LogExceptionMessage(e, $"SFTP[Int]: Error uploading moon image", true);
 								}
 							}
 						}
-						LogFtpMessage("SFTP[Int]: Done uploading daily graph data files");
-
-						if (MoonImage.Ftp && MoonImage.ReadyToFtp)
+						try
 						{
-							try
-							{
-								LogFtpMessage("SFTP[Int]: Uploading Moon image file");
-								UploadFile(conn, "web" + DirectorySeparator + "moon.png", remotePath + MoonImage.FtpDest, -1);
-								LogFtpMessage("SFTP[Int]: Done uploading Moon image file");
-								// clear the image ready for FTP flag, only upload once an hour
-								MoonImage.ReadyToFtp = false;
-							}
-							catch (Exception e)
-							{
-								LogExceptionMessage(e, $"SFTP[Int]: Error uploading moon image", true);
-							}
+							// do not error on disconnect
+							conn.Disconnect();
 						}
+						catch { }
 					}
-					try
-					{
-						// do not error on disconnect
-						conn.Disconnect();
-					}
-					catch { }
+				}
+				catch (Exception ex)
+				{
+					LogFtpMessage($"SFTP[Int]: Error using SFTP connection - {ex.Message}");
 				}
 				LogFtpDebugMessage("SFTP[Int]: Connection process complete");
 			}
@@ -9394,7 +9419,9 @@ namespace CumulusMX
 					LogMessage("CustomSqlSecs: Failed MySQL updates are present");
 					if (MySqlCheckConnection())
 					{
+						Thread.Sleep(500);
 						LogMessage("CustomSqlSecs: Connection to MySQL server is OK, trying to upload failed commands");
+
 						await MySqlCommandAsync(MySqlFailedList, "CustomSqlSecs");
 						LogMessage("CustomSqlSecs: Upload of failed MySQL commands complete");
 					}
@@ -9433,7 +9460,9 @@ namespace CumulusMX
 					LogMessage("CustomSqlMins: Failed MySQL updates are present");
 					if (MySqlCheckConnection())
 					{
+						Thread.Sleep(500);
 						LogMessage("CustomSqlMins: Connection to MySQL server is OK, trying to upload failed commands");
+
 						await MySqlCommandAsync(MySqlFailedList, "CustomSqlMins");
 						LogMessage("CustomSqlMins: Upload of failed MySQL commands complete");
 					}
@@ -9471,7 +9500,9 @@ namespace CumulusMX
 					LogMessage("CustomSqlRollover: Failed MySQL updates are present");
 					if (MySqlCheckConnection())
 					{
+						Thread.Sleep(500);
 						LogMessage("CustomSqlRollover: Connection to MySQL server is OK, trying to upload failed commands");
+
 						await MySqlCommandAsync(MySqlFailedList, "CustomSqlRollover");
 						LogMessage("CustomSqlRollover: Upload of failed MySQL commands complete");
 					}
@@ -9575,7 +9606,10 @@ namespace CumulusMX
 				}
 				LogDebugMessage("Disconnected Realtime FTP session");
 			}
-			catch { }
+			catch (Exception ex)
+			{
+				LogDebugMessage("RealtimeFTPDisconnect: Error disconnecting connection (can be ignored?) - " + ex.Message);
+			}
 		}
 
 		private void RealtimeFTPLogin()
@@ -10056,6 +10090,10 @@ namespace CumulusMX
 			{
 				using var mySqlConn = new MySqlConnection(MySqlConnSettings.ToString());
 				mySqlConn.Open();
+				// get the database name to check 100% we have a connection
+				var db = mySqlConn.Database;
+				LogMessage("MySqlCheckConnection: Connected to server ok, default database = " + db);
+				mySqlConn.Close();
 				return true;
 			}
 			catch
@@ -10495,7 +10533,7 @@ namespace CumulusMX
 		private void CreateRequiredFolders()
 		{
 			// The required folders are: /backup, /data, /Reports
-			var folders = new string[4] { "backup", "backup/daily", "data", "Reports"};
+			var folders = new string[4] { "backup", "backup/daily", "datav4", "Reports"};
 
 			LogMessage("Checking required folders");
 
@@ -10639,7 +10677,7 @@ namespace CumulusMX
 	public class StationOptions
 	{
 		public bool UseZeroBearing { get; set; }
-		public bool UseWind10MinAve { get; set; }
+		public bool CalcWind10MinAve { get; set; }
 		public bool UseSpeedForAvgCalc { get; set; }
 		public bool Humidity98Fix { get; set; }
 		public bool CalculatedDP { get; set; }

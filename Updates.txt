@@ -1,3 +1,25 @@
+4.0.0 - b4005
+——————————————
+- Final versions of the records editors. These now "look" better in that all default values of 999 etc are all replaced with a dash.
+	- I'll port much of this code back into CMX v3
+- The logged data editors (apart from Extra) are now rewritten using the database. The interval data has been changed completely from server side processing to client side. That
+	means the data is loaded into your browser for paging rather than being fetched a page a time so it may load a little slower than before.
+	- But the single day restriction has gone. You can now select a range of days. Note you will be limited to the first 5000 records from that range for performance reasons.
+	- It also implements Search - so you can enter a (rouge?) value and it will only show those rows within your date range that contain that value.
+		Note the search is a dumb text compare, but you can also search time stamps.
+
+
+4.0.0 - b4004
+——————————————
+- Reverts the daily data SQLite table name to DayData
+- Adds new Table LogData
+- All your monthly log files should be imported into the new SQLite database on first run
+- All internal functions (I think!) that use the dayfile or logfile data, now use the SQLite database rather than the text files as their data sources. ExtraLogFiles not done yet
+- Incorporates all the latest fixes in the v3 release
+- Additional logging for wind data on the GW1000 station
+
+
+
 4.0.0 - b4003
 ——————————————
 - Fix: GW1000 station not working correctly

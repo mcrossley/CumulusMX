@@ -6,13 +6,15 @@
     <StartupObject>CumulusMX.Program</StartupObject>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <NoWin32Manifest>true</NoWin32Manifest>
-    <AssemblyVersion>4.0.0.4003</AssemblyVersion>
-    <FileVersion>4.0.0.4003</FileVersion>
+    <AssemblyVersion>4.0.0.4006</AssemblyVersion>
+    <FileVersion>4.0.0.4006</FileVersion>
+    <PackageIcon>icon.ico</PackageIcon>
+    <PackageIconUrl />
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <OutputPath></OutputPath>
-    <DefineConstants>TRACE;USE_SQLITEPCL_RAW</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;USE_SQLITEPCL_RAW</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -58,6 +60,10 @@
     </None>
     <None Update="Updates.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="icon.ico">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
     </None>
   </ItemGroup>
 

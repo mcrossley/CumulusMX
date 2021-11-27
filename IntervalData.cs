@@ -5,7 +5,7 @@ using SQLite;
 
 namespace CumulusMX
 {
-	class LogData
+	class IntervalData
 	{
 		[PrimaryKey]
 		public DateTime Timestamp { get; set; }         // 0  DateTime
@@ -46,61 +46,61 @@ namespace CumulusMX
 
 			var sb = new StringBuilder(350);
 			sb.Append(Timestamp.ToString("'\"'dd/MM/yy HH:mm'\"'", invDate)).Append(',');
-			sb.Append(Utils.ToUnixTime(Timestamp)).Append(',');
-			if (Temp.HasValue) sb.Append(Temp.Value.ToString(Program.cumulus.TempFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (Humidity.HasValue) sb.Append(Humidity.Value); else sb.Append("\"\"");
-			sb.Append(',');
-			if (DewPoint.HasValue) sb.Append(DewPoint.Value.ToString(Program.cumulus.TempFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (WindAvg.HasValue) sb.Append(WindAvg.Value.ToString(Program.cumulus.WindFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (WindGust10m.HasValue) sb.Append(WindGust10m.Value.ToString(Program.cumulus.WindFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (WindAvgDir.HasValue) sb.Append(WindAvgDir.Value); else sb.Append("\"\"");
-			sb.Append(',');
-			if (RainRate.HasValue) sb.Append(RainRate.Value.ToString(Program.cumulus.RainFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (RainToday.HasValue) sb.Append(RainToday.Value.ToString(Program.cumulus.RainFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (Pressure.HasValue) sb.Append(Pressure.Value.ToString(Program.cumulus.PressFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (RainCounter.HasValue) sb.Append(RainCounter.Value.ToString(Program.cumulus.RainFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (InsideTemp.HasValue) sb.Append(InsideTemp.Value.ToString(Program.cumulus.TempFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (InsideHumidity.HasValue) sb.Append(InsideHumidity.Value); else sb.Append("\"\"");
-			sb.Append(',');
-			if (WindLatest.HasValue) sb.Append(WindLatest.Value.ToString(Program.cumulus.WindFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (WindChill.HasValue) sb.Append(WindChill.Value.ToString(Program.cumulus.TempFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (HeatIndex.HasValue) sb.Append(HeatIndex.Value.ToString(Program.cumulus.TempFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (UV.HasValue) sb.Append(UV.Value.ToString(Program.cumulus.UVFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (SolarRad.HasValue) sb.Append(SolarRad.Value); else sb.Append("\"\"");
-			sb.Append(',');
-			if (ET.HasValue) sb.Append(ET.Value.ToString(Program.cumulus.ETFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (AnnualET.HasValue) sb.Append(AnnualET.Value.ToString(Program.cumulus.ETFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (Apparent.HasValue) sb.Append(Apparent.Value.ToString(Program.cumulus.TempFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (SolarMax.HasValue) sb.Append(SolarMax.Value); else sb.Append("\"\"");
-			sb.Append(',');
-			if (Sunshine.HasValue) sb.Append(Sunshine.Value.ToString(Program.cumulus.SunFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (WindDir.HasValue) sb.Append(WindDir.Value); else sb.Append("\"\"");
-			sb.Append(',');
-			if (RG11Rain.HasValue) sb.Append(RG11Rain.Value.ToString(Program.cumulus.RainFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (RainMidnight.HasValue) sb.Append(RainMidnight.Value.ToString(Program.cumulus.RainFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (FeelsLike.HasValue) sb.Append(FeelsLike.Value.ToString(Program.cumulus.TempFormat, invNum)); else sb.Append("\"\"");
-			sb.Append(',');
-			if (Humidex.HasValue) sb.Append(Humidex.Value.ToString(Program.cumulus.TempFormat, invNum)); else sb.Append("\"\"");
-
+			sb.Append(Utils.ToUnixTime(Timestamp)).Append(",\"");
+			if (Temp.HasValue) sb.Append(Temp.Value.ToString(Program.cumulus.TempFormat, invNum));;
+			sb.Append("\",\"");
+			if (Humidity.HasValue) sb.Append(Humidity.Value);;
+			sb.Append("\",\"");
+			if (DewPoint.HasValue) sb.Append(DewPoint.Value.ToString(Program.cumulus.TempFormat, invNum));
+			sb.Append("\",\"");
+			if (WindAvg.HasValue) sb.Append(WindAvg.Value.ToString(Program.cumulus.WindFormat, invNum));
+			sb.Append("\",\"");
+			if (WindGust10m.HasValue) sb.Append(WindGust10m.Value.ToString(Program.cumulus.WindFormat, invNum));
+			sb.Append("\",\"");
+			if (WindAvgDir.HasValue) sb.Append(WindAvgDir.Value);
+			sb.Append("\",\"");
+			if (RainRate.HasValue) sb.Append(RainRate.Value.ToString(Program.cumulus.RainFormat, invNum));
+			sb.Append("\",\"");
+			if (RainToday.HasValue) sb.Append(RainToday.Value.ToString(Program.cumulus.RainFormat, invNum));
+			sb.Append("\",\"");
+			if (Pressure.HasValue) sb.Append(Pressure.Value.ToString(Program.cumulus.PressFormat, invNum));
+			sb.Append("\",\"");
+			if (RainCounter.HasValue) sb.Append(RainCounter.Value.ToString(Program.cumulus.RainFormat, invNum));
+			sb.Append("\",\"");
+			if (InsideTemp.HasValue) sb.Append(InsideTemp.Value.ToString(Program.cumulus.TempFormat, invNum));
+			sb.Append("\",\"");
+			if (InsideHumidity.HasValue) sb.Append(InsideHumidity.Value);
+			sb.Append("\",\"");
+			if (WindLatest.HasValue) sb.Append(WindLatest.Value.ToString(Program.cumulus.WindFormat, invNum));
+			sb.Append("\",\"");
+			if (WindChill.HasValue) sb.Append(WindChill.Value.ToString(Program.cumulus.TempFormat, invNum));
+			sb.Append("\",\"");
+			if (HeatIndex.HasValue) sb.Append(HeatIndex.Value.ToString(Program.cumulus.TempFormat, invNum));
+			sb.Append("\",\"");
+			if (UV.HasValue) sb.Append(UV.Value.ToString(Program.cumulus.UVFormat, invNum));
+			sb.Append("\",\"");
+			if (SolarRad.HasValue) sb.Append(SolarRad.Value);
+			sb.Append("\",\"");
+			if (ET.HasValue) sb.Append(ET.Value.ToString(Program.cumulus.ETFormat, invNum));
+			sb.Append("\",\"");
+			if (AnnualET.HasValue) sb.Append(AnnualET.Value.ToString(Program.cumulus.ETFormat, invNum));
+			sb.Append("\",\"");
+			if (Apparent.HasValue) sb.Append(Apparent.Value.ToString(Program.cumulus.TempFormat, invNum));
+			sb.Append("\",\"");
+			if (SolarMax.HasValue) sb.Append(SolarMax.Value);
+			sb.Append("\",\"");
+			if (Sunshine.HasValue) sb.Append(Sunshine.Value.ToString(Program.cumulus.SunFormat, invNum));
+			sb.Append("\",\"");
+			if (WindDir.HasValue) sb.Append(WindDir.Value);
+			sb.Append("\",\"");
+			if (RG11Rain.HasValue) sb.Append(RG11Rain.Value.ToString(Program.cumulus.RainFormat, invNum));
+			sb.Append("\",\"");
+			if (RainMidnight.HasValue) sb.Append(RainMidnight.Value.ToString(Program.cumulus.RainFormat, invNum));
+			sb.Append("\",\"");
+			if (FeelsLike.HasValue) sb.Append(FeelsLike.Value.ToString(Program.cumulus.TempFormat, invNum));
+			sb.Append("\",\"");
+			if (Humidex.HasValue) sb.Append(Humidex.Value.ToString(Program.cumulus.TempFormat, invNum));
+			sb.Append('"');
 			return sb.ToString();
 		}
 

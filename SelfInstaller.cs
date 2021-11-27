@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -24,7 +22,7 @@ namespace CumulusMX
 			{
 				if (!IsElevated())
 				{
-					Console.WriteLine("You must run the service install process as an elevated user - 'Run as Administrator'");
+					Console.WriteLine("You must run the service installation as an elevated user - 'Run as Administrator'");
 					return false;
 				}
 
@@ -97,13 +95,13 @@ namespace CumulusMX
 			{
 				if (!IsElevated())
 				{
-					Console.WriteLine("You must run the service install process as an elevated user - 'sudo dotnet CumulusMX -install'");
+					Console.WriteLine("You must run the service installation as an elevated user - 'sudo dotnet CumulusMX -install'");
 					return false;
 				}
 
 				var user = string.IsNullOrEmpty(userId) ? "root" : userId;
 
-				Console.WriteLine($"Installing as a systemctld service using userid {user}...");
+				Console.WriteLine($"Installing as a systemctld service to run as userid {user}...");
 
 
 				// does the service file exist already?
@@ -172,7 +170,7 @@ namespace CumulusMX
 				}
 				else
 				{
-					Console.WriteLine("Error removing service, the service file was not found - " + serviceFile);
+					Console.WriteLine("Error removing service, the service unit file was not found - " + serviceFile);
 				}
 
 				// does a sym link exist

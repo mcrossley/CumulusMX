@@ -9,13 +9,13 @@ using ServiceStack;
 
 namespace CumulusMX
 {
-	internal class LogFileEditors
+	internal class DataEditors
 	{
 		private WeatherStation station;
 		private readonly Cumulus cumulus;
 		private readonly System.Globalization.NumberFormatInfo invNum = System.Globalization.CultureInfo.InvariantCulture.NumberFormat;
 
-		internal LogFileEditors(Cumulus cumulus)
+		internal DataEditors(Cumulus cumulus)
 		{
 			this.cumulus = cumulus;
 		}
@@ -72,7 +72,7 @@ namespace CumulusMX
 		}
 
 
-		internal async Task<string> EditDayFile(IHttpContext context)
+		internal async Task<string> EditDailyData(IHttpContext context)
 		{
 			var request = context.Request;
 			string text;
@@ -81,7 +81,7 @@ namespace CumulusMX
 				text = reader.ReadToEnd();
 			}
 
-			var newData = text.FromJson<DayFileEditor>();
+			var newData = text.FromJson<DailyDataEditor>();
 
 			if (newData.action == "Edit")
 			{
@@ -90,7 +90,7 @@ namespace CumulusMX
 				var newRec = new DayData();
 				newRec.FromString(newData.data);
 
-				_ = station.Database.Update(newRec);
+				await station.DatabaseAsync.UpdateAsync(newRec);
 
 				// Update the dayfile
 				if (Program.cumulus.ProgramOptions.UpdateDayfile)
@@ -214,7 +214,7 @@ namespace CumulusMX
 				var newRec = new DayData();
 				newRec.FromString(newData.data);
 
-				_ = station.Database.Delete(newRec);
+				await station.DatabaseAsync.DeleteAsync(newRec);
 
 
 				// Update the dayfile
@@ -282,7 +282,7 @@ namespace CumulusMX
 			return rec.ToJson();
 		}
 
-		private class DayFileEditor
+		private class DailyDataEditor
 		{
 			public string action { get; set; }
 			public int line { get; set; }
@@ -292,9 +292,9 @@ namespace CumulusMX
 
 		#endregion Dayfile
 
-		#region Log Files
+		#region Interval Data
 		/// <summary>
-		/// Return lines from log file in JSON format
+		/// Return lines from the interval data in JSON format
 		/// </summary>
 		/// <param name="date"></param>
 		/// <param name="draw"></param>
@@ -302,46 +302,81 @@ namespace CumulusMX
 		/// <param name="length"></param>
 		/// <param name="extra"></param>
 		/// <returns>JSON encoded section of the log file as a string</returns>
-		internal async Task<string> GetLogfile(string date, string draw, int start, int length, bool extra)
+		internal async Task<string> GetIntervalData(string from, string to, string draw, int start, int length, string search, bool extra)
 		{
 			try
 			{
-				// date will be in format "dd-mm-yyyy"
-				var dayArr = date.Split('-');
+				// date will be in format "yyyy-mm-dd"
+				var stDate = from.Split('-');
+				var enDate = to.Split('-');
+
+				var filtered = 0;  // otal number of filtered rows available
+				var thisDraw = 0;  // count of the rows we are returning
 
 				// Get a time stamp, use 15th day to avoid wrap issues
-				var ts = new DateTime(int.Parse(dayArr[2]), int.Parse(dayArr[1]), int.Parse(dayArr[0]));
-				var ts1 = ts.AddDays(1);
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				ts1 = ts1.AddDays(1);
 
-				var logfile = extra ? cumulus.GetExtraLogFileName(ts) : cumulus.GetLogFileName(ts);
-				var numFields = extra ? Cumulus.NumExtraLogFileFields : Cumulus.NumLogFileFields;
+				if (ts > ts1)
+				{
+					// this cannot be, the end is earlier than the start!
+					return "";
+				}
 
+				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var total = await station.DatabaseAsync.ExecuteScalarAsync<int>("select count(*) from LogData where Timestamp >= ? and Timestamp < ?", ts, ts1);
-				var rows = await station.DatabaseAsync.QueryAsync<LogData>("select * from LogData where Timestamp >= ? and Timestamp < ? order by Timestamp limit ?,?", ts, ts1, start, length);
-				var json = new StringBuilder(350 * rows.Count);
+				var rows = await station.DatabaseAsync.QueryAsync<IntervalData>("select * from LogData where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var json = new StringBuilder(350 * length);
 
-
-				json.Append("{\"draw\":");
-				json.Append(draw);
-				json.Append(",\"recordsTotal\":");
-				json.Append(total);
-				json.Append(",\"recordsFiltered\":");
-				json.Append(total);
+				json.Append("{\"recordsTotal\":");
+				json.Append(rows.Count);
 				json.Append(",\"data\":[");
-
-				var lineNum = start + 1; // Start is zero relative
 
 				foreach (var row in rows)
 				{
-					json.Append('[');
-					json.Append(row.ToCSV());
-					json.Append("],");
+					var text = row.ToCSV();
+
+					// if we have a search string and no match, skip to next line
+					if (!string.IsNullOrEmpty(search) && !text.Contains(search))
+					{
+						continue;
+					}
+
+					filtered++;
+
+					// skip records until we get to the start entry
+					if (filtered <= start)
+					{
+						continue;
+					}
+
+					// only send the number requested
+					if (thisDraw < length)
+					{
+						// track the number of lines we have to return so far
+						thisDraw++;
+
+						json.Append('[');
+						json.Append(text);
+						json.Append("],");
+					}
 				}
 
 				// trim trailing ","
-				json.Length--;
-				json.Append("]}");
+				if (thisDraw > 0)
+					json.Length--;
+
+				json.Append("],\"draw\":");
+				json.Append(draw);
+				json.Append(",\"recordsFiltered\":");
+				json.Append(filtered);
+				json.Append('}');
+
+				watch.Stop();
+				var elapsed = watch.ElapsedMilliseconds;
+				cumulus.LogDebugMessage($"GetLogfile: Logfiles parse = {elapsed} ms");
+				cumulus.LogDebugMessage($"GetLogfile: Found={rows.Count}, filtered={filtered} (filter='{search}'), start={start}, return={thisDraw}");
 
 				return json.ToString();
 			}
@@ -354,7 +389,7 @@ namespace CumulusMX
 		}
 
 
-		internal string EditDatalog(IHttpContext context)
+		internal async Task<string> EditDatalog(IHttpContext context)
 		{
 			var request = context.Request;
 			string text;
@@ -363,7 +398,7 @@ namespace CumulusMX
 				text = reader.ReadToEnd();
 			}
 
-			var newData = text.FromJson<DatalogEditor>();
+			var newData = text.FromJson<IntervalDataEditor>();
 
 
 			if (newData.action == "Edit")
@@ -376,10 +411,10 @@ namespace CumulusMX
 				}
 				else
 				{
-					var newRec = new LogData();
+					var newRec = new IntervalData();
 					newRec.FromString(newData.data);
 
-					_ = station.Database.Update(newRec);
+					await station.DatabaseAsync.UpdateAsync(newRec);
 				}
 
 
@@ -509,10 +544,10 @@ namespace CumulusMX
 				}
 				else
 				{
-					var newRec = new LogData();
+					var newRec = new IntervalData();
 					newRec.FromString(newData.data);
 
-					_ = station.Database.Delete(newRec);
+					await station.DatabaseAsync.DeleteAsync(newRec);
 				}
 
 
@@ -561,7 +596,7 @@ namespace CumulusMX
 			return rec.ToJson();
 		}
 
-		private class DatalogEditor
+		private class IntervalDataEditor
 		{
 			public string action { get; set; }
 			public int line { get; set; }
@@ -570,6 +605,6 @@ namespace CumulusMX
 			public string[] data { get; set; }
 		}
 
-		#endregion Log Files
+		#endregion Interval Data
 	}
 }

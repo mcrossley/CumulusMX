@@ -32,8 +32,8 @@ namespace CumulusMX
 			// Do not set these if we are only using extra sensors
 			if (station == null)
 			{
-				cumulus.StationOptions.UseWind10MinAve = true;
-				cumulus.StationOptions.UseSpeedForAvgCalc = false;
+				cumulus.StationOptions.CalcWind10MinAve = true;
+				//cumulus.StationOptions.UseSpeedForAvgCalc = false;
 				// GW1000 does not send DP, so force MX to calculate it
 				cumulus.StationOptions.CalculatedDP = true;
 				// Same for Wind Chill

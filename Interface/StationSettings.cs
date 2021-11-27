@@ -40,7 +40,7 @@ namespace CumulusMX
 			var options = new OptionsJson()
 			{
 				usezerobearing = cumulus.StationOptions.UseZeroBearing,
-				calcwindaverage = cumulus.StationOptions.UseWind10MinAve,
+				calcwindaverage = cumulus.StationOptions.CalcWind10MinAve,
 				usespeedforavg = cumulus.StationOptions.UseSpeedForAvgCalc,
 				use100for98hum = cumulus.StationOptions.Humidity98Fix,
 				calculatedewpoint = cumulus.StationOptions.CalculatedDP,
@@ -700,7 +700,7 @@ namespace CumulusMX
 				try
 				{
 					cumulus.StationOptions.UseZeroBearing = settings.Options.usezerobearing;
-					cumulus.StationOptions.UseWind10MinAve = settings.Options.calcwindaverage;
+					cumulus.StationOptions.CalcWind10MinAve = settings.Options.calcwindaverage;
 					cumulus.StationOptions.UseSpeedForAvgCalc = settings.Options.usespeedforavg;
 					cumulus.StationOptions.Humidity98Fix = settings.Options.use100for98hum;
 					cumulus.StationOptions.CalculatedDP = settings.Options.calculatedewpoint;

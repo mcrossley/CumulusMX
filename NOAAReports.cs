@@ -20,13 +20,13 @@ namespace CumulusMX
 			this.station = station;
 		}
 
-		public List<string> GenerateNoaaYearReport(int year)
+		public async Task<List<string>> GenerateNoaaYearReport(int year)
 		{
 			NOAA noaa = new NOAA(cumulus, station);
 			DateTime noaats = new DateTime(year, 1, 1);
 
 			Cumulus.LogMessage("Creating NOAA yearly report");
-			report = noaa.CreateYearlyReport(noaats);
+			report = await noaa.CreateYearlyReport(noaats);
 			try
 			{
 				// If not using UTF, then we have to convert the character set

@@ -1403,7 +1403,7 @@ namespace CumulusMX
 				ResetSunshineHours();
 				midnightraindone = true;
 			}
-			// there seems to be no way of determining the log interval other than subtracting one logMainUnit.Units.MainUnit.Cumulus.LogMessage
+			// there seems to be no way of determining the log interval other than subtracting one logMainUnit.Units.MainUnit.cumulus.LogMessage
 			// timestamp from another, so we'll have to ignore the first one
 			if (previousHistoryTimeStamp > DateTime.MinValue)
 			{

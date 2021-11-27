@@ -26,7 +26,7 @@ namespace CumulusMX
 		internal static Wizard wizard { private get; set; }
 		internal static AlarmSettings alarmSettings { private get; set; }
 		internal static DataEditor dataEditor { get; set; }
-		internal static LogFileEditors logfileEditor { get; set; }
+		internal static DataEditors logfileEditor { get; set; }
 		internal static ApiTagProcessor tagProcessor { get; set; }
 
 		private static string EscapeUnicode(string input)
@@ -87,7 +87,7 @@ namespace CumulusMX
 							await writer.WriteAsync(await dataEditor.GetMonthlyRecDayFile());
 							break;
 						case "monthlyrecordslogfile.json":
-							await writer.WriteAsync(dataEditor.GetMonthlyRecLogFile());
+							await writer.WriteAsync(await dataEditor.GetMonthlyRecLogFile());
 							break;
 						case "thismonthrecords.json":
 							await writer.WriteAsync(dataEditor.GetThisMonthRecData());
@@ -166,10 +166,10 @@ namespace CumulusMX
 							await writer.WriteAsync(dataEditor.EditThisYearRecs(HttpContext));
 							break;
 						case "dayfile":
-							await writer.WriteAsync(await logfileEditor.EditDayFile(HttpContext));
+							await writer.WriteAsync(await logfileEditor.EditDailyData(HttpContext));
 							break;
 						case "datalogs":
-							await writer.WriteAsync(logfileEditor.EditDatalog(HttpContext));
+							await writer.WriteAsync(await logfileEditor.EditDatalog(HttpContext));
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
@@ -209,8 +209,10 @@ namespace CumulusMX
 					var query = HttpUtility.ParseQueryString(Request.Url.Query);
 					var date = query["date"];
 					var year = query["year"];
-					var month = query["month"];
+					var from = query["from"];
+					var to = query["to"];
 					var draw = query["draw"];
+					var search = query["search[value]"];
 					int start = Convert.ToInt32(query["start"]);
 					int length = Convert.ToInt32(query["length"]);
 
@@ -221,10 +223,10 @@ namespace CumulusMX
 							await writer.WriteAsync(await logfileEditor.GetDayfile(draw, start, length));
 							break;
 						case "logfile":
-							await writer.WriteAsync(await logfileEditor.GetLogfile(month, draw, start, length, false));
+							await writer.WriteAsync(await logfileEditor.GetIntervalData(from, to, draw, start, length, search, false));
 							break;
 						case "extralogfile":
-							await writer.WriteAsync(await logfileEditor.GetLogfile(month, draw, start, length, true));
+							await writer.WriteAsync(await logfileEditor.GetIntervalData(from, to, draw, start, length, search, true));
 							break;
 						case "currentdata":
 							await writer.WriteAsync(Station.GetCurrentData());
