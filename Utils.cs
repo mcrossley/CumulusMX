@@ -94,6 +94,51 @@ namespace CumulusMX
 			return date.Add(TimeSpan.ParseExact(time, "hh\\:mm", CultureInfo.InvariantCulture.DateTimeFormat));
 		}
 
+		/// <summary>
+		/// Rounds datetime up, down or to nearest minutes and all smaller units to zero
+		/// </summary>
+		/// <param name="dt">static extension method</param>
+		/// <param name="rndmin">mins to round to</param>
+		/// <param name="directn">Up,Down,Nearest</param>
+		/// <returns>rounded datetime with all smaller units than mins rounded off</returns>
+		public static DateTime RoundToNearestMinuteProper(this DateTime dt, int rndmin, RoundingDirection directn)
+		{
+			if (rndmin == 0) //can be > 60 mins
+				return dt;
+
+			TimeSpan d = TimeSpan.FromMinutes(rndmin); //this can be passed as a parameter, or use any timespan unit FromDays, FromHours, etc.
+
+			long delta = 0;
+			Int64 modTicks = dt.Ticks % d.Ticks;
+
+			switch (directn)
+			{
+				case RoundingDirection.Up:
+					delta = modTicks != 0 ? d.Ticks - modTicks : 0;
+					break;
+				case RoundingDirection.Down:
+					delta = -modTicks;
+					break;
+				case RoundingDirection.Nearest:
+					{
+						bool roundUp = modTicks > (d.Ticks / 2);
+						var offset = roundUp ? d.Ticks : 0;
+						delta = offset - modTicks;
+						break;
+					}
+
+			}
+			return new DateTime(dt.Ticks + delta, dt.Kind);
+		}
+
+		public enum RoundingDirection
+		{
+			Up,
+			Down,
+			Nearest
+		}
+
+
 		public static int? TryParseNullInt(string val)
 		{
 			double outVal;

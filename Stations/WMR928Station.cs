@@ -42,12 +42,9 @@ namespace CumulusMX
 		{
 			Cumulus.LogMessage("Opening COM port " + cumulus.ComportName);
 
-			comport = new SerialPort(cumulus.ComportName, 9600, Parity.None, 8, StopBits.One) {Handshake = Handshake.None, RtsEnable = true, DtrEnable = true};
-
-			//comport.DataReceived += new SerialDataReceivedEventHandler(portDataReceived);
-
 			try
 			{
+				comport = new SerialPort(cumulus.ComportName, 9600, Parity.None, 8, StopBits.One) {Handshake = Handshake.None, RtsEnable = true, DtrEnable = true};
 				comport.Open();
 
 				cumulus.CurrentActivity = "Normal running";

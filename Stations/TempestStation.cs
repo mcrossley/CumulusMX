@@ -196,7 +196,7 @@ namespace CumulusMX
 				//UpdateDatabase(timestamp.ToUniversalTime(), historydata.interval, false);
 
 				cumulus.DoLogFile(timestamp, false);
-				if (cumulus.StationOptions.LogExtraSensors) cumulus.DoExtraLogFile(timestamp);
+				cumulus.DoExtraLogFile(timestamp);
 
 				//AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing,
 				//    OutdoorTemperature, WindChill, OutdoorDewpoint, HeatIndex,

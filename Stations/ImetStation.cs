@@ -709,7 +709,7 @@ namespace CumulusMX
 							{
 								double temp2 = Convert.ToDouble(sl[TEMP2AVGPOS], provider);
 								// supply in CELSIUS
-								if (cumulus.StationOptions.LogExtraSensors)
+								if (cumulus.ExtraDataLogging.Temperature)
 								{
 									DoExtraTemp(temp2, 1);
 								}
@@ -934,7 +934,7 @@ namespace CumulusMX
 				{
 					if (double.TryParse(sl[TEMP2POS], NumberStyles.Float, provider, out varDbl))
 					{
-						if (cumulus.StationOptions.LogExtraSensors)
+						if (cumulus.ExtraDataLogging.Temperature)
 						{
 							// use second temp as Extra Temp 1
 							DoExtraTemp(ConvertTempCToUser(varDbl), 1);

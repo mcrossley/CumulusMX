@@ -195,8 +195,8 @@ namespace CumulusMX
 
 		//public Dataunits Units;
 
-		public const int DefaultHiVal = -9999;
-		public const int DefaultLoVal = 9999;
+		public const double DefaultHiVal = -9999.0;
+		public const double DefaultLoVal = 9999.0;
 
 		public const int DayfileFields = 53;
 
@@ -541,6 +541,8 @@ namespace CumulusMX
 
 		public DisplayOptions DisplayOptions = new DisplayOptions();
 
+		public ExtraDataLogOptions ExtraDataLogging = new ExtraDataLogOptions();
+
 		public EmailSender emailer;
 		public EmailSender.SmtpOptions SmtpOptions = new EmailSender.SmtpOptions();
 
@@ -620,23 +622,23 @@ namespace CumulusMX
 		public double CPUtemp = -999;
 
 		// Alarms
-		public Alarm DataStoppedAlarm = new Alarm();
-		public Alarm BatteryLowAlarm = new Alarm();
-		public Alarm SensorAlarm = new Alarm();
-		public Alarm SpikeAlarm = new Alarm();
-		public Alarm HighWindAlarm = new Alarm();
-		public Alarm HighGustAlarm = new Alarm();
-		public Alarm HighRainRateAlarm = new Alarm();
-		public Alarm HighRainTodayAlarm = new Alarm();
-		public AlarmChange PressChangeAlarm = new AlarmChange();
-		public Alarm HighPressAlarm = new Alarm();
-		public Alarm LowPressAlarm = new Alarm();
-		public AlarmChange TempChangeAlarm = new AlarmChange();
-		public Alarm HighTempAlarm = new Alarm();
-		public Alarm LowTempAlarm = new Alarm();
-		public Alarm UpgradeAlarm = new Alarm();
-		public Alarm HttpUploadAlarm = new Alarm();
-		public Alarm MySqlUploadAlarm = new Alarm();
+		public Alarm DataStoppedAlarm;
+		public Alarm BatteryLowAlarm;
+		public Alarm SensorAlarm;
+		public Alarm SpikeAlarm;
+		public Alarm HighWindAlarm;
+		public Alarm HighGustAlarm;
+		public Alarm HighRainRateAlarm;
+		public Alarm HighRainTodayAlarm;
+		public AlarmChange PressChangeAlarm;
+		public Alarm HighPressAlarm;
+		public Alarm LowPressAlarm;
+		public AlarmChange TempChangeAlarm;
+		public Alarm HighTempAlarm;
+		public Alarm LowTempAlarm;
+		public Alarm UpgradeAlarm;
+		public Alarm HttpUploadAlarm;
+		public Alarm MySqlUploadAlarm;
 
 
 		private const double DEFAULTFCLOWPRESS = 950.0;
@@ -816,7 +818,12 @@ namespace CumulusMX
 
 			LogMessage("OS version: " + Environment.OSVersion);
 
+			LogMessage("Running as a Service: " + Program.service);
+
+			LogMessage("Running Elevated: " + SelfInstaller.IsElevated());
+
 			LogMessage($"Current culture: {CultureInfo.CurrentCulture.DisplayName} [{CultureInfo.CurrentCulture.Name}]");
+
 
 			// determine system uptime based on OS
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -1027,6 +1034,26 @@ namespace CumulusMX
 			};
 
 			ProgramOptions.Culture = new CultureConfig();
+
+			// initialise the alarms
+			DataStoppedAlarm = new Alarm(this, "Data Stopped");
+			BatteryLowAlarm = new Alarm(this, "Battery Low");
+			SensorAlarm = new Alarm(this, "Sensor Contact Lost");
+			SpikeAlarm = new Alarm(this, "Data Spike");
+			HighWindAlarm = new Alarm(this, "High Avg Wind");
+			HighGustAlarm = new Alarm(this, "High Gust");
+			HighRainRateAlarm = new Alarm(this, "Rainfall Rate");
+			HighRainTodayAlarm = new Alarm(this, "Rainfall Today");
+			PressChangeAlarm = new AlarmChange(this, "Pressure Change");
+			HighPressAlarm = new Alarm(this, "High Pressure");
+			LowPressAlarm = new Alarm(this, "Low Pressure");
+			TempChangeAlarm = new AlarmChange(this, "Temperature Change");
+			HighTempAlarm = new Alarm(this, "High Temperature");
+			LowTempAlarm = new Alarm(this, "Low Temperature");
+			UpgradeAlarm = new Alarm(this, "CMX Upgrade");
+			HttpUploadAlarm = new Alarm(this, "HTTP Upload");
+			MySqlUploadAlarm = new Alarm(this, "MySQL Upload");
+
 
 			// Read the configuration file
 
@@ -1273,7 +1300,8 @@ namespace CumulusMX
 					RealtimeFTP.DataConnectionEncryption = true;
 					RealtimeFTP.ValidateAnyCertificate = true;
 					// b3045 - switch from System.Net.Ftp.Client to FluentFTP allows us to specify protocols
-					RealtimeFTP.SslProtocols = SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
+					// b3155 - switch to default again - this will use the highest version available in the OS
+					//RealtimeFTP.SslProtocols = SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
 				}
 			}
 
@@ -1337,34 +1365,17 @@ namespace CumulusMX
 
 			LogPrimaryAqSensor();
 
-			// initialise the alarms
-			DataStoppedAlarm.cumulus = this;
-			BatteryLowAlarm.cumulus = this;
-			SensorAlarm.cumulus = this;
-			SpikeAlarm.cumulus = this;
-			HighWindAlarm.cumulus = this;
+			// Set the alarm units
 			HighWindAlarm.Units = Units.WindText;
-			HighGustAlarm.cumulus = this;
 			HighGustAlarm.Units = Units.WindText;
-			HighRainRateAlarm.cumulus = this;
 			HighRainRateAlarm.Units = Units.RainTrendText;
-			HighRainTodayAlarm.cumulus = this;
 			HighRainTodayAlarm.Units = Units.RainText;
-			PressChangeAlarm.cumulus = this;
 			PressChangeAlarm.Units = Units.PressTrendText;
-			HighPressAlarm.cumulus = this;
 			HighPressAlarm.Units = Units.PressText;
-			LowPressAlarm.cumulus = this;
 			LowPressAlarm.Units = Units.PressText;
-			TempChangeAlarm.cumulus = this;
 			TempChangeAlarm.Units = Units.TempTrendText;
-			HighTempAlarm.cumulus = this;
 			HighTempAlarm.Units = Units.TempText;
-			LowTempAlarm.cumulus = this;
 			LowTempAlarm.Units = Units.TempText;
-			UpgradeAlarm.cumulus = this;
-			HttpUploadAlarm.cumulus = this;
-			MySqlUploadAlarm.cumulus = this;
 
 			GetLatestVersion();
 
@@ -4309,17 +4320,16 @@ namespace CumulusMX
 			FtpOptions.FtpMode = (FtpProtocols)ini.GetValue("FTP site", "Sslftp", 0);
 			// BUILD 3092 - added alternate SFTP authentication options
 			FtpOptions.SshAuthen = ini.GetValue("FTP site", "SshFtpAuthentication", "password");
-			if (!sshAuthenticationVals.Any(FtpOptions.SshAuthen.Contains))
+			if (!sshAuthenticationVals.Contains(FtpOptions.SshAuthen))
 			{
 				FtpOptions.SshAuthen = "password";
 				LogMessage($"Error, invalid SshFtpAuthentication value in Cumulus.ini [{FtpOptions.SshAuthen}], defaulting to Password.");
 				rewriteRequired = true;
 			}
 			FtpOptions.SshPskFile = ini.GetValue("FTP site", "SshFtpPskFile", "");
-			if (FtpOptions.SshPskFile.Length > 0 && (FtpOptions.SshAuthen == "psk" || FtpOptions.SshAuthen == "password_psk") && !File.Exists(FtpOptions.SshPskFile))
+			if ((FtpOptions.SshAuthen == "psk" || FtpOptions.SshAuthen == "password_psk") && (string.IsNullOrEmpty(FtpOptions.SshPskFile) || !File.Exists(FtpOptions.SshPskFile)))
 			{
-				FtpOptions.SshPskFile = "";
-				LogMessage($"Error, file name specified by SshFtpPskFile value in Cumulus.ini does not exist [{FtpOptions.SshPskFile}], defaulting to None.");
+				LogMessage($"Error, file name specified by SshFtpPskFile value in Cumulus.ini does not exist [{FtpOptions.SshPskFile}].");
 				rewriteRequired = true;
 			}
 			FtpOptions.DisableEPSV = ini.GetValue("FTP site", "DisableEPSV", false);
@@ -4780,7 +4790,7 @@ namespace CumulusMX
 			HighWindAlarm.Latch = ini.GetValue("Alarms", "HighWindAlarmLatch", false);
 			HighWindAlarm.LatchHours = ini.GetValue("Alarms", "HighWindAlarmLatchHours", 24);
 
-			SensorAlarm.Enabled = ini.GetValue("Alarms", "SensorAlarmSet", false);
+			SensorAlarm.Enabled = ini.GetValue("Alarms", "SensorAlarmSet", true);
 			SensorAlarm.Sound = ini.GetValue("Alarms", "SensorAlarmSound", false);
 			SensorAlarm.SoundFile = ini.GetValue("Alarms", "SensorAlarmSoundFile", DefaultSoundFile);
 			if (SensorAlarm.SoundFile.Contains(DefaultSoundFileOld))
@@ -4788,13 +4798,13 @@ namespace CumulusMX
 				SensorAlarm.SoundFile = DefaultSoundFile;
 				rewriteRequired = true;
 			}
-			SensorAlarm.Notify = ini.GetValue("Alarms", "SensorAlarmNotify", false);
+			SensorAlarm.Notify = ini.GetValue("Alarms", "SensorAlarmNotify", true);
 			SensorAlarm.Email = ini.GetValue("Alarms", "SensorAlarmEmail", false);
-			SensorAlarm.Latch = ini.GetValue("Alarms", "SensorAlarmLatch", false);
-			SensorAlarm.LatchHours = ini.GetValue("Alarms", "SensorAlarmLatchHours", 24);
-			SensorAlarm.TriggerThreshold = ini.GetValue("Alarms", "SensorAlarmTriggerCount", 1);
+			SensorAlarm.Latch = ini.GetValue("Alarms", "SensorAlarmLatch", true);
+			SensorAlarm.LatchHours = ini.GetValue("Alarms", "SensorAlarmLatchHours", 1);
+			SensorAlarm.TriggerThreshold = ini.GetValue("Alarms", "SensorAlarmTriggerCount", 2);
 
-			DataStoppedAlarm.Enabled = ini.GetValue("Alarms", "DataStoppedAlarmSet", false);
+			DataStoppedAlarm.Enabled = ini.GetValue("Alarms", "DataStoppedAlarmSet", true);
 			DataStoppedAlarm.Sound = ini.GetValue("Alarms", "DataStoppedAlarmSound", false);
 			DataStoppedAlarm.SoundFile = ini.GetValue("Alarms", "DataStoppedAlarmSoundFile", DefaultSoundFile);
 			if (DataStoppedAlarm.SoundFile.Contains(DefaultSoundFileOld))
@@ -4802,11 +4812,11 @@ namespace CumulusMX
 				SensorAlarm.SoundFile = DefaultSoundFile;
 				rewriteRequired = true;
 			}
-			DataStoppedAlarm.Notify = ini.GetValue("Alarms", "DataStoppedAlarmNotify", false);
+			DataStoppedAlarm.Notify = ini.GetValue("Alarms", "DataStoppedAlarmNotify", true);
 			DataStoppedAlarm.Email = ini.GetValue("Alarms", "DataStoppedAlarmEmail", false);
-			DataStoppedAlarm.Latch = ini.GetValue("Alarms", "DataStoppedAlarmLatch", false);
-			DataStoppedAlarm.LatchHours = ini.GetValue("Alarms", "DataStoppedAlarmLatchHours", 24);
-			DataStoppedAlarm.TriggerThreshold = ini.GetValue("Alarms", "DataStoppedAlarmTriggerCount", 1);
+			DataStoppedAlarm.Latch = ini.GetValue("Alarms", "DataStoppedAlarmLatch", true);
+			DataStoppedAlarm.LatchHours = ini.GetValue("Alarms", "DataStoppedAlarmLatchHours", 1);
+			DataStoppedAlarm.TriggerThreshold = ini.GetValue("Alarms", "DataStoppedAlarmTriggerCount", 2);
 
 			// Alarms below here were created after the change in default sound file, so no check required
 			BatteryLowAlarm.Enabled = ini.GetValue("Alarms", "BatteryLowAlarmSet", false);
@@ -4828,7 +4838,7 @@ namespace CumulusMX
 			SpikeAlarm.TriggerThreshold = ini.GetValue("Alarms", "DataSpikeAlarmTriggerCount", 1);
 
 			UpgradeAlarm.Enabled = ini.GetValue("Alarms", "UpgradeAlarmSet", true);
-			UpgradeAlarm.Sound = ini.GetValue("Alarms", "UpgradeAlarmSound", true);
+			UpgradeAlarm.Sound = ini.GetValue("Alarms", "UpgradeAlarmSound", false);
 			UpgradeAlarm.SoundFile = ini.GetValue("Alarms", "UpgradeAlarmSoundFile", DefaultSoundFile);
 			UpgradeAlarm.Notify = ini.GetValue("Alarms", "UpgradeAlarmNotify", true);
 			UpgradeAlarm.Email = ini.GetValue("Alarms", "UpgradeAlarmEmail", false);
@@ -5113,6 +5123,18 @@ namespace CumulusMX
 			}
 			TempSumBase1 = ini.GetValue("TempSum", "BaseTemperature1", GrowingBase1);
 			TempSumBase2 = ini.GetValue("TempSum", "BaseTemperature2", GrowingBase2);
+
+			// Additional sensor logging
+			ExtraDataLogging.Temperature = ini.GetValue("ExtraDataLogging", "Temperature", false);
+			ExtraDataLogging.Humidity = ini.GetValue("ExtraDataLogging", "Humidity", false);
+			ExtraDataLogging.Dewpoint = ini.GetValue("ExtraDataLogging", "Dewpoint", false);
+			ExtraDataLogging.UserTemp = ini.GetValue("ExtraDataLogging", "UserTemp", false);
+			ExtraDataLogging.SoilTemp = ini.GetValue("ExtraDataLogging", "SoilTemp", false);
+			ExtraDataLogging.SoilMoisture = ini.GetValue("ExtraDataLogging", "SoilMoisture", false);
+			ExtraDataLogging.LeafTemp = ini.GetValue("ExtraDataLogging", "LeafTemp", false);
+			ExtraDataLogging.LeafWetness = ini.GetValue("ExtraDataLogging", "LeafWetness", false);
+			ExtraDataLogging.AirQual = ini.GetValue("ExtraDataLogging", "AirQual", false);
+			ExtraDataLogging.CO2 = ini.GetValue("ExtraDataLogging", "CO2", false);
 
 			// do we need to decrypt creds?
 			if (ProgramOptions.EncryptedCreds)
@@ -5976,6 +5998,18 @@ namespace CumulusMX
 			ini.SetValue("TempSum", "BaseTemperature1", TempSumBase1);
 			ini.SetValue("TempSum", "BaseTemperature2", TempSumBase2);
 
+			// Additional sensor logging
+			ini.SetValue("ExtraDataLogging", "Temperature", ExtraDataLogging.Temperature);
+			ini.SetValue("ExtraDataLogging", "Humidity", ExtraDataLogging.Humidity);
+			ini.SetValue("ExtraDataLogging", "Dewpoint", ExtraDataLogging.Dewpoint);
+			ini.SetValue("ExtraDataLogging", "UserTemp", ExtraDataLogging.UserTemp);
+			ini.SetValue("ExtraDataLogging", "SoilTemp", ExtraDataLogging.SoilTemp);
+			ini.SetValue("ExtraDataLogging", "SoilMoisture", ExtraDataLogging.SoilMoisture);
+			ini.SetValue("ExtraDataLogging", "LeafTemp", ExtraDataLogging.LeafTemp);
+			ini.SetValue("ExtraDataLogging", "LeafWetness", ExtraDataLogging.LeafWetness);
+			ini.SetValue("ExtraDataLogging", "AirQual", ExtraDataLogging.AirQual);
+			ini.SetValue("ExtraDataLogging", "CO2", ExtraDataLogging.CO2);
+
 			ini.Flush();
 
 			LogMessage("Completed writing Cumulus.ini file");
@@ -6790,7 +6824,7 @@ namespace CumulusMX
 
 		public const int NumLogFileFields = 29;
 
-		public async void DoLogFile(DateTime timestamp, bool live)
+		public void DoLogFile(DateTime timestamp, bool live)
 		{
 			// Writes an entry to the n-minute log file. Fields are comma-separated:
 			// 0  Date in the form dd/mm/yy hh:mm
@@ -6822,6 +6856,9 @@ namespace CumulusMX
 			// 26  Rain since midnight
 			// 27  Feels like
 			// 28  Humidex
+
+			// first round the timestamp to whole minutes - database times are recorded in "ticks", so for exact matches we need round numbers
+			timestamp = Utils.RoundToNearestMinuteProper(timestamp, 1, Utils.RoundingDirection.Down);
 
 			// make sure solar max is calculated for those stations without a solar sensor
 			LogMessage("DoLogFile: Writing log entry for " + timestamp);
@@ -6861,7 +6898,7 @@ namespace CumulusMX
 				Humidex = station.Humidex
 			};
 
-			_ = await station.DatabaseAsync.InsertOrReplaceAsync(newRec);
+			_ = station.Database.InsertOrReplace(newRec);
 
 
 
@@ -6908,7 +6945,7 @@ namespace CumulusMX
 					using (FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read))
 					using (StreamWriter file = new StreamWriter(fs))
 					{
-						await file.WriteLineAsync(sb.ToString());
+						file.WriteLine(sb.ToString());
 						file.Close();
 						fs.Close();
 					}
@@ -6924,7 +6961,7 @@ namespace CumulusMX
 					{
 						LogMessage("DoLogFile: Error log file is in use: " + ex.Message);
 						retries--;
-						await Task.Delay(250);
+						Thread.Sleep(250);
 					}
 					else
 					{
@@ -7006,7 +7043,7 @@ namespace CumulusMX
 				if (live)
 				{
 					// do the update
-					_= MySqlCommandAsync(queryString, "DoLogFile");
+					MySqlCommandSync(queryString, "DoLogFile");
 				}
 				else
 				{
@@ -7018,7 +7055,7 @@ namespace CumulusMX
 
 		public const int NumExtraLogFileFields = 92;
 
-		public async void DoExtraLogFile(DateTime timestamp)
+		public void DoExtraLogFile(DateTime timestamp)
 		{
 			// Writes an entry to the n-minute extralogfile. Fields are comma-separated:
 			// 0  Date/time  in the form dd/mm/yy hh:mm
@@ -7044,132 +7081,328 @@ namespace CumulusMX
 			// 90  CO2 temp
 			// 91  CO2 hum
 
-			var filename = GetExtraLogFileName(timestamp);
-			var sep = ",";
 
-			LogDebugMessage($"DoExtraLogFile: Writing log entry for {timestamp}");
+			// first round the timestamp to whole minutes - database times are recorded in "ticks", so for exact matches we need round numbers
+			timestamp = Utils.RoundToNearestMinuteProper(timestamp, 1, Utils.RoundingDirection.Down);
 
-			var sb = new StringBuilder(512);
-			sb.Append(timestamp.ToString("dd/MM/yy HH:mm", invDate) + sep);         //0
-			sb.Append(Utils.ToUnixTime(timestamp) + sep);                        //1
-
-			for (int i = 1; i < 11; i++)
+			if (ExtraDataLogging.Temperature)
 			{
-				sb.Append(station.ExtraTemp[i].ToString(TempFormat, invNum) + sep);      //2-11
-			}
-			for (int i = 1; i < 11; i++)
-			{
-				sb.Append(station.ExtraHum[i].ToString(HumFormat, invNum) + sep);        //12-21
-			}
-			for (int i = 1; i < 11; i++)
-			{
-				sb.Append(station.ExtraDewPoint[i].ToString(TempFormat, invNum) + sep);  //22-31
-			}
-
-			sb.Append(station.SoilTemp1.ToString(TempFormat, invNum) + sep);     //32
-			sb.Append(station.SoilTemp2.ToString(TempFormat, invNum) + sep);     //33
-			sb.Append(station.SoilTemp3.ToString(TempFormat, invNum) + sep);     //34
-			sb.Append(station.SoilTemp4.ToString(TempFormat, invNum) + sep);     //35
-
-			sb.Append(station.SoilMoisture1 + sep);                      //36
-			sb.Append(station.SoilMoisture2 + sep);                      //37
-			sb.Append(station.SoilMoisture3 + sep);                      //38
-			sb.Append(station.SoilMoisture4 + sep);                      //39
-
-			sb.Append(station.LeafTemp1.ToString(TempFormat, invNum) + sep);     //40
-			sb.Append(station.LeafTemp2.ToString(TempFormat, invNum) + sep);     //41
-
-			sb.Append(station.LeafWetness1 + sep);                       //42
-			sb.Append(station.LeafWetness2 + sep);                       //43
-
-			sb.Append(station.SoilTemp5.ToString(TempFormat, invNum) + sep);     //44
-			sb.Append(station.SoilTemp6.ToString(TempFormat, invNum) + sep);     //45
-			sb.Append(station.SoilTemp7.ToString(TempFormat, invNum) + sep);     //46
-			sb.Append(station.SoilTemp8.ToString(TempFormat, invNum) + sep);     //47
-			sb.Append(station.SoilTemp9.ToString(TempFormat, invNum) + sep);     //48
-			sb.Append(station.SoilTemp10.ToString(TempFormat, invNum) + sep);    //49
-			sb.Append(station.SoilTemp11.ToString(TempFormat, invNum) + sep);    //50
-			sb.Append(station.SoilTemp12.ToString(TempFormat, invNum) + sep);    //51
-			sb.Append(station.SoilTemp13.ToString(TempFormat, invNum) + sep);    //52
-			sb.Append(station.SoilTemp14.ToString(TempFormat, invNum) + sep);    //53
-			sb.Append(station.SoilTemp15.ToString(TempFormat, invNum) + sep);    //54
-			sb.Append(station.SoilTemp16.ToString(TempFormat, invNum) + sep);    //55
-
-			sb.Append(station.SoilMoisture5 + sep);      //56
-			sb.Append(station.SoilMoisture6 + sep);      //57
-			sb.Append(station.SoilMoisture7 + sep);      //58
-			sb.Append(station.SoilMoisture8 + sep);      //59
-			sb.Append(station.SoilMoisture9 + sep);      //60
-			sb.Append(station.SoilMoisture10 + sep);     //61
-			sb.Append(station.SoilMoisture11 + sep);     //62
-			sb.Append(station.SoilMoisture12 + sep);     //63
-			sb.Append(station.SoilMoisture13 + sep);     //64
-			sb.Append(station.SoilMoisture14 + sep);     //65
-			sb.Append(station.SoilMoisture15 + sep);     //66
-			sb.Append(station.SoilMoisture16 + sep);     //67
-
-			sb.Append(station.AirQuality1.ToString("F1", invNum) + sep);     //68
-			sb.Append(station.AirQuality2.ToString("F1", invNum) + sep);     //69
-			sb.Append(station.AirQuality3.ToString("F1", invNum) + sep);     //70
-			sb.Append(station.AirQuality4.ToString("F1", invNum) + sep);     //71
-			sb.Append(station.AirQualityAvg1.ToString("F1", invNum) + sep);  //72
-			sb.Append(station.AirQualityAvg2.ToString("F1", invNum) + sep);  //73
-			sb.Append(station.AirQualityAvg3.ToString("F1", invNum) + sep);  //74
-			sb.Append(station.AirQualityAvg4.ToString("F1", invNum) + sep);  //75
-
-			for (int i = 1; i < 9; i++)
-			{
-				sb.Append(station.UserTemp[i].ToString(TempFormat, invNum) + sep);   //76-83
-			}
-
-			sb.Append(station.CO2 + sep);                                    //84
-			sb.Append(station.CO2_24h + sep);                                //85
-			sb.Append(station.CO2_pm2p5.ToString("F1", invNum) + sep);               //86
-			sb.Append(station.CO2_pm2p5_24h.ToString("F1", invNum) + sep);           //87
-			sb.Append(station.CO2_pm10.ToString("F1", invNum) + sep);                //88
-			sb.Append(station.CO2_pm10_24h.ToString("F1", invNum) + sep);            //89
-			sb.Append(station.CO2_temperature.ToString(TempFormat, invNum) + sep);   //90
-			sb.Append(station.CO2_humidity);                                         //91
-
-			var success = false;
-			var retries = LogFileRetries;
-			do
-			{
-				try
+				var newRec = new ExtraTemp()
 				{
-					using FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read);
-					using StreamWriter file = new StreamWriter(fs);
-					await file.WriteLineAsync(sb.ToString());
-					file.Close();
-					fs.Close();
+					Timestamp = timestamp,
+					Temp1 = station.ExtraTemp[1],
+					Temp2 = station.ExtraTemp[2],
+					Temp3 = station.ExtraTemp[3],
+					Temp4 = station.ExtraTemp[4],
+					Temp5 = station.ExtraTemp[5],
+					Temp6 = station.ExtraTemp[6],
+					Temp7 = station.ExtraTemp[7],
+					Temp8 = station.ExtraTemp[8],
+					Temp9 = station.ExtraTemp[9],
+					Temp10 = station.ExtraTemp[10]
+				};
+				_ = station.Database.InsertOrReplace(newRec);
+			}
 
-					success = true;
+			if (ExtraDataLogging.Humidity)
+			{
+				var newRec = new ExtraHum()
+				{
+					Timestamp = timestamp,
+					Hum1 = station.ExtraHum[1],
+					Hum2 = station.ExtraHum[2],
+					Hum3 = station.ExtraHum[3],
+					Hum4 = station.ExtraHum[4],
+					Hum5 = station.ExtraHum[5],
+					Hum6 = station.ExtraHum[6],
+					Hum7 = station.ExtraHum[7],
+					Hum8 = station.ExtraHum[8],
+					Hum9 = station.ExtraHum[9],
+					Hum10 = station.ExtraHum[10]
+				};
+				_ =  station.Database.InsertOrReplace(newRec);
+			}
 
-					LogDebugMessage($"DoExtraLogFile: Log entry for {timestamp} written");
+			if (ExtraDataLogging.Dewpoint)
+			{
+				var newRec = new ExtraDewPoint()
+				{
+					Timestamp = timestamp,
+					DewPoint1 = station.ExtraDewPoint[1],
+					DewPoint2 = station.ExtraDewPoint[2],
+					DewPoint3 = station.ExtraDewPoint[3],
+					DewPoint4 = station.ExtraDewPoint[4],
+					DewPoint5 = station.ExtraDewPoint[5],
+					DewPoint6 = station.ExtraDewPoint[6],
+					DewPoint7 = station.ExtraDewPoint[7],
+					DewPoint8 = station.ExtraDewPoint[8],
+					DewPoint9 = station.ExtraDewPoint[9],
+					DewPoint10 = station.ExtraDewPoint[10]
+				};
+				_ = station.Database.InsertOrReplace(newRec);
+			}
+
+			if (ExtraDataLogging.UserTemp)
+			{
+				var newRec = new UserTemp()
+				{
+					Timestamp = timestamp,
+					Temp1 = station.UserTemp[1],
+					Temp2 = station.UserTemp[2],
+					Temp3 = station.UserTemp[3],
+					Temp4 = station.UserTemp[4],
+					Temp5 = station.UserTemp[5],
+					Temp6 = station.UserTemp[6],
+					Temp7 = station.UserTemp[7],
+					Temp8 = station.UserTemp[8],
+					Temp9 = station.UserTemp[9],
+					Temp10 = station.UserTemp[10]
+				};
+				_ = station.Database.InsertOrReplace(newRec);
+			}
+
+			if (ExtraDataLogging.SoilTemp)
+			{
+				var newRec = new SoilTemp()
+				{
+					Timestamp = timestamp,
+					Temp1 = station.SoilTemp[1],
+					Temp2 = station.SoilTemp[2],
+					Temp3 = station.SoilTemp[3],
+					Temp4 = station.SoilTemp[4],
+					Temp5 = station.SoilTemp[5],
+					Temp6 = station.SoilTemp[6],
+					Temp7 = station.SoilTemp[7],
+					Temp8 = station.SoilTemp[8],
+					Temp9 = station.SoilTemp[9],
+					Temp10 = station.SoilTemp[10],
+					Temp11 = station.SoilTemp[11],
+					Temp12 = station.SoilTemp[12],
+					Temp13 = station.SoilTemp[13],
+					Temp14 = station.SoilTemp[14],
+					Temp15 = station.SoilTemp[15],
+					Temp16 = station.SoilTemp[16]
+				};
+				_ = station.Database.InsertOrReplace(newRec);
+			}
+
+			if (ExtraDataLogging.SoilMoisture)
+			{
+				var newRec = new SoilMoist()
+				{
+					Timestamp = timestamp,
+					Moist1 = station.SoilMoisture[1],
+					Moist2 = station.SoilMoisture[2],
+					Moist3 = station.SoilMoisture[3],
+					Moist4 = station.SoilMoisture[4],
+					Moist5 = station.SoilMoisture[5],
+					Moist6 = station.SoilMoisture[6],
+					Moist7 = station.SoilMoisture[7],
+					Moist8 = station.SoilMoisture[8],
+					Moist9 = station.SoilMoisture[9],
+					Moist10 = station.SoilMoisture[10],
+					Moist11 = station.SoilMoisture[11],
+					Moist12 = station.SoilMoisture[12],
+					Moist13 = station.SoilMoisture[13],
+					Moist14 = station.SoilMoisture[14],
+					Moist15 = station.SoilMoisture[15],
+					Moist16 = station.SoilMoisture[16]
+				};
+				_ = station.Database.InsertOrReplace(newRec);
+			}
+
+			if (ExtraDataLogging.LeafTemp)
+			{
+				var newRec = new LeafTemp()
+				{
+					Timestamp = timestamp,
+					Temp1 = station.LeafTemp[1],
+					Temp2 = station.LeafTemp[2],
+					Temp3 = station.LeafTemp[3],
+					Temp4 = station.LeafTemp[4]
+				};
+				_ = station.Database.InsertOrReplace(newRec);
+			}
+
+			if (ExtraDataLogging.LeafWetness)
+			{
+				var newRec = new LeafWet()
+				{
+					Timestamp = timestamp,
+					Wet1 = station.LeafWetness[1],
+					Wet2 = station.LeafWetness[2],
+					Wet3 = station.LeafWetness[3],
+					Wet4 = station.LeafWetness[4],
+					Wet5 = station.LeafWetness[5],
+					Wet6 = station.LeafWetness[6],
+					Wet7 = station.LeafWetness[7],
+					Wet8 = station.LeafWetness[8]
+				};
+				_ = station.Database.InsertOrReplace(newRec);
+			}
+
+			if (ExtraDataLogging.AirQual)
+			{
+				var newRec = new AirQuality()
+				{
+					Timestamp = timestamp,
+					Aq1 = station.AirQuality[1],
+					Aq2 = station.AirQuality[2],
+					Aq3 = station.AirQuality[3],
+					Aq4 = station.AirQuality[4],
+					AqAvg1 = station.AirQualityAvg[1],
+					AqAvg2 = station.AirQualityAvg[2],
+					AqAvg3 = station.AirQualityAvg[3],
+					AqAvg4 = station.AirQualityAvg[4],
+				};
+				_ = station.Database.InsertOrReplace(newRec);
+			}
+
+			if (ExtraDataLogging.CO2)
+			{
+				var newRec = new CO2Data()
+				{
+					Timestamp = timestamp,
+					CO2now = station.CO2,
+					CO2avg = station.CO2_24h,
+					Pm2p5 = station.CO2_pm2p5,
+					Pm2p5avg = station.CO2_pm2p5_24h,
+					Pm10 = station.CO2_pm10,
+					Pm10avg = station.CO2_pm10_24h,
+					Temp = station.CO2_temperature,
+					Hum = station.CO2_humidity,
+				};
+				_ = station.Database.InsertOrReplace(newRec);
+			}
+
+			if (StationOptions.LogExtraSensors)
+			{
+				LogDebugMessage($"DoExtraLogFile: Writing log entry for {timestamp}");
+
+				var filename = GetExtraLogFileName(timestamp);
+				var sep = ",";
+
+				var sb = new StringBuilder(512);
+				sb.Append(timestamp.ToString("dd/MM/yy HH:mm", invDate) + sep);         //0
+				sb.Append(Utils.ToUnixTime(timestamp) + sep);                        //1
+
+				for (int i = 1; i < station.ExtraTemp.Length; i++)
+				{
+					if (station.ExtraTemp[i].HasValue)
+						sb.Append(station.ExtraTemp[i].Value.ToString(TempFormat, invNum));      //2-11
+					sb.Append(sep);
 				}
-				catch (IOException ex)
+				for (int i = 1; i < station.ExtraHum.Length; i++)
 				{
-					if ((uint)ex.HResult == 0x80070020) // -2147024864
+					if (station.ExtraHum[i].HasValue)
+						sb.Append(station.ExtraHum[i].Value.ToString(HumFormat, invNum));        //12-21
+					sb.Append(sep);
+				}
+				for (int i = 1; i < station.ExtraDewPoint.Length; i++)
+				{
+					if (station.ExtraDewPoint[i].HasValue)
+						sb.Append(station.ExtraDewPoint[i].Value.ToString(TempFormat, invNum));  //22-31
+					sb.Append(sep);
+				}
+				for (int i = 1; i <= 4; i++)
+				{
+					if (station.SoilTemp[i].HasValue)
+						sb.Append(station.SoilTemp[i].Value.ToString(TempFormat, invNum));     //32-35
+					sb.Append(sep);
+				}
+				for (int i = 1; i <= 4; i++)
+				{
+					if (station.SoilMoisture[i].HasValue)
+						sb.Append(station.SoilMoisture[i]);   //36-39
+					sb.Append(sep);
+				}
+
+				sb.Append((station.LeafTemp[1].HasValue ? station.LeafTemp[1].Value.ToString(TempFormat, invNum) : "") + sep);     //40
+				sb.Append((station.LeafTemp[2].HasValue ? station.LeafTemp[2].Value.ToString(TempFormat, invNum) : "") + sep);     //41
+
+				sb.Append((station.LeafWetness[1].HasValue ? station.LeafWetness[1] : "") + sep);                       //42
+				sb.Append((station.LeafWetness[2].HasValue ? station.LeafWetness[2] : "") + sep);                       //43
+				for (int i = 5; i <= 16; i++)
+				{
+					if (station.SoilTemp[i].HasValue)
+						sb.Append(station.SoilTemp[i].Value.ToString(TempFormat, invNum));     //44-55
+					sb.Append(sep);
+				}
+				for (int i = 5; i <= 16; i++)
+				{
+					if (station.SoilMoisture[i].HasValue)
+						sb.Append(station.SoilMoisture[i]);      //56-67
+					sb.Append(sep);
+				}
+				for (int i = 1; i <= 4; i++)
+				{
+					if (station.AirQuality[i].HasValue)
+						sb.Append(station.AirQuality[i].Value.ToString("F1", invNum));     //68-71
+					sb.Append(sep);
+				}
+				for (int i = 1; i <= 4; i++)
+				{
+					if (station.AirQualityAvg[i].HasValue)
+						sb.Append(station.AirQualityAvg[i].Value.ToString("F1", invNum));  //72-75
+					sb.Append(sep);
+				}
+
+				for (int i = 1; i < 9; i++)
+				{
+					if (station.UserTemp[i].HasValue)
+						sb.Append(station.UserTemp[i].Value.ToString(TempFormat, invNum));   //76-83
+					sb.Append(sep);
+				}
+
+				sb.Append((station.CO2.HasValue ? station.CO2.Value : "") + sep);                                       //84
+				sb.Append((station.CO2_24h.HasValue ? station.CO2_24h.Value : "") + sep);                               //85
+				sb.Append((station.CO2_pm2p5.HasValue ? station.CO2_pm2p5.Value.ToString("F1", invNum) : "") + sep);    //86
+				sb.Append((station.CO2_pm2p5_24h.HasValue ? station.CO2_pm2p5_24h.Value.ToString("F1", invNum) : "") + sep);    //87
+				sb.Append((station.CO2_pm10.HasValue ? station.CO2_pm10.Value.ToString("F1", invNum) : "") + sep);              //88
+				sb.Append((station.CO2_pm10_24h.HasValue ? station.CO2_pm10_24h.Value.ToString("F1", invNum) : "") + sep);      //89
+				sb.Append((station.CO2_temperature.HasValue ? station.CO2_temperature.Value.ToString(TempFormat, invNum) : "") + sep);   //90
+				sb.Append(station.CO2_humidity.HasValue ? station.CO2_humidity : "");                                                    //91
+
+				var success = false;
+				var retries = LogFileRetries;
+				do
+				{
+					try
 					{
-						LogExceptionMessage(ex, "DoExtraLogFile: Error log file is in use");
-						retries--;
-						await Task.Delay(250);
+						using FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read);
+						using StreamWriter file = new StreamWriter(fs);
+						file.WriteLine(sb.ToString());
+						file.Close();
+						fs.Close();
+
+						success = true;
+
+						LogDebugMessage($"DoExtraLogFile: Log entry for {timestamp} written");
 					}
-					else
+					catch (IOException ex)
 					{
-						LogExceptionMessage(ex, $"DoExtraLogFile: Error writing log entry for {timestamp}");
+						if ((uint)ex.HResult == 0x80070020) // -2147024864
+						{
+							LogExceptionMessage(ex, "DoExtraLogFile: Error log file is in use");
+							retries--;
+							Thread.Sleep(250);
+						}
+						else
+						{
+							LogExceptionMessage(ex, $"DoExtraLogFile: Error writing log entry for {timestamp}");
+							retries = 0;
+						}
+					}
+					catch (Exception ex)
+					{
+						LogExceptionMessage(ex, $"DoExtraLogFile: Error writing log entry {timestamp}");
 						retries = 0;
 					}
-				}
-				catch (Exception ex)
-				{
-					LogExceptionMessage(ex, $"DoExtraLogFile: Error writing log entry {timestamp}");
-					retries = 0;
-				}
-			} while (!success && retries >= 0);
+				} while (!success && retries >= 0);
+			}
 		}
 
-		public async void DoAirLinkLogFile(DateTime timestamp)
+		public void DoAirLinkLogFile(DateTime timestamp)
 		{
 			// Writes an entry to the n-minute airlinklogfile. Fields are comma-separated:
 			// 0  Date in the form dd/mm/yy hh:mm
@@ -7228,6 +7461,9 @@ namespace CumulusMX
 			// 53 Outdoor AQI PM10 3-hour
 			// 54 Outdoor AQI PM10 24-hour
 			// 55 Outdoor AQI PM10 nowcast
+
+			// first round the timestamp to whole minutes - database times are recorded in "ticks", so for exact matches we need round numbers
+			timestamp = Utils.RoundToNearestMinuteProper(timestamp, 1, Utils.RoundingDirection.Down);
 
 			var filename = GetAirLinkLogFileName(timestamp);
 			var sep = ",";
@@ -7342,7 +7578,7 @@ namespace CumulusMX
 				{
 					using FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read);
 					using StreamWriter file = new StreamWriter(fs);
-					await file.WriteLineAsync(sb);
+					file.WriteLine(sb);
 					file.Close();
 					fs.Close();
 
@@ -7356,7 +7592,7 @@ namespace CumulusMX
 					{
 						LogExceptionMessage(ex, "DoAirLinkLogFile: Error log file is in use");
 						retries--;
-						await Task.Delay(250);
+						Thread.Sleep(250);
 					}
 					else
 					{
@@ -8236,15 +8472,31 @@ namespace CumulusMX
 				}
 				else if (FtpOptions.SshAuthen == "psk")
 				{
-					PrivateKeyFile pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
-					connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
-					LogFtpDebugMessage("SFTP[Int]: Connecting using PSK authentication");
+					if (File.Exists(FtpOptions.SshPskFile))
+					{
+						PrivateKeyFile pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
+						connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
+						LogFtpDebugMessage("SFTP[Int]: Connecting using PSK authentication");
+					}
+					else
+					{
+						LogMessage($"SFTP[Int]: Error: Could not find your PSK key file: {FtpOptions.SshPskFile}");
+						return;
+					}
 				}
 				else if (FtpOptions.SshAuthen == "password_psk")
 				{
-					PrivateKeyFile pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
-					connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PasswordAuthenticationMethod(FtpOptions.Username, FtpOptions.Password), new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
-					LogFtpDebugMessage("SFTP[Int]: Connecting using password or PSK authentication");
+					if (File.Exists(FtpOptions.SshPskFile))
+					{
+						PrivateKeyFile pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
+						connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PasswordAuthenticationMethod(FtpOptions.Username, FtpOptions.Password), new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
+						LogFtpDebugMessage("SFTP[Int]: Connecting using password or PSK authentication");
+					}
+					else
+					{
+						LogMessage($"SFTP[Int]: Error: Could not find your PSK key file: {FtpOptions.SshPskFile}");
+						return;
+					}
 				}
 				else
 				{
@@ -8473,7 +8725,8 @@ namespace CumulusMX
 						conn.DataConnectionEncryption = true;
 						conn.ValidateAnyCertificate = true;
 						// b3045 - switch from System.Net.Ftp.Client to FluentFTP allows us to specify protocols
-						conn.SslProtocols = SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
+						// b3155 - switch to default again - this will use the highest version available in the OS
+						//conn.SslProtocols = SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
 					}
 
 					if (FtpOptions.ActiveMode)
@@ -9608,7 +9861,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				LogDebugMessage("RealtimeFTPDisconnect: Error disconnecting connection (can be ignored?) - " + ex.Message);
+				LogExceptionMessage(ex, "RealtimeFTPDisconnect: Error disconnecting connection (can be ignored?)");
 			}
 		}
 
@@ -9625,7 +9878,8 @@ namespace CumulusMX
 				RealtimeFTP.DataConnectionEncryption = true;
 				RealtimeFTP.ValidateAnyCertificate = true;
 				// b3045 - switch from System.Net.Ftp.Client to FluentFTP allows us to specify protocols
-				RealtimeFTP.SslProtocols = SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
+				// b3155 - switch to default again - this will use the highest version available in the OS
+				//RealtimeFTP.SslProtocols = SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
 				LogDebugMessage($"RealtimeFTPLogin: Using FTPS protocol");
 			}
 
@@ -9677,15 +9931,31 @@ namespace CumulusMX
 					}
 					else if (FtpOptions.SshAuthen == "psk")
 					{
-						pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
-						connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
-						LogDebugMessage("RealtimeSSHLogin: Connecting using PSK authentication");
+						if (File.Exists(FtpOptions.SshPskFile))
+						{
+							pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
+							connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
+							LogDebugMessage("RealtimeSSHLogin: Connecting using PSK authentication");
+						}
+						else
+						{
+							LogMessage($"RealtimeSSHLogin: Error: Could not find your PSK key file: {FtpOptions.SshPskFile}");
+							return;
+						}
 					}
 					else if (FtpOptions.SshAuthen == "password_psk")
 					{
-						pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
-						connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PasswordAuthenticationMethod(FtpOptions.Username, FtpOptions.Password), new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
-						LogDebugMessage("RealtimeSSHLogin: Connecting using password or PSK authentication");
+						if (File.Exists(FtpOptions.SshPskFile))
+						{
+							pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
+							connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PasswordAuthenticationMethod(FtpOptions.Username, FtpOptions.Password), new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
+							LogDebugMessage("RealtimeSSHLogin: Connecting using password or PSK authentication");
+						}
+						else
+						{
+							LogMessage($"RealtimeSSHLogin: Error: Could not find your PSK key file: {FtpOptions.SshPskFile}");
+							return;
+						}
 					}
 					else
 					{
@@ -9970,6 +10240,8 @@ namespace CumulusMX
 				{
 					using (var mySqlConn = new MySqlConnection(MySqlConnSettings.ToString()))
 					{
+						var updated = 0;
+
 						mySqlConn.Open();
 
 						using var transaction = Cmds.Count > 2 ? mySqlConn.BeginTransaction() : null;
@@ -9978,21 +10250,25 @@ namespace CumulusMX
 						{
 							lastCmd = cmdStr;
 							using MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn);
-							LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
+
+							if (Cmds.Count == 1)
+								LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
 
 							if (transaction != null)
 							{
 								cmd.Transaction = transaction;
 							}
 
-							int aff = cmd.ExecuteNonQuery();
-							LogDebugMessage($"{CallingFunction}: MySQL {aff} rows were affected.");
+							updated += cmd.ExecuteNonQuery();
+
+							if (Cmds.Count == 1)
+								LogDebugMessage($"{CallingFunction}: MySQL {updated} rows were affected.");
 
 						}
 
 						if (transaction != null)
 						{
-							LogDebugMessage($"{CallingFunction}: Committing updates to DB");
+							LogDebugMessage($"{CallingFunction}: Committing {updated} updates to DB");
 							transaction.Commit();
 							LogDebugMessage($"{CallingFunction}: Commit complete");
 						}
@@ -10039,10 +10315,11 @@ namespace CumulusMX
 
 			try
 			{
-
 				using var mySqlConn = new MySqlConnection(MySqlConnSettings.ToString());
 				using var transaction = Cmds.Count > 2 ? mySqlConn.BeginTransaction() : null;
 				mySqlConn.Open();
+
+				var updated = 0;
 
 				foreach (var cmdStr in Cmds)
 				{
@@ -10050,16 +10327,26 @@ namespace CumulusMX
 
 					using (MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn))
 					{
-						LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
+						if (Cmds.Count == 1)
+							LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
 
-						if (Cmds.Count > 2)
+						if (transaction != null)
 							cmd.Transaction = transaction;
 
-						int aff = cmd.ExecuteNonQuery();
-						LogDebugMessage($"{CallingFunction}: MySQL {aff} rows were affected.");
+						updated += cmd.ExecuteNonQuery();
+
+						if (Cmds.Count == 1)
+							LogDebugMessage($"{CallingFunction}: MySQL {updated} rows were affected.");
 					}
 
 					MySqlUploadAlarm.Triggered = false;
+				}
+
+				if (transaction != null)
+				{
+					LogDebugMessage($"{CallingFunction}: Committing {updated} updates to DB");
+					transaction.Commit();
+					LogDebugMessage($"{CallingFunction}: Commit complete");
 				}
 
 				mySqlConn.Close();
@@ -10105,7 +10392,8 @@ namespace CumulusMX
 		public async void GetLatestVersion()
 		{
 			var http = new HttpClient();
-			ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
+			// Let this default to highest available version in the OS
+			//ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
 			try
 			{
 				var retVal = await http.GetAsync("https://github.com/cumulusmx/CumulusMX/releases/latest");
@@ -11026,6 +11314,20 @@ namespace CumulusMX
 		public bool UseApparent { get; set; }
 		public bool ShowSolar { get; set; }
 		public bool ShowUV { get; set; }
+	}
+
+	public class ExtraDataLogOptions
+	{
+		public bool Temperature { get; set; }
+		public bool Humidity { get; set; }
+		public bool Dewpoint { get; set; }
+		public bool UserTemp { get; set; }
+		public bool SoilTemp { get; set; }
+		public bool SoilMoisture { get; set; }
+		public bool LeafTemp { get; set; }
+		public bool LeafWetness { get; set; }
+		public bool AirQual { get; set; }
+		public bool CO2 { get; set; }
 	}
 
 	public class AlarmEmails

@@ -803,6 +803,9 @@ namespace CumulusMX
 
 		private void GetLiveData()
 		{
+			// wait a random time of 0 to 3 seconds before making the request to try and avoid continued clashes with other software or instances of MX
+			Thread.Sleep(random.Next(0, 3000));
+
 			cumulus.LogDebugMessage("Reading live data");
 
 			// set a flag at the start of every 10 minutes to trigger battery status check
@@ -1203,9 +1206,9 @@ namespace CumulusMX
 					// Same for extra T/H sensors
 					for (var i = 1; i <= 8; i++)
 					{
-						if (ExtraHum[i] > 0)
+						if (ExtraHum[i].HasValue && ExtraTemp[i].HasValue)
 						{
-							var dp = MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[i]), ExtraHum[i]);
+							var dp = MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[i].Value), ExtraHum[i].Value);
 							ExtraDewPoint[i] = ConvertTempCToUser(dp);
 						}
 					}
@@ -1433,7 +1436,7 @@ namespace CumulusMX
 				CO2_24h = ConvertBigEndianUInt16(data, idx);
 				idx += 2;
 				var batt = TestBattery3(data[idx]);
-				var msg = $"WH45 CO₂: temp={CO2_temperature.ToString(cumulus.TempFormat)}, hum={CO2_humidity}, pm10={CO2_pm10:F1}, pm10_24h={CO2_pm10_24h:F1}, pm2.5={CO2_pm2p5:F1}, pm2.5_24h={CO2_pm2p5_24h:F1}, CO₂={CO2}, CO₂_24h={CO2_24h}";
+				var msg = $"WH45 CO₂: temp={CO2_temperature.Value.ToString(cumulus.TempFormat)}, hum={CO2_humidity}, pm10={CO2_pm10.Value:F1}, pm10_24h={CO2_pm10_24h.Value:F1}, pm2.5={CO2_pm2p5.Value:F1}, pm2.5_24h={CO2_pm2p5_24h.Value:F1}, CO₂={CO2}, CO₂_24h={CO2_24h.Value}";
 				if (tenMinuteChanged)
 				{
 					if (batt == "Low")

@@ -37,6 +37,21 @@ namespace CumulusMX
 				raindaythreshold = cumulus.RainDayThreshold
 			};
 
+			var optionsExtraLog = new OptionsExtraLog()
+			{
+				extrasensors = cumulus.StationOptions.LogExtraSensors,
+				extratemp = cumulus.ExtraDataLogging.Temperature,
+				extrahum = cumulus.ExtraDataLogging.Humidity,
+				extradew = cumulus.ExtraDataLogging.Dewpoint,
+				usertemp = cumulus.ExtraDataLogging.UserTemp,
+				soiltemp = cumulus.ExtraDataLogging.SoilTemp,
+				soilmoist = cumulus.ExtraDataLogging.SoilMoisture,
+				leaftemp = cumulus.ExtraDataLogging.LeafTemp,
+				leafwet = cumulus.ExtraDataLogging.LeafWetness,
+				airqual = cumulus.ExtraDataLogging.AirQual,
+				co2 = cumulus.ExtraDataLogging.CO2
+			};
+
 			var options = new OptionsJson()
 			{
 				usezerobearing = cumulus.StationOptions.UseZeroBearing,
@@ -47,10 +62,10 @@ namespace CumulusMX
 				calculatewindchill = cumulus.StationOptions.CalculatedWC,
 				calculateet = cumulus.StationOptions.CalculatedET,
 				cumuluspresstrendnames = cumulus.StationOptions.UseCumulusPresstrendstr,
-				extrasensors = cumulus.StationOptions.LogExtraSensors,
 				ignorelacrosseclock = cumulus.StationOptions.WS2300IgnoreStationClock,
 				roundwindspeeds = cumulus.StationOptions.RoundWindSpeed,
 				nosensorcheck = cumulus.StationOptions.NoSensorCheck,
+				sensorlogging = optionsExtraLog,
 				advanced = optionsAdv
 			};
 
@@ -707,10 +722,21 @@ namespace CumulusMX
 					cumulus.StationOptions.CalculatedWC = settings.Options.calculatewindchill;
 					cumulus.StationOptions.CalculatedET = settings.Options.calculateet;
 					cumulus.StationOptions.UseCumulusPresstrendstr = settings.Options.cumuluspresstrendnames;
-					cumulus.StationOptions.LogExtraSensors = settings.Options.extrasensors;
 					cumulus.StationOptions.WS2300IgnoreStationClock = settings.Options.ignorelacrosseclock;
 					cumulus.StationOptions.RoundWindSpeed = settings.Options.roundwindspeeds;
 					cumulus.StationOptions.NoSensorCheck = settings.Options.nosensorcheck;
+
+					cumulus.StationOptions.LogExtraSensors = settings.Options.sensorlogging.extrasensors;
+					cumulus.ExtraDataLogging.Temperature = settings.Options.sensorlogging.extratemp;
+					cumulus.ExtraDataLogging.Humidity = settings.Options.sensorlogging.extrahum;
+					cumulus.ExtraDataLogging.Dewpoint = settings.Options.sensorlogging.extradew;
+					cumulus.ExtraDataLogging.UserTemp = settings.Options.sensorlogging.usertemp;
+					cumulus.ExtraDataLogging.SoilTemp = settings.Options.sensorlogging.soiltemp;
+					cumulus.ExtraDataLogging.SoilMoisture = settings.Options.sensorlogging.soilmoist;
+					cumulus.ExtraDataLogging.LeafTemp = settings.Options.sensorlogging.leaftemp;
+					cumulus.ExtraDataLogging.LeafWetness = settings.Options.sensorlogging.leafwet;
+					cumulus.ExtraDataLogging.AirQual = settings.Options.sensorlogging.airqual;
+					cumulus.ExtraDataLogging.CO2 = settings.Options.sensorlogging.co2;
 
 					cumulus.StationOptions.AvgBearingMinutes = settings.Options.advanced.avgbearingmins;
 					cumulus.StationOptions.AvgSpeedMinutes = settings.Options.advanced.avgspeedmins;
@@ -893,6 +919,20 @@ namespace CumulusMX
 						{
 							cumulus.StationOptions.LogExtraSensors = true;
 						}
+						if (cumulus.WllExtraTempTx[0] > 0 || cumulus.WllExtraTempTx[1] > 0 || cumulus.WllExtraTempTx[2] > 0 || cumulus.WllExtraTempTx[3] > 0 || cumulus.WllExtraTempTx[4] > 0 || cumulus.WllExtraTempTx[5] > 0 || cumulus.WllExtraTempTx[6] > 0 || cumulus.WllExtraTempTx[7] > 0)
+							cumulus.ExtraDataLogging.Temperature = true;
+
+						if (cumulus.WllExtraHumTx[0] || cumulus.WllExtraHumTx[1] || cumulus.WllExtraHumTx[2] || cumulus.WllExtraHumTx[3] || cumulus.WllExtraHumTx[4] || cumulus.WllExtraHumTx[5] || cumulus.WllExtraHumTx[6] || cumulus.WllExtraHumTx[7])
+						{
+							cumulus.ExtraDataLogging.Humidity = true;
+							cumulus.ExtraDataLogging.Dewpoint = true;
+						}
+						if (cumulus.WllExtraSoilTempTx1 > 0 || cumulus.WllExtraSoilTempTx2 > 0 || cumulus.WllExtraSoilTempTx3 > 0 || cumulus.WllExtraSoilTempTx4 > 0)
+							cumulus.ExtraDataLogging.SoilTemp = true;
+						if (cumulus.WllExtraSoilMoistureTx1 > 0 || cumulus.WllExtraSoilMoistureTx2 > 0 || cumulus.WllExtraSoilMoistureTx3 > 0 || cumulus.WllExtraSoilMoistureTx4 > 0)
+							cumulus.ExtraDataLogging.SoilMoisture = true;
+						if (cumulus.WllExtraLeafTx1 > 0 || cumulus.WllExtraLeafTx2 > 0)
+							cumulus.ExtraDataLogging.LeafWetness = true;
 					}
 				}
 				catch (Exception ex)
@@ -1404,12 +1444,27 @@ namespace CumulusMX
 			public bool cumuluspresstrendnames { get; set; }
 			public bool roundwindspeeds { get; set; }
 			public bool ignorelacrosseclock { get; set; }
-			public bool extrasensors { get; set; }
 			public bool debuglogging { get; set; }
 			public bool datalogging { get; set; }
 			public bool stopsecondinstance { get; set; }
 			public bool nosensorcheck { get; set; }
+			public OptionsExtraLog sensorlogging { get; set; }
 			public OptionsAdvancedJson advanced { get; set; }
+		}
+
+		private class OptionsExtraLog
+		{
+			public bool extrasensors { get; set; }
+			public bool extratemp { get; set; }
+			public bool extrahum { get; set; }
+			public bool extradew { get; set; }
+			public bool usertemp { get; set; }
+			public bool soiltemp { get; set; }
+			public bool soilmoist { get; set; }
+			public bool leaftemp { get; set; }
+			public bool leafwet { get; set; }
+			public bool airqual { get; set; }
+			public bool co2 { get; set; }
 		}
 
 		public class TcpSettingsJson

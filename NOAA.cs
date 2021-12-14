@@ -132,7 +132,7 @@ namespace CumulusMX
 			var end = start.AddMonths(1);
 			try
 			{
-				var rows = station.Database.Query<DbWindAvgDir>("select WindAvg, WindAvgDir from LogData where Timestamp >= ? and Timestamp < ?", start, end);
+				var rows = station.Database.Query<DbWindAvgDir>("select WindAvg, WindAvgDir from IntervalData where Timestamp >= ? and Timestamp < ?", start, end);
 
 				windsamples = 0;
 
@@ -625,7 +625,7 @@ namespace CumulusMX
 
 			try
 			{
-				var rows = station.Database.Query<DbTimeWindAvgDir>("select Timestamp, WindAvg, WindAvgDir from LogData where Timestamp >= ? and Timestamp < ?", start, end);
+				var rows = station.Database.Query<DbTimeWindAvgDir>("select Timestamp, WindAvg, WindAvgDir from IntervalData where Timestamp >= ? and Timestamp < ?", start, end);
 
 				foreach (var row in rows)
 				{

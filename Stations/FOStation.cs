@@ -571,10 +571,7 @@ namespace CumulusMX
 				bw.ReportProgress((totalentries - datalist.Count)*100/totalentries, "processing");
 
 				cumulus.DoLogFile(timestamp,false);
-				if (cumulus.StationOptions.LogExtraSensors)
-				{
-					cumulus.DoExtraLogFile(timestamp);
-				}
+				cumulus.DoExtraLogFile(timestamp);
 				cumulus.MySqlRealtimeFile(999, false, timestamp);
 
 				AddRecentDataWithAq(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, OutdoorTemperature, WindChill, OutdoorDewpoint, HeatIndex,

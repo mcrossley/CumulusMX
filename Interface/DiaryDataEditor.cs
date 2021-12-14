@@ -81,7 +81,7 @@ namespace CumulusMX
 				string localTimeFormat = "yyyy-MM-dd'T'HH:mm:ss";
 
 				// Override the ServiceStack de-serialization function
-				// Check which format provided, attempt to parse as datetime or return minValue.
+				// Check which format provided, attempt to parse as DateTime or return minValue.
 				ServiceStack.Text.JsConfig<DateTime>.DeSerializeFn = datetimeStr =>
 				{
 					if (string.IsNullOrWhiteSpace(datetimeStr))
@@ -135,7 +135,7 @@ namespace CumulusMX
 				string localTimeFormat = "yyyy-MM-dd'T'HH:mm:ss";
 
 				// Override the ServiceStack de-serialization function
-				// Check which format provided, attempt to parse as datetime or return minValue.
+				// Check which format provided, attempt to parse as DateTime or return minValue.
 				ServiceStack.Text.JsConfig<DateTime>.DeSerializeFn = datetimeStr =>
 				{
 					if (string.IsNullOrWhiteSpace(datetimeStr))

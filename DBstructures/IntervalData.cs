@@ -53,7 +53,7 @@ namespace CumulusMX
 			sb.Append("\",\"");
 			if (DewPoint.HasValue) sb.Append(DewPoint.Value.ToString(Program.cumulus.TempFormat, invNum));
 			sb.Append("\",\"");
-			if (WindAvg.HasValue) sb.Append(WindAvg.Value.ToString(Program.cumulus.WindFormat, invNum));
+			if (WindAvg.HasValue) sb.Append(WindAvg.Value.ToString(Program.cumulus.WindAvgFormat, invNum));
 			sb.Append("\",\"");
 			if (WindGust10m.HasValue) sb.Append(WindGust10m.Value.ToString(Program.cumulus.WindFormat, invNum));
 			sb.Append("\",\"");
@@ -106,7 +106,7 @@ namespace CumulusMX
 
 		public bool FromString(string[] data)
 		{
-			// Make sure we always have the correct number of fields
+			// Make sure we always have the correct number of fields - we have
 			var data2 = new string[Cumulus.NumLogFileFields];
 			Array.Copy(data, data2, data.Length);
 

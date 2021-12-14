@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -13,7 +14,7 @@ namespace CumulusMX
 	{
 		private WeatherStation station;
 		private readonly Cumulus cumulus;
-		private readonly System.Globalization.NumberFormatInfo invNum = System.Globalization.CultureInfo.InvariantCulture.NumberFormat;
+		private readonly NumberFormatInfo invNum = CultureInfo.InvariantCulture.NumberFormat;
 
 		internal DataEditors(Cumulus cumulus)
 		{
@@ -35,7 +36,7 @@ namespace CumulusMX
 		/// <param name="start"></param>
 		/// <param name="length"></param>
 		/// <returns>JSON encoded section of the dayfile as a string</returns>
-		internal async Task<string> GetDayfile(string draw, int start, int length)
+		internal async Task<string> GetDailyData(string draw, int start, int length)
 		{
 			try
 			{
@@ -88,7 +89,7 @@ namespace CumulusMX
 
 				// Update the MX database
 				var newRec = new DayData();
-				newRec.FromString(newData.data);
+				newRec.FromString(newData.data[0]);
 
 				await station.DatabaseAsync.UpdateAsync(newRec);
 
@@ -103,7 +104,7 @@ namespace CumulusMX
 					// Find the line using the date string
 					foreach (var line in lines)
 					{
-						if (line.Contains(newData.data[0]))
+						if (line.Contains(newData.data[0][0]))
 							break;
 
 						lineNum++;
@@ -118,6 +119,9 @@ namespace CumulusMX
 
 					// write dayfile back again
 					File.WriteAllLines(cumulus.DayFileName, lines);
+
+					Cumulus.LogMessage($"EditDailyData: Edit line {lineNum + 1}, original = {orgLine}");
+					Cumulus.LogMessage($"EditDailyData: Edit line {lineNum + 1},      new = {newLine}");
 				}
 
 
@@ -201,8 +205,7 @@ namespace CumulusMX
 						cumulus.LogExceptionMessage(ex, "EditDayFile: Failed, to update MySQL. Error");
 						Cumulus.LogMessage($"EditDayFile: SQL Update statement = {updateStr}");
 						context.Response.StatusCode = 501;  // Use 501 to signal that SQL failed but file update was OK
-						var thisrec = new List<string>(newData.data);
-						thisrec.Insert(0, newData.line.ToString());
+						var thisrec = new List<string>(newData.data[0]);
 
 						return "{\"errors\":{\"Dayfile\":[\"<br>Updated the dayfile OK\"], \"MySQL\":[\"<br>Failed to update MySQL\"]}, \"data\":" + thisrec.ToJson() + "}";
 					}
@@ -212,7 +215,7 @@ namespace CumulusMX
 			{
 				// Update the MX database
 				var newRec = new DayData();
-				newRec.FromString(newData.data);
+				newRec.FromString(newData.data[0]);
 
 				await station.DatabaseAsync.DeleteAsync(newRec);
 
@@ -227,7 +230,7 @@ namespace CumulusMX
 					// Find the line using the timestamp
 					foreach (var line in lines)
 					{
-						if (line.Contains(newData.data[1]))
+						if (line.Contains(newData.data[0][1]))
 							break;
 
 						lineNum++;
@@ -240,6 +243,8 @@ namespace CumulusMX
 
 					// write dayfile back again
 					File.WriteAllLines(cumulus.DayFileName, lines);
+
+					Cumulus.LogMessage($"EditDailyData: Delete line {lineNum + 1}, original = {orgLine}");
 				}
 
 				// Update the MySQL record
@@ -251,8 +256,7 @@ namespace CumulusMX
 					)
 				{
 
-					var thisRec = new List<string>(newData.data);
-					thisRec.Insert(0, newData.line.ToString());
+					var thisRec = new List<string>(newData.data[0]);
 
 					try
 					{
@@ -277,16 +281,15 @@ namespace CumulusMX
 			}
 
 			// return the updated record
-			var rec = new List<string>(newData.data);
-			rec.Insert(0, newData.line.ToString());
+			var rec = new List<string>(newData.data[0]);
 			return rec.ToJson();
 		}
 
 		private class DailyDataEditor
 		{
 			public string action { get; set; }
-			public int line { get; set; }
-			public string[] data { get; set; }
+			public long[] dates { get; set; }
+			public List<string[]> data { get; set; }
 		}
 
 
@@ -302,7 +305,7 @@ namespace CumulusMX
 		/// <param name="length"></param>
 		/// <param name="extra"></param>
 		/// <returns>JSON encoded section of the log file as a string</returns>
-		internal async Task<string> GetIntervalData(string from, string to, string draw, int start, int length, string search, bool extra)
+		internal async Task<string> GetIntervalData(string from, string to, string draw, int start, int length, string search)
 		{
 			try
 			{
@@ -326,7 +329,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = await station.DatabaseAsync.QueryAsync<IntervalData>("select * from LogData where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = await station.DatabaseAsync.QueryAsync<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -389,7 +392,7 @@ namespace CumulusMX
 		}
 
 
-		internal async Task<string> EditDatalog(IHttpContext context)
+		internal async Task<string> EditIntervalData(IHttpContext context)
 		{
 			var request = context.Request;
 			string text;
@@ -398,50 +401,72 @@ namespace CumulusMX
 				text = reader.ReadToEnd();
 			}
 
-			var newData = text.FromJson<IntervalDataEditor>();
+			var newData = text.FromJson<IntervalDataEditor2>();
 
 
 			if (newData.action == "Edit")
 			{
+				var logDateStr = newData.data[0][0];
+				var newRec = new IntervalData();
+				newRec.FromString(newData.data[0]);
+				var logDate = Utils.FromUnixTime(newData.dates[0]);
 
-				// Update the MX database
-				if (newData.extra)
+				try
 				{
-					//TODO: Extra log file data
+					var res = station.Database.Update(newRec);
+
+					//await station.DatabaseAsync.UpdateAsync(newRec);
+					if (res == 1)
+					{
+						Cumulus.LogMessage($"EditIntervalData: Changed database entry {logDateStr}");
+					}
+					else
+					{
+						Cumulus.LogMessage($"EditIntervalData: ERROR - Faied to update database entry {logDateStr}");
+						context.Response.StatusCode = 500;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
 				}
-				else
+				catch (Exception ex)
 				{
-					var newRec = new IntervalData();
-					newRec.FromString(newData.data);
+					context.Response.StatusCode = 500;
+					var thisrec = new List<string>(newData.data[0]);
 
-					await station.DatabaseAsync.UpdateAsync(newRec);
+					return "{\"errors\": { \"SQLite\":[<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
 				}
 
-
-				// Update the dayfile
+				// Update the log file
 				if (Program.cumulus.ProgramOptions.UpdateLogfile)
 				{
-					var logDate = Utils.FromUnixTime(long.Parse(newData.data[1]));
-
-					var logfile = (newData.extra ? cumulus.GetExtraLogFileName(logDate) : cumulus.GetLogFileName(logDate));
+					var logfile = cumulus.GetLogFileName(logDate);
 
 					// read the log file into a List
 					var lines = File.ReadAllLines(logfile).ToList();
 					var lineNum = 0;
 
 					// Find the line using the timestamp
+					var found = false;
 					foreach (var line in lines)
 					{
-						if (line.Contains(newData.data[1]))
+						if (line.Contains(logDateStr))
+						{
+							found = true;
 							break;
+						}
 
 						lineNum++;
+					}
+
+					if (!found)
+					{
+						Cumulus.LogMessage($"EditIntervalData: Error editing entry, line not found for - {logDateStr}");
+						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
 					}
 
 
 					// replace the edited line
 					var orgLine = lines[lineNum];
-					var newLine = String.Join(",", newData.data);
+					var newLine = String.Join(",", newData.data[0]);
 
 					lines[lineNum] = newLine;
 
@@ -449,13 +474,13 @@ namespace CumulusMX
 					{
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditDataLog: Changed Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-						Cumulus.LogMessage($"EditDataLog: Changed Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						Cumulus.LogMessage($"EditIntervalData: Changed Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						Cumulus.LogMessage($"EditIntervalData: Changed Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 					}
 					catch (Exception ex)
 					{
-						cumulus.LogExceptionMessage(ex, "EditDataLog: Failed, error");
-						Cumulus.LogMessage("EditDataLog: Data received - " + newLine);
+						cumulus.LogExceptionMessage(ex, "EditIntervalData: Failed, error");
+						Cumulus.LogMessage("EditIntervalData: Data received - " + newLine);
 						context.Response.StatusCode = 500;
 
 						//return "{\"errors\":{\"Logfile\":[\"<br>Failed to update, error = " + ex.Message + "\"]}}";
@@ -472,139 +497,3098 @@ namespace CumulusMX
 					)
 				{
 					// Only the monthly log file is stored in MySQL
-					if (!newData.extra)
+					var updateStr = "";
+					var newLine = String.Join(",", newData.data[0]);
+
+					try
 					{
-						var updateStr = "";
-						var newLine = String.Join(",", newData.data);
+						var updt = new StringBuilder(1024);
 
-						try
-						{
-							var updt = new StringBuilder(1024);
+						var LogRec = station.ParseLogFileRec(newLine, false);
 
-							var LogRec = station.ParseLogFileRec(newLine, false);
+						updt.Append($"UPDATE {cumulus.MySqlSettings.Monthly.TableName} SET ");
+						updt.Append($"Temp={LogRec.OutdoorTemperature.ToString(cumulus.TempFormat, invNum)},");
+						updt.Append($"Humidity={ LogRec.OutdoorHumidity},");
+						updt.Append($"Dewpoint={LogRec.OutdoorDewpoint.ToString(cumulus.TempFormat, invNum)},");
+						updt.Append($"Windspeed={LogRec.WindAverage.ToString(cumulus.WindAvgFormat, invNum)},");
+						updt.Append($"Windgust={LogRec.RecentMaxGust.ToString(cumulus.WindFormat, invNum)},");
+						updt.Append($"Windbearing={LogRec.AvgBearing},");
+						updt.Append($"RainRate={LogRec.RainRate.ToString(cumulus.RainFormat, invNum)},");
+						updt.Append($"TodayRainSoFar={LogRec.RainToday.ToString(cumulus.RainFormat, invNum)},");
+						updt.Append($"Pressure={LogRec.Pressure.ToString(cumulus.PressFormat, invNum)},");
+						updt.Append($"Raincounter={LogRec.Raincounter.ToString(cumulus.RainFormat, invNum)},");
+						updt.Append($"InsideTemp={LogRec.IndoorTemperature.ToString(cumulus.TempFormat, invNum)},");
+						updt.Append($"InsideHumidity={LogRec.IndoorHumidity},");
+						updt.Append($"LatestWindGust={LogRec.WindLatest.ToString(cumulus.WindFormat, invNum)},");
+						updt.Append($"WindChill={LogRec.WindChill.ToString(cumulus.TempFormat, invNum)},");
+						updt.Append($"HeatIndex={LogRec.HeatIndex.ToString(cumulus.TempFormat, invNum)},");
+						updt.Append($"UVindex={LogRec.UV.ToString(cumulus.UVFormat, invNum)},");
+						updt.Append($"SolarRad={LogRec.SolarRad},");
+						updt.Append($"Evapotrans={LogRec.ET.ToString(cumulus.ETFormat, invNum)},");
+						updt.Append($"AnnualEvapTran={LogRec.AnnualETTotal.ToString(cumulus.ETFormat, invNum)},");
+						updt.Append($"ApparentTemp={LogRec.ApparentTemperature.ToString(cumulus.TempFormat, invNum)},");
+						updt.Append($"MaxSolarRad={(Math.Round(LogRec.CurrentSolarMax))},");
+						updt.Append($"HrsSunShine={LogRec.SunshineHours.ToString(cumulus.SunFormat, invNum)},");
+						updt.Append($"CurrWindBearing={LogRec.Bearing},");
+						updt.Append($"RG11rain={LogRec.RG11RainToday.ToString(cumulus.RainFormat, invNum)},");
+						updt.Append($"RainSinceMidnight={LogRec.RainSinceMidnight.ToString(cumulus.RainFormat, invNum)},");
+						updt.Append($"WindbearingSym='{station.CompassPoint(LogRec.AvgBearing)}',");
+						updt.Append($"CurrWindBearingSym='{station.CompassPoint(LogRec.Bearing)}',");
+						updt.Append($"FeelsLike={LogRec.FeelsLike.ToString(cumulus.TempFormat, invNum)},");
+						updt.Append($"Humidex={LogRec.Humidex.ToString(cumulus.TempFormat, invNum)} ");
 
-							updt.Append($"UPDATE {cumulus.MySqlSettings.Monthly.TableName} SET ");
-							updt.Append($"Temp={LogRec.OutdoorTemperature.ToString(cumulus.TempFormat, invNum)},");
-							updt.Append($"Humidity={ LogRec.OutdoorHumidity},");
-							updt.Append($"Dewpoint={LogRec.OutdoorDewpoint.ToString(cumulus.TempFormat, invNum)},");
-							updt.Append($"Windspeed={LogRec.WindAverage.ToString(cumulus.WindAvgFormat, invNum)},");
-							updt.Append($"Windgust={LogRec.RecentMaxGust.ToString(cumulus.WindFormat, invNum)},");
-							updt.Append($"Windbearing={LogRec.AvgBearing},");
-							updt.Append($"RainRate={LogRec.RainRate.ToString(cumulus.RainFormat, invNum)},");
-							updt.Append($"TodayRainSoFar={LogRec.RainToday.ToString(cumulus.RainFormat, invNum)},");
-							updt.Append($"Pressure={LogRec.Pressure.ToString(cumulus.PressFormat, invNum)},");
-							updt.Append($"Raincounter={LogRec.Raincounter.ToString(cumulus.RainFormat, invNum)},");
-							updt.Append($"InsideTemp={LogRec.IndoorTemperature.ToString(cumulus.TempFormat, invNum)},");
-							updt.Append($"InsideHumidity={LogRec.IndoorHumidity},");
-							updt.Append($"LatestWindGust={LogRec.WindLatest.ToString(cumulus.WindFormat, invNum)},");
-							updt.Append($"WindChill={LogRec.WindChill.ToString(cumulus.TempFormat, invNum)},");
-							updt.Append($"HeatIndex={LogRec.HeatIndex.ToString(cumulus.TempFormat, invNum)},");
-							updt.Append($"UVindex={LogRec.UV.ToString(cumulus.UVFormat, invNum)},");
-							updt.Append($"SolarRad={LogRec.SolarRad},");
-							updt.Append($"Evapotrans={LogRec.ET.ToString(cumulus.ETFormat, invNum)},");
-							updt.Append($"AnnualEvapTran={LogRec.AnnualETTotal.ToString(cumulus.ETFormat, invNum)},");
-							updt.Append($"ApparentTemp={LogRec.ApparentTemperature.ToString(cumulus.TempFormat, invNum)},");
-							updt.Append($"MaxSolarRad={(Math.Round(LogRec.CurrentSolarMax))},");
-							updt.Append($"HrsSunShine={LogRec.SunshineHours.ToString(cumulus.SunFormat, invNum)},");
-							updt.Append($"CurrWindBearing={LogRec.Bearing},");
-							updt.Append($"RG11rain={LogRec.RG11RainToday.ToString(cumulus.RainFormat, invNum)},");
-							updt.Append($"RainSinceMidnight={LogRec.RainSinceMidnight.ToString(cumulus.RainFormat, invNum)},");
-							updt.Append($"WindbearingSym='{station.CompassPoint(LogRec.AvgBearing)}',");
-							updt.Append($"CurrWindBearingSym='{station.CompassPoint(LogRec.Bearing)}',");
-							updt.Append($"FeelsLike={LogRec.FeelsLike.ToString(cumulus.TempFormat, invNum)},");
-							updt.Append($"Humidex={LogRec.Humidex.ToString(cumulus.TempFormat, invNum)} ");
-
-							updt.Append($"WHERE LogDateTime='{LogRec.Date:yyyy-MM-dd HH:mm}';");
-							updateStr = updt.ToString();
+						updt.Append($"WHERE LogDateTime='{LogRec.Date:yyyy-MM-dd HH:mm}';");
+						updateStr = updt.ToString();
 
 
-							cumulus.MySqlCommandSync(updateStr, "EditLogFile");
-							Cumulus.LogMessage($"EditDataLog: SQL Updated");
-						}
-						catch (Exception ex)
-						{
-							cumulus.LogExceptionMessage(ex, "EditDataLog: Failed, to update MySQL. Error");
-							Cumulus.LogMessage($"EditDataLog: SQL Update statement = {updateStr}");
-							context.Response.StatusCode = 501; // Use 501 to signal that SQL failed but file update was OK
-							var thisrec = new List<string>(newData.data);
-							thisrec.Insert(0, newData.line.ToString());
+						//cumulus.MySqlCommandSync(updateStr, "EditLogFile");
+						await cumulus.MySqlCommandAsync(updateStr, "EditLogFile");
+						Cumulus.LogMessage($"EditIntervalData: SQL Updated");
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "EditIntervalData: Failed, to update MySQL. Error");
+						Cumulus.LogMessage($"EditIntervalData: SQL Update statement = {updateStr}");
+						context.Response.StatusCode = 501; // Use 501 to signal that SQL failed but file update was OK
+						var thisrec = new List<string>(newData.data[0]);
 
-							return "{\"errors\": { \"Logfile\":[\"<br>Updated the log file OK\"], \"MySQL\":[\"<br>Failed to update MySQL. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
-						}
-
+						return "{\"errors\": { \"Logfile\":[\"<br>Updated the log file OK\"], \"MySQL\":[\"<br>Failed to update MySQL. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
 					}
 				}
 			}
 			else if (newData.action == "Delete")
 			{
 				// Update the MX database
-				if (newData.extra)
-				{
-					//TODO: Extra log file data
-				}
-				else
+				foreach (var row in newData.data)
 				{
 					var newRec = new IntervalData();
-					newRec.FromString(newData.data);
 
-					await station.DatabaseAsync.DeleteAsync(newRec);
+					newRec.FromString(row);
+					try
+					{
+						var res = station.Database.Delete(newRec);
+						//await station.DatabaseAsync.DeleteAsync(newRec);
+
+						if (res == 1)
+						{
+							Cumulus.LogMessage($"EditIntervalData: Deleted database entry {(newRec.Timestamp.ToString("dd/MM/yy hh:mm", CultureInfo.InvariantCulture))}");
+						}
+						else
+						{
+							Cumulus.LogMessage($"EditIntervalData: ERROR - Faied to update database entry {(newRec.Timestamp.ToString("dd/MM/yy hh:mm", CultureInfo.InvariantCulture))}");
+							context.Response.StatusCode = 502;
+							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+
+						}
+					}
+					catch (Exception ex)
+					{
+						context.Response.StatusCode = 502;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
 				}
 
 
 				// Update the log file
 				if (Program.cumulus.ProgramOptions.UpdateLogfile)
 				{
-					var logDate = Utils.FromUnixTime(long.Parse(newData.data[1]));
+					var lastMonth = -1;
+					string logfile = "";
 
-					var logfile = (newData.extra ? cumulus.GetExtraLogFileName(logDate) : cumulus.GetLogFileName(logDate));
+					var lines = new List<string>();
+
+					foreach (var row in newData.data)
+					{
+						var logDate = Utils.FromUnixTime(long.Parse(row[1]));
+
+						if (lastMonth != logDate.Month)
+						{
+							logfile = cumulus.GetLogFileName(logDate);
+
+							// read the log file into a List
+							lines = File.ReadAllLines(logfile).ToList();
+						}
+
+						// Find the line current using the timestamp
+						var lineNum = 0;
+						foreach (var line in lines)
+						{
+							if (line.Contains(row[1]))
+							{
+								var orgLine = line;
+								try
+								{
+									lines.RemoveAt(lineNum);
+
+									// write logfile back again
+									File.WriteAllLines(logfile, lines);
+									Cumulus.LogMessage($"EditDataLog: Entry deleted - {orgLine}");
+								}
+								catch (Exception ex)
+								{
+									cumulus.LogExceptionMessage(ex, "EditDataLog: Entry deletion failed. Error");
+									Cumulus.LogMessage($"EditDataLog: Entry data = - {orgLine}");
+									context.Response.StatusCode = 500;
+									return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+								}
+
+								break;
+							}
+							lineNum++;
+						}
+					}
+				}
+
+				//return "";
+			}
+
+
+			// return the updated record
+			var rec = new List<string>(newData.data[0]);
+			return rec.ToJson();
+		}
+
+		/*
+		private class IntervalDataEditor
+		{
+			public string action { get; set; }
+			public int line { get; set; }
+			public long logdate { get; set; }
+			public bool extra { get; set; }
+			public string[] data { get; set; }
+		}
+		*/
+
+		private class IntervalDataEditor2
+		{
+			public string action { get; set; }
+			public long[] dates { get; set; }
+			public List<string[]> data { get; set; }
+		}
+
+		#endregion Interval Data
+
+
+		#region ExtraTemps
+
+		internal async Task<string> GetExtraTempData(string from, string to, string draw, int start, int length, string search)
+		{
+			try
+			{
+				// date will be in format "yyyy-mm-dd"
+				var stDate = from.Split('-');
+				var enDate = to.Split('-');
+
+				var filtered = 0;  // Total number of filtered rows available
+				var thisDraw = 0;  // count of the rows we are returning
+
+				// Get a time stamp, use 15th day to avoid wrap issues
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				ts1 = ts1.AddDays(1);
+
+				if (ts > ts1)
+				{
+					// this cannot be, the end is earlier than the start!
+					return "";
+				}
+
+				var watch = System.Diagnostics.Stopwatch.StartNew();
+
+				var rows = await station.DatabaseAsync.QueryAsync<ExtraTemp>("select * from ExtraTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var json = new StringBuilder(350 * length);
+
+				json.Append("{\"recordsTotal\":");
+				json.Append(rows.Count);
+				json.Append(",\"data\":[");
+
+				foreach (var row in rows)
+				{
+					var text = row.ToCSV();
+
+					// if we have a search string and no match, skip to next line
+					if (!string.IsNullOrEmpty(search) && !text.Contains(search))
+					{
+						continue;
+					}
+
+					filtered++;
+
+					// skip records until we get to the start entry
+					if (filtered <= start)
+					{
+						continue;
+					}
+
+					// only send the number requested
+					if (thisDraw < length)
+					{
+						// track the number of lines we have to return so far
+						thisDraw++;
+
+						json.Append('[');
+						json.Append(text);
+						json.Append("],");
+					}
+				}
+
+				// trim trailing ","
+				if (thisDraw > 0)
+					json.Length--;
+
+				json.Append("],\"draw\":");
+				json.Append(draw);
+				json.Append(",\"recordsFiltered\":");
+				json.Append(filtered);
+				json.Append('}');
+
+				watch.Stop();
+				var elapsed = watch.ElapsedMilliseconds;
+				cumulus.LogDebugMessage($"GetExtraTemp: Parse time = {elapsed} ms");
+				cumulus.LogDebugMessage($"GetExtraTemp: Found={rows.Count}, filtered={filtered} (filter='{search}'), start={start}, return={thisDraw}");
+
+				return json.ToString();
+			}
+			catch (Exception ex)
+			{
+				Cumulus.LogMessage(ex.ToString());
+			}
+
+			return "";
+		}
+
+		internal string EditExtraTemp(IHttpContext context)
+		{
+			var request = context.Request;
+			string text;
+			using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+			{
+				text = reader.ReadToEnd();
+			}
+
+			var newData = text.FromJson<DailyDataEditor>();
+
+			if (newData.action == "Edit")
+			{
+				// Update the MX database
+				var newRec = new ExtraTemp();
+				newRec.FromString(newData.data[0]);
+				var logDate = Utils.FromUnixTime(newData.dates[0]);
+				var logDateStr = newData.data[0][0];
+
+				try
+				{
+					var res = station.Database.Update(newRec);
+
+					//await station.DatabaseAsync.UpdateAsync(newRec);
+					if (res == 1)
+					{
+						Cumulus.LogMessage($"EditExtraTemp: Changed database entry {logDateStr}");
+					}
+					else
+					{
+						Cumulus.LogMessage($"EditExtraTemp: ERROR - Faied to update database entry {logDateStr}");
+						context.Response.StatusCode = 500;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+				catch (Exception ex)
+				{
+					context.Response.StatusCode = 500;
+					var thisrec = new List<string>(newData.data[0]);
+
+					return "{\"errors\": { \"SQLite\":[<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
+				}
+
+
+				// Update the extralogfile
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var logfile = cumulus.GetExtraLogFileName(logDate);
 
 					// read the log file into a List
 					var lines = File.ReadAllLines(logfile).ToList();
 					var lineNum = 0;
 
-					// Find the line using the timestamp
+					// Find the line using the date string
+					var found = false;
 					foreach (var line in lines)
 					{
-						if (line.Contains(newData.data[1]))
+						if (line.Contains(logDateStr))
+						{
+							found = true;
 							break;
+						}
 
 						lineNum++;
 					}
 
+					if (!found)
+					{
+						Cumulus.LogMessage($"EditExtraTemp: Error editing entry, line not found for - {logDateStr}");
+						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
+					}
+
+					// replace the extra temp fields (2-11) edited line
 					var orgLine = lines[lineNum];
+					var orgFields = orgLine.Split(',');
+
+					var newLine = String.Join(',', newData.data[0]) + ',' + String.Join(',', orgFields[12..]);
+
+					lines[lineNum] = newLine;
+
 					try
 					{
-						lines.RemoveAt(lineNum);
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditDataLog: Entry deleted - {orgLine}");
+						Cumulus.LogMessage($"EditExtraTemp: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						Cumulus.LogMessage($"EditExtraTemp: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 					}
 					catch (Exception ex)
 					{
-						cumulus.LogExceptionMessage(ex, "EditDataLog: Entry deletion failed. Error");
-						Cumulus.LogMessage($"EditDataLog: Entry data = - {orgLine}");
+						cumulus.LogExceptionMessage(ex, "EditExtraTemp: Failed, error");
+						Cumulus.LogMessage("EditExtraTemp: Data received - " + newLine);
 						context.Response.StatusCode = 500;
-						return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+
+						//return "{\"errors\":{\"Logfile\":[\"<br>Failed to update, error = " + ex.Message + "\"]}}";
 					}
 				}
 			}
+			else if (newData.action == "Delete")
+			{
+				// Update the MX database
+				foreach (var row in newData.data)
+				{
+					var newRec = new ExtraTemp();
+					newRec.FromString(row);
 
+					try
+					{
+						var res = station.Database.Delete(newRec);
+						//await station.DatabaseAsync.DeleteAsync(newRec);
+						if (res == 1)
+						{
+							Cumulus.LogMessage($"EditExtraTemp: Deleted database entry {row[0]}");
+						}
+						else
+						{
+							Cumulus.LogMessage($"EditExtraTemp: ERROR - Faied to update database entry {row[0]}");
+							context.Response.StatusCode = 502;
+							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+
+						}
+					}
+					catch (Exception ex)
+					{
+						context.Response.StatusCode = 502;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+
+
+				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var lastMonth = -1;
+					string logfile = "";
+
+					var lines = new List<string>();
+
+					foreach (var row in newData.data)
+					{
+						var logDate = Utils.FromUnixTime(long.Parse(row[1]));
+
+						if (lastMonth != logDate.Month)
+						{
+							logfile = cumulus.GetExtraLogFileName(logDate);
+
+							// read the log file into a List
+							lines = File.ReadAllLines(logfile).ToList();
+						}
+
+						// Find the line using the timestamp
+						var lineNum = 0;
+						var found = false;
+						foreach (var line in lines)
+						{
+							if (line.Contains(row[1]))
+							{
+								found = true;
+								break;
+							}
+
+							lineNum++;
+						}
+
+						if (!found)
+						{
+							Cumulus.LogMessage($"EditExtraTemp: Error deleting entry, line not found for - {row[0]}");
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
+						}
+
+						var orgLine = lines[lineNum];
+						var orgFields = orgLine.Split(',');
+
+						var newLine = String.Join(',', orgFields[0..2]) + ',' + ",,,,,,,,," + ',' + String.Join(',', orgFields[12..]);
+
+						lines[lineNum] = newLine;
+
+						try
+						{
+							// write logfile back again
+							File.WriteAllLines(logfile, lines);
+							Cumulus.LogMessage($"EditExtraTemp: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							Cumulus.LogMessage($"EditExtraTemp: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						}
+						catch (Exception ex)
+						{
+							cumulus.LogExceptionMessage(ex, "EditExtraTemp: Entry deletion failed. Error");
+							Cumulus.LogMessage($"EditExtraTemp: Entry data = - {orgLine}");
+							context.Response.StatusCode = 500;
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+						}
+					}
+				}
+			}
+			else
+			{
+				Cumulus.LogMessage($"EditExtraTemp: Unrecognised action = " + newData.action);
+				context.Response.StatusCode = 500;
+				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
+			}
 
 			// return the updated record
-			var rec = new List<string>(newData.data);
-			rec.Insert(0, newData.line.ToString());
+			var rec = new List<string>(newData.data[0]);
 			return rec.ToJson();
 		}
 
-		private class IntervalDataEditor
+		#endregion ExtraTemps
+
+		#region ExtraHums
+
+		internal async Task<string> GetExtraHumData(string from, string to, string draw, int start, int length, string search)
 		{
-			public string action { get; set; }
-			public int line { get; set; }
-			public string month { get; set; }
-			public bool extra { get; set; }
-			public string[] data { get; set; }
+			try
+			{
+				// date will be in format "yyyy-mm-dd"
+				var stDate = from.Split('-');
+				var enDate = to.Split('-');
+
+				var filtered = 0;  // Total number of filtered rows available
+				var thisDraw = 0;  // count of the rows we are returning
+
+				// Get a time stamp, use 15th day to avoid wrap issues
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				ts1 = ts1.AddDays(1);
+
+				if (ts > ts1)
+				{
+					// this cannot be, the end is earlier than the start!
+					return "";
+				}
+
+				var watch = System.Diagnostics.Stopwatch.StartNew();
+
+				var rows = await station.DatabaseAsync.QueryAsync<ExtraHum>("select * from ExtraHum where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var json = new StringBuilder(350 * length);
+
+				json.Append("{\"recordsTotal\":");
+				json.Append(rows.Count);
+				json.Append(",\"data\":[");
+
+				foreach (var row in rows)
+				{
+					var text = row.ToCSV();
+
+					// if we have a search string and no match, skip to next line
+					if (!string.IsNullOrEmpty(search) && !text.Contains(search))
+					{
+						continue;
+					}
+
+					filtered++;
+
+					// skip records until we get to the start entry
+					if (filtered <= start)
+					{
+						continue;
+					}
+
+					// only send the number requested
+					if (thisDraw < length)
+					{
+						// track the number of lines we have to return so far
+						thisDraw++;
+
+						json.Append('[');
+						json.Append(text);
+						json.Append("],");
+					}
+				}
+
+				// trim trailing ","
+				if (thisDraw > 0)
+					json.Length--;
+
+				json.Append("],\"draw\":");
+				json.Append(draw);
+				json.Append(",\"recordsFiltered\":");
+				json.Append(filtered);
+				json.Append('}');
+
+				watch.Stop();
+				var elapsed = watch.ElapsedMilliseconds;
+				cumulus.LogDebugMessage($"GetExtraHum: Parse time = {elapsed} ms");
+				cumulus.LogDebugMessage($"GetExtraHum: Found={rows.Count}, filtered={filtered} (filter='{search}'), start={start}, return={thisDraw}");
+
+				return json.ToString();
+			}
+			catch (Exception ex)
+			{
+				Cumulus.LogMessage(ex.ToString());
+			}
+
+			return "";
 		}
 
-		#endregion Interval Data
+		internal string EditExtraHum(IHttpContext context)
+		{
+			var request = context.Request;
+			string text;
+			using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+			{
+				text = reader.ReadToEnd();
+			}
+
+			var newData = text.FromJson<DailyDataEditor>();
+
+			if (newData.action == "Edit")
+			{
+				// Update the MX database
+				var newRec = new ExtraHum();
+				newRec.FromString(newData.data[0]);
+				var logDate = Utils.FromUnixTime(newData.dates[0]);
+				var logDateStr = newData.data[0][0];
+				try
+				{
+					var res = station.Database.Update(newRec);
+
+					//await station.DatabaseAsync.UpdateAsync(newRec);
+					if (res == 1)
+					{
+						Cumulus.LogMessage($"EditExtraHum: Changed database entry {logDateStr}");
+					}
+					else
+					{
+						Cumulus.LogMessage($"EditExtraHum: ERROR - Faied to update database entry {logDateStr}");
+						context.Response.StatusCode = 500;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+				catch (Exception ex)
+				{
+					context.Response.StatusCode = 500;
+					var thisrec = new List<string>(newData.data[0]);
+
+					return "{\"errors\": { \"SQLite\":[<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
+				}
+
+				// Update the extralogfile
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+
+					// read the log file into a List
+					var lines = File.ReadAllLines(logfile).ToList();
+					var lineNum = 0;
+
+					// Find the line using the date string
+					var found = false;
+					foreach (var line in lines)
+					{
+						if (line.Contains(logDateStr))
+						{
+							found = true;
+							break;
+						}
+
+						lineNum++;
+					}
+
+					if (!found)
+					{
+						Cumulus.LogMessage($"EditExtraHum: Error editing entry, line not found for - {logDateStr}");
+						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
+					}
+
+					// replace the extra hum fields (12-21) edited line
+					var orgLine = lines[lineNum];
+					var orgFields = orgLine.Split(',');
+
+					var newLine = String.Join(',', orgFields[0..12]) + ',' + String.Join(',', newData.data[0][2..]) + ',' + String.Join(',', orgFields[22..]);
+
+					lines[lineNum] = newLine;
+
+					try
+					{
+						// write logfile back again
+						File.WriteAllLines(logfile, lines);
+						Cumulus.LogMessage($"EditExtraHum: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						Cumulus.LogMessage($"EditExtraHum: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "EditExtraHum: Failed, error");
+						Cumulus.LogMessage("EditExtraHum: Data received - " + newLine);
+						context.Response.StatusCode = 500;
+
+						//return "{\"errors\":{\"Logfile\":[\"<br>Failed to update, error = " + ex.Message + "\"]}}";
+					}
+				}
+			}
+			else if (newData.action == "Delete")
+			{
+				// Update the MX database
+				foreach (var row in newData.data)
+				{
+					var newRec = new ExtraHum();
+					newRec.FromString(row);
+
+					try
+					{
+						var res = station.Database.Delete(newRec);
+						//await station.DatabaseAsync.DeleteAsync(newRec);
+						if (res == 1)
+						{
+							Cumulus.LogMessage($"EditExtraHum: Deleted database entry {row[0]}");
+						}
+						else
+						{
+							Cumulus.LogMessage($"EditExtraHum: ERROR - Faied to update database entry {row[0]}");
+							context.Response.StatusCode = 502;
+							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+						}
+					}
+					catch (Exception ex)
+					{
+						context.Response.StatusCode = 502;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+
+				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var lastMonth = -1;
+					string logfile = "";
+
+					var lines = new List<string>();
+
+					foreach (var row in newData.data)
+					{
+						var logDate = Utils.FromUnixTime(long.Parse(row[1]));
+
+						if (lastMonth != logDate.Month)
+						{
+							logfile = cumulus.GetExtraLogFileName(logDate);
+
+							// read the log file into a List
+							lines = File.ReadAllLines(logfile).ToList();
+						}
+
+						// Find the line using the timestamp
+						var found = false;
+						var lineNum = 0;
+						foreach (var line in lines)
+						{
+							if (line.Contains(row[1]))
+							{
+								found = true;
+								break;
+							}
+
+							lineNum++;
+						}
+
+						if (!found)
+						{
+							Cumulus.LogMessage($"EditExtraHum: Error deleting entry, line not found for - {row[0]}");
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
+						}
+
+						var orgLine = lines[lineNum];
+						var orgFields = orgLine.Split(',');
+
+						// replace the extra hum fields (12-21) edited line
+						var newLine = String.Join(',', orgFields[0..12]) + ',' + ",,,,,,,,," + ',' + String.Join(',', orgFields[22..]);
+
+						lines[lineNum] = newLine;
+
+						try
+						{
+							// write logfile back again
+							File.WriteAllLines(logfile, lines);
+							Cumulus.LogMessage($"EditExtraHum: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							Cumulus.LogMessage($"EditExtraHum: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						}
+						catch (Exception ex)
+						{
+							cumulus.LogExceptionMessage(ex, "EditDataLog: Entry deletion failed. Error");
+							Cumulus.LogMessage($"EditExtraHum: Entry data = - {orgLine}");
+							context.Response.StatusCode = 500;
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+						}
+					}
+				}
+			}
+			else
+			{
+				Cumulus.LogMessage($"EditExtraHum: Unrecognised action = " + newData.action);
+				context.Response.StatusCode = 500;
+				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
+			}
+
+			// return the updated record
+			var rec = new List<string>(newData.data[0]);
+			return rec.ToJson();
+		}
+
+		#endregion ExtraHums
+
+		#region ExtraDewpoint
+
+		internal async Task<string> GetExtraDewData(string from, string to, string draw, int start, int length, string search)
+		{
+			try
+			{
+				// date will be in format "yyyy-mm-dd"
+				var stDate = from.Split('-');
+				var enDate = to.Split('-');
+
+				var filtered = 0;  // otal number of filtered rows available
+				var thisDraw = 0;  // count of the rows we are returning
+
+				// Get a time stamp, use 15th day to avoid wrap issues
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				ts1 = ts1.AddDays(1);
+
+				if (ts > ts1)
+				{
+					// this cannot be, the end is earlier than the start!
+					return "";
+				}
+
+				var watch = System.Diagnostics.Stopwatch.StartNew();
+
+				var rows = await station.DatabaseAsync.QueryAsync<ExtraDewPoint>("select * from ExtraDewPoint where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var json = new StringBuilder(350 * length);
+
+				json.Append("{\"recordsTotal\":");
+				json.Append(rows.Count);
+				json.Append(",\"data\":[");
+
+				foreach (var row in rows)
+				{
+					var text = row.ToCSV();
+
+					// if we have a search string and no match, skip to next line
+					if (!string.IsNullOrEmpty(search) && !text.Contains(search))
+					{
+						continue;
+					}
+
+					filtered++;
+
+					// skip records until we get to the start entry
+					if (filtered <= start)
+					{
+						continue;
+					}
+
+					// only send the number requested
+					if (thisDraw < length)
+					{
+						// track the number of lines we have to return so far
+						thisDraw++;
+
+						json.Append('[');
+						json.Append(text);
+						json.Append("],");
+					}
+				}
+
+				// trim trailing ","
+				if (thisDraw > 0)
+					json.Length--;
+
+				json.Append("],\"draw\":");
+				json.Append(draw);
+				json.Append(",\"recordsFiltered\":");
+				json.Append(filtered);
+				json.Append('}');
+
+				watch.Stop();
+				var elapsed = watch.ElapsedMilliseconds;
+				cumulus.LogDebugMessage($"GetExtraDewData: Parse time = {elapsed} ms");
+				cumulus.LogDebugMessage($"GetExtraDewData: Found={rows.Count}, filtered={filtered} (filter='{search}'), start={start}, return={thisDraw}");
+
+				return json.ToString();
+			}
+			catch (Exception ex)
+			{
+				Cumulus.LogMessage(ex.ToString());
+			}
+
+			return "";
+		}
+
+		internal string EditExtraDew(IHttpContext context)
+		{
+			var request = context.Request;
+			string text;
+			using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+			{
+				text = reader.ReadToEnd();
+			}
+
+			var newData = text.FromJson<DailyDataEditor>();
+
+			if (newData.action == "Edit")
+			{
+				// Update the MX database
+				var newRec = new ExtraDewPoint();
+				newRec.FromString(newData.data[0]);
+				var logDate = Utils.FromUnixTime(newData.dates[0]);
+				var logDateStr = newData.data[0][0];
+
+				try
+				{
+					var res = station.Database.Update(newRec);
+					//await station.DatabaseAsync.UpdateAsync(newRec);
+					if (res == 1)
+					{
+						Cumulus.LogMessage($"EditExtraDew: Changed database entry {logDateStr}");
+					}
+					else
+					{
+						Cumulus.LogMessage($"EditExtraDew: ERROR - Faied to update database entry {logDateStr}");
+						context.Response.StatusCode = 500;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+				catch (Exception ex)
+				{
+					context.Response.StatusCode = 500;
+					var thisrec = new List<string>(newData.data[0]);
+
+					return "{\"errors\": { \"SQLite\":[<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
+				}
+
+				// Update the extralogfile
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+
+					// read the log file into a List
+					var lines = File.ReadAllLines(logfile).ToList();
+					var lineNum = 0;
+
+					// Find the line using the date string
+					var found = false;
+					foreach (var line in lines)
+					{
+						if (line.Contains(logDateStr))
+						{
+							found = true;
+							break;
+						}
+
+						lineNum++;
+					}
+
+					if (!found)
+					{
+						Cumulus.LogMessage($"EditExtraDew: Error editing entry, line not found for - {logDateStr}");
+						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
+					}
+
+					// replace the extra dew point fields (22-31) edited line
+					var orgLine = lines[lineNum];
+					var orgFields = orgLine.Split(',');
+
+					var newLine = String.Join(',', orgFields[0..22]) + ',' + String.Join(',', newData.data[0][2..]) + ',' + String.Join(',', orgFields[32..]);
+
+					lines[lineNum] = newLine;
+
+					try
+					{
+						// write logfile back again
+						File.WriteAllLines(logfile, lines);
+						Cumulus.LogMessage($"EditExtraDew: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						Cumulus.LogMessage($"EditExtraDew: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "EditExtraDew: Failed, error");
+						Cumulus.LogMessage("EditExtraDew: Data received - " + newLine);
+						context.Response.StatusCode = 500;
+					}
+				}
+			}
+			else if (newData.action == "Delete")
+			{
+				// Update the MX database
+				foreach (var row in newData.data)
+				{
+					var newRec = new ExtraDewPoint();
+					newRec.FromString(row);
+
+					try
+					{
+						var res = station.Database.Delete(newRec);
+						//await station.DatabaseAsync.DeleteAsync(newRec);
+						if (res == 1)
+						{
+							Cumulus.LogMessage($"EditExtraDew: Deleted database entry {row[0]}");
+						}
+						else
+						{
+							Cumulus.LogMessage($"EditExtraDew: ERROR - Faied to update database entry {row[0]}");
+							context.Response.StatusCode = 502;
+							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+						}
+					}
+					catch (Exception ex)
+					{
+						context.Response.StatusCode = 502;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+
+				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var lastMonth = -1;
+					string logfile = "";
+
+					var lines = new List<string>();
+
+					foreach (var row in newData.data)
+					{
+						var logDate = Utils.FromUnixTime(long.Parse(row[1]));
+
+						if (lastMonth != logDate.Month)
+						{
+							logfile = cumulus.GetExtraLogFileName(logDate);
+
+							// read the log file into a List
+							lines = File.ReadAllLines(logfile).ToList();
+						}
+
+						// Find the line using the timestamp
+						var found = false;
+						var lineNum = 0;
+						foreach (var line in lines)
+						{
+							if (line.Contains(row[1]))
+							{
+								found = true;
+								break;
+							}
+
+							lineNum++;
+						}
+
+						if (!found)
+						{
+							Cumulus.LogMessage($"EditExtraDew: Error deleting entry, line not found for - {row[0]}");
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
+						}
+
+						var orgLine = lines[lineNum];
+						var orgFields = orgLine.Split(',');
+
+						var newLine = String.Join(',', orgFields[0..22]) + ',' + ",,,,,,,,," + ',' + String.Join(',', orgFields[32..]);
+
+						lines[lineNum] = newLine;
+
+						try
+						{
+							// write logfile back again
+							File.WriteAllLines(logfile, lines);
+							Cumulus.LogMessage($"EditExtraDew: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							Cumulus.LogMessage($"EditExtraDew: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						}
+						catch (Exception ex)
+						{
+							cumulus.LogExceptionMessage(ex, "EditExtraDew: Entry deletion failed. Error");
+							Cumulus.LogMessage($"EditExtraDew: Entry data = - {orgLine}");
+							context.Response.StatusCode = 500;
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+						}
+					}
+				}
+			}
+			else
+			{
+				Cumulus.LogMessage($"EditExtraDew: Unrecognised action = " + newData.action);
+				context.Response.StatusCode = 500;
+				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
+			}
+
+			// return the updated record
+			var rec = new List<string>(newData.data[0]);
+			return rec.ToJson();
+		}
+
+
+		#endregion ExtraDewpoint
+
+		#region UserTemps
+
+		internal async Task<string> GetUserTempData(string from, string to, string draw, int start, int length, string search)
+		{
+			try
+			{
+				// date will be in format "yyyy-mm-dd"
+				var stDate = from.Split('-');
+				var enDate = to.Split('-');
+
+				var filtered = 0;  // otal number of filtered rows available
+				var thisDraw = 0;  // count of the rows we are returning
+
+				// Get a time stamp, use 15th day to avoid wrap issues
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				ts1 = ts1.AddDays(1);
+
+				if (ts > ts1)
+				{
+					// this cannot be, the end is earlier than the start!
+					return "";
+				}
+
+				var watch = System.Diagnostics.Stopwatch.StartNew();
+
+				var rows = await station.DatabaseAsync.QueryAsync<UserTemp>("select * from UserTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var json = new StringBuilder(350 * length);
+
+				json.Append("{\"recordsTotal\":");
+				json.Append(rows.Count);
+				json.Append(",\"data\":[");
+
+				foreach (var row in rows)
+				{
+					var text = row.ToCSV();
+
+					// if we have a search string and no match, skip to next line
+					if (!string.IsNullOrEmpty(search) && !text.Contains(search))
+					{
+						continue;
+					}
+
+					filtered++;
+
+					// skip records until we get to the start entry
+					if (filtered <= start)
+					{
+						continue;
+					}
+
+					// only send the number requested
+					if (thisDraw < length)
+					{
+						// track the number of lines we have to return so far
+						thisDraw++;
+
+						json.Append('[');
+						json.Append(text);
+						json.Append("],");
+					}
+				}
+
+				// trim trailing ","
+				if (thisDraw > 0)
+					json.Length--;
+
+				json.Append("],\"draw\":");
+				json.Append(draw);
+				json.Append(",\"recordsFiltered\":");
+				json.Append(filtered);
+				json.Append('}');
+
+				watch.Stop();
+				var elapsed = watch.ElapsedMilliseconds;
+				cumulus.LogDebugMessage($"GetUserTempData: Parse time = {elapsed} ms");
+				cumulus.LogDebugMessage($"GetUserTempData: Found={rows.Count}, filtered={filtered} (filter='{search}'), start={start}, return={thisDraw}");
+
+				return json.ToString();
+			}
+			catch (Exception ex)
+			{
+				Cumulus.LogMessage(ex.ToString());
+			}
+
+			return "";
+		}
+
+		internal string EditUserTemp(IHttpContext context)
+		{
+			var request = context.Request;
+			string text;
+			using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+			{
+				text = reader.ReadToEnd();
+			}
+
+			var newData = text.FromJson<DailyDataEditor>();
+
+			if (newData.action == "Edit")
+			{
+				// Update the MX database
+				var newRec = new UserTemp();
+				newRec.FromString(newData.data[0]);
+				var logDate = Utils.FromUnixTime(newData.dates[0]);
+				var logDateStr = newData.data[0][0];
+
+				try
+				{
+					var res = station.Database.Update(newRec);
+					//await station.DatabaseAsync.UpdateAsync(newRec);
+					if (res == 1)
+					{
+						Cumulus.LogMessage($"EditUserTemp: Changed database entry {logDateStr}");
+					}
+					else
+					{
+						Cumulus.LogMessage($"EditUserTemp: ERROR - Faied to update database entry {logDateStr}");
+						context.Response.StatusCode = 500;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+				catch (Exception ex)
+				{
+					context.Response.StatusCode = 500;
+					var thisrec = new List<string>(newData.data[0]);
+
+					return "{\"errors\": { \"SQLite\":[<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
+				}
+
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					// Update the extralogfile
+					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+
+					// read the log file into a List
+					var lines = File.ReadAllLines(logfile).ToList();
+
+					// Find the line using the date string
+					var found = false;
+					var lineNum = 0;
+					foreach (var line in lines)
+					{
+						if (line.Contains(logDateStr))
+						{
+							found = true;
+							break;
+						}
+
+						lineNum++;
+					}
+
+					if (!found)
+					{
+						Cumulus.LogMessage($"EditUserTemp: Error editing entry, line not found for - {logDateStr}");
+						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
+					}
+
+					// replace the extra temp fields (76-83) edited line
+					var orgLine = lines[lineNum];
+					var orgFields = orgLine.Split(',');
+
+					var newLine = String.Join(',', orgFields[0..76]) + ',' + String.Join(',', newData.data[0][2..]) + ',' + String.Join(',', orgFields[84..]);
+
+					lines[lineNum] = newLine;
+
+					try
+					{
+						// write logfile back again
+						File.WriteAllLines(logfile, lines);
+						Cumulus.LogMessage($"EditUserTemp: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						Cumulus.LogMessage($"EditUserTemp: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "EditUserTemp: Failed, error");
+						Cumulus.LogMessage("EditUserTemp: Data received - " + newLine);
+						context.Response.StatusCode = 500;
+					}
+				}
+			}
+			else if (newData.action == "Delete")
+			{
+				// Update the MX database
+				foreach (var row in newData.data)
+				{
+					var newRec = new UserTemp();
+					newRec.FromString(row);
+
+					try
+					{
+						var res = station.Database.Delete(newRec);
+						//await station.DatabaseAsync.DeleteAsync(newRec);
+						if (res == 1)
+						{
+							Cumulus.LogMessage($"EditUserTemp: Deleted database entry {row[0]}");
+						}
+						else
+						{
+							Cumulus.LogMessage($"EditUserTemp: ERROR - Faied to update database entry {row[0]}");
+							context.Response.StatusCode = 502;
+							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+						}
+					}
+						catch (Exception ex)
+					{
+						context.Response.StatusCode = 502;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+
+				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var lastMonth = -1;
+					string logfile = "";
+
+					var lines = new List<string>();
+
+					foreach (var row in newData.data)
+					{
+						var logDate = Utils.FromUnixTime(long.Parse(row[1]));
+
+						if (lastMonth != logDate.Month)
+						{
+							logfile = cumulus.GetExtraLogFileName(logDate);
+
+							// read the log file into a List
+							lines = File.ReadAllLines(logfile).ToList();
+						}
+
+						// Find the line using the timestamp
+						var found = false;
+						var lineNum = 0;
+						foreach (var line in lines)
+						{
+							if (line.Contains(row[1]))
+							{
+								found = true;
+								break;
+							}
+
+							lineNum++;
+						}
+
+						if (!found)
+						{
+							Cumulus.LogMessage($"EditUserTemp: Error deleting entry, line not found for - {row[0]}");
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
+						}
+
+						var orgLine = lines[lineNum];
+						var orgFields = orgLine.Split(',');
+
+						var newLine = String.Join(',', orgFields[0..76]) + ',' + ",,,,,,,,," + ',' + String.Join(',', orgFields[84..]);
+
+						lines[lineNum] = newLine;
+
+						try
+						{
+							// write logfile back again
+							File.WriteAllLines(logfile, lines);
+							Cumulus.LogMessage($"EditUserTemp: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							Cumulus.LogMessage($"EditUserTemp: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						}
+						catch (Exception ex)
+						{
+							cumulus.LogExceptionMessage(ex, "EditUserTemp: Entry deletion failed. Error");
+							Cumulus.LogMessage($"EditUserTemp: Entry data = - {orgLine}");
+							context.Response.StatusCode = 500;
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+						}
+					}
+				}
+			}
+			else
+			{
+				Cumulus.LogMessage($"EditUserTemp: Unrecognised action = " + newData.action);
+				context.Response.StatusCode = 500;
+				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
+			}
+
+			// return the updated record
+			var rec = new List<string>(newData.data[0]);
+			return rec.ToJson();
+		}
+
+
+		#endregion UserTemps
+
+		#region SoilTemps
+
+		internal async Task<string> GetSoilTempData(string from, string to, string draw, int start, int length, string search)
+		{
+			try
+			{
+				// date will be in format "yyyy-mm-dd"
+				var stDate = from.Split('-');
+				var enDate = to.Split('-');
+
+				var filtered = 0;  // otal number of filtered rows available
+				var thisDraw = 0;  // count of the rows we are returning
+
+				// Get a time stamp, use 15th day to avoid wrap issues
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				ts1 = ts1.AddDays(1);
+
+				if (ts > ts1)
+				{
+					// this cannot be, the end is earlier than the start!
+					return "";
+				}
+
+				var watch = System.Diagnostics.Stopwatch.StartNew();
+
+				var rows = await station.DatabaseAsync.QueryAsync<SoilTemp>("select * from SoilTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var json = new StringBuilder(350 * length);
+
+				json.Append("{\"recordsTotal\":");
+				json.Append(rows.Count);
+				json.Append(",\"data\":[");
+
+				foreach (var row in rows)
+				{
+					var text = row.ToCSV();
+
+					// if we have a search string and no match, skip to next line
+					if (!string.IsNullOrEmpty(search) && !text.Contains(search))
+					{
+						continue;
+					}
+
+					filtered++;
+
+					// skip records until we get to the start entry
+					if (filtered <= start)
+					{
+						continue;
+					}
+
+					// only send the number requested
+					if (thisDraw < length)
+					{
+						// track the number of lines we have to return so far
+						thisDraw++;
+
+						json.Append('[');
+						json.Append(text);
+						json.Append("],");
+					}
+				}
+
+				// trim trailing ","
+				if (thisDraw > 0)
+					json.Length--;
+
+				json.Append("],\"draw\":");
+				json.Append(draw);
+				json.Append(",\"recordsFiltered\":");
+				json.Append(filtered);
+				json.Append('}');
+
+				watch.Stop();
+				var elapsed = watch.ElapsedMilliseconds;
+				cumulus.LogDebugMessage($"GetSoilTempData: Parse time = {elapsed} ms");
+				cumulus.LogDebugMessage($"GetSoilTempData: Found={rows.Count}, filtered={filtered} (filter='{search}'), start={start}, return={thisDraw}");
+
+				return json.ToString();
+			}
+			catch (Exception ex)
+			{
+				Cumulus.LogMessage(ex.ToString());
+			}
+
+			return "";
+		}
+
+		internal string EditSoilTemp(IHttpContext context)
+		{
+			var request = context.Request;
+			string text;
+			using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+			{
+				text = reader.ReadToEnd();
+			}
+
+			var newData = text.FromJson<DailyDataEditor>();
+
+			if (newData.action == "Edit")
+			{
+
+				// Update the MX database
+				var newRec = new SoilTemp();
+				newRec.FromString(newData.data[0]);
+				var logDate = Utils.FromUnixTime(newData.dates[0]);
+				var logDateStr = newData.data[0][0];
+
+				try
+				{
+					var res = station.Database.Update(newRec);
+					//await station.DatabaseAsync.UpdateAsync(newRec);
+					if (res == 1)
+					{
+						Cumulus.LogMessage($"EditSoilTemp: Changed database entry {logDateStr}");
+					}
+					else
+					{
+						Cumulus.LogMessage($"EditSoilTemp: ERROR - Faied to update database entry {logDateStr}");
+						context.Response.StatusCode = 500;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+				catch (Exception ex)
+				{
+					context.Response.StatusCode = 500;
+					var thisrec = new List<string>(newData.data[0]);
+
+					return "{\"errors\": { \"SQLite\":[<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
+				}
+
+				// Update the extralogfile
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+
+					// read the log file into a List
+					var lines = File.ReadAllLines(logfile).ToList();
+					var lineNum = 0;
+
+					// Find the line using the date string
+					var found = false;
+					foreach (var line in lines)
+					{
+						if (line.Contains(logDateStr))
+						{
+							found = true;
+							break;
+						}
+
+						lineNum++;
+					}
+
+					if (!found)
+					{
+						Cumulus.LogMessage($"EditSoilTemp: Error editing entry, line not found for - {logDateStr}");
+						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
+					}
+
+					// replace the extra temp fields (32-35 & 44-55) edited line
+					var orgLine = lines[lineNum];
+					var orgFields = orgLine.Split(',');
+
+					var newLine = String.Join(',', orgFields[0..32]) + ',' + String.Join(',', newData.data[0][2..5]) + ',' + String.Join(',', orgFields[36..44]) + ',' + String.Join(',', newData.data[0][6..]) + ',' + String.Join(',', orgFields[56..]);
+
+					lines[lineNum] = newLine;
+
+					try
+					{
+						// write logfile back again
+						File.WriteAllLines(logfile, lines);
+						Cumulus.LogMessage($"EditSoilTemp: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						Cumulus.LogMessage($"EditSoilTemp: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "EditUserTemp: Failed, error");
+						Cumulus.LogMessage("EditSoilTemp: Data received - " + newLine);
+						context.Response.StatusCode = 500;
+					}
+				}
+			}
+			else if (newData.action == "Delete")
+			{
+				// Update the MX database
+				foreach (var row in newData.data)
+				{
+					var newRec = new SoilTemp();
+					newRec.FromString(row);
+
+					try
+					{
+						var res = station.Database.Delete(newRec);
+						//await station.DatabaseAsync.DeleteAsync(newRec);
+						if (res == 1)
+						{
+							Cumulus.LogMessage($"EditSoilTemp: Deleted database entry {row[0]}");
+						}
+						else
+						{
+							Cumulus.LogMessage($"EditSoilTemp: ERROR - Faied to update database entry {row[0]}");
+							context.Response.StatusCode = 502;
+							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+						}
+					}
+					catch (Exception ex)
+					{
+						context.Response.StatusCode = 502;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+
+				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var lastMonth = -1;
+					string logfile = "";
+
+					var lines = new List<string>();
+
+					foreach (var row in newData.data)
+					{
+						var logDate = Utils.FromUnixTime(long.Parse(row[1]));
+
+						if (lastMonth != logDate.Month)
+						{
+							logfile = cumulus.GetExtraLogFileName(logDate);
+
+							// read the log file into a List
+							lines = File.ReadAllLines(logfile).ToList();
+						}
+
+						// Find the line using the timestamp
+						var found = false;
+						var lineNum = 0;
+						foreach (var line in lines)
+						{
+							if (line.Contains(row[1]))
+							{
+								found = true;
+								break;
+							}
+
+							lineNum++;
+						}
+
+						if (!found)
+						{
+							Cumulus.LogMessage($"EditSoilTemp: Error deleting entry, line not found for - {row[0]}");
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
+						}
+
+						var orgLine = lines[lineNum];
+						var orgFields = orgLine.Split(',');
+
+						var newLine = String.Join(',', orgFields[0..32]) + ',' + ",,," + ',' + String.Join(',', orgFields[36..44]) + ',' + ",,,,,,,,,,," + ',' + String.Join(',', orgFields[56..]);
+
+						lines[lineNum] = newLine;
+
+						try
+						{
+							// write logfile back again
+							File.WriteAllLines(logfile, lines);
+							Cumulus.LogMessage($"EditSoilTemp: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							Cumulus.LogMessage($"EditSoilTemp: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						}
+						catch (Exception ex)
+						{
+							cumulus.LogExceptionMessage(ex, "EditSoilTemp: Entry deletion failed. Error");
+							Cumulus.LogMessage($"EditSoilTemp: Entry data = - {orgLine}");
+							context.Response.StatusCode = 500;
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+						}
+					}
+				}
+			}
+			else
+			{
+				Cumulus.LogMessage($"EditUserTemp: Unrecognised action = " + newData.action);
+				context.Response.StatusCode = 500;
+				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
+			}
+
+			// return the updated record
+			var rec = new List<string>(newData.data[0]);
+			return rec.ToJson();
+		}
+
+
+		#endregion SoilTemps
+
+		#region SoilMoist
+
+		internal async Task<string> GetSoilMoistData(string from, string to, string draw, int start, int length, string search)
+		{
+			try
+			{
+				// date will be in format "yyyy-mm-dd"
+				var stDate = from.Split('-');
+				var enDate = to.Split('-');
+
+				var filtered = 0;  // otal number of filtered rows available
+				var thisDraw = 0;  // count of the rows we are returning
+
+				// Get a time stamp, use 15th day to avoid wrap issues
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				ts1 = ts1.AddDays(1);
+
+				if (ts > ts1)
+				{
+					// this cannot be, the end is earlier than the start!
+					return "";
+				}
+
+				var watch = System.Diagnostics.Stopwatch.StartNew();
+
+				var rows = await station.DatabaseAsync.QueryAsync<SoilMoist>("select * from SoilMoist where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var json = new StringBuilder(350 * length);
+
+				json.Append("{\"recordsTotal\":");
+				json.Append(rows.Count);
+				json.Append(",\"data\":[");
+
+				foreach (var row in rows)
+				{
+					var text = row.ToCSV();
+
+					// if we have a search string and no match, skip to next line
+					if (!string.IsNullOrEmpty(search) && !text.Contains(search))
+					{
+						continue;
+					}
+
+					filtered++;
+
+					// skip records until we get to the start entry
+					if (filtered <= start)
+					{
+						continue;
+					}
+
+					// only send the number requested
+					if (thisDraw < length)
+					{
+						// track the number of lines we have to return so far
+						thisDraw++;
+
+						json.Append('[');
+						json.Append(text);
+						json.Append("],");
+					}
+				}
+
+				// trim trailing ","
+				if (thisDraw > 0)
+					json.Length--;
+
+				json.Append("],\"draw\":");
+				json.Append(draw);
+				json.Append(",\"recordsFiltered\":");
+				json.Append(filtered);
+				json.Append('}');
+
+				watch.Stop();
+				var elapsed = watch.ElapsedMilliseconds;
+				cumulus.LogDebugMessage($"GetSoilMoistData: Parse time = {elapsed} ms");
+				cumulus.LogDebugMessage($"GetSoilMoistData: Found={rows.Count}, filtered={filtered} (filter='{search}'), start={start}, return={thisDraw}");
+
+				return json.ToString();
+			}
+			catch (Exception ex)
+			{
+				Cumulus.LogMessage(ex.ToString());
+			}
+
+			return "";
+		}
+
+		internal string EditSoilMoist(IHttpContext context)
+		{
+			var request = context.Request;
+			string text;
+			using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+			{
+				text = reader.ReadToEnd();
+			}
+
+			var newData = text.FromJson<DailyDataEditor>();
+
+			if (newData.action == "Edit")
+			{
+
+				// Update the MX database
+				var newRec = new SoilMoist();
+				newRec.FromString(newData.data[0]);
+				var logDate = Utils.FromUnixTime(newData.dates[0]);
+				var logDateStr = newData.data[0][0];
+
+				try
+				{
+					var res = station.Database.Update(newRec);
+					//await station.DatabaseAsync.UpdateAsync(newRec);
+					if (res == 1)
+					{
+						Cumulus.LogMessage($"EditSoilMoist: Changed database entry {logDateStr}");
+					}
+					else
+					{
+						Cumulus.LogMessage($"EditSoilMoist: ERROR - Faied to update database entry {logDateStr}");
+						context.Response.StatusCode = 500;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+				catch (Exception ex)
+				{
+					context.Response.StatusCode = 500;
+					var thisrec = new List<string>(newData.data[0]);
+
+					return "{\"errors\": { \"SQLite\":[<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
+				}
+
+				// Update the extralogfile
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+
+					// read the log file into a List
+					var lines = File.ReadAllLines(logfile).ToList();
+
+					// Find the line using the date string
+					var found = false;
+					var lineNum = 0;
+					foreach (var line in lines)
+					{
+						if (line.Contains(logDateStr))
+						{
+							found = true;
+							break;
+						}
+
+						lineNum++;
+					}
+
+					if (!found)
+					{
+						Cumulus.LogMessage($"EditSoilMoist: Error editing entry, line not found for - {logDateStr}");
+						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
+					}
+
+					// replace the soil moist fields (36-39 & 56-67)edited line
+					var orgLine = lines[lineNum];
+					var orgFields = orgLine.Split(',');
+
+					var newLine = String.Join(',', orgFields[0..36]) + ',' + String.Join(',', newData.data[0][2..5]) + ',' + String.Join(',', orgFields[40..56]) + ',' + String.Join(',', newData.data[0][6..]) + ',' + String.Join(',', orgFields[68..]);
+
+					lines[lineNum] = newLine;
+
+					try
+					{
+						// write logfile back again
+						File.WriteAllLines(logfile, lines);
+						Cumulus.LogMessage($"EditSoilMoist: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						Cumulus.LogMessage($"EditSoilMoist: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "EditSoilMoist: Failed, error");
+						Cumulus.LogMessage("EditSoilMoist: Data received - " + newLine);
+						context.Response.StatusCode = 500;
+					}
+				}
+			}
+			else if (newData.action == "Delete")
+			{
+				// Update the MX database
+				foreach (var row in newData.data)
+				{
+					var newRec = new SoilTemp();
+					newRec.FromString(row);
+
+					try
+					{
+						var res = station.Database.Delete(newRec);
+						//await station.DatabaseAsync.DeleteAsync(newRec);
+						if (res == 1)
+						{
+							Cumulus.LogMessage($"EditSoilMoist: Deleted database entry {row[0]}");
+						}
+						else
+						{
+							Cumulus.LogMessage($"EditSoilMoist: ERROR - Faied to update database entry {row[0]}");
+							context.Response.StatusCode = 502;
+							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+						}
+					}
+					catch (Exception ex)
+					{
+						context.Response.StatusCode = 502;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+
+				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+
+					var lastMonth = -1;
+					string logfile = "";
+
+					var lines = new List<string>();
+
+					foreach (var row in newData.data)
+					{
+						var logDate = Utils.FromUnixTime(long.Parse(row[1]));
+
+						if (lastMonth != logDate.Month)
+						{
+							logfile = cumulus.GetExtraLogFileName(logDate);
+
+							// read the log file into a List
+							lines = File.ReadAllLines(logfile).ToList();
+						}
+
+						// Find the line using the timestamp
+						var found = false;
+						var lineNum = 0;
+						foreach (var line in lines)
+						{
+							if (line.Contains(row[1]))
+							{
+								found = true;
+								break;
+							}
+
+							lineNum++;
+						}
+
+						if (!found)
+						{
+							Cumulus.LogMessage($"EditSoilMoist: Error deleting entry, line not found for - {row[0]}");
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
+						}
+
+						var orgLine = lines[lineNum];
+						var orgFields = orgLine.Split(',');
+
+						var newLine = String.Join(',', orgFields[0..36]) + ',' + ",,," + ',' + String.Join(',', orgFields[40..56]) + ',' + ",,,,,,,,,,," + ',' + String.Join(',', orgFields[68..]);
+
+						lines[lineNum] = newLine;
+
+						try
+						{
+							// write logfile back again
+							File.WriteAllLines(logfile, lines);
+							Cumulus.LogMessage($"EditSoilMoist: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							Cumulus.LogMessage($"EditSoilMoist: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						}
+						catch (Exception ex)
+						{
+							cumulus.LogExceptionMessage(ex, "EditSoilMoist: Entry deletion failed. Error");
+							Cumulus.LogMessage($"EditSoilMoist: Entry data = - {orgLine}");
+							context.Response.StatusCode = 500;
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+						}
+					}
+				}
+			}
+			else
+			{
+				Cumulus.LogMessage($"EditSoilMoist: Unrecognised action = " + newData.action);
+				context.Response.StatusCode = 500;
+				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
+			}
+
+			// return the updated record
+			var rec = new List<string>(newData.data[0]);
+			return rec.ToJson();
+		}
+
+		#endregion SoilMoist
+
+		#region LeafTemp
+
+		internal async Task<string> GetLeafTempData(string from, string to, string draw, int start, int length, string search)
+		{
+			try
+			{
+				// date will be in format "yyyy-mm-dd"
+				var stDate = from.Split('-');
+				var enDate = to.Split('-');
+
+				var filtered = 0;  // otal number of filtered rows available
+				var thisDraw = 0;  // count of the rows we are returning
+
+				// Get a time stamp, use 15th day to avoid wrap issues
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				ts1 = ts1.AddDays(1);
+
+				if (ts > ts1)
+				{
+					// this cannot be, the end is earlier than the start!
+					return "";
+				}
+
+				var watch = System.Diagnostics.Stopwatch.StartNew();
+
+				var rows = await station.DatabaseAsync.QueryAsync<LeafTemp>("select * from LeafTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var json = new StringBuilder(350 * length);
+
+				json.Append("{\"recordsTotal\":");
+				json.Append(rows.Count);
+				json.Append(",\"data\":[");
+
+				foreach (var row in rows)
+				{
+					var text = row.ToCSV();
+
+					// if we have a search string and no match, skip to next line
+					if (!string.IsNullOrEmpty(search) && !text.Contains(search))
+					{
+						continue;
+					}
+
+					filtered++;
+
+					// skip records until we get to the start entry
+					if (filtered <= start)
+					{
+						continue;
+					}
+
+					// only send the number requested
+					if (thisDraw < length)
+					{
+						// track the number of lines we have to return so far
+						thisDraw++;
+
+						json.Append('[');
+						json.Append(text);
+						json.Append("],");
+					}
+				}
+
+				// trim trailing ","
+				if (thisDraw > 0)
+					json.Length--;
+
+				json.Append("],\"draw\":");
+				json.Append(draw);
+				json.Append(",\"recordsFiltered\":");
+				json.Append(filtered);
+				json.Append('}');
+
+				watch.Stop();
+				var elapsed = watch.ElapsedMilliseconds;
+				cumulus.LogDebugMessage($"GetLeafTempData: Parse time = {elapsed} ms");
+				cumulus.LogDebugMessage($"GetLeafTempData: Found={rows.Count}, filtered={filtered} (filter='{search}'), start={start}, return={thisDraw}");
+
+				return json.ToString();
+			}
+			catch (Exception ex)
+			{
+				Cumulus.LogMessage(ex.ToString());
+			}
+
+			return "";
+		}
+
+		internal string EditLeafTemp(IHttpContext context)
+		{
+			var request = context.Request;
+			string text;
+			using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+			{
+				text = reader.ReadToEnd();
+			}
+
+			var newData = text.FromJson<DailyDataEditor>();
+
+			if (newData.action == "Edit")
+			{
+
+				// Update the MX database
+				var newRec = new LeafTemp();
+				newRec.FromString(newData.data[0]);
+				var logDate = Utils.FromUnixTime(newData.dates[0]);
+				var logDateStr = newData.data[0][0];
+
+				try
+				{
+					var res = station.Database.Update(newRec);
+					//await station.DatabaseAsync.UpdateAsync(newRec);
+					if (res == 1)
+					{
+						Cumulus.LogMessage($"EditLeafTemp: Changed database entry {logDateStr}");
+					}
+					else
+					{
+						Cumulus.LogMessage($"EditLeafTemp: ERROR - Faied to update database entry {logDateStr}");
+						context.Response.StatusCode = 500;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+				catch (Exception ex)
+				{
+					context.Response.StatusCode = 500;
+					var thisrec = new List<string>(newData.data[0]);
+
+					return "{\"errors\": { \"SQLite\":[<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
+				}
+
+				// Update the extralogfile
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+
+					// read the log file into a List
+					var lines = File.ReadAllLines(logfile).ToList();
+
+					// Find the line using the date string
+					var found = false;
+					var lineNum = 0;
+					foreach (var line in lines)
+					{
+						if (line.Contains(logDateStr))
+						{
+							found = true;
+							break;
+						}
+
+						lineNum++;
+					}
+
+					if (!found)
+					{
+						Cumulus.LogMessage($"EditLeafTemp: Error editing entry, line not found for - {logDateStr}");
+						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
+					}
+
+					// replace the extra temp fields (40-41) edited line
+					var orgLine = lines[lineNum];
+					var orgFields = orgLine.Split(',');
+
+					var newLine = String.Join(',', orgFields[0..40]) + ',' + String.Join(',', newData.data[0][2..4]) + ',' + String.Join(',', orgFields[42..]);
+
+					lines[lineNum] = newLine;
+
+					try
+					{
+						// write logfile back again
+						File.WriteAllLines(logfile, lines);
+						Cumulus.LogMessage($"EditLeafTemp: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						Cumulus.LogMessage($"EditLeafTemp: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "EditLeafTemp: Failed, error");
+						Cumulus.LogMessage("EditLeafTemp: Data received - " + newLine);
+						context.Response.StatusCode = 500;
+					}
+				}
+			}
+			else if (newData.action == "Delete")
+			{
+				// Update the MX database
+				foreach (var row in newData.data)
+				{
+					var newRec = new SoilTemp();
+					newRec.FromString(row);
+
+					try
+					{
+						var res = station.Database.Delete(newRec);
+						//await station.DatabaseAsync.DeleteAsync(newRec);
+						if (res == 1)
+						{
+							Cumulus.LogMessage($"EditLeafTemp: Deleted database entry {row[0]}");
+						}
+						else
+						{
+							Cumulus.LogMessage($"EditLeafTemp: ERROR - Faied to update database entry {row[0]}");
+							context.Response.StatusCode = 502;
+							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+						}
+					}
+					catch (Exception ex)
+					{
+						context.Response.StatusCode = 502;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+
+				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var lastMonth = -1;
+					string logfile = "";
+
+					var lines = new List<string>();
+
+					foreach (var row in newData.data)
+					{
+						var logDate = Utils.FromUnixTime(long.Parse(row[1]));
+
+						if (lastMonth != logDate.Month)
+						{
+							logfile = cumulus.GetExtraLogFileName(logDate);
+
+							// read the log file into a List
+							lines = File.ReadAllLines(logfile).ToList();
+						}
+
+						// Find the line using the timestamp
+						var found = false;
+						var lineNum = 0;
+						foreach (var line in lines)
+						{
+							if (line.Contains(row[1]))
+							{
+								found = true;
+								break;
+							}
+
+							lineNum++;
+						}
+
+						if (!found)
+						{
+							Cumulus.LogMessage($"EditLeafTemp: Error deleting entry, line not found for - {row[0]}");
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
+						}
+
+						var orgLine = lines[lineNum];
+						var orgFields = orgLine.Split(',');
+
+						var newLine = String.Join(',', orgFields[0..40]) + ',' + "," + ',' + String.Join(',', orgFields[42..]);
+
+						lines[lineNum] = newLine;
+
+						try
+						{
+							// write logfile back again
+							File.WriteAllLines(logfile, lines);
+							Cumulus.LogMessage($"EditLeafTemp: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							Cumulus.LogMessage($"EditLeafTemp: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						}
+						catch (Exception ex)
+						{
+							cumulus.LogExceptionMessage(ex, "EditLeafTemp: Entry deletion failed. Error");
+							Cumulus.LogMessage($"EditLeafTemp: Entry data = - {orgLine}");
+							context.Response.StatusCode = 500;
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+						}
+					}
+				}
+			}
+			else
+			{
+				Cumulus.LogMessage($"EditLeafTemp: Unrecognised action = " + newData.action);
+				context.Response.StatusCode = 500;
+				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
+			}
+
+			// return the updated record
+			var rec = new List<string>(newData.data[0]);
+			return rec.ToJson();
+		}
+
+
+		#endregion LeafTemp
+
+		#region LeafWet
+
+		internal async Task<string> GetLeafWetData(string from, string to, string draw, int start, int length, string search)
+		{
+			try
+			{
+				// date will be in format "yyyy-mm-dd"
+				var stDate = from.Split('-');
+				var enDate = to.Split('-');
+
+				var filtered = 0;  // otal number of filtered rows available
+				var thisDraw = 0;  // count of the rows we are returning
+
+				// Get a time stamp, use 15th day to avoid wrap issues
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				ts1 = ts1.AddDays(1);
+
+				if (ts > ts1)
+				{
+					// this cannot be, the end is earlier than the start!
+					return "";
+				}
+
+				var watch = System.Diagnostics.Stopwatch.StartNew();
+
+				var rows = await station.DatabaseAsync.QueryAsync<LeafWet>("select * from LeafWet where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var json = new StringBuilder(350 * length);
+
+				json.Append("{\"recordsTotal\":");
+				json.Append(rows.Count);
+				json.Append(",\"data\":[");
+
+				foreach (var row in rows)
+				{
+					var text = row.ToCSV();
+
+					// if we have a search string and no match, skip to next line
+					if (!string.IsNullOrEmpty(search) && !text.Contains(search))
+					{
+						continue;
+					}
+
+					filtered++;
+
+					// skip records until we get to the start entry
+					if (filtered <= start)
+					{
+						continue;
+					}
+
+					// only send the number requested
+					if (thisDraw < length)
+					{
+						// track the number of lines we have to return so far
+						thisDraw++;
+
+						json.Append('[');
+						json.Append(text);
+						json.Append("],");
+					}
+				}
+
+				// trim trailing ","
+				if (thisDraw > 0)
+					json.Length--;
+
+				json.Append("],\"draw\":");
+				json.Append(draw);
+				json.Append(",\"recordsFiltered\":");
+				json.Append(filtered);
+				json.Append('}');
+
+				watch.Stop();
+				var elapsed = watch.ElapsedMilliseconds;
+				cumulus.LogDebugMessage($"GetLeafWetData: Parse time = {elapsed} ms");
+				cumulus.LogDebugMessage($"GetLeafWetData: Found={rows.Count}, filtered={filtered} (filter='{search}'), start={start}, return={thisDraw}");
+
+				return json.ToString();
+			}
+			catch (Exception ex)
+			{
+				Cumulus.LogMessage(ex.ToString());
+			}
+
+			return "";
+		}
+
+		internal string EditLeafWet(IHttpContext context)
+		{
+			var request = context.Request;
+			string text;
+			using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+			{
+				text = reader.ReadToEnd();
+			}
+
+			var newData = text.FromJson<DailyDataEditor>();
+
+			if (newData.action == "Edit")
+			{
+
+				// Update the MX database
+				var newRec = new LeafWet();
+				newRec.FromString(newData.data[0]);
+				var logDate = Utils.FromUnixTime(newData.dates[0]);
+				var logDateStr = newData.data[0][0];
+
+				try
+				{
+					var res = station.Database.Update(newRec);
+					//await station.DatabaseAsync.UpdateAsync(newRec);
+					if (res == 1)
+					{
+						Cumulus.LogMessage($"EditLeafWet: Changed database entry {logDateStr}");
+					}
+					else
+					{
+						Cumulus.LogMessage($"EditLeafWet: ERROR - Faied to update database entry {logDateStr}");
+						context.Response.StatusCode = 500;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+				catch (Exception ex)
+				{
+					context.Response.StatusCode = 500;
+					var thisrec = new List<string>(newData.data[0]);
+
+					return "{\"errors\": { \"SQLite\":[<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
+				}
+
+				// Update the extralogfile
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+
+					// read the log file into a List
+					var lines = File.ReadAllLines(logfile).ToList();
+
+					// Find the line using the date string
+					var found = false;
+					var lineNum = 0;
+					foreach (var line in lines)
+					{
+						if (line.Contains(logDateStr))
+						{
+							found = true;
+							break;
+						}
+
+						lineNum++;
+					}
+
+					if (!found)
+					{
+						Cumulus.LogMessage($"EditLeafWet: Error editing entry, line not found for - {logDateStr}");
+						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
+					}
+
+					// replace the leaf wetness fields (42-43) edited line
+					var orgLine = lines[lineNum];
+					var orgFields = orgLine.Split(',');
+
+					var newLine = String.Join(',', orgFields[0..42]) + ',' + String.Join(',', newData.data[0][2..3]) + ',' + String.Join(',', orgFields[44..]);
+
+					lines[lineNum] = newLine;
+
+					try
+					{
+						// write logfile back again
+						File.WriteAllLines(logfile, lines);
+						Cumulus.LogMessage($"EditLeafWet: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						Cumulus.LogMessage($"EditLeafWet: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "EditLeafWet: Failed, error");
+						Cumulus.LogMessage("EditLeafWet: Data received - " + newLine);
+						context.Response.StatusCode = 500;
+					}
+				}
+			}
+			else if (newData.action == "Delete")
+			{
+				// Update the MX database
+				foreach (var row in newData.data)
+				{
+					var newRec = new UserTemp();
+					newRec.FromString(row);
+
+					try
+					{
+						var res = station.Database.Delete(newRec);
+						//await station.DatabaseAsync.DeleteAsync(newRec);
+						if (res == 1)
+						{
+							Cumulus.LogMessage($"EditLeafWet: Deleted database entry {row[0]}");
+						}
+						else
+						{
+							Cumulus.LogMessage($"EditLeafWet: ERROR - Faied to update database entry {row[0]}");
+							context.Response.StatusCode = 502;
+							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+						}
+					}
+					catch (Exception ex)
+					{
+						context.Response.StatusCode = 502;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+
+				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var lastMonth = -1;
+					string logfile = "";
+
+					var lines = new List<string>();
+
+					foreach (var row in newData.data)
+					{
+						var logDate = Utils.FromUnixTime(long.Parse(row[1]));
+
+						if (lastMonth != logDate.Month)
+						{
+							logfile = cumulus.GetExtraLogFileName(logDate);
+
+							// read the log file into a List
+							lines = File.ReadAllLines(logfile).ToList();
+						}
+
+						// Find the line using the timestamp
+						var found = false;
+						var lineNum = 0;
+						foreach (var line in lines)
+						{
+							if (line.Contains(row[1]))
+							{
+								found = true;
+								break;
+							}
+
+							lineNum++;
+						}
+
+						if (!found)
+						{
+							Cumulus.LogMessage($"EditLeafWet: Error deleting entry, line not found for - {row[0]}");
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
+						}
+
+						var orgLine = lines[lineNum];
+						var orgFields = orgLine.Split(',');
+
+						var newLine = String.Join(',', orgFields[0..42]) + ',' + "," + ',' + String.Join(',', orgFields[44..]);
+
+						lines[lineNum] = newLine;
+
+						try
+						{
+							// write logfile back again
+							File.WriteAllLines(logfile, lines);
+							Cumulus.LogMessage($"EditLeafWet: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							Cumulus.LogMessage($"EditLeafWet: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+
+						}
+						catch (Exception ex)
+						{
+							cumulus.LogExceptionMessage(ex, "EditLeafWet: Entry deletion failed. Error");
+							Cumulus.LogMessage($"EditLeafWet: Entry data = - {orgLine}");
+							context.Response.StatusCode = 500;
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+						}
+					}
+				}
+			}
+			else
+			{
+				Cumulus.LogMessage($"EditLeafWet: Unrecognised action = " + newData.action);
+				context.Response.StatusCode = 500;
+				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
+			}
+
+			// return the updated record
+			var rec = new List<string>(newData.data[0]);
+			return rec.ToJson();
+		}
+
+		#endregion LeafTemp
+
+		#region AirQuality
+
+		internal async Task<string> GetAirQualData(string from, string to, string draw, int start, int length, string search)
+		{
+			try
+			{
+				// date will be in format "yyyy-mm-dd"
+				var stDate = from.Split('-');
+				var enDate = to.Split('-');
+
+				var filtered = 0;  // Total number of filtered rows available
+				var thisDraw = 0;  // count of the rows we are returning
+
+				// Get a time stamp, use 15th day to avoid wrap issues
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				ts1 = ts1.AddDays(1);
+
+				if (ts > ts1)
+				{
+					// this cannot be, the end is earlier than the start!
+					return "";
+				}
+
+				var watch = System.Diagnostics.Stopwatch.StartNew();
+
+				var rows = await station.DatabaseAsync.QueryAsync<AirQuality>("select * from AirQuality where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var json = new StringBuilder(350 * length);
+
+				json.Append("{\"recordsTotal\":");
+				json.Append(rows.Count);
+				json.Append(",\"data\":[");
+
+				foreach (var row in rows)
+				{
+					var text = row.ToCSV();
+
+					// if we have a search string and no match, skip to next line
+					if (!string.IsNullOrEmpty(search) && !text.Contains(search))
+					{
+						continue;
+					}
+
+					filtered++;
+
+					// skip records until we get to the start entry
+					if (filtered <= start)
+					{
+						continue;
+					}
+
+					// only send the number requested
+					if (thisDraw < length)
+					{
+						// track the number of lines we have to return so far
+						thisDraw++;
+
+						json.Append('[');
+						json.Append(text);
+						json.Append("],");
+					}
+				}
+
+				// trim trailing ","
+				if (thisDraw > 0)
+					json.Length--;
+
+				json.Append("],\"draw\":");
+				json.Append(draw);
+				json.Append(",\"recordsFiltered\":");
+				json.Append(filtered);
+				json.Append('}');
+
+				watch.Stop();
+				var elapsed = watch.ElapsedMilliseconds;
+				cumulus.LogDebugMessage($"GetAirQualData: Parse time = {elapsed} ms");
+				cumulus.LogDebugMessage($"GetAirQualData: Found={rows.Count}, filtered={filtered} (filter='{search}'), start={start}, return={thisDraw}");
+
+				return json.ToString();
+			}
+			catch (Exception ex)
+			{
+				Cumulus.LogMessage(ex.ToString());
+			}
+
+			return "";
+		}
+
+		internal string EditAirQual(IHttpContext context)
+		{
+			var request = context.Request;
+			string text;
+			using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+			{
+				text = reader.ReadToEnd();
+			}
+
+			var newData = text.FromJson<DailyDataEditor>();
+
+			if (newData.action == "Edit")
+			{
+
+				// Update the MX database
+				var newRec = new AirQuality();
+				newRec.FromString(newData.data[0]);
+				var logDate = Utils.FromUnixTime(newData.dates[0]);
+				var logDateStr = newData.data[0][0];
+
+				try
+				{
+					var res = station.Database.Update(newRec);
+					//await station.DatabaseAsync.UpdateAsync(newRec);
+					if (res == 1)
+					{
+						Cumulus.LogMessage($"EditAirQual: Changed database entry {logDateStr}");
+					}
+					else
+					{
+						Cumulus.LogMessage($"EditAirQual: ERROR - Faied to update database entry {logDateStr}");
+						context.Response.StatusCode = 500;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+				catch (Exception ex)
+				{
+					context.Response.StatusCode = 500;
+					var thisrec = new List<string>(newData.data[0]);
+
+					return "{\"errors\": { \"SQLite\":[<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
+				}
+
+				// Update the extralogfile
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+
+					// read the log file into a List
+					var lines = File.ReadAllLines(logfile).ToList();
+
+					// Find the line using the date string
+					var found = false;
+					var lineNum = 0;
+					foreach (var line in lines)
+					{
+						if (line.Contains(logDateStr))
+						{
+							found = true;
+							break;
+						}
+
+						lineNum++;
+					}
+
+					if (!found)
+					{
+						Cumulus.LogMessage($"EditAirQual: Error editing entry, line not found for - {logDateStr}");
+						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
+					}
+
+					// replace the leaf wetness fields (68-75) edited line
+					var orgLine = lines[lineNum];
+					var orgFields = orgLine.Split(',');
+
+					// We do not have the fields in the editor in the same order as the file - for clarity
+					// so construct a custom string
+					var vals = newData.data[0][2] + ',' + newData.data[0][4] + ',' + newData.data[0][6] + ',' + newData.data[0][8];
+					vals += ',' + newData.data[0][1] + ',' + newData.data[0][3] + ',' + newData.data[0][5] + ',' + newData.data[0][7];
+
+					var newLine = String.Join(',', orgFields[0..68]) + ',' + vals + ',' + String.Join(',', orgFields[76..]);
+
+					lines[lineNum] = newLine;
+
+					try
+					{
+						// write logfile back again
+						File.WriteAllLines(logfile, lines);
+						Cumulus.LogMessage($"EditAirQual: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						Cumulus.LogMessage($"EditAirQual: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "EditAirQual: Failed, error");
+						Cumulus.LogMessage("EditAirQual: Data received - " + newLine);
+						context.Response.StatusCode = 500;
+					}
+				}
+			}
+			else if (newData.action == "Delete")
+			{
+				// Update the MX database
+				foreach (var row in newData.data)
+				{
+					var newRec = new AirQuality();
+					newRec.FromString(row);
+
+					newRec.FromString(row);
+
+					try
+					{
+						var res = station.Database.Delete(newRec);
+						//await station.DatabaseAsync.DeleteAsync(newRec);
+						if (res == 1)
+						{
+							Cumulus.LogMessage($"EditAirQual: Deleted database entry {row[0]}");
+						}
+						else
+						{
+							Cumulus.LogMessage($"EditAirQual: ERROR - Faied to update database entry {row[0]}");
+							context.Response.StatusCode = 502;
+							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+						}
+					}
+					catch (Exception ex)
+					{
+						context.Response.StatusCode = 502;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+
+				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var lastMonth = -1;
+					string logfile = "";
+
+					var lines = new List<string>();
+
+					foreach (var row in newData.data)
+					{
+						var logDate = Utils.FromUnixTime(long.Parse(row[1]));
+
+						if (lastMonth != logDate.Month)
+						{
+							logfile = cumulus.GetExtraLogFileName(logDate);
+
+							// read the log file into a List
+							lines = File.ReadAllLines(logfile).ToList();
+						}
+
+
+						// Find the line using the timestamp
+						var found = false;
+						var lineNum = 0;
+						foreach (var line in lines)
+						{
+							if (line.Contains(row[1]))
+							{
+								found = true;
+								break;
+							}
+
+							lineNum++;
+						}
+
+						if (!found)
+						{
+							Cumulus.LogMessage($"EditAirQual: Error deleting entry, line not found for - {row[0]}");
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
+						}
+
+						var orgLine = lines[lineNum];
+						var orgFields = orgLine.Split(',');
+
+						var newLine = String.Join(',', orgFields[0..68]) + ',' + ",,,,,,," + ',' + String.Join(',', orgFields[76..]);
+
+						lines[lineNum] = newLine;
+
+						try
+						{
+							// write logfile back again
+							File.WriteAllLines(logfile, lines);
+							Cumulus.LogMessage($"EditAirQual: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							Cumulus.LogMessage($"EditAirQual: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+
+						}
+						catch (Exception ex)
+						{
+							cumulus.LogExceptionMessage(ex, "EditAirQual: Entry deletion failed. Error");
+							Cumulus.LogMessage($"EditAirQual: Entry data = - {orgLine}");
+							context.Response.StatusCode = 500;
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+						}
+					}
+				}
+			}
+			else
+			{
+				Cumulus.LogMessage($"EditAirQual: Unrecognised action = " + newData.action);
+				context.Response.StatusCode = 500;
+				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
+			}
+
+			// return the updated record
+			var rec = new List<string>(newData.data[0]);
+			return rec.ToJson();
+		}
+
+		#endregion AirQuality
+
+		#region CO2
+
+		internal async Task<string> GetCo2Data(string from, string to, string draw, int start, int length, string search)
+		{
+			try
+			{
+				// date will be in format "yyyy-mm-dd"
+				var stDate = from.Split('-');
+				var enDate = to.Split('-');
+
+				var filtered = 0;  // otal number of filtered rows available
+				var thisDraw = 0;  // count of the rows we are returning
+
+				// Get a time stamp, use 15th day to avoid wrap issues
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				ts1 = ts1.AddDays(1);
+
+				if (ts > ts1)
+				{
+					// this cannot be, the end is earlier than the start!
+					return "";
+				}
+
+				var watch = System.Diagnostics.Stopwatch.StartNew();
+
+				var rows = await station.DatabaseAsync.QueryAsync<CO2Data>("select * from CO2Data where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var json = new StringBuilder(350 * length);
+
+				json.Append("{\"recordsTotal\":");
+				json.Append(rows.Count);
+				json.Append(",\"data\":[");
+
+				foreach (var row in rows)
+				{
+					var text = row.ToCSV();
+
+					// if we have a search string and no match, skip to next line
+					if (!string.IsNullOrEmpty(search) && !text.Contains(search))
+					{
+						continue;
+					}
+
+					filtered++;
+
+					// skip records until we get to the start entry
+					if (filtered <= start)
+					{
+						continue;
+					}
+
+					// only send the number requested
+					if (thisDraw < length)
+					{
+						// track the number of lines we have to return so far
+						thisDraw++;
+
+						json.Append('[');
+						json.Append(text);
+						json.Append("],");
+					}
+				}
+
+				// trim trailing ","
+				if (thisDraw > 0)
+					json.Length--;
+
+				json.Append("],\"draw\":");
+				json.Append(draw);
+				json.Append(",\"recordsFiltered\":");
+				json.Append(filtered);
+				json.Append('}');
+
+				watch.Stop();
+				var elapsed = watch.ElapsedMilliseconds;
+				cumulus.LogDebugMessage($"GetCo2Data: Parse time = {elapsed} ms");
+				cumulus.LogDebugMessage($"GetCo2Data: Found={rows.Count}, filtered={filtered} (filter='{search}'), start={start}, return={thisDraw}");
+
+				return json.ToString();
+			}
+			catch (Exception ex)
+			{
+				Cumulus.LogMessage(ex.ToString());
+			}
+
+			return "";
+		}
+
+		internal string EditCo2(IHttpContext context)
+		{
+			var request = context.Request;
+			string text;
+			using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+			{
+				text = reader.ReadToEnd();
+			}
+
+			var newData = text.FromJson<DailyDataEditor>();
+
+			if (newData.action == "Edit")
+			{
+
+				// Update the MX database
+				var newRec = new CO2Data();
+				newRec.FromString(newData.data[0]);
+				var logDate = Utils.FromUnixTime(newData.dates[0]);
+				var logDateStr = newData.data[0][0];
+
+				try
+				{
+					var res = station.Database.Update(newRec);
+					//await station.DatabaseAsync.UpdateAsync(newRec);
+					if (res == 1)
+					{
+						Cumulus.LogMessage($"EditCo2: Changed database entry {logDateStr}");
+					}
+					else
+					{
+						Cumulus.LogMessage($"EditCo2: ERROR - Faied to update database entry {logDateStr}");
+						context.Response.StatusCode = 500;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+				catch (Exception ex)
+				{
+					context.Response.StatusCode = 500;
+					var thisrec = new List<string>(newData.data[0]);
+
+					return "{\"errors\": { \"SQLite\":[<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
+				}
+
+				// Update the extralogfile
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+
+					// read the log file into a List
+					var lines = File.ReadAllLines(logfile).ToList();
+
+					// Find the line using the date string
+					var found = false;
+					var lineNum = 0;
+					foreach (var line in lines)
+					{
+						if (line.Contains(logDateStr))
+						{
+							found = true;
+							break;
+						}
+
+						lineNum++;
+					}
+
+					if (!found)
+					{
+						Cumulus.LogMessage($"EditCo2: Error editing entry, line not found for - {logDateStr}");
+						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
+					}
+
+					// replace the leaf wetness fields (84-91) edited line (currently the last records)
+					var orgLine = lines[lineNum];
+					var orgFields = orgLine.Split(',');
+
+					var newLine = String.Join(',', orgFields[0..84]) + ',' + String.Join(',', newData.data[0][2..]);
+
+					lines[lineNum] = newLine;
+
+					try
+					{
+						// write logfile back again
+						File.WriteAllLines(logfile, lines);
+						Cumulus.LogMessage($"EditCo2: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						Cumulus.LogMessage($"EditCo2: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "EditCo2: Failed, error");
+						Cumulus.LogMessage("EditCo2: Data received - " + newLine);
+						context.Response.StatusCode = 500;
+					}
+				}
+			}
+			else if (newData.action == "Delete")
+			{
+				// Update the MX database
+				foreach (var row in newData.data)
+				{
+					var newRec = new CO2Data();
+					newRec.FromString(row);
+
+					try
+					{
+						var res = station.Database.Delete(newRec);
+						//await station.DatabaseAsync.DeleteAsync(newRec);
+						if (res == 1)
+						{
+							Cumulus.LogMessage($"EditCo2: Deleted database entry {row[0]}");
+						}
+						else
+						{
+							Cumulus.LogMessage($"EditCo2: ERROR - Faied to update database entry {row[0]}");
+							context.Response.StatusCode = 502;
+							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
+						}
+					}
+					catch (Exception ex)
+					{
+						context.Response.StatusCode = 502;
+						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + newRec.ToJson() + "}";
+					}
+				}
+
+				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
+				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				{
+					var lastMonth = -1;
+					string logfile = "";
+
+					var lines = new List<string>();
+
+					foreach (var row in newData.data)
+					{
+						var logDate = Utils.FromUnixTime(long.Parse(row[1]));
+
+						if (lastMonth != logDate.Month)
+						{
+							logfile = cumulus.GetExtraLogFileName(logDate);
+
+							// read the log file into a List
+							lines = File.ReadAllLines(logfile).ToList();
+						}
+
+						// Find the line using the timestamp
+						var found = false;
+						var lineNum = 0;
+						foreach (var line in lines)
+						{
+							if (line.Contains(row[1]))
+							{
+								found = true;
+								break;
+							}
+
+							lineNum++;
+						}
+
+						if (!found)
+						{
+							Cumulus.LogMessage($"EditCo2: Error deleting entry, line not found for - {row[0]}");
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
+						}
+
+						var orgLine = lines[lineNum];
+						var orgFields = orgLine.Split(',');
+
+						var newLine = String.Join(',', orgFields[0..84]) + ',' + ",,,,,,,";
+
+						lines[lineNum] = newLine;
+
+						try
+						{
+							// write logfile back again
+							File.WriteAllLines(logfile, lines);
+							Cumulus.LogMessage($"EditCo2: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							Cumulus.LogMessage($"EditCo2: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+
+						}
+						catch (Exception ex)
+						{
+							cumulus.LogExceptionMessage(ex, "EditCo2: Entry deletion failed. Error");
+							Cumulus.LogMessage($"EditCo2: Entry data = - {orgLine}");
+							context.Response.StatusCode = 500;
+							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+						}
+					}
+				}
+			}
+			else
+			{
+				Cumulus.LogMessage($"EditCo2: Unrecognised action = " + newData.action);
+				context.Response.StatusCode = 500;
+				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
+			}
+
+			// return the updated record
+			var rec = new List<string>(newData.data[0]);
+			return rec.ToJson();
+		}
+
+		#endregion CO2
+
 	}
 }

@@ -1656,115 +1656,58 @@ namespace CumulusMX
 
 				cumulus.BatteryLowAlarm.Triggered = TxBatText.Contains("LOW") || loopData.ConBatVoltage <= 3.5;
 
-
-				if (cumulus.StationOptions.LogExtraSensors)
+				if (cumulus.ExtraDataLogging.Temperature || cumulus.ExtraDataLogging.Humidity)
 				{
-					if (loopData.ExtraTemp1 < 255)
+					for (var j = 1; j <= 7; j++)
 					{
-						DoExtraTemp(ConvertTempFToUser(loopData.ExtraTemp1 - 90), 1);
-					}
-
-					if (loopData.ExtraTemp2 < 255)
-					{
-						DoExtraTemp(ConvertTempFToUser(loopData.ExtraTemp2 - 90), 2);
-					}
-
-					if (loopData.ExtraTemp3 < 255)
-					{
-						DoExtraTemp(ConvertTempFToUser(loopData.ExtraTemp3 - 90), 3);
-					}
-
-					if (loopData.ExtraTemp4 < 255)
-					{
-						DoExtraTemp(ConvertTempFToUser(loopData.ExtraTemp4 - 90), 4);
-					}
-
-					if (loopData.ExtraTemp5 < 255)
-					{
-						DoExtraTemp(ConvertTempFToUser(loopData.ExtraTemp5 - 90), 5);
-					}
-
-					if (loopData.ExtraTemp6 < 255)
-					{
-						DoExtraTemp(ConvertTempFToUser(loopData.ExtraTemp6 - 90), 6);
-					}
-
-					if (loopData.ExtraTemp7 < 255)
-					{
-						DoExtraTemp(ConvertTempFToUser(loopData.ExtraTemp7 - 90), 7);
-					}
-
-					if (loopData.ExtraHum1 >= 0 && loopData.ExtraHum1 <= 100)
-					{
-						DoExtraHum(loopData.ExtraHum1, 1);
-						if (loopData.ExtraTemp1 < 255)
+						if (cumulus.ExtraDataLogging.Temperature)
 						{
-							ExtraDewPoint[1] = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[1]), ExtraHum[1]));
+							var val = (int)loopData.GetPropValue("ExtraTemp" + j);
+							if (val < 255)
+							{
+								DoExtraTemp(ConvertTempFToUser(val - 90), j);
+							}
+							else
+							{
+								ExtraTemp[j] = null;
+							}
+						}
+
+						if (cumulus.ExtraDataLogging.Humidity)
+						{
+							var val = (int)loopData.GetPropValue("ExtraHum" + j);
+							if (val >= 0 && val <= 100)
+							{
+								DoExtraHum(val, j);
+								if (ExtraTemp[j].HasValue)
+								{
+									ExtraDewPoint[1] = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[1].Value), ExtraHum[1].Value));
+								}
+								else
+								{
+									ExtraDewPoint[1] = null;
+								}
+							}
 						}
 					}
-
-					if (loopData.ExtraHum2 >= 0 && loopData.ExtraHum2 <= 100)
+				}
+				if (cumulus.ExtraDataLogging.SoilMoisture)
+				{
+					for (var j = 1; j <= 4; j++)
 					{
-						DoExtraHum(loopData.ExtraHum2, 2);
-						if (loopData.ExtraTemp2 < 255)
+						var val = (int)loopData.GetPropValue("SoilMoisture" + j);
+						if (val >= 0 && val <= 250)
 						{
-							ExtraDewPoint[2] = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[2]), ExtraHum[2]));
+							DoSoilMoisture(val, j);
+						}
+						else
+						{
+							SoilMoisture[j] = null;
 						}
 					}
-
-					if (loopData.ExtraHum3 >= 0 && loopData.ExtraHum3 <= 100)
-					{
-						DoExtraHum(loopData.ExtraHum3, 3);
-						if (loopData.ExtraTemp3 < 255)
-						{
-							ExtraDewPoint[3] = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[3]), ExtraHum[3]));
-						}
-					}
-
-					if (loopData.ExtraHum4 >= 0 && loopData.ExtraHum4 <= 100)
-					{
-						DoExtraHum(loopData.ExtraHum4, 4);
-						if (loopData.ExtraTemp4 < 255)
-						{
-							ExtraDewPoint[4] = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[4]), ExtraHum[4]));
-						}
-					}
-
-					if (loopData.ExtraHum5 >= 0 && loopData.ExtraHum5 <= 100)
-					{
-						DoExtraHum(loopData.ExtraHum5, 5);
-					}
-
-					if (loopData.ExtraHum6 >= 0 && loopData.ExtraHum6 <= 100)
-					{
-						DoExtraHum(loopData.ExtraHum6, 6);
-					}
-
-					if (loopData.ExtraHum7 >= 0 && loopData.ExtraHum7 <= 100)
-					{
-						DoExtraHum(loopData.ExtraHum7, 7);
-					}
-
-					if (loopData.SoilMoisture1 >= 0 && loopData.SoilMoisture1 <= 250)
-					{
-						DoSoilMoisture(loopData.SoilMoisture1, 1);
-					}
-
-					if (loopData.SoilMoisture2 >= 0 && loopData.SoilMoisture2 <= 250)
-					{
-						DoSoilMoisture(loopData.SoilMoisture2, 2);
-					}
-
-					if (loopData.SoilMoisture3 >= 0 && loopData.SoilMoisture3 <= 250)
-					{
-						DoSoilMoisture(loopData.SoilMoisture3, 3);
-					}
-
-					if (loopData.SoilMoisture4 >= 0 && loopData.SoilMoisture4 <= 250)
-					{
-						DoSoilMoisture(loopData.SoilMoisture4, 4);
-					}
-
+				}
+				if (cumulus.ExtraDataLogging.SoilTemp)
+				{
 					if (loopData.SoilTemp1 < 255 && loopData.SoilTemp1 > 0)
 					{
 						DoSoilTemp(ConvertTempFToUser(loopData.SoilTemp1 - 90), 1);
@@ -1784,7 +1727,9 @@ namespace CumulusMX
 					{
 						DoSoilTemp(ConvertTempFToUser(loopData.SoilTemp4 - 90), 4);
 					}
-
+				}
+				if (cumulus.ExtraDataLogging.LeafWetness)
+				{
 					if (loopData.LeafWetness1 >= 0 && loopData.LeafWetness1 < 16)
 					{
 						DoLeafWetness(loopData.LeafWetness1, 1);
@@ -1804,7 +1749,9 @@ namespace CumulusMX
 					{
 						DoLeafWetness(loopData.LeafWetness4, 4);
 					}
-
+				}
+				if (cumulus.ExtraDataLogging.LeafTemp)
+				{
 					if (loopData.LeafTemp1 < 255 && loopData.LeafTemp1 > 0)
 					{
 						DoLeafTemp(ConvertTempFToUser(loopData.LeafTemp1 - 90), 1);
@@ -2569,7 +2516,7 @@ namespace CumulusMX
 									DoExtraHum(archiveData.ExtraHum1, 1);
 									if (archiveData.ExtraTemp1 < 255)
 									{
-										ExtraDewPoint[1] = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[1]), ExtraHum[1]));
+										ExtraDewPoint[1] = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[1].Value), ExtraHum[1].Value));
 									}
 								}
 
@@ -2578,7 +2525,7 @@ namespace CumulusMX
 									DoExtraHum(archiveData.ExtraHum2, 2);
 									if (archiveData.ExtraTemp2 < 255)
 									{
-										ExtraDewPoint[2] = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[2]), ExtraHum[2]));
+										ExtraDewPoint[2] = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[2].Value), ExtraHum[2].Value));
 									}
 								}
 
@@ -2624,12 +2571,12 @@ namespace CumulusMX
 
 								if (archiveData.LeafWetness1 >= 0 && archiveData.LeafWetness1 < 16)
 								{
-									DoLeafWetness(LeafWetness1, 1);
+									DoLeafWetness(archiveData.LeafWetness1, 1);
 								}
 
 								if (archiveData.LeafWetness2 >= 0 && archiveData.LeafWetness2 < 16)
 								{
-									DoLeafWetness(LeafWetness2, 2);
+									DoLeafWetness(archiveData.LeafWetness2, 2);
 								}
 
 								if (archiveData.LeafTemp1 < 255 && archiveData.LeafTemp1 > 0)

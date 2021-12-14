@@ -192,7 +192,7 @@ namespace CumulusMX
 			}
 		}
 
-		private static bool IsElevated()
+		public static bool IsElevated()
 		{
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 				return WindowsIdentity.GetCurrent().Owner.IsWellKnown(WellKnownSidType.BuiltinAdministratorsSid);

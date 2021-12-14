@@ -169,7 +169,37 @@ namespace CumulusMX
 							await writer.WriteAsync(await logfileEditor.EditDailyData(HttpContext));
 							break;
 						case "datalogs":
-							await writer.WriteAsync(await logfileEditor.EditDatalog(HttpContext));
+							await writer.WriteAsync(await logfileEditor.EditIntervalData(HttpContext));
+							break;
+						case "extratemp":
+							await writer.WriteAsync(logfileEditor.EditExtraTemp(HttpContext));
+							break;
+						case "extrahum":
+							await writer.WriteAsync(logfileEditor.EditExtraHum(HttpContext));
+							break;
+						case "extradew":
+							await writer.WriteAsync(logfileEditor.EditExtraDew(HttpContext));
+							break;
+						case "usertemp":
+							await writer.WriteAsync(logfileEditor.EditUserTemp(HttpContext));
+							break;
+						case "soiltemp":
+							await writer.WriteAsync(logfileEditor.EditSoilTemp(HttpContext));
+							break;
+						case "soilmoist":
+							await writer.WriteAsync(logfileEditor.EditSoilMoist(HttpContext));
+							break;
+						case "leaftemp":
+							await writer.WriteAsync(logfileEditor.EditLeafTemp(HttpContext));
+							break;
+						case "leafwet":
+							await writer.WriteAsync(logfileEditor.EditLeafWet(HttpContext));
+							break;
+						case "airqual":
+							await writer.WriteAsync(logfileEditor.EditAirQual(HttpContext));
+							break;
+						case "co2":
+							await writer.WriteAsync(logfileEditor.EditCo2(HttpContext));
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
@@ -212,21 +242,51 @@ namespace CumulusMX
 					var from = query["from"];
 					var to = query["to"];
 					var draw = query["draw"];
-					var search = query["search[value]"];
 					int start = Convert.ToInt32(query["start"]);
 					int length = Convert.ToInt32(query["length"]);
+					var search = query["search[value]"];
 
 					using var writer = HttpContext.OpenResponseText();
 					switch (lastSegment)
 					{
 						case "dayfile":
-							await writer.WriteAsync(await logfileEditor.GetDayfile(draw, start, length));
+							await writer.WriteAsync(await logfileEditor.GetDailyData(draw, start, length));
 							break;
 						case "logfile":
-							await writer.WriteAsync(await logfileEditor.GetIntervalData(from, to, draw, start, length, search, false));
+							await writer.WriteAsync(await logfileEditor.GetIntervalData(from, to, draw, start, length, search));
 							break;
-						case "extralogfile":
-							await writer.WriteAsync(await logfileEditor.GetIntervalData(from, to, draw, start, length, search, true));
+						//case "extralogfile":
+						//	await writer.WriteAsync(await logfileEditor.GetIntervalData(from, to, draw, start, length, search, true));
+						//	break;
+						case "extratemp":
+							await writer.WriteAsync(await logfileEditor.GetExtraTempData(from, to, draw, start, length, search));
+							break;
+						case "extrahum":
+							await writer.WriteAsync(await logfileEditor.GetExtraHumData(from, to, draw, start, length, search));
+							break;
+						case "extradew":
+							await writer.WriteAsync(await logfileEditor.GetExtraDewData(from, to, draw, start, length, search));
+							break;
+						case "usertemp":
+							await writer.WriteAsync(await logfileEditor.GetUserTempData(from, to, draw, start, length, search));
+							break;
+						case "soiltemp":
+							await writer.WriteAsync(await logfileEditor.GetSoilTempData(from, to, draw, start, length, search));
+							break;
+						case "soilmoist":
+							await writer.WriteAsync(await logfileEditor.GetSoilMoistData(from, to, draw, start, length, search));
+							break;
+						case "leaftemp":
+							await writer.WriteAsync(await logfileEditor.GetLeafTempData(from, to, draw, start, length, search));
+							break;
+						case "leafwet":
+							await writer.WriteAsync(await logfileEditor.GetLeafWetData(from, to, draw, start, length, search));
+							break;
+						case "airqual":
+							await writer.WriteAsync(await logfileEditor.GetAirQualData(from, to, draw, start, length, search));
+							break;
+						case "co2":
+							await writer.WriteAsync(await logfileEditor.GetCo2Data(from, to, draw, start, length, search));
 							break;
 						case "currentdata":
 							await writer.WriteAsync(Station.GetCurrentData());

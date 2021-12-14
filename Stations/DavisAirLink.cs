@@ -39,7 +39,6 @@ namespace CumulusMX
 		private readonly string locationStr;
 		private readonly bool standalone;
 		private readonly bool standaloneHistory; // Used to flag if we need to get history data on catch-up
-
 		private DateTime airLinkLastUpdateTime;
 
 		private readonly DiscoveredDevices discovered = new DiscoveredDevices();
@@ -296,6 +295,10 @@ namespace CumulusMX
 				cumulus.LogDebugMessage("GetAlCurrent: Previous update is still running");
 				return;
 			}
+
+			// wait a random time of 0 to 5 seconds before making the request to try and avoid continued clashes with other software or instances of MX
+			await Task.Delay(station.random.Next(0, 5000));
+
 			updateInProgress = true;
 
 			lock (threadSafer)

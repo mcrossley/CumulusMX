@@ -204,12 +204,6 @@ namespace CumulusMX
 					// This assumes the day file is in date order!
 					if (thisDate.Month != rec.Timestamp.Month)
 					{
-						// monthly rain
-						if (rainThisMonth > highRainMonth.Value)
-						{
-							highRainMonth.Value = rainThisMonth;
-							highRainMonth.Ts = thisDate;
-						}
 						// reset the date and counter for a new month
 						thisDate = rec.Timestamp;
 						rainThisMonth = 0;
@@ -277,10 +271,21 @@ namespace CumulusMX
 					// hi rain day
 					if (rec.TotalRain.HasValue)
 					{
+						if (rec.TotalRain.HasValue && rec.TotalRain.Value > highRainDay.Value)
+						{
+							highRainDay.Value = rec.TotalRain.Value;
+							highRainDay.Ts = rec.Timestamp;
+						}
+
 						// monthly rain
 						rainThisMonth += rec.TotalRain.Value;
 					}
-
+					// monthly rain
+					if (rainThisMonth > highRainMonth.Value)
+					{
+						highRainMonth.Value = rainThisMonth;
+						highRainMonth.Ts = thisDate;
+					}
 
 					// dry/wet period
 					if (Convert.ToInt32(rec.TotalRain * 1000) >= rainThreshold)
@@ -289,7 +294,7 @@ namespace CumulusMX
 						{
 							currentWetPeriod = 1;
 							isDryNow = false;
-							if (currentDryPeriod > dryPeriod.Value)
+							if (!(dryPeriod.Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod.Value)
 							{
 								dryPeriod.Value = currentDryPeriod;
 								dryPeriod.Ts = thisDateDry;
@@ -313,7 +318,7 @@ namespace CumulusMX
 						{
 							currentDryPeriod = 1;
 							isDryNow = true;
-							if (currentWetPeriod > wetPeriod.Value)
+							if (!(wetPeriod.Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod.Value)
 							{
 								wetPeriod.Value = currentWetPeriod;
 								wetPeriod.Ts = thisDateWet;
@@ -321,6 +326,7 @@ namespace CumulusMX
 							currentWetPeriod = 0;
 						}
 					}
+
 					// hi wind run
 					if (rec.WindRun.HasValue && rec.WindRun.Value > highWindRun.Value)
 					{
@@ -408,7 +414,7 @@ namespace CumulusMX
 				}
 
 				// We need to check if the run or wet/dry days at the end of logs exceeds any records
-				if (currentWetPeriod > wetPeriod.Value)
+				if (!(wetPeriod.Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod.Value)
 				{
 					wetPeriod.Value = currentWetPeriod;
 					wetPeriod.Ts = thisDateWet;
@@ -420,7 +426,7 @@ namespace CumulusMX
 				}
 
 				// need to do the final monthly rainfall
-				if (rainThisMonth > highRainMonth.Value)
+				if (!(dryPeriod.Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod.Value)
 				{
 					highRainMonth.Value = rainThisMonth;
 					highRainMonth.Ts = thisDate;
@@ -591,6 +597,7 @@ namespace CumulusMX
 			var thisDateDry = DateTime.MinValue;
 			var thisDateWet = DateTime.MinValue;
 
+			var monthlyRain = 0.0;
 			var totalRainfall = 0.0;
 
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -601,11 +608,10 @@ namespace CumulusMX
 			{
 				cumulus.LogDebugMessage($"GetAllTimeRecLogFile: Processing month - {monthDate:yyyy-MM}");
 				var linenum = 0;
-				double monthlyRain = 0;
 
 				try
 				{
-					var rows = await station.DatabaseAsync.QueryAsync<IntervalData>("select * from LogData where Timestamp >= ? and Timestamp < ?", monthDate, monthDate.AddMonths(1));
+					var rows = await station.DatabaseAsync.QueryAsync<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ?", monthDate, monthDate.AddMonths(1));
 
 					foreach (var rec in rows)
 					{
@@ -754,40 +760,23 @@ namespace CumulusMX
 							highRainRate.Ts = rec.Timestamp;
 						}
 
-						if (monthlyRain > highRainMonth.Value)
+						if (rec.Temp.HasValue)
 						{
-							highRainMonth.Value = monthlyRain;
-							highRainMonth.Ts = rec.Timestamp;
+							if (rec.Temp.Value > dayHighTemp.Value)
+							{
+								dayHighTemp.Value = rec.Temp.Value;
+								dayHighTemp.Ts = rec.Timestamp;
+							}
+
+							if (rec.Temp.Value < dayLowTemp.Value)
+							{
+								dayLowTemp.Value = rec.Temp.Value;
+								dayLowTemp.Ts = rec.Timestamp;
+							}
 						}
 
-						// same meteo day
-						if (currentDay.Date == metoDate.Date)
-						{
-							if (rec.Temp.HasValue)
-							{
-								if (rec.Temp.Value > dayHighTemp.Value)
-								{
-									dayHighTemp.Value = rec.Temp.Value;
-									dayHighTemp.Ts = rec.Timestamp;
-								}
-
-								if (rec.Temp.Value < dayLowTemp.Value)
-								{
-									dayLowTemp.Value = rec.Temp.Value;
-									dayLowTemp.Ts = rec.Timestamp;
-								}
-							}
-							if (rec.RainToday.HasValue && dayRain < rec.RainToday.Value)
-							{
-								dayRain = rec.RainToday.Value;
-							}
-
-							if (rec.WindAvg.HasValue)
-							{
-								dayWindRun += rec.Timestamp.Subtract(lastentrydate).TotalHours * rec.WindAvg.Value;
-							}
-						}
-						else // new meteo day
+						// new meteo day
+						if (currentDay.Date != metoDate.Date)
 						{
 							if (dayHighTemp.Value < lowMaxTemp.Value)
 							{
@@ -809,17 +798,19 @@ namespace CumulusMX
 								lowTempRange.Value = dayHighTemp.Value - dayLowTemp.Value;
 								lowTempRange.Ts = currentDay;
 							}
-							if (dayWindRun > highWindRun.Value)
-							{
-								highWindRun.Value = dayWindRun;
-								highWindRun.Ts = currentDay;
-							}
-							if (dayRain > highRainDay.Value)
-							{
-								highRainDay.Value = dayRain;
-								highRainDay.Ts = currentDay;
-							}
+
 							monthlyRain += dayRain;
+
+							if (monthlyRain > highRainMonth.Value)
+							{
+								highRainMonth.Value = monthlyRain;
+								highRainMonth.Ts = currentDay;
+							}
+
+							if (currentDay.Month != metoDate.Month)
+							{
+								monthlyRain = 0;
+							}
 
 							// dry/wet period
 							if (Convert.ToInt32(dayRain * 1000) >= rainThreshold)
@@ -828,7 +819,7 @@ namespace CumulusMX
 								{
 									currentWetPeriod = 1;
 									isDryNow = false;
-									if (currentDryPeriod > dryPeriod.Value)
+									if (!(dryPeriod.Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod.Value)
 									{
 										dryPeriod.Value = currentDryPeriod;
 										dryPeriod.Ts = thisDateDry;
@@ -852,7 +843,7 @@ namespace CumulusMX
 								{
 									currentDryPeriod = 1;
 									isDryNow = true;
-									if (currentWetPeriod > wetPeriod.Value)
+									if (!(wetPeriod.Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod.Value)
 									{
 										wetPeriod.Value = currentWetPeriod;
 										wetPeriod.Ts = thisDateWet;
@@ -867,6 +858,28 @@ namespace CumulusMX
 							dayWindRun = 0;
 							totalRainfall += dayRain;
 							dayRain = 0;
+						}
+
+						if (rec.RainToday.HasValue && dayRain < rec.RainToday.Value)
+						{
+							dayRain = rec.RainToday.Value;
+						}
+
+						if (dayRain > highRainDay.Value)
+						{
+							highRainDay.Value = dayRain;
+							highRainDay.Ts = currentDay;
+						}
+
+						if (rec.WindAvg.HasValue)
+						{
+							dayWindRun += rec.Timestamp.Subtract(lastentrydate).TotalHours * rec.WindAvg.Value;
+						}
+
+						if (dayWindRun > highWindRun.Value)
+						{
+							highWindRun.Value = dayWindRun;
+							highWindRun.Ts = currentDay;
 						}
 
 						// hourly rain
@@ -906,15 +919,15 @@ namespace CumulusMX
 			}
 
 			// We need to check if the run or wet/dry days at the end of logs exceeds any records
-			if (currentWetPeriod > wetPeriod.Value)
+			if (!(wetPeriod.Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod.Value)
 			{
 				wetPeriod.Value = currentWetPeriod;
-				wetPeriod.Ts = thisDateWet;
+				wetPeriod.Ts = currentDay;
 			}
-			if (currentDryPeriod > dryPeriod.Value)
+			if (!(dryPeriod.Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod.Value)
 			{
 				dryPeriod.Value = currentDryPeriod;
-				dryPeriod.Ts = thisDateDry;
+				dryPeriod.Ts = currentDay;
 			}
 
 			cumulus.LogDebugMessage("GetAllTimeRecLogFile: Finished all processing");
@@ -1556,7 +1569,7 @@ namespace CumulusMX
 			var thisDateDry = DateTime.MinValue;
 			var thisDateWet = DateTime.MinValue;
 			var firstEntry = true;
-			var json = new StringBuilder('{', 25500);
+			var json = new StringBuilder("{", 25500);
 
 			int rainThreshold;
 			if (cumulus.RainDayThreshold > 0)
@@ -1679,7 +1692,7 @@ namespace CumulusMX
 						highRainRate[monthOffset].Value = data[i].HighRainRate.Value;
 						highRainRate[monthOffset].Ts = data[i].HighRainRateTime.Value;
 					}
-					// hi rain day
+
 					if (data[i].TotalRain.HasValue)
 					{
 						// monthly rain
@@ -1691,13 +1704,12 @@ namespace CumulusMX
 							highRainMonth[monthOffset].Ts = thisDate;
 						}
 
-
+						// hi rain day
 						if (data[i].TotalRain.Value > highRainDay[monthOffset].Value)
 						{
 							highRainDay[monthOffset].Value = data[i].TotalRain.Value;
 							highRainDay[monthOffset].Ts = loggedDate;
 						}
-
 
 						// dry/wet period
 						if (Convert.ToInt32(data[i].TotalRain * 1000) >= rainThreshold)
@@ -1706,8 +1718,8 @@ namespace CumulusMX
 							{
 								currentWetPeriod = 1;
 								isDryNow = false;
-								var dryMonthOffset = thisDateWet.Month - 1;
-								if (currentDryPeriod > dryPeriod[dryMonthOffset].Value)
+								var dryMonthOffset = thisDateDry.Month - 1;
+								if (!(dryPeriod[dryMonthOffset].Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod[dryMonthOffset].Value)
 								{
 									dryPeriod[dryMonthOffset].Value = currentDryPeriod;
 									dryPeriod[dryMonthOffset].Ts = thisDateDry;
@@ -1732,7 +1744,7 @@ namespace CumulusMX
 								currentDryPeriod = 1;
 								isDryNow = true;
 								var wetMonthOffset = thisDateWet.Month - 1;
-								if (currentWetPeriod > wetPeriod[wetMonthOffset].Value)
+								if (!(wetPeriod[wetMonthOffset].Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod[wetMonthOffset].Value)
 								{
 									wetPeriod[wetMonthOffset].Value = currentWetPeriod;
 									wetPeriod[wetMonthOffset].Ts = thisDateWet;
@@ -1835,6 +1847,17 @@ namespace CumulusMX
 					}
 				}
 
+				// We need to check if the run or wet/dry days at the end of log exceeds any records
+				if (!(wetPeriod[thisDateWet.Month - 1].Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod[thisDateWet.Month - 1].Value)
+				{
+					wetPeriod[thisDateWet.Month - 1].Value = currentWetPeriod;
+					wetPeriod[thisDateWet.Month - 1].Ts = thisDateWet;
+				}
+				if (!(dryPeriod[thisDateDry.Month - 1].Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod[thisDateDry.Month - 1].Value)
+				{
+					dryPeriod[thisDateDry.Month - 1].Value = currentDryPeriod;
+					dryPeriod[thisDateDry.Month - 1].Ts = thisDateDry;
+				}
 
 				for (var i = 0; i < 12; i++)
 				{
@@ -2029,7 +2052,7 @@ namespace CumulusMX
 			{
 				try
 				{
-					var rows = await station.DatabaseAsync.QueryAsync<IntervalData>("select * from LogData where Timestamp >= ? and Timestamp < ?", currDate, currDate.AddMonths(1));
+					var rows = await station.DatabaseAsync.QueryAsync<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ?", currDate, currDate.AddMonths(1));
 					foreach (var row in rows)
 					{
 						// We need to work in meteo dates not clock dates for day hi/lows
@@ -2178,6 +2201,7 @@ namespace CumulusMX
 							highRainRate[monthOffset].Ts = row.Timestamp;
 						}
 
+						/*
 						// same meteo day
 						if (currentDay.Date == metoDate.Date)
 						{
@@ -2195,15 +2219,13 @@ namespace CumulusMX
 									dayLowTemp.Ts = row.Timestamp;
 								}
 							}
-							if (row.RainToday.HasValue && dayRain < row.RainToday.Value)
-							{
-								dayRain = row.RainToday.Value;
-							}
-
 							if (row.WindAvg.HasValue)
 								dayWindRun += row.Timestamp.Subtract(lastentrydate).TotalHours * row.WindAvg.Value;
 						}
-						else // new meteo day
+						*/
+
+						// new meteo day
+						if (currentDay.Date != metoDate.Date)
 						{
 							var lastEntryMonthOffset = currentDay.Month - 1;
 							if (dayHighTemp.Value < lowMaxTemp[lastEntryMonthOffset].Value)
@@ -2226,15 +2248,32 @@ namespace CumulusMX
 								lowTempRange[lastEntryMonthOffset].Value = dayHighTemp.Value - dayLowTemp.Value;
 								lowTempRange[lastEntryMonthOffset].Ts = currentDay;
 							}
-							if (dayWindRun > highWindRun[lastEntryMonthOffset].Value)
-							{
-								highWindRun[lastEntryMonthOffset].Value = dayWindRun;
-								highWindRun[lastEntryMonthOffset].Ts = currentDay;
-							}
+
 							if (dayRain > highRainDay[lastEntryMonthOffset].Value)
 							{
 								highRainDay[lastEntryMonthOffset].Value = dayRain;
 								highRainDay[lastEntryMonthOffset].Ts = currentDay;
+							}
+
+							// new month ?
+							if (currentDay.Month != metoDate.Month)
+							{
+								var offset = currentDay.Month - 1;
+								if (monthlyRain > highRainMonth[offset].Value)
+								{
+									highRainMonth[offset].Value = monthlyRain;
+									highRainMonth[offset].Ts = currentDay;
+								}
+								monthlyRain = 0;
+							}
+
+							monthlyRain += dayRain;
+							totalRainfall += dayRain;
+
+							if (dayWindRun > highWindRun[lastEntryMonthOffset].Value)
+							{
+								highWindRun[lastEntryMonthOffset].Value = dayWindRun;
+								highWindRun[lastEntryMonthOffset].Ts = currentDay;
 							}
 
 							// dry/wet period
@@ -2277,20 +2316,6 @@ namespace CumulusMX
 								}
 							}
 
-							// new month ?
-							if (currentDay.Month != metoDate.Month)
-							{
-								var offset = currentDay.Month - 1;
-								if (monthlyRain > highRainMonth[offset].Value)
-								{
-									highRainMonth[offset].Value = monthlyRain;
-									highRainMonth[offset].Ts = currentDay;
-								}
-								monthlyRain = 0;
-							}
-
-							monthlyRain += dayRain;
-							totalRainfall += dayRain;
 
 							currentDay = metoDate;
 							if (row.Temp.HasValue)
@@ -2298,8 +2323,32 @@ namespace CumulusMX
 								dayHighTemp.Value = row.Temp.Value;
 								dayLowTemp.Value = row.Temp.Value;
 							}
-							dayWindRun = 0.0;
-							dayRain = 0.0;
+							dayRain = 0;
+						}
+
+						if (row.RainToday.HasValue && dayRain < row.RainToday.Value)
+						{
+							dayRain = row.RainToday.Value;
+						}
+
+						if (dayRain > highRainDay[monthOffset].Value)
+						{
+							highRainDay[monthOffset].Value = dayRain;
+							highRainDay[monthOffset].Ts = currentDay;
+						}
+
+						if (monthlyRain > highRainMonth[monthOffset].Value)
+						{
+							highRainMonth[monthOffset].Value = monthlyRain;
+							highRainMonth[monthOffset].Ts = currentDay;
+						}
+
+						dayWindRun += row.Timestamp.Subtract(lastentrydate).TotalHours * row.WindAvg.Value;
+
+						if (dayWindRun > highWindRun[monthOffset].Value)
+						{
+							highWindRun[monthOffset].Value = dayWindRun;
+							highWindRun[monthOffset].Ts = currentDay;
 						}
 
 						// hourly rain
@@ -2956,7 +3005,6 @@ namespace CumulusMX
 			}
 			return $"{{\"result\":\"{((result == 1) ? "Success" : "Failed")}\"}}";
 		}
-
 
 
 

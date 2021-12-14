@@ -342,6 +342,11 @@ namespace CumulusMX
 			};
 		}
 
+		public object GetPropValue(string propName)
+		{
+			return this.GetType().GetProperty(propName).GetValue(this, null);
+		}
+
 		public VPLoopData()
 		{
 			PressureTrend = 0;
@@ -566,6 +571,11 @@ namespace CumulusMX
 				Timestamp = new DateTime(1900, 1, 1);
 			}
 			lastArchiveDate = Timestamp;
+		}
+
+		public object GetPropValue(string propName)
+		{
+			return this.GetType().GetProperty(propName).GetValue(this, null);
 		}
 
 		public VPArchiveData()

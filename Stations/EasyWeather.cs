@@ -166,34 +166,31 @@ namespace CumulusMX
 
 					DoForecast(string.Empty, false);
 
-					if (cumulus.StationOptions.LogExtraSensors)
+					var lightReading = GetConvertedValue(st[EW_LIGHT]);
+
+					if ((lightReading >= 0) && (lightReading <= 300000))
 					{
-						var lightReading = GetConvertedValue(st[EW_LIGHT]);
+						DoSolarRad((int)(lightReading * cumulus.LuxToWM2), now);
+						LightValue = lightReading;
+					}
 
-						if ((lightReading >= 0) && (lightReading <= 300000))
-						{
-							DoSolarRad((int)(lightReading * cumulus.LuxToWM2), now);
-							LightValue = lightReading;
-						}
+					var uVreading = GetConvertedValue(st[EW_UV]);
 
-						var uVreading = GetConvertedValue(st[EW_UV]);
-
-						if (uVreading == 255)
-						{
-							// ignore
-						}
-						else if (uVreading < 0)
-						{
-							DoUV(0, now);
-						}
-						else if (uVreading > 16)
-						{
-							DoUV(16, now);
-						}
-						else
-						{
-							DoUV(uVreading, now);
-						}
+					if (uVreading == 255)
+					{
+						// ignore
+					}
+					else if (uVreading < 0)
+					{
+						DoUV(0, now);
+					}
+					else if (uVreading > 16)
+					{
+						DoUV(16, now);
+					}
+					else
+					{
+						DoUV(uVreading, now);
 					}
 
 					if (cumulus.StationOptions.CalculatedET && now.Minute == 0)

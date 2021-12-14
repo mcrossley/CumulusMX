@@ -926,11 +926,13 @@ namespace CumulusMX
 		{
 			for (var i = 1; i <= 10; i++)
 			{
-				if (data["temp" + i + "f"] != null && data["humidity" + i] != null)
+				if (station.ExtraTemp[i].HasValue && station.ExtraHum[i].HasValue)
 				{
-					var dp = MeteoLib.DewPoint(ConvertUserTempToC(station.ExtraTemp[i]), station.ExtraHum[i]);
+					var dp = MeteoLib.DewPoint(ConvertUserTempToC(station.ExtraTemp[i].Value), station.ExtraHum[i].Value);
 					station.ExtraDewPoint[i] = ConvertTempCToUser(dp);
 				}
+				else
+					station.ExtraDewPoint[i] = null;
 			}
 		}
 	}

@@ -241,6 +241,36 @@ namespace CumulusMX
 						{
 							cumulus.StationOptions.LogExtraSensors = true;
 						}
+						if (cumulus.EcowittExtraUseTempHum)
+						{
+							cumulus.ExtraDataLogging.Temperature = true;
+							cumulus.ExtraDataLogging.Humidity = true;
+							cumulus.ExtraDataLogging.Dewpoint = true;
+						}
+						if (cumulus.EcowittExtraUseSoilTemp)
+						{
+							cumulus.ExtraDataLogging.SoilTemp = true;
+						}
+						if (cumulus.EcowittExtraUseSoilMoist)
+						{
+							cumulus.ExtraDataLogging.SoilMoisture = true;
+						}
+						if (cumulus.EcowittExtraUseLeafWet)
+						{
+							cumulus.ExtraDataLogging.LeafWetness = true;
+						}
+						if (cumulus.EcowittExtraUseUserTemp)
+						{
+							cumulus.ExtraDataLogging.UserTemp = true;
+						}
+						if (cumulus.EcowittExtraUseAQI)
+						{
+							cumulus.ExtraDataLogging.AirQual = true;
+						}
+						if (cumulus.EcowittExtraUseCo2)
+						{
+							cumulus.ExtraDataLogging.CO2 = true;
+						}
 					}
 					else
 						cumulus.EcowittExtraEnabled = false;
