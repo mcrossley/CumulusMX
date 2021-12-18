@@ -460,8 +460,6 @@ namespace CumulusMX
 		public double Longitude;
 		public double Altitude;
 
-		public double RStransfactor = 0.8;
-
 		internal int wsPort;
 		private bool DebuggingEnabled;
 
@@ -545,6 +543,8 @@ namespace CumulusMX
 
 		public EmailSender emailer;
 		public EmailSender.SmtpOptions SmtpOptions = new EmailSender.SmtpOptions();
+
+		public SolarOptions SolarOptions = new SolarOptions();
 
 		public string AlarmEmailPreamble;
 		public string AlarmEmailSubject;
@@ -803,8 +803,8 @@ namespace CumulusMX
 			//Assembly thisAssembly = this.GetType().Assembly;
 			//Version = thisAssembly.GetName().Version.ToString();
 			//VersionLabel.Content = "Cumulus v." + thisAssembly.GetName().Version;
-			LogMessage("Cumulus MX v." + Version + " build " + Build);
-			LogConsoleMessage("Cumulus MX v." + Version + " build " + Build);
+			LogMessage($"Cumulus MX v.{Version} build {Build} - running 64 bit: {Environment.Is64BitProcess}");
+			LogConsoleMessage($"Cumulus MX v.{Version} build {Build} - running 64 bit: {Environment.Is64BitProcess}");
 			LogConsoleMessage("Working Dir: " + AppDir);
 
 			IsOSX = IsRunningOnMac();
@@ -812,11 +812,11 @@ namespace CumulusMX
 			Platform = IsOSX ? "Mac OS X" : Environment.OSVersion.Platform.ToString();
 
 			// Set the default comport name depending on platform
-			DefaultComportName = Platform.Substring(0, 3) == "Win" ? "COM1" : "/dev/ttyUSB0";
+			DefaultComportName = Platform[..3] == "Win" ? "COM1" : "/dev/ttyUSB0";
 
 			LogMessage("Platform: " + Platform);
 
-			LogMessage("OS version: " + Environment.OSVersion);
+			LogMessage($"OS version: {Environment.OSVersion}, 64bit OS: {Environment.Is64BitOperatingSystem}");
 
 			LogMessage("Running as a Service: " + Program.service);
 
@@ -3348,17 +3348,13 @@ namespace CumulusMX
 			if (MoonImage.Enabled)
 			{
 				LogDebugMessage("Generating new Moon image");
-				var ret = MoonriseMoonset.CreateMoonImage(MoonPhaseAngle, Latitude, MoonImage.Size);
+				var ret = MoonriseMoonset.CreateMoonImage(MoonPhaseAngle, Latitude, MoonImage.Size, MoonImage.Transparent);
 
-				if (ret == "OK")
+				if (ret)
 				{
 					// set a flag to show file is ready for FTP
 					MoonImage.ReadyToFtp = true;
 					MoonImage.ReadyToCopy = true;
-				}
-				else
-				{
-					LogMessage(ret);
 				}
 			}
 		}
@@ -3449,7 +3445,7 @@ namespace CumulusMX
 				alwaysUp = false;
 				try
 				{
-					int h = Convert.ToInt32(rise.Substring(0, 2));
+					int h = Convert.ToInt32(rise[..2]);
 					int m = Convert.ToInt32(rise.Substring(2, 2));
 					int s = Convert.ToInt32(rise.Substring(4, 2));
 					sunrise = DateTime.Now.Date.Add(new TimeSpan(h, m, s));
@@ -3461,7 +3457,7 @@ namespace CumulusMX
 
 				try
 				{
-					int h = Convert.ToInt32(set.Substring(0, 2));
+					int h = Convert.ToInt32(set[..2]);
 					int m = Convert.ToInt32(set.Substring(2, 2));
 					int s = Convert.ToInt32(set.Substring(4, 2));
 					sunset = DateTime.Now.Date.Add(new TimeSpan(h, m, s));
@@ -3522,7 +3518,7 @@ namespace CumulusMX
 				alwaysUp = false;
 				try
 				{
-					int h = Convert.ToInt32(dawnStr.Substring(0, 2));
+					int h = Convert.ToInt32(dawnStr[..2]);
 					int m = Convert.ToInt32(dawnStr.Substring(2, 2));
 					int s = Convert.ToInt32(dawnStr.Substring(4, 2));
 					dawn = DateTime.Now.Date.Add(new TimeSpan(h, m, s));
@@ -3534,7 +3530,7 @@ namespace CumulusMX
 
 				try
 				{
-					int h = Convert.ToInt32(duskStr.Substring(0, 2));
+					int h = Convert.ToInt32(duskStr[..2]);
 					int m = Convert.ToInt32(duskStr.Substring(2, 2));
 					int s = Convert.ToInt32(duskStr.Substring(4, 2));
 					dusk = DateTime.Now.Date.Add(new TimeSpan(h, m, s));
@@ -3838,7 +3834,7 @@ namespace CumulusMX
 			ProgramOptions.StartupDelayMaxUptime = ini.GetValue("Program", "StartupDelayMaxUptime", 300);
 			ProgramOptions.Culture.RemoveSpaceFromDateSeparator = ini.GetValue("Culture", "RemoveSpaceFromDateSeparator", false);
 			// if the culture names match, then we apply the new date separator if change is enabled and it contains a space
-			if (ProgramOptions.Culture.RemoveSpaceFromDateSeparator && CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(" "))
+			if (ProgramOptions.Culture.RemoveSpaceFromDateSeparator && CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(' '))
 			{
 				// get the existing culture
 				var newCulture = (CultureInfo)CultureInfo.CurrentCulture.Clone();
@@ -4463,6 +4459,7 @@ namespace CumulusMX
 				MoonImage.Size = 10;
 				rewriteRequired = true;
 			}
+			MoonImage.Transparent = ini.GetValue("Graphs", "MoonImageShadeTransparent", false);
 			MoonImage.FtpDest = ini.GetValue("Graphs", "MoonImageFtpDest", "images/moon.png");
 			MoonImage.CopyDest = ini.GetValue("Graphs", "MoonImageCopyDest", FtpOptions.LocalCopyFolder + "images" + sep1 + "moon.png");
 			GraphOptions.TempVisible = ini.GetValue("Graphs", "TempVisible", true);
@@ -4900,15 +4897,35 @@ namespace CumulusMX
 			xapUID = ini.GetValue("xAP", "UID", "4375");
 			xapPort = ini.GetValue("xAP", "Port", 3639);
 
-			SunThreshold = ini.GetValue("Solar", "SunThreshold", 75);
-			RStransfactor = ini.GetValue("Solar", "RStransfactor", 0.8);
-			SolarMinimum = ini.GetValue("Solar", "SolarMinimum", 30);
-			LuxToWM2 = ini.GetValue("Solar", "LuxToWM2", 0.0079);
-			UseBlakeLarsen = ini.GetValue("Solar", "UseBlakeLarsen", false);
-			SolarCalc = ini.GetValue("Solar", "SolarCalc", 0);
-			BrasTurbidity = ini.GetValue("Solar", "BrasTurbidity", 2.0);
-			//SolarFactorSummer = ini.GetValue("Solar", "SolarFactorSummer", -1);
-			//SolarFactorWinter = ini.GetValue("Solar", "SolarFactorWinter", -1);
+			SolarOptions.SunThreshold = ini.GetValue("Solar", "SunThreshold", 75);
+			SolarOptions.SolarMinimum = ini.GetValue("Solar", "SolarMinimum", 30);
+			SolarOptions.LuxToWM2 = ini.GetValue("Solar", "LuxToWM2", 0.0079);
+			SolarOptions.UseBlakeLarsen = ini.GetValue("Solar", "UseBlakeLarsen", false);
+			SolarOptions.SolarCalc = ini.GetValue("Solar", "SolarCalc", 0);
+
+			// Migrate old single solar factors to the new dual scheme
+			if (ini.ValueExists("Solar", "RStransfactor"))
+			{
+				SolarOptions.RStransfactorJul = ini.GetValue("Solar", "RStransfactor", 0.8);
+				SolarOptions.RStransfactorDec = SolarOptions.RStransfactorJul;
+				rewriteRequired = true;
+			}
+			else
+			{
+				SolarOptions.RStransfactorJul = ini.GetValue("Solar", "RStransfactorJul", 0.8);
+				SolarOptions.RStransfactorDec = ini.GetValue("Solar", "RStransfactorDec", 0.8);
+			}
+			if (ini.ValueExists("Solar", "BrasTurbidity"))
+			{
+				SolarOptions.BrasTurbidityJul = ini.GetValue("Solar", "BrasTurbidity", 2.0);
+				SolarOptions.BrasTurbidityDec = SolarOptions.BrasTurbidityJul;
+				rewriteRequired = true;
+			}
+			else
+			{
+				SolarOptions.BrasTurbidityJul = ini.GetValue("Solar", "BrasTurbidityJul", 2.0);
+				SolarOptions.BrasTurbidityDec = ini.GetValue("Solar", "BrasTurbidityDec", 2.0);
+			}
 
 			NOAAconf.Name = ini.GetValue("NOAA", "Name", " ");
 			NOAAconf.City = ini.GetValue("NOAA", "City", " ");
@@ -5835,12 +5852,15 @@ namespace CumulusMX
 			ini.SetValue("xAP", "UID", xapUID);
 			ini.SetValue("xAP", "Port", xapPort);
 
-			ini.SetValue("Solar", "SunThreshold", SunThreshold);
-			ini.SetValue("Solar", "RStransfactor", RStransfactor);
-			ini.SetValue("Solar", "SolarMinimum", SolarMinimum);
-			ini.SetValue("Solar", "UseBlakeLarsen", UseBlakeLarsen);
-			ini.SetValue("Solar", "SolarCalc", SolarCalc);
-			ini.SetValue("Solar", "BrasTurbidity", BrasTurbidity);
+			ini.SetValue("Solar", "SunThreshold", SolarOptions.SunThreshold);
+			ini.SetValue("Solar", "SolarMinimum", SolarOptions.SolarMinimum);
+			ini.SetValue("Solar", "UseBlakeLarsen", SolarOptions.UseBlakeLarsen);
+			ini.SetValue("Solar", "SolarCalc", SolarOptions.SolarCalc);
+			ini.SetValue("Solar", "LuxToWM2", SolarOptions.LuxToWM2);
+			ini.SetValue("Solar", "RStransfactorJul", SolarOptions.RStransfactorJul);
+			ini.SetValue("Solar", "RStransfactorDec", SolarOptions.RStransfactorDec);
+			ini.SetValue("Solar", "BrasTurbidityJul", SolarOptions.BrasTurbidityJul);
+			ini.SetValue("Solar", "BrasTurbidityDec", SolarOptions.BrasTurbidityDec);
 
 			ini.SetValue("NOAA", "Name", NOAAconf.Name);
 			ini.SetValue("NOAA", "City", NOAAconf.City);
@@ -5907,6 +5927,7 @@ namespace CumulusMX
 			ini.SetValue("Graphs", "GraphHours", GraphHours);
 			ini.SetValue("Graphs", "MoonImageEnabled", MoonImage.Enabled);
 			ini.SetValue("Graphs", "MoonImageSize", MoonImage.Size);
+			ini.SetValue("Graphs", "MoonImageShadeTransparent", MoonImage.Transparent);
 			ini.SetValue("Graphs", "MoonImageFtpDest", MoonImage.FtpDest);
 			ini.SetValue("Graphs", "MoonImageCopyDest", MoonImage.CopyDest);
 			ini.SetValue("Graphs", "TempVisible", GraphOptions.TempVisible);
@@ -6301,20 +6322,6 @@ namespace CumulusMX
 		}
 
 
-		public bool UseBlakeLarsen { get; set; }
-
-		public double LuxToWM2 { get; set; }
-
-		public int SolarMinimum { get; set; }
-
-		public int SunThreshold { get; set; }
-
-		public int SolarCalc { get; set; }
-
-		public double BrasTurbidity { get; set; }
-
-		//public double SolarFactorSummer { get; set; }
-		//public double SolarFactorWinter { get; set; }
 
 		public int xapPort { get; set; }
 
@@ -6863,7 +6870,7 @@ namespace CumulusMX
 			// make sure solar max is calculated for those stations without a solar sensor
 			LogMessage("DoLogFile: Writing log entry for " + timestamp);
 			LogDebugMessage("DoLogFile: max gust: " + station.RecentMaxGust.ToString(WindFormat));
-			station.CurrentSolarMax = AstroLib.SolarMax(timestamp, Longitude, Latitude, station.AltitudeM(Altitude), out station.SolarElevation, RStransfactor, BrasTurbidity, SolarCalc);
+			station.CurrentSolarMax = AstroLib.SolarMax(timestamp, Longitude, Latitude, station.AltitudeM(Altitude), out station.SolarElevation, SolarOptions);
 
 
 			var newRec = new IntervalData()
@@ -8506,200 +8513,198 @@ namespace CumulusMX
 
 				try
 				{
-					using (SftpClient conn = new SftpClient(connectionInfo))
+					using SftpClient conn = new SftpClient(connectionInfo);
+					try
 					{
-						try
+						LogFtpDebugMessage($"SFTP[Int]: CumulusMX Connecting to {FtpOptions.Hostname} on port {FtpOptions.Port}");
+						conn.Connect();
+						if (ServicePointManager.DnsRefreshTimeout == 0)
 						{
-							LogFtpDebugMessage($"SFTP[Int]: CumulusMX Connecting to {FtpOptions.Hostname} on port {FtpOptions.Port}");
-							conn.Connect();
-							if (ServicePointManager.DnsRefreshTimeout == 0)
-							{
-								ServicePointManager.DnsRefreshTimeout = 120000; // two minutes default
-							}
+							ServicePointManager.DnsRefreshTimeout = 120000; // two minutes default
 						}
-						catch (Exception ex)
-						{
-							LogExceptionMessage(ex, "SFTP[Int]: Error connecting SFTP", true);
-							if ((uint)ex.HResult == 0x80004005) // Could not resolve host
-							{
-								// Disable the DNS cache for the next query
-								ServicePointManager.DnsRefreshTimeout = 0;
-							}
-							return;
-						}
-
-						if (conn.IsConnected)
-						{
-							if (NOAAconf.NeedFtp)
-							{
-								try
-								{
-									// upload NOAA reports
-									LogFtpDebugMessage("SFTP[Int]: Uploading NOAA reports");
-
-									var uploadfile = ReportPath + NOAAconf.LatestMonthReport;
-									var remotefile = NOAAconf.FtpFolder + '/' + NOAAconf.LatestMonthReport;
-
-									UploadFile(conn, uploadfile, remotefile, -1);
-
-									uploadfile = ReportPath + NOAAconf.LatestYearReport;
-									remotefile = NOAAconf.FtpFolder + '/' + NOAAconf.LatestYearReport;
-
-									UploadFile(conn, uploadfile, remotefile, -1);
-
-									LogFtpDebugMessage("SFTP[Int]: Done uploading NOAA reports");
-								}
-								catch (Exception e)
-								{
-									LogExceptionMessage(e, "SFTP[Int]: Error uploading file", true);
-								}
-								NOAAconf.NeedFtp = false;
-							}
-
-							LogFtpDebugMessage("SFTP[Int]: Uploading extra files");
-							// Extra files
-							for (int i = 0; i < numextrafiles; i++)
-							{
-								var uploadfile = ExtraFiles[i].local;
-								var remotefile = ExtraFiles[i].remote;
-
-								if ((uploadfile.Length > 0) &&
-									(remotefile.Length > 0) &&
-									!ExtraFiles[i].realtime &&
-									(!ExtraFiles[i].endofday || EODfilesNeedFTP == ExtraFiles[i].endofday) && // Either, it's not flagged as an EOD file, OR: It is flagged as EOD and EOD FTP is required
-									ExtraFiles[i].FTP)
-								{
-									// For EOD files, we want the previous days log files since it is now just past the day roll-over time. Makes a difference on month roll-over
-									var logDay = ExtraFiles[i].endofday ? DateTime.Now.AddDays(-1) : DateTime.Now;
-
-									uploadfile = GetUploadFilename(uploadfile, logDay);
-
-									if (File.Exists(uploadfile))
-									{
-										remotefile = GetRemoteFileName(remotefile, logDay);
-
-										// all checks OK, file needs to be uploaded
-										if (ExtraFiles[i].process)
-										{
-											// we've already processed the file
-											uploadfile += "tmp";
-										}
-
-										try
-										{
-											UploadFile(conn, uploadfile, remotefile, -1);
-										}
-										catch (Exception e)
-										{
-											LogExceptionMessage(e, $"SFTP[Int]: Error uploading Extra web file #{i} [{uploadfile}]", true);
-										}
-									}
-									else
-									{
-										LogFtpMessage($"SFTP[Int]: Extra web file #{i} [{uploadfile}] not found!");
-									}
-								}
-							}
-							if (EODfilesNeedFTP)
-							{
-								EODfilesNeedFTP = false;
-							}
-							LogFtpDebugMessage("SFTP[Int]: Done uploading extra files");
-
-							// standard files
-							LogFtpDebugMessage("SFTP[Int]: Uploading standard web files");
-							for (var i = 0; i < StdWebFiles.Length; i++)
-							{
-								if (StdWebFiles[i].FTP && StdWebFiles[i].FtpRequired)
-								{
-									try
-									{
-										var localFile = StdWebFiles[i].LocalPath + StdWebFiles[i].LocalFileName;
-										var remotefile = remotePath + StdWebFiles[i].RemoteFileName;
-										UploadFile(conn, localFile, remotefile, -1);
-									}
-									catch (Exception e)
-									{
-										LogFtpMessage($"SFTP[Int]: Error uploading standard data file [{StdWebFiles[i].LocalFileName}]");
-										LogFtpMessage($"SFTP[Int]: Error = {e}");
-									}
-								}
-							}
-							LogFtpDebugMessage("SFTP[Int]: Done uploading standard web files");
-
-							LogFtpDebugMessage("SFTP[Int]: Uploading graph data files");
-
-							for (int i = 0; i < GraphDataFiles.Length; i++)
-							{
-								if (GraphDataFiles[i].FTP && GraphDataFiles[i].FtpRequired)
-								{
-									var uploadfile = GraphDataFiles[i].LocalPath + GraphDataFiles[i].LocalFileName;
-									var remotefile = remotePath + GraphDataFiles[i].RemoteFileName;
-
-									try
-									{
-										UploadFile(conn, uploadfile, remotefile, -1);
-										// The config files only need uploading once per change
-										if (GraphDataFiles[i].LocalFileName == "availabledata.json" ||
-											GraphDataFiles[i].LocalFileName == "graphconfig.json")
-										{
-											GraphDataFiles[i].FtpRequired = false;
-										}
-									}
-									catch (Exception e)
-									{
-										LogFtpMessage($"SFTP[Int]: Error uploading graph data file [{uploadfile}]");
-										LogFtpMessage($"SFTP[Int]: Error = {e}");
-									}
-								}
-							}
-							LogFtpDebugMessage("SFTP[Int]: Done uploading graph data files");
-
-							LogFtpMessage("SFTP[Int]: Uploading daily graph data files");
-							for (int i = 0; i < GraphDataEodFiles.Length; i++)
-							{
-								if (GraphDataEodFiles[i].FTP && GraphDataEodFiles[i].FtpRequired)
-								{
-									var uploadfile = GraphDataEodFiles[i].LocalPath + GraphDataEodFiles[i].LocalFileName;
-									var remotefile = remotePath + GraphDataEodFiles[i].RemoteFileName;
-									try
-									{
-										UploadFile(conn, uploadfile, remotefile, -1);
-										// Uploaded OK, reset the upload required flag
-										GraphDataEodFiles[i].FtpRequired = false;
-									}
-									catch (Exception e)
-									{
-										LogFtpMessage($"SFTP[Int]: Error uploading daily graph data file [{uploadfile}]");
-										LogFtpMessage($"SFTP[Int]: Error = {e}");
-									}
-								}
-							}
-							LogFtpMessage("SFTP[Int]: Done uploading daily graph data files");
-
-							if (MoonImage.Ftp && MoonImage.ReadyToFtp)
-							{
-								try
-								{
-									LogFtpMessage("SFTP[Int]: Uploading Moon image file");
-									UploadFile(conn, "web" + DirectorySeparator + "moon.png", remotePath + MoonImage.FtpDest, -1);
-									LogFtpMessage("SFTP[Int]: Done uploading Moon image file");
-									// clear the image ready for FTP flag, only upload once an hour
-									MoonImage.ReadyToFtp = false;
-								}
-								catch (Exception e)
-								{
-									LogExceptionMessage(e, $"SFTP[Int]: Error uploading moon image", true);
-								}
-							}
-						}
-						try
-						{
-							// do not error on disconnect
-							conn.Disconnect();
-						}
-						catch { }
 					}
+					catch (Exception ex)
+					{
+						LogExceptionMessage(ex, "SFTP[Int]: Error connecting SFTP", true);
+						if ((uint)ex.HResult == 0x80004005) // Could not resolve host
+						{
+							// Disable the DNS cache for the next query
+							ServicePointManager.DnsRefreshTimeout = 0;
+						}
+						return;
+					}
+
+					if (conn.IsConnected)
+					{
+						if (NOAAconf.NeedFtp)
+						{
+							try
+							{
+								// upload NOAA reports
+								LogFtpDebugMessage("SFTP[Int]: Uploading NOAA reports");
+
+								var uploadfile = ReportPath + NOAAconf.LatestMonthReport;
+								var remotefile = NOAAconf.FtpFolder + '/' + NOAAconf.LatestMonthReport;
+
+								UploadFile(conn, uploadfile, remotefile, -1);
+
+								uploadfile = ReportPath + NOAAconf.LatestYearReport;
+								remotefile = NOAAconf.FtpFolder + '/' + NOAAconf.LatestYearReport;
+
+								UploadFile(conn, uploadfile, remotefile, -1);
+
+								LogFtpDebugMessage("SFTP[Int]: Done uploading NOAA reports");
+							}
+							catch (Exception e)
+							{
+								LogExceptionMessage(e, "SFTP[Int]: Error uploading file", true);
+							}
+							NOAAconf.NeedFtp = false;
+						}
+
+						LogFtpDebugMessage("SFTP[Int]: Uploading extra files");
+						// Extra files
+						for (int i = 0; i < numextrafiles; i++)
+						{
+							var uploadfile = ExtraFiles[i].local;
+							var remotefile = ExtraFiles[i].remote;
+
+							if ((uploadfile.Length > 0) &&
+								(remotefile.Length > 0) &&
+								!ExtraFiles[i].realtime &&
+								(!ExtraFiles[i].endofday || EODfilesNeedFTP == ExtraFiles[i].endofday) && // Either, it's not flagged as an EOD file, OR: It is flagged as EOD and EOD FTP is required
+								ExtraFiles[i].FTP)
+							{
+								// For EOD files, we want the previous days log files since it is now just past the day roll-over time. Makes a difference on month roll-over
+								var logDay = ExtraFiles[i].endofday ? DateTime.Now.AddDays(-1) : DateTime.Now;
+
+								uploadfile = GetUploadFilename(uploadfile, logDay);
+
+								if (File.Exists(uploadfile))
+								{
+									remotefile = GetRemoteFileName(remotefile, logDay);
+
+									// all checks OK, file needs to be uploaded
+									if (ExtraFiles[i].process)
+									{
+										// we've already processed the file
+										uploadfile += "tmp";
+									}
+
+									try
+									{
+										UploadFile(conn, uploadfile, remotefile, -1);
+									}
+									catch (Exception e)
+									{
+										LogExceptionMessage(e, $"SFTP[Int]: Error uploading Extra web file #{i} [{uploadfile}]", true);
+									}
+								}
+								else
+								{
+									LogFtpMessage($"SFTP[Int]: Extra web file #{i} [{uploadfile}] not found!");
+								}
+							}
+						}
+						if (EODfilesNeedFTP)
+						{
+							EODfilesNeedFTP = false;
+						}
+						LogFtpDebugMessage("SFTP[Int]: Done uploading extra files");
+
+						// standard files
+						LogFtpDebugMessage("SFTP[Int]: Uploading standard web files");
+						for (var i = 0; i < StdWebFiles.Length; i++)
+						{
+							if (StdWebFiles[i].FTP && StdWebFiles[i].FtpRequired)
+							{
+								try
+								{
+									var localFile = StdWebFiles[i].LocalPath + StdWebFiles[i].LocalFileName;
+									var remotefile = remotePath + StdWebFiles[i].RemoteFileName;
+									UploadFile(conn, localFile, remotefile, -1);
+								}
+								catch (Exception e)
+								{
+									LogFtpMessage($"SFTP[Int]: Error uploading standard data file [{StdWebFiles[i].LocalFileName}]");
+									LogFtpMessage($"SFTP[Int]: Error = {e}");
+								}
+							}
+						}
+						LogFtpDebugMessage("SFTP[Int]: Done uploading standard web files");
+
+						LogFtpDebugMessage("SFTP[Int]: Uploading graph data files");
+
+						for (int i = 0; i < GraphDataFiles.Length; i++)
+						{
+							if (GraphDataFiles[i].FTP && GraphDataFiles[i].FtpRequired)
+							{
+								var uploadfile = GraphDataFiles[i].LocalPath + GraphDataFiles[i].LocalFileName;
+								var remotefile = remotePath + GraphDataFiles[i].RemoteFileName;
+
+								try
+								{
+									UploadFile(conn, uploadfile, remotefile, -1);
+									// The config files only need uploading once per change
+									if (GraphDataFiles[i].LocalFileName == "availabledata.json" ||
+										GraphDataFiles[i].LocalFileName == "graphconfig.json")
+									{
+										GraphDataFiles[i].FtpRequired = false;
+									}
+								}
+								catch (Exception e)
+								{
+									LogFtpMessage($"SFTP[Int]: Error uploading graph data file [{uploadfile}]");
+									LogFtpMessage($"SFTP[Int]: Error = {e}");
+								}
+							}
+						}
+						LogFtpDebugMessage("SFTP[Int]: Done uploading graph data files");
+
+						LogFtpMessage("SFTP[Int]: Uploading daily graph data files");
+						for (int i = 0; i < GraphDataEodFiles.Length; i++)
+						{
+							if (GraphDataEodFiles[i].FTP && GraphDataEodFiles[i].FtpRequired)
+							{
+								var uploadfile = GraphDataEodFiles[i].LocalPath + GraphDataEodFiles[i].LocalFileName;
+								var remotefile = remotePath + GraphDataEodFiles[i].RemoteFileName;
+								try
+								{
+									UploadFile(conn, uploadfile, remotefile, -1);
+									// Uploaded OK, reset the upload required flag
+									GraphDataEodFiles[i].FtpRequired = false;
+								}
+								catch (Exception e)
+								{
+									LogFtpMessage($"SFTP[Int]: Error uploading daily graph data file [{uploadfile}]");
+									LogFtpMessage($"SFTP[Int]: Error = {e}");
+								}
+							}
+						}
+						LogFtpMessage("SFTP[Int]: Done uploading daily graph data files");
+
+						if (MoonImage.Ftp && MoonImage.ReadyToFtp)
+						{
+							try
+							{
+								LogFtpMessage("SFTP[Int]: Uploading Moon image file");
+								UploadFile(conn, "web" + DirectorySeparator + "moon.png", remotePath + MoonImage.FtpDest, -1);
+								LogFtpMessage("SFTP[Int]: Done uploading Moon image file");
+								// clear the image ready for FTP flag, only upload once an hour
+								MoonImage.ReadyToFtp = false;
+							}
+							catch (Exception e)
+							{
+								LogExceptionMessage(e, $"SFTP[Int]: Error uploading moon image", true);
+							}
+						}
+					}
+					try
+					{
+						// do not error on disconnect
+						conn.Disconnect();
+					}
+					catch { }
 				}
 				catch (Exception ex)
 				{
@@ -11034,6 +11039,7 @@ namespace CumulusMX
 	{
 		public bool Enabled { get; set; }
 		public int Size { get; set; }
+		public bool Transparent { get; set; }
 		public bool Ftp { get; set; }
 		public string FtpDest { get; set; }
 		public bool Copy { get; set; }
@@ -11099,6 +11105,19 @@ namespace CumulusMX
 		public int MaxPressMB { get; set; }
 		public int MaxRainTipDiff { get; set; }
 		public double PressOffset { get; set; }
+	}
+
+	public class SolarOptions
+	{
+		public int SunThreshold { get; set; }
+		public int SolarMinimum { get; set; }
+		public double LuxToWM2 { get; set; }
+		public bool UseBlakeLarsen { get; set; }
+		public int SolarCalc { get; set; }
+		public double RStransfactorJul { get; set; }
+		public double RStransfactorDec { get; set; }
+		public double BrasTurbidityJul { get; set; }
+		public double BrasTurbidityDec { get; set; }
 	}
 
 	public class GraphOptions

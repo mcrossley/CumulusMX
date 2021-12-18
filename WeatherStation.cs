@@ -1525,7 +1525,7 @@ namespace CumulusMX
 
 			if (!DataStopped)
 			{
-				CurrentSolarMax = AstroLib.SolarMax(now, cumulus.Longitude, cumulus.Latitude, AltitudeM(cumulus.Altitude), out SolarElevation, cumulus.RStransfactor, cumulus.BrasTurbidity, cumulus.SolarCalc);
+				CurrentSolarMax = AstroLib.SolarMax(now, cumulus.Longitude, cumulus.Latitude, AltitudeM(cumulus.Altitude), out SolarElevation, cumulus.SolarOptions);
 				if (((Pressure > 0) && TempReadyToPlot && WindReadyToPlot) || cumulus.StationOptions.NoSensorCheck)
 				{
 					// increment wind run by one minute's worth of average speed
@@ -1543,11 +1543,11 @@ namespace CumulusMX
 					}
 
 					// update sunshine hours
-					if (cumulus.UseBlakeLarsen)
+					if (cumulus.SolarOptions.UseBlakeLarsen)
 					{
 						ReadBlakeLarsenData();
 					}
-					else if ((SolarRad > (CurrentSolarMax * cumulus.SunThreshold / 100.0)) && (SolarRad >= cumulus.SolarMinimum))
+					else if ((SolarRad > (CurrentSolarMax * cumulus.SolarOptions.SunThreshold / 100.0)) && (SolarRad >= cumulus.SolarOptions.SolarMinimum))
 					{
 						SunshineHours += 1.0 / 60.0;
 					}
@@ -4138,11 +4138,11 @@ namespace CumulusMX
 				HiLoToday.HighSolar = SolarRad;
 				HiLoToday.HighSolarTime = timestamp;
 			}
-			CurrentSolarMax = AstroLib.SolarMax(timestamp, cumulus.Longitude, cumulus.Latitude, AltitudeM(cumulus.Altitude), out SolarElevation, cumulus.RStransfactor, cumulus.BrasTurbidity, cumulus.SolarCalc);
+			CurrentSolarMax = AstroLib.SolarMax(timestamp, cumulus.Longitude, cumulus.Latitude, AltitudeM(cumulus.Altitude), out SolarElevation, cumulus.SolarOptions);
 
-			if (!cumulus.UseBlakeLarsen)
+			if (!cumulus.SolarOptions.UseBlakeLarsen)
 			{
-				IsSunny = (SolarRad > (CurrentSolarMax * cumulus.SunThreshold / 100)) && (SolarRad >= cumulus.SolarMinimum);
+				IsSunny = (SolarRad > (CurrentSolarMax * cumulus.SolarOptions.SunThreshold / 100)) && (SolarRad >= cumulus.SolarOptions.SolarMinimum);
 			}
 			HaveReadData = true;
 		}
@@ -4511,14 +4511,8 @@ namespace CumulusMX
 				else
 				// default
 				{
-					if (cumulus.Units.Rain == 0)
-					{
-						rdthresh1000 = 200; // 0.2mm *1000
-					}
-					else
-					{
-						rdthresh1000 = 10; // 0.01in *1000
-					}
+					// 0.2mm *1000, 0.01in *1000
+					rdthresh1000 = cumulus.Units.Rain == 0 ? 200 : 10;
 				}
 
 				// set up rain yesterday * 1000 for comparison

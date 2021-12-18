@@ -645,7 +645,7 @@ namespace CumulusMX
 				{
 					try
 					{
-						ProcessExtraDewPoint(data, thisStation);
+						ProcessExtraDewPoint(thisStation);
 					}
 					catch (Exception ex)
 					{
@@ -922,7 +922,7 @@ namespace CumulusMX
 			cumulus.BatteryLowAlarm.Triggered = lowBatt;
 		}
 
-		private void ProcessExtraDewPoint(NameValueCollection data, WeatherStation station)
+		private void ProcessExtraDewPoint(WeatherStation station)
 		{
 			for (var i = 1; i <= 10; i++)
 			{

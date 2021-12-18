@@ -278,39 +278,39 @@ namespace CumulusMX
 				// Create a broadcast listener
 				Task.Run(() =>
 				  {
-					  using var udpClient = new UdpClient();
-					  udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-					  udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, port));
-					  udpClient.Client.ReceiveTimeout = 4000;  // We should get a message every 2.5 seconds
+					using var udpClient = new UdpClient();
+					udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+					udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, port));
+					udpClient.Client.ReceiveTimeout = 4000;  // We should get a message every 2.5 seconds
 					var from = new IPEndPoint(0, 0);
 
-					  while (!stop)
-					  {
-						  try
-						  {
-							  var jsonBtye = udpClient.Receive(ref from);
-							  var jsonStr = Encoding.UTF8.GetString(jsonBtye);
-							  if (!stop) // we may be waiting for a broadcast when a shutdown is started
+					while (!stop)
+					{
+						try
+						{
+							var jsonBtye = udpClient.Receive(ref from);
+							var jsonStr = Encoding.UTF8.GetString(jsonBtye);
+							if (!stop) // we may be waiting for a broadcast when a shutdown is started
 							{
-								  DecodeBroadcast(jsonStr);
-							  }
-						  }
-						  catch (SocketException ex)
-						  {
-							  if (ex.SocketErrorCode == SocketError.TimedOut)
-							  {
-								  multicastsBad++;
-								  var msg = string.Format("WLL: Missed a WLL broadcast message. Percentage good packets {0:F2}% - ({1},{2})", (multicastsGood / (float)(multicastsBad + multicastsGood) * 100), multicastsBad, multicastsGood);
-								  cumulus.LogDebugMessage(msg);
-							  }
-							  else
-							  {
-								  cumulus.LogExceptionMessage(ex, "WLL: UDP socket error");
-							  }
-						  }
-					  }
-					  udpClient.Close();
-					  Cumulus.LogMessage("WLL broadcast listener stopped");
+								DecodeBroadcast(jsonStr);
+							}
+						}
+						catch (SocketException ex)
+						{
+							if (ex.SocketErrorCode == SocketError.TimedOut)
+							{
+								multicastsBad++;
+								var msg = string.Format("WLL: Missed a WLL broadcast message. Percentage good packets {0:F2}% - ({1},{2})", (multicastsGood / (float)(multicastsBad + multicastsGood) * 100), multicastsBad, multicastsGood);
+								cumulus.LogDebugMessage(msg);
+							}
+							else
+							{
+								cumulus.LogExceptionMessage(ex, "WLL: UDP socket error");
+							}
+						}
+					}
+					udpClient.Close();
+					Cumulus.LogMessage("WLL broadcast listener stopped");
 				  });
 
 				Cumulus.LogMessage($"WLL Now listening on broadcast port {port}");
@@ -1392,7 +1392,7 @@ namespace CumulusMX
 		{
 			Cumulus.LogMessage("GetWlHistoricData: Get WL.com Historic Data");
 
-			if (cumulus.WllApiKey == string.Empty || cumulus.WllApiSecret == string.Empty)
+			if (string.IsNullOrEmpty(cumulus.WllApiKey) || string.IsNullOrEmpty(cumulus.WllApiSecret))
 			{
 				Cumulus.LogMessage("GetWlHistoricData: Missing WeatherLink API data in the configuration, aborting!");
 				cumulus.LastUpdateTime = DateTime.Now;
@@ -2134,7 +2134,7 @@ namespace CumulusMX
 									DoSolarRad((int)data11.solar_rad_avg, recordTs);
 
 									// add in archive period worth of sunshine, if sunny - arch_int in seconds
-									if ((SolarRad > CurrentSolarMax * cumulus.SunThreshold / 100.00) && (SolarRad >= cumulus.SolarMinimum))
+									if ((SolarRad > CurrentSolarMax * cumulus.SolarOptions.SunThreshold / 100.00) && (SolarRad >= cumulus.SolarOptions.SolarMinimum))
 									{
 										SunshineHours += (data11.arch_int / 3600.0);
 									}

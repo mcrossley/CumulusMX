@@ -1386,7 +1386,7 @@ namespace CumulusMX
 							break;
 						case "highMonthlyRainTime":
 							dt = value.Split('/');
-							var datstr = "01/" + dt[0] + "/" + dt[1].Substring(2, 2);
+							var datstr = string.Concat("01/", dt[0], "/", dt[1].AsSpan(2, 2));
 							station.SetMonthlyAlltime(station.MonthlyRecs[month].MonthlyRain, station.MonthlyRecs[month].MonthlyRain.Val, Utils.ddmmyyyyStrToDate(datstr));
 							break;
 						case "longestDryPeriodVal":

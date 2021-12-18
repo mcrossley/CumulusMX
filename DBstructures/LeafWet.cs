@@ -20,7 +20,6 @@ namespace CumulusMX
 
 		public string ToCSV()
 		{
-			var invNum = CultureInfo.InvariantCulture.NumberFormat;
 			var invDate = CultureInfo.InvariantCulture.NumberFormat;
 
 			var sb = new StringBuilder(350);

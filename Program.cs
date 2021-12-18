@@ -242,8 +242,7 @@ namespace CumulusMX
 
 			using (appMutex = new Mutex(false, "Global\\" + AppGuid))
 			{
-				// Interactive seems to be always false under mono :(
-				//TODO: Is that true under .Net?
+				// Interactive seems to be always true on Linux :(
 
 				if (RunningOnWindows && !Environment.UserInteractive)
 				{
@@ -260,7 +259,6 @@ namespace CumulusMX
 					{
 						// Windows interactive or Linux and no service flag
 						svcTextListener.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + "Running interactively");
-						service = false;
 					}
 					else
 					{

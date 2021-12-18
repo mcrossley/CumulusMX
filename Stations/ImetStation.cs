@@ -533,10 +533,10 @@ namespace CumulusMX
 				bool dataOK;
 				try
 				{
-					hour = Convert.ToInt32(sl[TIMEPOS].Substring(0, 2));
+					hour = Convert.ToInt32(sl[TIMEPOS][..2]);
 					minute = Convert.ToInt32(sl[TIMEPOS].Substring(3, 2));
 					sec = Convert.ToInt32(sl[TIMEPOS].Substring(6, 2));
-					day = Convert.ToInt32(sl[DATEPOS].Substring(0, 2));
+					day = Convert.ToInt32(sl[DATEPOS][..2]);
 					month = Convert.ToInt32(sl[DATEPOS].Substring(3, 2));
 					year = Convert.ToInt32(sl[DATEPOS].Substring(6, 4));
 					Cumulus.LogMessage("Logger entry : Y = " + year + ", M = " + month + ", D = " + day + ", h = " + hour + ", m = " + minute + ", s = " + sec);
@@ -566,10 +566,11 @@ namespace CumulusMX
 							sl = GetArchiveRecord();
 							try
 							{
-								hour = Convert.ToInt32(sl[TIMEPOS].Substring(0, 2));
-								minute = Convert.ToInt32(sl[TIMEPOS].Substring(3, 2));
+								hour = Convert.ToInt32(sl[TIMEPOS][..2]);
+								//minute = Convert.ToInt32(sl[TIMEPOS].Substring(3, 2));
+								minute = Convert.ToInt32(sl[TIMEPOS][2..5]);
 								sec = Convert.ToInt32(sl[TIMEPOS].Substring(6, 2));
-								day = Convert.ToInt32(sl[DATEPOS].Substring(0, 2));
+								day = Convert.ToInt32(sl[DATEPOS][..2]);
 								month = Convert.ToInt32(sl[DATEPOS].Substring(3, 2));
 								year = Convert.ToInt32(sl[DATEPOS].Substring(6, 4));
 								Cumulus.LogMessage("Logger entry zero: Y = " + year + ", M = " + month + ", D = " + day + ", h = " + hour + ", m = " + minute + ", s = " + sec);
@@ -630,10 +631,10 @@ namespace CumulusMX
 							sl = GetArchiveRecord();
 							ProgressLogs();
 
-							hour = Convert.ToInt32(sl[TIMEPOS].Substring(0, 2));
+							hour = Convert.ToInt32(sl[TIMEPOS][..2]);
 							minute = Convert.ToInt32(sl[TIMEPOS].Substring(3, 2));
 							sec = Convert.ToInt32(sl[TIMEPOS].Substring(6, 2));
-							day = Convert.ToInt32(sl[DATEPOS].Substring(0, 2));
+							day = Convert.ToInt32(sl[DATEPOS][..2]);
 							month = Convert.ToInt32(sl[DATEPOS].Substring(3, 2));
 							year = Convert.ToInt32(sl[DATEPOS].Substring(6, 4));
 							timestamp = new DateTime(year, month, day, hour, minute, sec);

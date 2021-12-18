@@ -1068,7 +1068,6 @@ namespace CumulusMX
 				// Update the MX database
 				var newRec = new ExtraHum();
 				newRec.FromString(newData.data[0]);
-				var logDate = Utils.FromUnixTime(newData.dates[0]);
 				var logDateStr = newData.data[0][0];
 				try
 				{
@@ -1360,7 +1359,6 @@ namespace CumulusMX
 				// Update the MX database
 				var newRec = new ExtraDewPoint();
 				newRec.FromString(newData.data[0]);
-				var logDate = Utils.FromUnixTime(newData.dates[0]);
 				var logDateStr = newData.data[0][0];
 
 				try
@@ -1650,7 +1648,6 @@ namespace CumulusMX
 				// Update the MX database
 				var newRec = new UserTemp();
 				newRec.FromString(newData.data[0]);
-				var logDate = Utils.FromUnixTime(newData.dates[0]);
 				var logDateStr = newData.data[0][0];
 
 				try
@@ -1941,7 +1938,6 @@ namespace CumulusMX
 				// Update the MX database
 				var newRec = new SoilTemp();
 				newRec.FromString(newData.data[0]);
-				var logDate = Utils.FromUnixTime(newData.dates[0]);
 				var logDateStr = newData.data[0][0];
 
 				try
@@ -2232,7 +2228,6 @@ namespace CumulusMX
 				// Update the MX database
 				var newRec = new SoilMoist();
 				newRec.FromString(newData.data[0]);
-				var logDate = Utils.FromUnixTime(newData.dates[0]);
 				var logDateStr = newData.data[0][0];
 
 				try
@@ -2523,7 +2518,6 @@ namespace CumulusMX
 				// Update the MX database
 				var newRec = new LeafTemp();
 				newRec.FromString(newData.data[0]);
-				var logDate = Utils.FromUnixTime(newData.dates[0]);
 				var logDateStr = newData.data[0][0];
 
 				try
@@ -2814,7 +2808,6 @@ namespace CumulusMX
 				// Update the MX database
 				var newRec = new LeafWet();
 				newRec.FromString(newData.data[0]);
-				var logDate = Utils.FromUnixTime(newData.dates[0]);
 				var logDateStr = newData.data[0][0];
 
 				try
@@ -3105,7 +3098,6 @@ namespace CumulusMX
 				// Update the MX database
 				var newRec = new AirQuality();
 				newRec.FromString(newData.data[0]);
-				var logDate = Utils.FromUnixTime(newData.dates[0]);
 				var logDateStr = newData.data[0][0];
 
 				try
@@ -3404,7 +3396,6 @@ namespace CumulusMX
 				// Update the MX database
 				var newRec = new CO2Data();
 				newRec.FromString(newData.data[0]);
-				var logDate = Utils.FromUnixTime(newData.dates[0]);
 				var logDateStr = newData.data[0][0];
 
 				try

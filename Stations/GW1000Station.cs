@@ -460,70 +460,83 @@ namespace CumulusMX
 			// We only want unique IP addresses
 			var discovered = new Discovery();
 			const int broadcastPort = 46000;
-			const int clientPort = 59387;
-
 
 			try
 			{
 				using var client = new UdpClient();
-				using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-				var recvEp = new IPEndPoint(IPAddress.Any, clientPort);
+				var recvEp = new IPEndPoint(0, 0);
 				var sendEp = new IPEndPoint(IPAddress.Broadcast, broadcastPort);
-				var sendBytes = new byte[] { 0xff, 0xff, 0x12, 0x03, 0x15 };
-
-				socket.ReceiveTimeout = 100;
-				socket.EnableBroadcast = true;
-				socket.Bind(recvEp);
+				var sendBytes = new byte[] { 0xff, 0xff, 0x12, 0x00, 0x04, 0x16 };
 
 
-				var receivedBytes = new byte[200];
+				// Get the primary IP address
+				var myIP = Utils.GetIpWithDefaultGateway();
+				cumulus.LogDebugMessage($"Using local IP address {myIP} to discover the GW1000");
 
-				var endTime = DateTime.Now.AddSeconds(3);
+				// bind the cient to the primary address - broadcast does not work with .Any address :(
+				client.Client.Bind(new IPEndPoint(myIP, broadcastPort));
+				// time out listening after 1 second
+				client.Client.ReceiveTimeout = 1000;
 
-				client.EnableBroadcast = true;
-				client.Send(sendBytes, sendBytes.Length, sendEp);
-
-				//string[] namesToCheck = { "GW1000", "WH2650", "EasyWeather", "AMBWeather", "WS1900", "WN1900" };
-
+				// we are going to attemp discovery three times
+				var retryCount = 3;
 				do
 				{
+					// each time we wait 1 second for any responses
+					var endTime = DateTime.Now.AddSeconds(1);
+
 					try
 					{
-						socket.Receive(receivedBytes, 0, receivedBytes.Length, SocketFlags.None);
-						//receivedBytes = client.Receive(ref recvEp);
-						string ipAddr = $"{receivedBytes[11]}.{receivedBytes[12]}.{receivedBytes[13]}.{receivedBytes[14]}";
-						int nameLen = receivedBytes[17];
-						var nameArr = new byte[nameLen];
-						var macArr = new byte[6];
+						// Send the request
+						client.Send(sendBytes, sendBytes.Length, sendEp);
 
-						Array.Copy(receivedBytes, 18, nameArr, 0, nameLen);
-						var name = Encoding.Default.GetString(nameArr);
-
-						Array.Copy(receivedBytes, 5, macArr, 0, 6);
-						var macHex = BitConverter.ToString(macArr).Replace('-', ':');
-
-						//if (namesToCheck.Any((name.Split('-')[0]).StartsWith) && ipAddr.Split('.', StringSplitOptions.RemoveEmptyEntries).Length == 4)
-						if (ipAddr.Split('.', StringSplitOptions.RemoveEmptyEntries).Length == 4)
+						do
 						{
-							IPAddress ipAddr2;
-							if (IPAddress.TryParse(ipAddr, out ipAddr2))
+							try
 							{
-								if (!discovered.IP.Contains(ipAddr))
+								// get a response
+								var recevBuffer = client.Receive(ref recvEp);
+
+								// sanity check the response size - we may see our request back as a receive packet
+								if (recevBuffer.Length > 20)
 								{
-									cumulus.LogDebugMessage($"Discovered GW1000 device: Name={name}, IP={ipAddr}, MAC={macHex}");
-									discovered.IP.Add(ipAddr);
-									discovered.Name.Add(name);
-									discovered.Mac.Add(macHex);
+									string ipAddr = $"{recevBuffer[11]}.{recevBuffer[12]}.{recevBuffer[13]}.{recevBuffer[14]}";
+									var macArr = new byte[6];
+
+									Array.Copy(recevBuffer, 5, macArr, 0, 6);
+									var macHex = BitConverter.ToString(macArr).Replace('-', ':');
+
+									if (ipAddr.Split('.', StringSplitOptions.RemoveEmptyEntries).Length == 4)
+									{
+										IPAddress ipAddr2;
+										if (IPAddress.TryParse(ipAddr, out ipAddr2))
+										{
+											if (!discovered.IP.Contains(ipAddr))
+											{
+												cumulus.LogDebugMessage($"Discovered GW1000 device: IP={ipAddr}, MAC={macHex}");
+												discovered.IP.Add(ipAddr);
+												discovered.Mac.Add(macHex);
+											}
+										}
+									}
+									else
+									{
+										cumulus.LogDebugMessage($"Discovered an unsupported device: IP={ipAddr}, MAC={macHex}");
+									}
 								}
 							}
-						}
-						else
-						{
-							cumulus.LogDebugMessage($"Discovered an unsupported device: Name={name}, IP={ipAddr}, MAC={macHex}");
-						}
+							catch
+							{ }
+
+						} while (DateTime.Now < endTime);
 					}
-					catch { }
-				} while (DateTime.Now < endTime);
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "DiscoverGW1000: Error sending discovery request");
+					}
+					retryCount--;
+
+				} while (retryCount > 0);
 			}
 			catch (Exception ex)
 			{
@@ -564,6 +577,10 @@ namespace CumulusMX
 							cumulus.Gw1000MacAddress = discoveredDevices.Mac[0];
 						}
 						cumulus.WriteIniFile();
+					}
+					else
+					{
+						Cumulus.LogMessage("The discovered IP address for the GW1000 matches our current one");
 					}
 				}
 				else if (discoveredDevices.Mac.Contains(macaddr))
@@ -960,7 +977,7 @@ namespace CumulusMX
 								// Save the Lux value
 								LightValue = ConvertBigEndianUInt32(data, idx) / 10.0;
 								// convert Lux to W/m² - approximately!
-								DoSolarRad((int)(LightValue * cumulus.LuxToWM2), dateTime);
+								DoSolarRad((int)(LightValue * cumulus.SolarOptions.LuxToWM2), dateTime);
 								idx += 4;
 								break;
 							case 0x16: //UV (µW/cm²) - what use is this!
@@ -1761,13 +1778,11 @@ namespace CumulusMX
 		private class Discovery
 		{
 			public List<string> IP { get; set; }
-			public List<string> Name { get; set; }
 			public List<string> Mac { get; set; }
 
 			public Discovery()
 			{
 				IP = new List<string>();
-				Name = new List<string>();
 				Mac = new List<string>();
 			}
 		}

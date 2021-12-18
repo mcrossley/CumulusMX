@@ -106,7 +106,7 @@ namespace CumulusMX
 				cumulus.ProgramOptions.ListWebTags = settings.options.listwebtags;
 				cumulus.ProgramOptions.Culture.RemoveSpaceFromDateSeparator = settings.culture.removespacefromdateseparator;
 
-				if (cumulus.ProgramOptions.Culture.RemoveSpaceFromDateSeparator && CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(" "))
+				if (cumulus.ProgramOptions.Culture.RemoveSpaceFromDateSeparator && CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(' '))
 				{
 					// get the existing culture
 					var newCulture = CultureInfo.CurrentCulture;
@@ -121,7 +121,7 @@ namespace CumulusMX
 				{
 					var newCulture = CultureInfo.GetCultureInfo(CultureInfo.CurrentCulture.Name);
 
-					if (!cumulus.ProgramOptions.Culture.RemoveSpaceFromDateSeparator && newCulture.DateTimeFormat.DateSeparator.Contains(" ") && !CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(" "))
+					if (!cumulus.ProgramOptions.Culture.RemoveSpaceFromDateSeparator && newCulture.DateTimeFormat.DateSeparator.Contains(' ') && !CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(' '))
 					{
 						// set current thread culture
 						Thread.CurrentThread.CurrentCulture = newCulture;

@@ -88,7 +88,7 @@ namespace CumulusMX
 
 			var bl = new BlakeLarsenJson()
 			{
-				enabled = cumulus.UseBlakeLarsen
+				enabled = cumulus.SolarOptions.UseBlakeLarsen
 			};
 
 			var rg11port1 = new RG11devicejson()
@@ -320,7 +320,7 @@ namespace CumulusMX
 				// Blake-Larsen settings
 				try
 				{
-					cumulus.UseBlakeLarsen = settings.blakeLarsen.enabled;
+					cumulus.SolarOptions.UseBlakeLarsen = settings.blakeLarsen.enabled;
 				}
 				catch (Exception ex)
 				{

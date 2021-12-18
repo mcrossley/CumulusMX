@@ -118,7 +118,7 @@ namespace CumulusMX
 							if ((i=s.IndexOf('=')) > 0)
 							{
 								int j = s.Length - i - 1;
-								string Key = s.Substring(0,i).Trim();
+								string Key = s[..i].Trim();
 								if (Key.Length  > 0)
 								{
 									// *** Only first occurrence of a key is loaded ***
@@ -301,7 +301,7 @@ namespace CumulusMX
 				int l = hex.Length;
 				if (l > 2)
 				{
-					sb.Append(hex.Substring(l-2,2));
+					sb.Append(hex.AsSpan(l-2,2));
 				}
 				else
 				{

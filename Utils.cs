@@ -2,6 +2,9 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 
 // A rag tag of useful functions
@@ -158,5 +161,19 @@ namespace CumulusMX
 			return TimeSpan.TryParseExact(val, format, CultureInfo.InvariantCulture, out tim) ? baseDate.Add(tim) : null;
 		}
 
+
+		public static IPAddress GetIpWithDefaultGateway()
+		{
+			return NetworkInterface
+				.GetAllNetworkInterfaces()
+				.Where(n => n.OperationalStatus == OperationalStatus.Up)
+				.Where(n => n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+				.Where(n => n.GetIPProperties().GatewayAddresses.Count > 0)
+				.SelectMany(n => n.GetIPProperties().UnicastAddresses)
+				.Where(n => n.Address.AddressFamily == AddressFamily.InterNetwork)
+				.Where(n => n.IPv4Mask.ToString() != "0.0.0.0")
+				.Select(g => g.Address)
+				.First();
+		}
 	}
 }

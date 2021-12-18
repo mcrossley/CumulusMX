@@ -1,3 +1,31 @@
+4.0.0 - b4006
+——————————————
+- Converted to .Net 6
+- Extra data logging now moved to the database as the primary source. It now also supports null values
+- Interval data and extra data editors switched back to server side processing. There are no longer any restrictions on the date ranges
+- No longer requires the libgdiplus library on Linux/MacOS
+- The Moon image has a new option, the "shadow" can be either the image dimmed by 80% as before, or now can be made transparent
+- Improved Ecowitt GW1000 auto-discovery mechanism
+- The Solar calculation now allows you to input different transparency values for July and August. MX uses a cosine interpolation between the two values
+
+- There are new options to control extra data logging to the database by type rather than the current global switch.
+	- There is no GUI for setting these yet. Please add the following section to your Cumulus.ini file to control this...
+	[ExtraDataLogging]
+	Temperature=1
+	Humidity=1
+	Dewpoint=1
+	UserTemp=1
+	SoilTemp=1
+	SoilMoisture=1
+	LeafTemp=1
+	LeafWetness=1
+	AirQual=1
+	CO2=1
+
+- The database table for AQ values is temporary whilst I decide the best way of storing this information across different sensor types
+
+
+
 4.0.0 - b4005
 ——————————————
 - Final versions of the records editors. These now "look" better in that all default values of 999 etc are all replaced with a dash.
