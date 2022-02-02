@@ -47,7 +47,7 @@ namespace CumulusMX
 							{
 								msg += "\r\nLast error: " + LastError;
 							}
-							cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml);
+							_ = cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml);
 						}
 					}
 				}
@@ -92,6 +92,20 @@ namespace CumulusMX
 		public string LastError { get; set; }
 		int triggerCount = 0;
 		public int TriggerThreshold { get; set; }
+
+		public void Clear()
+		{
+			if (Latch && triggered && DateTime.Now > TriggeredTime.AddHours(LatchHours))
+			{
+				triggered = false;
+				triggerCount = 0;
+
+				if (Enabled)
+				{
+					Cumulus.LogMessage($"Alarm '{name}' cleared");
+				}
+			}
+		}
 	}
 
 	public class AlarmChange : Alarm
@@ -123,7 +137,7 @@ namespace CumulusMX
 						{
 							// Construct the message - preamble, plus values
 							var msg = Program.cumulus.AlarmEmailPreamble + "\r\n" + string.Format(EmailMsgUp, Value, Units);
-							cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml);
+							_ = cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml);
 						}
 					}
 				}
@@ -172,7 +186,7 @@ namespace CumulusMX
 						{
 							// Construct the message - preamble, plus values
 							var msg = Program.cumulus.AlarmEmailPreamble + "\n" + string.Format(EmailMsgDn, Value, Units);
-							cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml);
+							_ = cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml);
 						}
 					}
 				}
@@ -202,5 +216,27 @@ namespace CumulusMX
 
 		public string EmailMsgUp { get; set; }
 		public string EmailMsgDn { get; set; }
+
+		public new void Clear()
+		{
+			if (Latch && upTriggered && DateTime.Now > UpTriggeredTime.AddHours(LatchHours))
+			{
+				upTriggered = false;
+
+				if (Enabled)
+				{
+					Cumulus.LogMessage($"Alarm '{name}' up cleared");
+				}
+			}
+			if (Latch && downTriggered && DateTime.Now > DownTriggeredTime.AddHours(LatchHours))
+			{
+				downTriggered = false;
+
+				if (Enabled)
+				{
+					Cumulus.LogMessage($"Alarm '{name}' down cleared");
+				}
+			}
+		}
 	}
 }

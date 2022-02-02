@@ -54,7 +54,7 @@ namespace CumulusMX
 				CleanSession = true
 			};
 
-			Connect(mqttOptions);
+			_ = Connect(mqttOptions); // let this run in background
 
 			mqttClient.UseDisconnectedHandler(async e =>
 			{
@@ -64,7 +64,7 @@ namespace CumulusMX
 				cumulus.LogDebugMessage("MQTT attempting to reconnect with server");
 				try
 				{
-					Connect(mqttOptions);
+					Connect(mqttOptions).Wait();
 					cumulus.LogDebugMessage("MQTT reconnected OK");
 				}
 				catch
@@ -96,7 +96,7 @@ namespace CumulusMX
 			}
 		}
 
-		private static async void Connect(MQTTnet.Client.Options.IMqttClientOptions options)
+		private static async Task Connect(MQTTnet.Client.Options.IMqttClientOptions options)
 		{
 			try
 			{

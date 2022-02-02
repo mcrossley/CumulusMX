@@ -424,7 +424,7 @@ namespace CumulusMX
 				// validate the from email
 				if (!EmailSender.CheckEmailAddress(result.email.fromEmail.Trim()))
 				{
-					var msg = "ERROR: Invalid Alarm from email address entered";
+					var msg = "ERROR: Invalid Alarm from email address entered - " + result.email.fromEmail.Trim();
 					Cumulus.LogMessage(msg);
 					context.Response.StatusCode = 500;
 					return msg;
@@ -438,7 +438,7 @@ namespace CumulusMX
 					emails[i] = emails[i].Trim();
 					if (!EmailSender.CheckEmailAddress(emails[i]))
 					{
-						var msg = "ERROR: Invalid Alarm destination email address entered";
+						var msg = "ERROR: Invalid Alarm destination email address entered - " + emails[i];
 						Cumulus.LogMessage(msg);
 						context.Response.StatusCode = 500;
 						return msg;

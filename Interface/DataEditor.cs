@@ -105,7 +105,7 @@ namespace CumulusMX
 			return json.ToString();
 		}
 
-		internal async Task<string> GetRecordsDayFile(string recordType)
+		internal string GetRecordsDayFile(string recordType)
 		{
 			const string timeStampFormat = "dd/MM/yyyy HH:mm";
 			const string dateStampFormat = "dd/MM/yyyy";
@@ -189,7 +189,7 @@ namespace CumulusMX
 			}
 
 			// Get all the dayfile records from the Database
-			var data = await station.DatabaseAsync.QueryAsync<DayData>("select * from DayData where Timestamp >= ? order by Timestamp", startDate);
+			var data = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? order by Timestamp", startDate);
 
 			if (data.Count > 0)
 			{
@@ -501,7 +501,7 @@ namespace CumulusMX
 			return json.ToString();
 		}
 
-		internal async Task<string> GetRecordsLogFile(string recordType)
+		internal string GetRecordsLogFile(string recordType)
 		{
 			const string timeStampFormat = "dd/MM/yyyy HH:mm";
 			const string dateStampFormat = "dd/MM/yyyy";
@@ -611,7 +611,7 @@ namespace CumulusMX
 
 				try
 				{
-					var rows = await station.DatabaseAsync.QueryAsync<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ?", monthDate, monthDate.AddMonths(1));
+					var rows = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ?", monthDate, monthDate.AddMonths(1));
 
 					foreach (var rec in rows)
 					{
@@ -1495,7 +1495,7 @@ namespace CumulusMX
 			return json.ToString();
 		}
 
-		internal async Task<string> GetMonthlyRecDayFile()
+		internal string GetMonthlyRecDayFile()
 		{
 			const string timeStampFormat = "dd/MM/yyyy HH:mm";
 			const string dateStampFormat = "dd/MM/yyyy";
@@ -1590,7 +1590,7 @@ namespace CumulusMX
 			}
 
 			// get all the data from the database
-			var data = await station.DatabaseAsync.QueryAsync<DayData>("select * from DayData order by Timestamp");
+			var data = station.Database.Query<DayData>("select * from DayData order by Timestamp");
 
 			if (data.Count > 0)
 			{
@@ -1930,7 +1930,7 @@ namespace CumulusMX
 			return json.ToString();
 		}
 
-		internal async Task<string> GetMonthlyRecLogFile()
+		internal string GetMonthlyRecLogFile()
 		{
 			const string timeStampFormat = "dd/MM/yyyy HH:mm";
 			const string dateStampFormat = "dd/MM/yyyy";
@@ -2052,7 +2052,7 @@ namespace CumulusMX
 			{
 				try
 				{
-					var rows = await station.DatabaseAsync.QueryAsync<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ?", currDate, currDate.AddMonths(1));
+					var rows = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ?", currDate, currDate.AddMonths(1));
 					foreach (var row in rows)
 					{
 						// We need to work in meteo dates not clock dates for day hi/lows
@@ -3067,10 +3067,10 @@ namespace CumulusMX
 				try
 				{
 					var raintoday = double.Parse(raintodaystring, CultureInfo.InvariantCulture.NumberFormat);
-					Cumulus.LogMessage("Before rain today edit, raintoday=" + station.RainToday.ToString(cumulus.RainFormat, invNum) + " Raindaystart=" + station.raindaystart.ToString(cumulus.RainFormat, invNum));
+					Cumulus.LogMessage("Before rain today edit, raintoday=" + (station.RainToday ?? 0).ToString(cumulus.RainFormat, invNum) + " Raindaystart=" + station.raindaystart.ToString(cumulus.RainFormat, invNum));
 					station.RainToday = raintoday;
-					station.raindaystart = station.Raincounter - (station.RainToday / cumulus.Calib.Rain.Mult);
-					Cumulus.LogMessage("After rain today edit,  raintoday=" + station.RainToday.ToString(cumulus.RainFormat, invNum) + " Raindaystart=" + station.raindaystart.ToString(cumulus.RainFormat, invNum));
+					station.raindaystart = station.Raincounter - ((station.RainToday ?? 0) / cumulus.Calib.Rain.Mult);
+					Cumulus.LogMessage("After rain today edit,  raintoday=" + (station.RainToday ?? 0).ToString(cumulus.RainFormat, invNum) + " Raindaystart=" + station.raindaystart.ToString(cumulus.RainFormat, invNum));
 				}
 				catch (Exception ex)
 				{
@@ -3078,7 +3078,7 @@ namespace CumulusMX
 				}
 			}
 
-			var json = "{\"raintoday\":\"" + station.RainToday.ToString(cumulus.RainFormat, invNum) +
+			var json = "{\"raintoday\":\"" + (station.RainToday ?? 0).ToString(cumulus.RainFormat, invNum) +
 				"\",\"raincounter\":\"" + station.Raincounter.ToString(cumulus.RainFormat, invNum) +
 				"\",\"startofdayrain\":\"" + station.raindaystart.ToString(cumulus.RainFormat, invNum) +
 				"\",\"rainmult\":\"" + cumulus.Calib.Rain.Mult.ToString("F3", invNum) + "\"}";
@@ -3089,7 +3089,7 @@ namespace CumulusMX
 		internal string GetRainTodayEditData()
 		{
 			var step = (cumulus.RainDPlaces == 1 ? "0.1" : "0.01");
-			var json = "{\"raintoday\":\"" + station.RainToday.ToString(cumulus.RainFormat, invNum) +
+			var json = "{\"raintoday\":\"" + (station.RainToday ?? 0).ToString(cumulus.RainFormat, invNum) +
 				"\",\"raincounter\":\"" + station.Raincounter.ToString(cumulus.RainFormat, invNum) +
 				"\",\"startofdayrain\":\"" + station.raindaystart.ToString(cumulus.RainFormat, invNum) +
 				"\",\"rainmult\":\"" + cumulus.Calib.Rain.Mult.ToString("F3", invNum) +

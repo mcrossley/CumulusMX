@@ -1,12 +1,26 @@
+4.0.0 - b4007
+——————————————
+- All the v3.15.0 updates applied (Ecowitt API code refactored)
+- Virtually all the primary data and extra sensor values are now nullable
+- The Cumulus.ini file parser now understands "null" as a value, so you will see xxx=null in the today/yesterday.ini etc files where values have not yet been determined
+- HTTP (Ecowitt) - now has the option to configure the Custom Server settings for you.
+	- It also has the ability to change the update time down to as low as 5 seconds
+	- Note this is incompatible with the WS View apps - if you alter another server setting they will complain and you will have to reset back 16 seconds, but CMX will reconfigure it back to 5 seconds on the next restart
+- A new logging option - Raw Data Log. This logs just the transmit/receive data to/from the station into a separate log file (not all stations supported, I have not implemented on WMR stations for instance)
+
+
 4.0.0 - b4006
 ——————————————
 - Converted to .Net 6
 - Extra data logging now moved to the database as the primary source. It now also supports null values
+	- Currently there is no pre-loading of the extra data tables from the extra logfiles
 - Interval data and extra data editors switched back to server side processing. There are no longer any restrictions on the date ranges
 - No longer requires the libgdiplus library on Linux/MacOS
 - The Moon image has a new option, the "shadow" can be either the image dimmed by 80% as before, or now can be made transparent
 - Improved Ecowitt GW1000 auto-discovery mechanism
 - The Solar calculation now allows you to input different transparency values for July and August. MX uses a cosine interpolation between the two values
+- The data folder has been renamed to /datav4 for this release
+- The MigrateData3to4 utility now reads from the /data folder and writes to the /datav4 folder
 
 - There are new options to control extra data logging to the database by type rather than the current global switch.
 	- There is no GUI for setting these yet. Please add the following section to your Cumulus.ini file to control this...

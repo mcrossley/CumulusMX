@@ -87,8 +87,8 @@ namespace CumulusMX
 						cumulus.Wund.CatchUp = settings.wunderground.catchup;
 						cumulus.Wund.SynchronisedUpdate = (!cumulus.Wund.RapidFireEnabled) && (60 % cumulus.Wund.Interval == 0);
 
-						cumulus.WundTimer.Interval = cumulus.Wund.RapidFireEnabled ? 5000 : cumulus.Wund.Interval * 60 * 1000;
-						cumulus.WundTimer.Enabled = cumulus.Wund.Enabled && !cumulus.Wund.SynchronisedUpdate && !string.IsNullOrWhiteSpace(cumulus.Wund.ID) && !string.IsNullOrWhiteSpace(cumulus.Wund.PW);
+						cumulus.Wund.IntTimer.Interval = cumulus.Wund.RapidFireEnabled ? 5000 : cumulus.Wund.Interval * 60 * 1000;
+						cumulus.Wund.IntTimer.Enabled = cumulus.Wund.Enabled && !cumulus.Wund.SynchronisedUpdate && !string.IsNullOrWhiteSpace(cumulus.Wund.ID) && !string.IsNullOrWhiteSpace(cumulus.Wund.PW);
 					}
 				}
 				catch (Exception ex)
@@ -140,8 +140,8 @@ namespace CumulusMX
 						cumulus.AWEKAS.SendAirQuality = settings.awekas.includeaq;
 						cumulus.AWEKAS.SynchronisedUpdate = (cumulus.AWEKAS.Interval % 60 == 0);
 
-						cumulus.AwekasTimer.Interval = cumulus.AWEKAS.Interval * 1000;
-						cumulus.AwekasTimer.Enabled = cumulus.AWEKAS.Enabled && !cumulus.AWEKAS.SynchronisedUpdate && !string.IsNullOrWhiteSpace(cumulus.AWEKAS.ID) && !string.IsNullOrWhiteSpace(cumulus.AWEKAS.PW);
+						cumulus.AWEKAS.IntTimer.Interval = cumulus.AWEKAS.Interval * 1000;
+						cumulus.AWEKAS.IntTimer.Enabled = cumulus.AWEKAS.Enabled && !cumulus.AWEKAS.SynchronisedUpdate && !string.IsNullOrWhiteSpace(cumulus.AWEKAS.ID) && !string.IsNullOrWhiteSpace(cumulus.AWEKAS.PW);
 					}
 				}
 				catch (Exception ex)
@@ -208,9 +208,11 @@ namespace CumulusMX
 					{
 						cumulus.WOW.SendSolar = settings.wow.includesolar;
 						cumulus.WOW.SendUV = settings.wow.includeuv;
+						cumulus.WOW.SendSoilTemp = settings.wow.includesoiltemp;
+						cumulus.WOW.SoilTempSensor = settings.wow.soiltempsensor;
 						cumulus.WOW.Interval = settings.wow.interval;
-						cumulus.WOW.PW = settings.wow.password ?? string.Empty; ;
-						cumulus.WOW.ID = settings.wow.stationid ?? string.Empty; ;
+						cumulus.WOW.PW = settings.wow.password ?? string.Empty;
+						cumulus.WOW.ID = settings.wow.stationid ?? string.Empty;
 						cumulus.WOW.CatchUp = settings.wow.catchup;
 					}
 				}
@@ -330,7 +332,7 @@ namespace CumulusMX
 				cumulus.WriteIniFile();
 
 				// Do OpenWeatherMap set-up
-				cumulus.EnableOpenWeatherMap();
+				cumulus.OpenWeatherMap.EnableOpenWeatherMap();
 			}
 			catch (Exception ex)
 			{
@@ -430,6 +432,8 @@ namespace CumulusMX
 				enabled = cumulus.WOW.Enabled,
 				includesolar = cumulus.WOW.SendSolar,
 				includeuv = cumulus.WOW.SendUV,
+				includesoiltemp = cumulus.WOW.SendSoilTemp,
+				soiltempsensor = cumulus.WOW.SoilTempSensor,
 				interval = cumulus.WOW.Interval,
 				password = cumulus.WOW.PW,
 				stationid = cumulus.WOW.ID
@@ -605,6 +609,8 @@ namespace CumulusMX
 			public bool enabled { get; set; }
 			public bool includeuv { get; set; }
 			public bool includesolar { get; set; }
+			public bool includesoiltemp { get; set; }
+			public int soiltempsensor { get; set; }
 			public bool catchup { get; set; }
 			public string stationid { get; set; }
 			public string password { get; set; }

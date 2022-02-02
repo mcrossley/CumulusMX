@@ -36,31 +36,64 @@ namespace CumulusMX
 		/// <param name="start"></param>
 		/// <param name="length"></param>
 		/// <returns>JSON encoded section of the dayfile as a string</returns>
-		internal async Task<string> GetDailyData(string draw, int start, int length)
+		internal string GetDailyData(string draw, int start, int length, string search)
 		{
 			try
 			{
-				var total = await station.DatabaseAsync.ExecuteScalarAsync<int>("select count(*) from DayData");
-				var rows = await station.DatabaseAsync.QueryAsync<DayData>("select * from DayData order by Timestamp limit ?,?", start, length);
+				var total = station.Database.ExecuteScalar<int>("select count(*) from DayData");
+				//var rows = station.Database.Query<DayData>("select * from DayData order by Timestamp limit ?,?", start, length);
+				var rows = station.Database.Query<DayData>("select * from DayData order by Timestamp");
 				var json = new StringBuilder(350 * rows.Count);
 
-				json.Append("{\"draw\":" + draw);
-				json.Append(",\"recordsTotal\":" + total);
-				json.Append(",\"recordsFiltered\":" + total);
+				json.Append("{\"recordsTotal\":");
+				json.Append(total);
 				json.Append(",\"data\":[");
 
-				var lineNum = start + 1; // Start is zero relative
+				var lineNum = start; // Start is zero relative
+				var filtered = 0;  // Total number of filtered rows available
+				var thisDraw = 0;  // count of the rows we are returning
 
 				foreach (var row in rows)
 				{
-					json.Append($"[{lineNum++},");
-					json.Append(row.ToCSV());
-					json.Append("],");
+					var text = row.ToCSV();
+
+					lineNum++;
+
+					// if we have a search string and no match, skip to next line
+					if (!string.IsNullOrEmpty(search) && !text.Contains(search))
+					{
+						continue;
+					}
+
+					filtered++;
+
+					// skip records until we get to the start entry
+					if (filtered <= start)
+					{
+						continue;
+					}
+
+					// only send the number requested
+					if (thisDraw < length)
+					{
+						// track the number of lines we have to return so far
+						thisDraw++;
+
+						json.Append($"[{lineNum},");
+						json.Append(text);
+						json.Append("],");
+					}
 				}
 
 				// trim last ","
-				json.Length--;
-				json.Append("]}");
+				if (filtered > 0) json.Length--;
+
+
+				json.Append("],\"draw\":");
+				json.Append(draw);
+				json.Append(",\"recordsFiltered\":");
+				json.Append(filtered);
+				json.Append('}');
 
 				return json.ToString();
 			}
@@ -73,7 +106,7 @@ namespace CumulusMX
 		}
 
 
-		internal async Task<string> EditDailyData(IHttpContext context)
+		internal string EditDailyData(IHttpContext context)
 		{
 			var request = context.Request;
 			string text;
@@ -91,7 +124,7 @@ namespace CumulusMX
 				var newRec = new DayData();
 				newRec.FromString(newData.data[0]);
 
-				await station.DatabaseAsync.UpdateAsync(newRec);
+				station.Database.Update(newRec);
 
 				// Update the dayfile
 				if (Program.cumulus.ProgramOptions.UpdateDayfile)
@@ -126,11 +159,11 @@ namespace CumulusMX
 
 
 				// Update the MySQL record
-				if (!string.IsNullOrEmpty(cumulus.MySqlConnSettings.Server) &&
-					!string.IsNullOrEmpty(cumulus.MySqlConnSettings.UserID) &&
-					!string.IsNullOrEmpty(cumulus.MySqlConnSettings.Password) &&
-					!string.IsNullOrEmpty(cumulus.MySqlConnSettings.Database) &&
-					cumulus.MySqlSettings.UpdateOnEdit
+				if (!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Server) &&
+					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.UserID) &&
+					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Password) &&
+					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Database) &&
+					cumulus.MySqlStuff.Settings.UpdateOnEdit
 					)
 				{
 					var updateStr = "";
@@ -139,7 +172,7 @@ namespace CumulusMX
 					{
 						var updt = new StringBuilder(1024);
 
-						updt.Append($"UPDATE {cumulus.MySqlSettings.Dayfile.TableName} SET ");
+						updt.Append($"UPDATE {cumulus.MySqlStuff.Settings.Dayfile.TableName} SET ");
 						if (newRec.HighGust.HasValue) updt.Append($"HighWindGust={newRec.HighGust.Value.ToString(cumulus.WindFormat, invNum)},");
 						if (newRec.HighGustBearing.HasValue) updt.Append($"HWindGBear={newRec.HighGustBearing.Value},");
 						if (newRec.HighGustTime.HasValue) updt.Append($"THWindG={newRec.HighGustTime.Value:\\'HH:mm\\'},");
@@ -197,7 +230,7 @@ namespace CumulusMX
 						updt.Append($"WHERE LogDate='{newRec.Timestamp:yyyy-MM-dd}';");
 						updateStr = updt.ToString();
 
-						cumulus.MySqlCommandSync(updateStr, "EditDayFile");
+						cumulus.MySqlStuff.CommandSync(updateStr, "EditDayFile");
 						Cumulus.LogMessage($"EditDayFile: SQL Updated");
 					}
 					catch (Exception ex)
@@ -217,7 +250,7 @@ namespace CumulusMX
 				var newRec = new DayData();
 				newRec.FromString(newData.data[0]);
 
-				await station.DatabaseAsync.DeleteAsync(newRec);
+				station.Database.Delete(newRec);
 
 
 				// Update the dayfile
@@ -248,11 +281,11 @@ namespace CumulusMX
 				}
 
 				// Update the MySQL record
-				if (!string.IsNullOrEmpty(cumulus.MySqlConnSettings.Server) &&
-					!string.IsNullOrEmpty(cumulus.MySqlConnSettings.UserID) &&
-					!string.IsNullOrEmpty(cumulus.MySqlConnSettings.Password) &&
-					!string.IsNullOrEmpty(cumulus.MySqlConnSettings.Database) &&
-					cumulus.MySqlSettings.UpdateOnEdit
+				if (!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Server) &&
+					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.UserID) &&
+					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Password) &&
+					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Database) &&
+					cumulus.MySqlStuff.Settings.UpdateOnEdit
 					)
 				{
 
@@ -261,7 +294,7 @@ namespace CumulusMX
 					try
 					{
 						// Update the in database  record
-						await station.DatabaseAsync.DeleteAsync<DayData>(thisRec);
+						station.Database.Delete<DayData>(thisRec);
 
 					}
 					catch (Exception ex)
@@ -305,7 +338,7 @@ namespace CumulusMX
 		/// <param name="length"></param>
 		/// <param name="extra"></param>
 		/// <returns>JSON encoded section of the log file as a string</returns>
-		internal async Task<string> GetIntervalData(string from, string to, string draw, int start, int length, string search)
+		internal string GetIntervalData(string from, string to, string draw, int start, int length, string search)
 		{
 			try
 			{
@@ -313,7 +346,7 @@ namespace CumulusMX
 				var stDate = from.Split('-');
 				var enDate = to.Split('-');
 
-				var filtered = 0;  // otal number of filtered rows available
+				var filtered = 0;  // Total number of filtered rows available
 				var thisDraw = 0;  // count of the rows we are returning
 
 				// Get a time stamp, use 15th day to avoid wrap issues
@@ -329,7 +362,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = await station.DatabaseAsync.QueryAsync<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -392,7 +425,7 @@ namespace CumulusMX
 		}
 
 
-		internal async Task<string> EditIntervalData(IHttpContext context)
+		internal string EditIntervalData(IHttpContext context)
 		{
 			var request = context.Request;
 			string text;
@@ -489,60 +522,57 @@ namespace CumulusMX
 
 
 				// Update the MySQL record
-				if (!string.IsNullOrEmpty(cumulus.MySqlConnSettings.Server) &&
-					!string.IsNullOrEmpty(cumulus.MySqlConnSettings.UserID) &&
-					!string.IsNullOrEmpty(cumulus.MySqlConnSettings.Password) &&
-					!string.IsNullOrEmpty(cumulus.MySqlConnSettings.Database) &&
-					cumulus.MySqlSettings.UpdateOnEdit
+				if (!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Server) &&
+					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.UserID) &&
+					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Password) &&
+					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Database) &&
+					cumulus.MySqlStuff.Settings.UpdateOnEdit
 					)
 				{
 					// Only the monthly log file is stored in MySQL
 					var updateStr = "";
-					var newLine = String.Join(",", newData.data[0]);
+					//var newLine = String.Join(",", newData.data[0]);
 
 					try
 					{
 						var updt = new StringBuilder(1024);
 
-						var LogRec = station.ParseLogFileRec(newLine, false);
+						updt.Append($"UPDATE {cumulus.MySqlStuff.Settings.Monthly.TableName} SET ");
+						updt.Append($"Temp={(newRec.Temp.HasValue ? newRec.Temp.Value.ToString(cumulus.TempFormat, invNum) : "null")},");
+						updt.Append($"Humidity={(newRec.Humidity.HasValue ? newRec.Humidity.Value : "null")},");
+						updt.Append($"Dewpoint={(newRec.DewPoint.HasValue ? newRec.DewPoint.Value.ToString(cumulus.TempFormat, invNum) : "null")},");
+						updt.Append($"Windspeed={(newRec.WindAvg.HasValue ? newRec.WindAvg.Value.ToString(cumulus.WindAvgFormat, invNum) : "null")},");
+						updt.Append($"Windgust={(newRec.WindGust10m.HasValue ? newRec.WindGust10m.Value.ToString(cumulus.WindFormat, invNum) : "null")},");
+						updt.Append($"Windbearing={(newRec.WindAvgDir.HasValue ? newRec.WindAvgDir : "null")},");
+						updt.Append($"RainRate={(newRec.RainRate.HasValue ? newRec.RainRate.Value.ToString(cumulus.RainFormat, invNum) : "null")},");
+						updt.Append($"TodayRainSoFar={(newRec.RainToday.HasValue ? newRec.RainToday.Value.ToString(cumulus.RainFormat, invNum) : "null")},");
+						updt.Append($"Pressure={(newRec.Pressure.HasValue ? newRec.Pressure.Value.ToString(cumulus.PressFormat, invNum) : "null")},");
+						updt.Append($"Raincounter={(newRec.RainCounter.HasValue ? newRec.RainCounter.Value.ToString(cumulus.RainFormat, invNum) : "null")},");
+						updt.Append($"InsideTemp={(newRec.InsideTemp.HasValue ? newRec.InsideTemp.Value.ToString(cumulus.TempFormat, invNum) : "null")},");
+						updt.Append($"InsideHumidity={(newRec.InsideHumidity.HasValue ? newRec.InsideHumidity.Value : "null")},");
+						updt.Append($"LatestWindGust={(newRec.WindLatest.HasValue ? newRec.WindLatest.Value.ToString(cumulus.WindFormat, invNum) : "null")},");
+						updt.Append($"WindChill={(newRec.WindChill.HasValue ? newRec.WindChill.Value.ToString(cumulus.TempFormat, invNum) : "null")},");
+						updt.Append($"HeatIndex={(newRec.HeatIndex.HasValue ? newRec.HeatIndex.Value.ToString(cumulus.TempFormat, invNum) : "null")},");
+						updt.Append($"UVindex={(newRec.UV.HasValue ? newRec.UV.Value.ToString(cumulus.UVFormat, invNum) : "null")},");
+						updt.Append($"SolarRad={(newRec.SolarRad.HasValue ? newRec.SolarRad.Value : "null")},");
+						updt.Append($"Evapotrans={(newRec.ET.HasValue ? newRec.ET.Value.ToString(cumulus.ETFormat, invNum) : "null")},");
+						updt.Append($"AnnualEvapTran={(newRec.AnnualET.HasValue ? newRec.AnnualET.Value.ToString(cumulus.ETFormat, invNum) : "null")},");
+						updt.Append($"ApparentTemp={(newRec.Apparent.HasValue ? newRec.Apparent.Value.ToString(cumulus.TempFormat, invNum) : "null")},");
+						updt.Append($"MaxSolarRad={(newRec.SolarMax.HasValue ? newRec.SolarMax.Value : "null")},");
+						updt.Append($"HrsSunShine={(newRec.Sunshine.HasValue ? newRec.Sunshine.Value.ToString(cumulus.SunFormat, invNum) : "null")},");
+						updt.Append($"CurrWindBearing={(newRec.WindDir.HasValue ? newRec.WindDir.Value : "null")},");
+						updt.Append($"RG11rain={(newRec.RG11Rain.HasValue ? newRec.RG11Rain.Value.ToString(cumulus.RainFormat, invNum) : "null")},");
+						updt.Append($"RainSinceMidnight={(newRec.RainMidnight.HasValue ? newRec.RainMidnight.Value.ToString(cumulus.RainFormat, invNum) : "null")},");
+						updt.Append($"WindbearingSym='{(newRec.WindAvgDir.HasValue ? station.CompassPoint(newRec.WindAvgDir.Value) : "null")}',");
+						updt.Append($"CurrWindBearingSym='{(newRec.WindDir.HasValue ? station.CompassPoint(newRec.WindDir.Value) : "null")}',");
+						updt.Append($"FeelsLike={(newRec.FeelsLike.HasValue ? newRec.FeelsLike.Value.ToString(cumulus.TempFormat, invNum) : "null")},");
+						updt.Append($"Humidex={(newRec.Humidex.HasValue ? newRec.Humidex.Value.ToString(cumulus.TempFormat, invNum) : "null")} ");
 
-						updt.Append($"UPDATE {cumulus.MySqlSettings.Monthly.TableName} SET ");
-						updt.Append($"Temp={LogRec.OutdoorTemperature.ToString(cumulus.TempFormat, invNum)},");
-						updt.Append($"Humidity={ LogRec.OutdoorHumidity},");
-						updt.Append($"Dewpoint={LogRec.OutdoorDewpoint.ToString(cumulus.TempFormat, invNum)},");
-						updt.Append($"Windspeed={LogRec.WindAverage.ToString(cumulus.WindAvgFormat, invNum)},");
-						updt.Append($"Windgust={LogRec.RecentMaxGust.ToString(cumulus.WindFormat, invNum)},");
-						updt.Append($"Windbearing={LogRec.AvgBearing},");
-						updt.Append($"RainRate={LogRec.RainRate.ToString(cumulus.RainFormat, invNum)},");
-						updt.Append($"TodayRainSoFar={LogRec.RainToday.ToString(cumulus.RainFormat, invNum)},");
-						updt.Append($"Pressure={LogRec.Pressure.ToString(cumulus.PressFormat, invNum)},");
-						updt.Append($"Raincounter={LogRec.Raincounter.ToString(cumulus.RainFormat, invNum)},");
-						updt.Append($"InsideTemp={LogRec.IndoorTemperature.ToString(cumulus.TempFormat, invNum)},");
-						updt.Append($"InsideHumidity={LogRec.IndoorHumidity},");
-						updt.Append($"LatestWindGust={LogRec.WindLatest.ToString(cumulus.WindFormat, invNum)},");
-						updt.Append($"WindChill={LogRec.WindChill.ToString(cumulus.TempFormat, invNum)},");
-						updt.Append($"HeatIndex={LogRec.HeatIndex.ToString(cumulus.TempFormat, invNum)},");
-						updt.Append($"UVindex={LogRec.UV.ToString(cumulus.UVFormat, invNum)},");
-						updt.Append($"SolarRad={LogRec.SolarRad},");
-						updt.Append($"Evapotrans={LogRec.ET.ToString(cumulus.ETFormat, invNum)},");
-						updt.Append($"AnnualEvapTran={LogRec.AnnualETTotal.ToString(cumulus.ETFormat, invNum)},");
-						updt.Append($"ApparentTemp={LogRec.ApparentTemperature.ToString(cumulus.TempFormat, invNum)},");
-						updt.Append($"MaxSolarRad={(Math.Round(LogRec.CurrentSolarMax))},");
-						updt.Append($"HrsSunShine={LogRec.SunshineHours.ToString(cumulus.SunFormat, invNum)},");
-						updt.Append($"CurrWindBearing={LogRec.Bearing},");
-						updt.Append($"RG11rain={LogRec.RG11RainToday.ToString(cumulus.RainFormat, invNum)},");
-						updt.Append($"RainSinceMidnight={LogRec.RainSinceMidnight.ToString(cumulus.RainFormat, invNum)},");
-						updt.Append($"WindbearingSym='{station.CompassPoint(LogRec.AvgBearing)}',");
-						updt.Append($"CurrWindBearingSym='{station.CompassPoint(LogRec.Bearing)}',");
-						updt.Append($"FeelsLike={LogRec.FeelsLike.ToString(cumulus.TempFormat, invNum)},");
-						updt.Append($"Humidex={LogRec.Humidex.ToString(cumulus.TempFormat, invNum)} ");
-
-						updt.Append($"WHERE LogDateTime='{LogRec.Date:yyyy-MM-dd HH:mm}';");
+						updt.Append($"WHERE LogDateTime='{newRec.Timestamp:yyyy-MM-dd HH:mm}';");
 						updateStr = updt.ToString();
 
 
-						//cumulus.MySqlCommandSync(updateStr, "EditLogFile");
-						await cumulus.MySqlCommandAsync(updateStr, "EditLogFile");
+						cumulus.MySqlStuff.CommandSync(updateStr, "EditLogFile");
 						Cumulus.LogMessage($"EditIntervalData: SQL Updated");
 					}
 					catch (Exception ex)
@@ -671,7 +701,7 @@ namespace CumulusMX
 
 		#region ExtraTemps
 
-		internal async Task<string> GetExtraTempData(string from, string to, string draw, int start, int length, string search)
+		internal string GetExtraTempData(string from, string to, string draw, int start, int length, string search)
 		{
 			try
 			{
@@ -695,7 +725,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = await station.DatabaseAsync.QueryAsync<ExtraTemp>("select * from ExtraTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<ExtraTemp>("select * from ExtraTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -966,7 +996,7 @@ namespace CumulusMX
 
 		#region ExtraHums
 
-		internal async Task<string> GetExtraHumData(string from, string to, string draw, int start, int length, string search)
+		internal string GetExtraHumData(string from, string to, string draw, int start, int length, string search)
 		{
 			try
 			{
@@ -990,7 +1020,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = await station.DatabaseAsync.QueryAsync<ExtraHum>("select * from ExtraHum where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<ExtraHum>("select * from ExtraHum where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -1257,7 +1287,7 @@ namespace CumulusMX
 
 		#region ExtraDewpoint
 
-		internal async Task<string> GetExtraDewData(string from, string to, string draw, int start, int length, string search)
+		internal string GetExtraDewData(string from, string to, string draw, int start, int length, string search)
 		{
 			try
 			{
@@ -1281,7 +1311,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = await station.DatabaseAsync.QueryAsync<ExtraDewPoint>("select * from ExtraDewPoint where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<ExtraDewPoint>("select * from ExtraDewPoint where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -1546,7 +1576,7 @@ namespace CumulusMX
 
 		#region UserTemps
 
-		internal async Task<string> GetUserTempData(string from, string to, string draw, int start, int length, string search)
+		internal string GetUserTempData(string from, string to, string draw, int start, int length, string search)
 		{
 			try
 			{
@@ -1570,7 +1600,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = await station.DatabaseAsync.QueryAsync<UserTemp>("select * from UserTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<UserTemp>("select * from UserTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -1835,7 +1865,7 @@ namespace CumulusMX
 
 		#region SoilTemps
 
-		internal async Task<string> GetSoilTempData(string from, string to, string draw, int start, int length, string search)
+		internal string GetSoilTempData(string from, string to, string draw, int start, int length, string search)
 		{
 			try
 			{
@@ -1859,7 +1889,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = await station.DatabaseAsync.QueryAsync<SoilTemp>("select * from SoilTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<SoilTemp>("select * from SoilTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -2125,7 +2155,7 @@ namespace CumulusMX
 
 		#region SoilMoist
 
-		internal async Task<string> GetSoilMoistData(string from, string to, string draw, int start, int length, string search)
+		internal string GetSoilMoistData(string from, string to, string draw, int start, int length, string search)
 		{
 			try
 			{
@@ -2149,7 +2179,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = await station.DatabaseAsync.QueryAsync<SoilMoist>("select * from SoilMoist where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<SoilMoist>("select * from SoilMoist where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -2415,7 +2445,7 @@ namespace CumulusMX
 
 		#region LeafTemp
 
-		internal async Task<string> GetLeafTempData(string from, string to, string draw, int start, int length, string search)
+		internal string GetLeafTempData(string from, string to, string draw, int start, int length, string search)
 		{
 			try
 			{
@@ -2439,7 +2469,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = await station.DatabaseAsync.QueryAsync<LeafTemp>("select * from LeafTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<LeafTemp>("select * from LeafTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -2705,7 +2735,7 @@ namespace CumulusMX
 
 		#region LeafWet
 
-		internal async Task<string> GetLeafWetData(string from, string to, string draw, int start, int length, string search)
+		internal string GetLeafWetData(string from, string to, string draw, int start, int length, string search)
 		{
 			try
 			{
@@ -2729,7 +2759,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = await station.DatabaseAsync.QueryAsync<LeafWet>("select * from LeafWet where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<LeafWet>("select * from LeafWet where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -2995,7 +3025,7 @@ namespace CumulusMX
 
 		#region AirQuality
 
-		internal async Task<string> GetAirQualData(string from, string to, string draw, int start, int length, string search)
+		internal string GetAirQualData(string from, string to, string draw, int start, int length, string search)
 		{
 			try
 			{
@@ -3019,7 +3049,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = await station.DatabaseAsync.QueryAsync<AirQuality>("select * from AirQuality where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<AirQuality>("select * from AirQuality where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -3293,7 +3323,7 @@ namespace CumulusMX
 
 		#region CO2
 
-		internal async Task<string> GetCo2Data(string from, string to, string draw, int start, int length, string search)
+		internal string GetCo2Data(string from, string to, string draw, int start, int length, string search)
 		{
 			try
 			{
@@ -3317,7 +3347,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = await station.DatabaseAsync.QueryAsync<CO2Data>("select * from CO2Data where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<CO2Data>("select * from CO2Data where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");

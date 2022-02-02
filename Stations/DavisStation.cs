@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading;
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace CumulusMX
 {
@@ -45,6 +44,8 @@ namespace CumulusMX
 
 			// VP2 does not provide pressure trend strings
 			cumulus.StationOptions.UseCumulusPresstrendstr = true;
+			// LOOP does not provide wind chill (loop2 does) so we always calculate WC in MX
+			cumulus.StationOptions.CalculatedWC = true;
 
 			isSerial = (cumulus.DavisOptions.ConnectionType == 0);
 
@@ -173,8 +174,10 @@ namespace CumulusMX
 			{
 				Cumulus.LogMessage("Console clock: Failed to read console time");
 			}
+		}
 
-
+		public override void DoStartup()
+		{
 			DateTime tooold = new DateTime(0);
 
 			if ((cumulus.LastUpdateTime <= tooold) || !cumulus.UseDataLogger)
@@ -317,6 +320,7 @@ namespace CumulusMX
 			}
 
 			cumulus.LogDataMessage("GetFirmwareVersion: Received - " + data);
+			LogRawStationData(data, false);
 
 			return response.Length >= 5 ? response[0..^2] : "???";
 		}
@@ -414,6 +418,7 @@ namespace CumulusMX
 			}
 
 			cumulus.LogDataMessage("CheckLoggerInterval: Received - " + BitConverter.ToString(readBuffer.Take(bytesRead).ToArray()));
+			LogRawStationData(BitConverter.ToString(readBuffer.Take(bytesRead).ToArray()), false);
 
 			cumulus.LogDebugMessage($"CheckLoggerInterval: Station logger interval is {readBuffer[0]} minutes");
 
@@ -603,6 +608,7 @@ namespace CumulusMX
 			}
 
 			cumulus.LogDataMessage("GetReceptionStats: Received - " + BitConverter.ToString(readBuffer.Take(bytesRead).ToArray()));
+			LogRawStationData(BitConverter.ToString(readBuffer.Take(bytesRead).ToArray()), false);
 
 			response = response.Length > 10 ? response[0..^2] : "0 0 0 0 0";
 
@@ -781,7 +787,7 @@ namespace CumulusMX
 			StartLoop();
 
 			cumulus.LogDebugMessage("Lock: Station releasing lock");
-			Cumulus.syncInit.Release();
+			_ = Cumulus.syncInit.Release();
 		}
 
 		private void bw_DoWork(object sender, DoWorkEventArgs e)
@@ -806,7 +812,7 @@ namespace CumulusMX
 				cumulus.LogExceptionMessage(ex, "Exception occurred reading archive data");
 			}
 			cumulus.LogDebugMessage("Lock: Station releasing the lock");
-			Cumulus.syncInit.Release();
+			_ = Cumulus.syncInit.Release();
 		}
 
 
@@ -893,9 +899,9 @@ namespace CumulusMX
 			const int loop2count = 1;
 			bool reconnecting = false;
 
-			try
+			while (!stop)
 			{
-				while (!stop)
+				try
 				{
 					if (clockSetNeeded && !stop)
 					{
@@ -1019,27 +1025,35 @@ namespace CumulusMX
 					var recepStats = GetReceptionStats();
 					DecodeReceptionStats(recepStats);
 				}
-			}
-			catch (ThreadAbortException) // Catch the ThreadAbortException
-			{
-			}
-			finally
-			{
-				if (isSerial)
+				catch (ThreadAbortException) // Catch the ThreadAbortException
 				{
-					if (comport != null && comport.IsOpen)
-					{
-						comport.WriteLine("");
-						comport.Close();
-					}
+					Cumulus.LogMessage("Davis Start: ThreadAbortException");
+					// and exit
+					stop = true;
 				}
-				else
+				catch (Exception ex)
 				{
-					if (socket != null && socket.Connected)
-					{
-						socket.GetStream().WriteByte(10);
-						socket.Close();
-					}
+					// any others, log them and carry on
+					Cumulus.LogMessage("Davis Start: Exception - " + ex.Message);
+				}
+			}
+
+			Cumulus.LogMessage("Ending normal reading loop");
+
+			if (isSerial)
+			{
+				if (comport != null && comport.IsOpen)
+				{
+					comport.WriteLine("");
+					comport.Close();
+				}
+			}
+			else
+			{
+				if (socket != null && socket.Connected)
+				{
+					socket.GetStream().WriteByte(10);
+					socket.Close();
 				}
 			}
 		}
@@ -1140,6 +1154,8 @@ namespace CumulusMX
 			}
 
 			cumulus.LogDataMessage("BARREAD Received - " + BitConverter.ToString(readBuffer.Take(bytesRead).ToArray()));
+			LogRawStationData(BitConverter.ToString(readBuffer.Take(bytesRead).ToArray()), false);
+
 			if (response.Length > 2)
 			{
 				cumulus.LogDebugMessage("BARREAD Received - " + response[0..^2]);
@@ -1156,7 +1172,7 @@ namespace CumulusMX
 			{
 				if (serialPort.IsOpen && !stop)
 				{
-					WakeVP(serialPort);
+					_ = WakeVP(serialPort);
 					//Cumulus.LogMessage("Sending command: " + commandString);
 
 					int passCount = 1;
@@ -1237,7 +1253,7 @@ namespace CumulusMX
 
 				while (stream.DataAvailable)
 				{
-					stream.ReadByte();
+					_ = stream.ReadByte();
 				}
 
 				// Try the command until we get a clean ACKnowledge from the VP.  We count the number of passes since
@@ -1329,7 +1345,7 @@ namespace CumulusMX
 							Cumulus.LogMessage($"LOOP: {i + 1} - Expected data not received, expected 99 bytes, got {comport.BytesToRead}");
 						}
 
-						comport.Read(loopString, 0, loopDataLength);
+						_ = comport.Read(loopString, 0, loopDataLength);
 					}
 					catch (TimeoutException)
 					{
@@ -1399,7 +1415,7 @@ namespace CumulusMX
 						}
 
 						// Read the first 99 bytes of the buffer into the array
-						socket.GetStream().Read(loopString, 0, loopDataLength);
+						_ = socket.GetStream().Read(loopString, 0, loopDataLength);
 					}
 					catch (System.IO.IOException ex)
 					{
@@ -1427,6 +1443,7 @@ namespace CumulusMX
 				}
 
 				cumulus.LogDataMessage($"LOOP: Data - {i + 1}: {BitConverter.ToString(loopString)}");
+				LogRawStationData(BitConverter.ToString(loopString), false);
 
 				// Check it is a LOOP packet, starts with "LOO" and 5th byte == 0: LOOP1
 				if (!(loopString[0] == 'L' && loopString[1] == 'O' && loopString[2] == 'O' && Convert.ToByte(loopString[4]) == 0))
@@ -1464,7 +1481,7 @@ namespace CumulusMX
 								cumulus.LogDebugMessage("LOOP: Discarding bytes from pipeline: " + socket.Available);
 								do
 								{
-									socket.GetStream().ReadByte();
+									_ = socket.GetStream().ReadByte();
 								} while (socket.Available > 0);
 							}
 						}
@@ -1503,13 +1520,19 @@ namespace CumulusMX
 				{
 					DoIndoorHumidity(loopData.InsideHumidity);
 				}
+				else
+				{
+					DoIndoorHumidity(null);
+					cumulus.LogDebugMessage($"LOOP: Ignoring indoor humidity data. RH={loopData.OutsideHumidity} %.");
+				}
 
 				if ((loopData.OutsideHumidity >= 0) && (loopData.OutsideHumidity <= 100))
 				{
-					DoOutdoorHumidity(loopData.OutsideHumidity, now);
+					DoHumidity(loopData.OutsideHumidity, now);
 				}
 				else
 				{
+					DoHumidity(null, now);
 					cumulus.LogDebugMessage($"LOOP: Ignoring outdoor humidity data. RH={loopData.OutsideHumidity} %.");
 				}
 
@@ -1520,10 +1543,11 @@ namespace CumulusMX
 
 				if ((loopData.OutsideTemperature > -200) && (loopData.OutsideTemperature < 300))
 				{
-					DoOutdoorTemp(ConvertTempFToUser(loopData.OutsideTemperature), now);
+					DoTemperature(ConvertTempFToUser(loopData.OutsideTemperature), now);
 				}
 				else
 				{
+					DoTemperature(null, now);
 					cumulus.LogDebugMessage($"LOOP: Ignoring outdoor temp data. Temp={loopData.OutsideTemperature} F.");
 				}
 
@@ -1536,30 +1560,30 @@ namespace CumulusMX
 					cumulus.LogDebugMessage($"LOOP: Ignoring pressure data. Pressure={loopData.Pressure} inHg.");
 				}
 
-				double wind = ConvertWindMPHToUser(loopData.CurrentWindSpeed);
-				double avgwind = ConvertWindMPHToUser(loopData.AvgWindSpeed);
+				double wind = ConvertWindMPHToUser(loopData.CurrentWindSpeed).Value;
+				double? avgwind = ConvertWindMPHToUser(loopData.AvgWindSpeed);
 
 				// Check for sensible figures (spec says max for large cups is 175 mph, but up to 200 mph)
 				// Average = 255 means the console hasn't calculated it yet
 				if (loopData.CurrentWindSpeed < 200 && (loopData.AvgWindSpeed < 200 || loopData.AvgWindSpeed == 255))
 				{
-					int winddir = loopData.WindDirection;
+					int? winddir = loopData.WindDirection;
 
 					if (winddir == 0x7FFF) // no reading
 					{
-						cumulus.LogDebugMessage("LOOP: Wind direction = 0x7FFF = no reading, using zero instead");
-						winddir = 0;
+						cumulus.LogDebugMessage("LOOP: Wind direction = 0x7FFF = no reading, using null instead");
+						winddir = null;
 					}
 					else if (winddir > 360)
 					{
-						cumulus.LogDebugMessage($"LOOP: Wind direction = {winddir}, using zero instead");
-						winddir = 0;
+						cumulus.LogDebugMessage($"LOOP: Wind direction = {winddir}, using null instead");
+						winddir = null;
 					}
 
 					if (loopData.AvgWindSpeed == 255)
 					{
-						// The console hasn't calculated an average yet, set to zero
-						avgwind = 0;
+						// The console hasn't calculated an average yet, set to null
+						avgwind = null;
 					}
 
 					DoWind(wind, winddir, avgwind, now);
@@ -1569,12 +1593,12 @@ namespace CumulusMX
 						// See if the current speed is higher than the current 10-min max
 						// We can then update the figure before the next LOOP2 packet is read
 
-						CheckHighGust(WindLatest, winddir, now);
+						_ = CheckHighGust(WindLatest, winddir, now);
 
 						if (WindLatest > RecentMaxGust)
 						{
 							RecentMaxGust = WindLatest;
-							cumulus.LogDebugMessage("LOOP: Setting max gust from loop value: " + RecentMaxGust.ToString(cumulus.WindFormat));
+							cumulus.LogDebugMessage("LOOP: Setting max gust from loop value: " + RecentMaxGust.Value.ToString(cumulus.WindFormat));
 						}
 					}
 				}
@@ -1600,6 +1624,10 @@ namespace CumulusMX
 				{
 					DoUV(loopData.UVIndex, now);
 				}
+				else
+				{
+					DoUV(null, now);
+				}
 
 				if (loopData.SolarRad >= 0 && loopData.SolarRad < 1801)
 				{
@@ -1611,19 +1639,15 @@ namespace CumulusMX
 					DoET(ConvertRainINToUser(loopData.AnnualET), now);
 				}
 
-				if (ConvertUserWindToMS(WindAverage) < 1.5)
-				{
-					DoWindChill(OutdoorTemperature, now);
-				}
-				else
+				if (Temperature.HasValue)
 				{
 					// calculate wind chill from calibrated C temp and calibrated win in KPH
-					DoWindChill(ConvertTempCToUser(MeteoLib.WindChill(ConvertUserTempToC(OutdoorTemperature), ConvertUserWindToKPH(WindAverage))), now);
-				}
+					DoWindChill(null, now);
 
-				DoApparentTemp(now);
-				DoFeelsLike(now);
-				DoHumidex(now);
+					DoApparentTemp(now);
+					DoFeelsLike(now);
+					DoHumidex(now);
+				}
 
 				var forecastRule = loopData.ForecastRule < cumulus.DavisForecastLookup.Length ? loopData.ForecastRule : cumulus.DavisForecastLookup.Length - 1;
 
@@ -1663,30 +1687,17 @@ namespace CumulusMX
 						if (cumulus.ExtraDataLogging.Temperature)
 						{
 							var val = (int)loopData.GetPropValue("ExtraTemp" + j);
-							if (val < 255)
-							{
-								DoExtraTemp(ConvertTempFToUser(val - 90), j);
-							}
-							else
-							{
-								ExtraTemp[j] = null;
-							}
+							double? temp = val < 255 ? val - 90 : null;
+							DoExtraTemp(ConvertTempFToUser(temp), j);
 						}
 
 						if (cumulus.ExtraDataLogging.Humidity)
 						{
 							var val = (int)loopData.GetPropValue("ExtraHum" + j);
-							if (val >= 0 && val <= 100)
+							int? hum = val >= 0 && val <= 100 ? val : null;
 							{
-								DoExtraHum(val, j);
-								if (ExtraTemp[j].HasValue)
-								{
-									ExtraDewPoint[1] = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[1].Value), ExtraHum[1].Value));
-								}
-								else
-								{
-									ExtraDewPoint[1] = null;
-								}
+								DoExtraHum(hum, j);
+								DoExtraDP(ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[1]), ExtraHum[1])), j);
 							}
 						}
 					}
@@ -1696,80 +1707,35 @@ namespace CumulusMX
 					for (var j = 1; j <= 4; j++)
 					{
 						var val = (int)loopData.GetPropValue("SoilMoisture" + j);
-						if (val >= 0 && val <= 250)
-						{
-							DoSoilMoisture(val, j);
-						}
-						else
-						{
-							SoilMoisture[j] = null;
-						}
+						int? moist = val >= 0 && val <= 250 ? val : null;
+						DoSoilMoisture(moist, j);
 					}
 				}
 				if (cumulus.ExtraDataLogging.SoilTemp)
 				{
-					if (loopData.SoilTemp1 < 255 && loopData.SoilTemp1 > 0)
+					for (var j = 1; j <= 4; j++)
 					{
-						DoSoilTemp(ConvertTempFToUser(loopData.SoilTemp1 - 90), 1);
-					}
-
-					if (loopData.SoilTemp2 < 255 && loopData.SoilTemp2 > 0)
-					{
-						DoSoilTemp(ConvertTempFToUser(loopData.SoilTemp2 - 90), 2);
-					}
-
-					if (loopData.SoilTemp3 < 255 && loopData.SoilTemp3 > 0)
-					{
-						DoSoilTemp(ConvertTempFToUser(loopData.SoilTemp3 - 90), 3);
-					}
-
-					if (loopData.SoilTemp4 < 255 && loopData.SoilTemp4 > 0)
-					{
-						DoSoilTemp(ConvertTempFToUser(loopData.SoilTemp4 - 90), 4);
+						var val = (int)loopData.GetPropValue("SoilTemp" + j);
+						double? temp = val < 255 && val > 0 ? val : null;
+						DoSoilTemp(temp, j);
 					}
 				}
 				if (cumulus.ExtraDataLogging.LeafWetness)
 				{
-					if (loopData.LeafWetness1 >= 0 && loopData.LeafWetness1 < 16)
+					for (var j = 1; j <= 4; j++)
 					{
-						DoLeafWetness(loopData.LeafWetness1, 1);
-					}
-
-					if (loopData.LeafWetness2 >= 0 && loopData.LeafWetness2 < 16)
-					{
-						DoLeafWetness(loopData.LeafWetness2, 2);
-					}
-
-					if (loopData.LeafWetness3 >= 0 && loopData.LeafWetness3 < 16)
-					{
-						DoLeafWetness(loopData.LeafWetness3, 3);
-					}
-
-					if (loopData.LeafWetness4 >= 0 && loopData.LeafWetness4 < 16)
-					{
-						DoLeafWetness(loopData.LeafWetness4, 4);
+						var val = (int)loopData.GetPropValue("LeafWetness" + j);
+						int? wet = val >= 0 && val < 16 ? val : null;
+						DoLeafWetness(wet, j);
 					}
 				}
 				if (cumulus.ExtraDataLogging.LeafTemp)
 				{
-					if (loopData.LeafTemp1 < 255 && loopData.LeafTemp1 > 0)
+					for (var j = 1; j <= 4; j++)
 					{
-						DoLeafTemp(ConvertTempFToUser(loopData.LeafTemp1 - 90), 1);
-					}
-
-					if (loopData.LeafTemp2 < 255 && loopData.LeafTemp2 > 0)
-					{
-						DoLeafTemp(ConvertTempFToUser(loopData.LeafTemp2 - 90), 2);
-					}
-
-					if (loopData.LeafTemp3 < 255 && loopData.LeafTemp3 > 0)
-					{
-						DoLeafTemp(ConvertTempFToUser(loopData.LeafTemp3 - 90), 3);
-					}
-
-					if (loopData.LeafTemp4 < 255 && loopData.LeafTemp4 > 0)
-					{
-						DoLeafTemp(ConvertTempFToUser(loopData.LeafTemp4 - 90), 4);
+						var val = (int)loopData.GetPropValue("LeafTemp" + j);
+						double? temp = val < 255 && val > 0 ? ConvertTempFToUser(val - 90) : null;
+						DoLeafTemp(temp, j);
 					}
 				}
 				UpdateStatusPanel(DateTime.Now);
@@ -1822,7 +1788,7 @@ namespace CumulusMX
 						}
 
 						// Read the data from the buffer into the array
-						comport.Read(loopString, 0, loopDataLength);
+						_ = comport.Read(loopString, 0, loopDataLength);
 					}
 					catch (TimeoutException)
 					{
@@ -1854,7 +1820,7 @@ namespace CumulusMX
 							Cumulus.LogMessage($"LOOP2: Expected data not received, expected 99 bytes got {socket.Available}");
 						}
 						// Read the first 99 bytes of the buffer into the array
-						socket.GetStream().Read(loopString, 0, loopDataLength);
+						_ = socket.GetStream().Read(loopString, 0, loopDataLength);
 					}
 					catch (System.IO.IOException ex)
 					{
@@ -1897,6 +1863,7 @@ namespace CumulusMX
 				if (stop) return;
 
 				cumulus.LogDataMessage("LOOP2: Data - " + BitConverter.ToString(loopString));
+				LogRawStationData(BitConverter.ToString(loopString), false);
 
 				// Allocate a structure for the data
 				var loopData = new VPLoop2Data();
@@ -1913,7 +1880,7 @@ namespace CumulusMX
 				// Extract station pressure, and use it to calculate altimeter pressure
 				// Spike removal is in mb/hPa
 				var pressUser = ConvertPressINHGToUser(loopData.AbsolutePressure);
-				var pressMB = ConvertUserPressToMB(pressUser);
+				var pressMB = ConvertUserPressToMB(pressUser).Value;
 				if ((previousPressStation == 9999) || (Math.Abs(pressMB - previousPressStation) < cumulus.Spike.PressDiff))
 				{
 					previousPressStation = pressMB;
@@ -1927,9 +1894,11 @@ namespace CumulusMX
 					lastSpikeRemoval = DateTime.Now;
 					cumulus.SpikeAlarm.LastError = $"Station Pressure difference greater than spike value - NewVal={pressMB:F1} OldVal={previousPressStation:F1}";
 					cumulus.SpikeAlarm.Triggered = true;
+					StationPressure = null;
+					AltimeterPressure = null;
 				}
 
-				double wind = ConvertWindMPHToUser(loopData.CurrentWindSpeed);
+				double wind = ConvertWindMPHToUser(loopData.CurrentWindSpeed).Value;
 
 				// Use current average as we don't have a new value in LOOP2. Allow for calibration.
 				if (loopData.CurrentWindSpeed < 200)
@@ -1948,16 +1917,16 @@ namespace CumulusMX
 					var gust10min = ConvertWindMPHToUser(loopData.WindGust10Min)*cumulus.Calib.WindGust.Mult;
 					var gustdir = loopData.WindGustDir;
 
-					cumulus.LogDebugMessage("LOOP2: 10-min gust: " + gust10min.ToString(cumulus.WindFormat));
+					cumulus.LogDebugMessage("LOOP2: 10-min gust: " + (gust10min.HasValue ? gust10min.Value.ToString(cumulus.WindFormat) : "null"));
 
-					if (gust10min > RecentMaxGust)
+					if (gust10min > (RecentMaxGust ?? 0))
 					{
 						cumulus.LogDebugMessage("LOOP2: Using 10-min gust from loop2");
 						if (CheckHighGust(gust10min, gustdir, now))
 						{
 							// add to recent values so normal calculation includes this value
-							WindRecent[nextwind].Gust = ConvertWindMPHToUser(loopData.WindGust10Min);
-							WindRecent[nextwind].Speed = WindAverage / cumulus.Calib.WindSpeed.Mult;
+							WindRecent[nextwind].Gust = ConvertWindMPHToUser(loopData.WindGust10Min).Value;
+							WindRecent[nextwind].Speed = WindAverage.Value / cumulus.Calib.WindSpeed.Mult;
 							WindRecent[nextwind].Timestamp = now;
 							nextwind = (nextwind + 1) % MaxWindRecent;
 
@@ -1968,10 +1937,7 @@ namespace CumulusMX
 
 				//cumulus.LogDebugMessage("LOOP2 wind average: "+loopData.WindAverage);
 
-				if (loopData.THSWindex < 32000)
-				{
-					THSWIndex = ConvertTempFToUser(loopData.THSWindex);
-				}
+				THSWIndex = loopData.THSWindex < 32000 ? ConvertTempFToUser(loopData.THSWindex) : null;
 
 				//UpdateStatusPanel(DateTime.Now);
 			}
@@ -2104,6 +2070,7 @@ namespace CumulusMX
 			data[5] = (byte) (crc%256);
 
 			cumulus.LogDataMessage("GetArchiveData: Sending: " + BitConverter.ToString(data));
+			LogRawStationData(BitConverter.ToString(data), true);
 
 			if (isSerial)
 			{
@@ -2126,7 +2093,7 @@ namespace CumulusMX
 				}
 
 				// Read the response
-				comport.Read(data, 0, 6);
+				_ = comport.Read(data, 0, 6);
 
 				var resp = "Response: ";
 
@@ -2135,6 +2102,7 @@ namespace CumulusMX
 					resp = resp + " " + data[i].ToString("X2");
 				}
 				cumulus.LogDataMessage("GetArchiveData: " + resp);
+				LogRawStationData(resp, false);
 			}
 			else
 			{
@@ -2154,9 +2122,10 @@ namespace CumulusMX
 				}
 
 				// Read the response
-				stream.Read(data, 0, 6);
+				_ = stream.Read(data, 0, 6);
 
 				cumulus.LogDataMessage("GetArchiveData: Response - " + BitConverter.ToString(data));
+				LogRawStationData(BitConverter.ToString(data), false);
 			}
 
 			// extract number of pages and offset into first page
@@ -2232,9 +2201,10 @@ namespace CumulusMX
 							}
 							// Read the response
 							Cumulus.LogMessage("GetArchiveData: Reading response");
-							comport.Read(buff, 0, pageSize);
+							_ = comport.Read(buff, 0, pageSize);
 
 							cumulus.LogDataMessage("GetArchiveData: Response data - " + BitConverter.ToString(buff));
+							LogRawStationData(BitConverter.ToString(buff), false);
 
 							if (CrcOk(buff))
 								badCRC = false;
@@ -2264,9 +2234,10 @@ namespace CumulusMX
 							}
 
 							// Read the response
-							stream.Read(buff, 0, pageSize);
+							_ = stream.Read(buff, 0, pageSize);
 
 							cumulus.LogDataMessage("GetArchiveData: Response data - " + BitConverter.ToString(buff));
+							LogRawStationData(BitConverter.ToString(buff), false);
 
 							if (CrcOk(buff))
 								badCRC = false;
@@ -2376,34 +2347,42 @@ namespace CumulusMX
 							{
 								DoIndoorHumidity(archiveData.InsideHumidity);
 							}
+							else
+							{
+								DoIndoorHumidity(null);
+							}
 
 							if ((archiveData.OutsideHumidity >= 0) && (archiveData.OutsideHumidity <= 100))
 							{
-								DoOutdoorHumidity(archiveData.OutsideHumidity, timestamp);
+								DoHumidity(archiveData.OutsideHumidity, timestamp);
+							}
+							else
+							{
+								DoHumidity(null, timestamp);
 							}
 
 							// Check if the archive hi/lo temps break any records
 							if ((archiveData.HiOutsideTemp > -200) && (archiveData.HiOutsideTemp < 300))
 							{
-								DoOutdoorTemp(ConvertTempFToUser(archiveData.HiOutsideTemp), timestamp);
+								DoTemperature(ConvertTempFToUser(archiveData.HiOutsideTemp), timestamp);
 							}
 
 							// Check if the archive hi/lo temps break any records
 							if ((archiveData.LoOutsideTemp > -200) && (archiveData.LoOutsideTemp < 300))
 							{
-								DoOutdoorTemp(ConvertTempFToUser(archiveData.LoOutsideTemp), timestamp);
+								DoTemperature(ConvertTempFToUser(archiveData.LoOutsideTemp), timestamp);
 							}
 
 							// Now process the "average" interval temperature - use this as our
 							if ((archiveData.OutsideTemperature > -200) && (archiveData.OutsideTemperature < 300))
 							{
-								DoOutdoorTemp(ConvertTempFToUser(archiveData.OutsideTemperature), timestamp);
+								DoTemperature(ConvertTempFToUser(archiveData.OutsideTemperature), timestamp);
 								// add in 'archivePeriod' minutes worth of temperature to the temp samples
 								tempsamplestoday += interval;
-								TempTotalToday += (OutdoorTemperature * interval);
+								TempTotalToday += (Temperature.Value * interval);
 
 								// update chill hours
-								if (OutdoorTemperature < cumulus.ChillHourThreshold)
+								if (Temperature < cumulus.ChillHourThreshold)
 								{
 									// add 1 minute to chill hours
 									ChillHours += (interval / 60.0);
@@ -2412,9 +2391,13 @@ namespace CumulusMX
 								// update heating/cooling degree days
 								UpdateDegreeDays(interval);
 							}
+							else
+							{
+								DoTemperature(null, timestamp);
+							}
 
-							double wind = ConvertWindMPHToUser(archiveData.HiWindSpeed);
-							double avgwind = ConvertWindMPHToUser(archiveData.AvgWindSpeed);
+							double wind = ConvertWindMPHToUser(archiveData.HiWindSpeed).Value;
+							double avgwind = ConvertWindMPHToUser(archiveData.AvgWindSpeed).Value;
 							if (archiveData.HiWindSpeed < 250 && archiveData.AvgWindSpeed < 250)
 							{
 								int bearing = archiveData.WindDirection;
@@ -2425,15 +2408,8 @@ namespace CumulusMX
 
 								DoWind(wind, (int)(bearing * 22.5), avgwind, timestamp);
 
-								if (ConvertUserWindToMS(WindAverage) < 1.5)
-								{
-									DoWindChill(OutdoorTemperature, timestamp);
-								}
-								else
-								{
-									// calculate wind chill from calibrated C temp and calibrated win in KPH
-									DoWindChill(ConvertTempCToUser(MeteoLib.WindChill(ConvertUserTempToC(OutdoorTemperature), ConvertUserWindToKPH(WindAverage))), timestamp);
-								}
+								// calculate wind chill from calibrated C temp and calibrated win in KPH
+								DoWindChill(null, timestamp);
 
 								// update dominant wind bearing
 								CalculateDominantWindBearing((int)(bearing * 22.5), WindAverage, interval);
@@ -2444,7 +2420,7 @@ namespace CumulusMX
 							DoHumidex(timestamp);
 
 							// add in 'archivePeriod' minutes worth of wind speed to windrun
-							WindRunToday += ((WindAverage * WindRunHourMult[cumulus.Units.Wind] * interval) / 60.0);
+							WindRunToday += ((WindAverage.Value * WindRunHourMult[cumulus.Units.Wind] * interval) / 60.0);
 
 							DateTime windruncheckTS;
 							if ((h == rollHour) && (timestamp.Minute == 0))
@@ -2479,6 +2455,10 @@ namespace CumulusMX
 							{
 								DoUV(archiveData.HiUVIndex, timestamp);
 							}
+							else
+							{
+								DoUV(null, timestamp);
+							}
 
 							if (archiveData.SolarRad >= 0 && archiveData.SolarRad < 5000)
 							{
@@ -2487,6 +2467,10 @@ namespace CumulusMX
 								// add in archive period worth of sunshine, if sunny
 								if ((SolarRad > CurrentSolarMax * cumulus.SolarOptions.SunThreshold / 100.00) && (SolarRad >= cumulus.SolarOptions.SolarMinimum))
 									SunshineHours += (interval / 60.0);
+							}
+							else
+							{
+								DoSolarRad(null, timestamp);
 							}
 
 							if (!cumulus.StationOptions.CalculatedET && archiveData.ET >= 0 && archiveData.ET < 32000)
@@ -2592,25 +2576,27 @@ namespace CumulusMX
 
 							Cumulus.LogMessage("GetArchiveData: Page=" + p + " Record=" + r + " Timestamp=" + archiveData.Timestamp);
 
-							DoWindChill(ConvertTempCToUser(MeteoLib.WindChill(ConvertUserTempToC(OutdoorTemperature), ConvertUserWindToKPH(WindAverage))), timestamp);
+							if (Temperature.HasValue)
+							{
+								DoWindChill(null, timestamp);
 
-							DoApparentTemp(timestamp);
-							DoFeelsLike(timestamp);
-							DoHumidex(timestamp);
-
+								DoApparentTemp(timestamp);
+								DoFeelsLike(timestamp);
+								DoHumidex(timestamp);
+							}
 							lastDataReadTime = timestamp;
 
-							cumulus.DoLogFile(timestamp, false);
+							_ = cumulus.DoLogFile(timestamp, false);
 							Cumulus.LogMessage("GetArchiveData: Log file entry written");
-							cumulus.MySqlRealtimeFile(999, false, timestamp);
+							cumulus.MySqlStuff.DoRealtimeData(999, false, timestamp);
 
 							if (cumulus.StationOptions.LogExtraSensors)
 							{
-								cumulus.DoExtraLogFile(timestamp);
+								_ = cumulus.DoExtraLogFile(timestamp);
 							}
 
-							AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, OutdoorTemperature, WindChill, OutdoorDewpoint, HeatIndex,
-								OutdoorHumidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemperature, IndoorTemperature, IndoorHumidity, CurrentSolarMax, RainRate, -1, -1);
+							AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex,
+								Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate, -1, -1);
 							DoTrendValues(timestamp);
 
 							if (cumulus.StationOptions.CalculatedET && timestamp.Minute == 0)
@@ -2897,7 +2883,7 @@ namespace CumulusMX
 				while (stream.DataAvailable)
 				{
 					// Read the current character
-					stream.ReadByte();
+					_ = stream.ReadByte();
 					cnt++;
 				}
 				if (cnt > 0)
@@ -3078,6 +3064,7 @@ namespace CumulusMX
 
 						var resp = Encoding.ASCII.GetString(readBuffer);
 						cumulus.LogDataMessage($"InitSerial: TEST ({tryCount}) received - '{BitConverter.ToString(readBuffer.Take(bytesRead).ToArray())}'");
+						LogRawStationData(BitConverter.ToString(readBuffer.Take(bytesRead).ToArray()), false);
 
 						if (resp.Contains("TEST"))
 						{
@@ -3151,7 +3138,7 @@ namespace CumulusMX
 				while (stream.DataAvailable)
 				{
 					// Read the current character
-					stream.ReadByte();
+					_ = stream.ReadByte();
 					Thread.Sleep(10);
 				}
 
@@ -3184,6 +3171,7 @@ namespace CumulusMX
 
 					var resp = Encoding.ASCII.GetString(buffer1);
 					cumulus.LogDataMessage($"InitTCP: TEST ({tryCount}) received - '{BitConverter.ToString(buffer1.Take(idx).ToArray())}'");
+					LogRawStationData(BitConverter.ToString(buffer1.Take(idx).ToArray()), false);
 
 					if (resp.Contains("TEST"))
 					{
@@ -3217,7 +3205,7 @@ namespace CumulusMX
 				try
 				{
 					// Read the current character
-					readBuffer.Append((char)serialPort.ReadChar());
+					_ = readBuffer.Append((char)serialPort.ReadChar());
 				}
 				catch (TimeoutException)
 				{
@@ -3251,7 +3239,7 @@ namespace CumulusMX
 				try
 				{
 					// Read the current character
-					readBuffer.Append((char)stream.ReadByte());
+					_ = readBuffer.Append((char)stream.ReadByte());
 				}
 				catch (System.IO.IOException ex)
 				{
@@ -3259,11 +3247,14 @@ namespace CumulusMX
 					{
 						cumulus.LogDebugMessage("WaitForOK: Timed out");
 						cumulus.LogDataMessage($"WaitForOK: Received - {BitConverter.ToString(Encoding.UTF8.GetBytes(readBuffer.ToString()))}");
+						LogRawStationData(BitConverter.ToString(Encoding.UTF8.GetBytes(readBuffer.ToString())), false);
 						return false;
 					}
 
 					cumulus.LogExceptionMessage(ex, "WaitForOK: Error");
 					cumulus.LogDataMessage($"WaitForOK: Received - {BitConverter.ToString(Encoding.UTF8.GetBytes(readBuffer.ToString()))}");
+					LogRawStationData(BitConverter.ToString(Encoding.UTF8.GetBytes(readBuffer.ToString())), false);
+
 					cumulus.LogDebugMessage("WaitForOK: Attempting to reconnect to logger");
 					InitTCP();
 					cumulus.LogDebugMessage("WaitForOK: Reconnected to logger");
@@ -3526,6 +3517,8 @@ namespace CumulusMX
 			}
 
 			cumulus.LogDataMessage("getTime: Received - " + BitConverter.ToString(readBuffer.Take(bytesRead).ToArray()));
+			LogRawStationData(BitConverter.ToString(readBuffer.Take(bytesRead).ToArray()), false);
+
 			if (bytesRead != 8)
 			{
 				Cumulus.LogMessage("getTime: Expected 8 bytes, got " + bytesRead);

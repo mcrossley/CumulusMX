@@ -32,9 +32,11 @@ namespace CumulusMX
 			calculaterainrate = false;
 
 			Cumulus.LogMessage("Station type = WMR928");
+		}
 
+		public override void DoStartup()
+		{
 			// start reading the data
-
 			startReadingHistoryData();
 		}
 
@@ -305,7 +307,7 @@ namespace CumulusMX
 
 			double temp = ExtractTemp(buff[4], buff[5]);
 
-			WMR928ExtraTempValues[channel] = ConvertTempCToUser(temp);
+			WMR928ExtraTempValues[channel] = ConvertTempCToUser(temp).Value;
 			DoExtraTemp(WMR928ExtraTempValues[channel], channel);
 
 			if (cumulus.WMR928TempChannel == channel)
@@ -313,7 +315,7 @@ namespace CumulusMX
 				// use this sensor as main temp sensor
 				TempBattStatus = buff[3]/16;
 
-				DoOutdoorTemp(WMR928ExtraTempValues[channel], DateTime.Now);
+				DoTemperature(WMR928ExtraTempValues[channel], DateTime.Now);
 
 				DoApparentTemp(DateTime.Now);
 				DoFeelsLike(DateTime.Now);
@@ -374,10 +376,10 @@ namespace CumulusMX
 
 			double temp = ExtractTemp(buff[4], buff[5]);
 
-			WMR928ExtraTempValues[channel] = ConvertTempCToUser(temp);
+			WMR928ExtraTempValues[channel] = ConvertTempCToUser(temp).Value;
 			DoExtraTemp(WMR928ExtraTempValues[channel], channel);
 
-			WMR928ExtraDPValues[channel] = ConvertTempCToUser(BCDchartoint(buff[7]));
+			WMR928ExtraDPValues[channel] = ConvertTempCToUser(BCDchartoint(buff[7])).Value;
 			ExtraDewPoint[channel] = ConvertTempCToUser(BCDchartoint(buff[7]));
 
 			if (cumulus.WMR928TempChannel == channel)
@@ -386,11 +388,11 @@ namespace CumulusMX
 				TempBattStatus = buff[3]/16;
 
 				// Extract humidity
-				DoOutdoorHumidity(BCDchartoint(buff[6]), DateTime.Now);
+				DoHumidity(BCDchartoint(buff[6]), DateTime.Now);
 
-				DoOutdoorTemp(ConvertTempCToUser(temp), DateTime.Now);
+				DoTemperature(ConvertTempCToUser(temp), DateTime.Now);
 
-				DoOutdoorDewpoint(ConvertTempCToUser(BCDchartoint(buff[7])), DateTime.Now);
+				DoDewpoint(ConvertTempCToUser(BCDchartoint(buff[7])), DateTime.Now);
 			}
 		}
 
@@ -466,15 +468,15 @@ namespace CumulusMX
 
 				// Extract humidity
 				int hum = BCDchartoint(buff[6]);
-				DoOutdoorHumidity(hum, DateTime.Now);
+				DoHumidity(hum, DateTime.Now);
 
 				// Extract temperature
 				double temp = ExtractTemp(buff[4], buff[5]);
 
-				DoOutdoorTemp(ConvertTempCToUser(temp), DateTime.Now);
+				DoTemperature(ConvertTempCToUser(temp), DateTime.Now);
 
 				// Extract dewpoint
-				DoOutdoorDewpoint(ConvertTempCToUser(BCDchartoint(buff[7])), DateTime.Now);
+				DoDewpoint(ConvertTempCToUser(BCDchartoint(buff[7])), DateTime.Now);
 
 				DoApparentTemp(DateTime.Now);
 				DoFeelsLike(DateTime.Now);

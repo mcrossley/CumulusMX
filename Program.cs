@@ -114,7 +114,7 @@ namespace CumulusMX
 #endif
 
 			// Create a unique instance ID if it does not exist
-			CheckInstanceId();
+			_ = CheckInstanceId();
 
 			var install = false;
 			var uninstall = false;
@@ -326,7 +326,7 @@ namespace CumulusMX
 			}
 		}
 
-		private static async void UnhandledExceptionTrapper(object sender, UnhandledExceptionEventArgs e)
+		private static async Task UnhandledExceptionTrapper(object sender, UnhandledExceptionEventArgs e)
 		{
 			try
 			{
@@ -354,7 +354,7 @@ namespace CumulusMX
 			}
 		}
 
-		private static async void CheckInstanceId()
+		private static async Task CheckInstanceId()
 		{
 			// check if instance file exists, if it exists, read the contents
 			if (File.Exists("UniqueId.txt"))

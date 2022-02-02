@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Timers;
 using HidSharp;
 using Timer = System.Timers.Timer;
@@ -66,6 +67,10 @@ namespace CumulusMX
 				//maxHistoryEntries = 4080;
 			}
 
+			// no dew point data supplied by the station
+			cumulus.StationOptions.CalculatedDP = true;
+
+
 			do
 			{
 				if (OpenHidDevice())
@@ -109,9 +114,6 @@ namespace CumulusMX
 						Cumulus.LogMessage("EWpressureoffset = " + cumulus.EwOptions.PressOffset);
 						pressureOffset = cumulus.EwOptions.PressOffset;
 					}
-
-					// Read the data from the logger
-					startReadingHistoryData();
 				}
 				else
 				{
@@ -119,6 +121,12 @@ namespace CumulusMX
 					Thread.Sleep(10000);
 				}
 			} while (hidDevice == null || stream == null || !stream.CanRead);
+		}
+
+		public override void DoStartup()
+		{
+			// Read the data from the logger
+			startReadingHistoryData();
 		}
 
 		public override void startReadingHistoryData()
@@ -388,6 +396,7 @@ namespace CumulusMX
 				if (historydata.inHum > 100 || historydata.inHum < 0)
 				{
 					// 255 is the overflow value, when RH gets below 10% - ignore
+					DoIndoorHumidity(null);
 					Cumulus.LogMessage("Ignoring bad data: inhum = " + historydata.inHum);
 				}
 				else
@@ -427,11 +436,12 @@ namespace CumulusMX
 					if (historydata.outHum > 100 || historydata.outHum < 0)
 					{
 						// 255 is the overflow value, when RH gets below 10% - ignore
+						Humidity = null;
 						Cumulus.LogMessage("Ignoring bad data: outhum = " + historydata.outHum);
 					}
 					else
 					{
-						DoOutdoorHumidity(historydata.outHum, timestamp);
+						DoHumidity(historydata.outHum, timestamp);
 					}
 
 					// Wind =================================================================
@@ -451,18 +461,19 @@ namespace CumulusMX
 					// Outdoor Temperature ==================================================
 					if (historydata.outTemp < -50 || historydata.outTemp > 70)
 					{
+						DoTemperature(null, timestamp);
 						Cumulus.LogMessage("Ignoring bad data: outtemp = " + historydata.outTemp);
 					}
 					else
 					{
-						DoOutdoorTemp(ConvertTempCToUser(historydata.outTemp), timestamp);
+						DoTemperature(ConvertTempCToUser(historydata.outTemp), timestamp);
 						// add in 'archivePeriod' minutes worth of temperature to the temp samples
 						tempsamplestoday += historydata.interval;
-						TempTotalToday += (OutdoorTemperature*historydata.interval);
+						TempTotalToday += (Temperature.Value * historydata.interval);
 					}
 
 					// update chill hours
-					if (OutdoorTemperature < cumulus.ChillHourThreshold)
+					if (Temperature.HasValue && Temperature.Value < cumulus.ChillHourThreshold)
 					{
 						// add 1 minute to chill hours
 						ChillHours += (historydata.interval / 60.0);
@@ -509,31 +520,21 @@ namespace CumulusMX
 
 					prevraintotal = historydata.rainCounter;
 
-					OutdoorDewpoint = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(OutdoorTemperature), OutdoorHumidity));
+					DoDewpoint(null, timestamp);
+					DoWindChill(null, timestamp);
 
-					CheckForDewpointHighLow(timestamp);
-
-					// calculate wind chill
-
-					if (ConvertUserWindToMS(WindAverage) < 1.5)
+					if (Temperature.HasValue && Humidity.HasValue)
 					{
-						DoWindChill(OutdoorTemperature, timestamp);
+						DoApparentTemp(timestamp);
+						DoFeelsLike(timestamp);
+						DoHumidex(timestamp);
 					}
-					else
-					{
-						// calculate wind chill from calibrated C temp and calibrated win in KPH
-						DoWindChill(ConvertTempCToUser(MeteoLib.WindChill(ConvertUserTempToC(OutdoorTemperature), ConvertUserWindToKPH(WindAverage))), timestamp);
-					}
-
-					DoApparentTemp(timestamp);
-					DoFeelsLike(timestamp);
-					DoHumidex(timestamp);
-
 					if (hasSolar)
 					{
 						if (historydata.uvVal < 0 || historydata.uvVal > 16)
 						{
 							Cumulus.LogMessage("Invalid UV-I value ignored: " + historydata.uvVal);
+							DoUV(null, timestamp);
 						}
 						else
 							DoUV(historydata.uvVal, timestamp);
@@ -551,31 +552,35 @@ namespace CumulusMX
 						else
 						{
 							Cumulus.LogMessage("Invalid solar value ignored: " + historydata.solarVal);
+							DoSolarRad(null, timestamp);
 						}
 					}
 				}
 				// add in 'following interval' minutes worth of wind speed to windrun
-				Cumulus.LogMessage("Windrun: " + WindAverage.ToString(cumulus.WindFormat) + cumulus.Units.WindText + " for " + historydata.followinginterval + " minutes = " +
-								(WindAverage*WindRunHourMult[cumulus.Units.Wind]*historydata.followinginterval/60.0).ToString(cumulus.WindRunFormat) + cumulus.Units.WindRunText);
+				if (WindAverage.HasValue)
+				{
+					Cumulus.LogMessage("Windrun: " + WindAverage.Value.ToString(cumulus.WindFormat) + cumulus.Units.WindText + " for " + historydata.followinginterval + " minutes = " +
+									(WindAverage.Value * WindRunHourMult[cumulus.Units.Wind] * historydata.followinginterval / 60.0).ToString(cumulus.WindRunFormat) + cumulus.Units.WindRunText);
 
-				WindRunToday += (WindAverage*WindRunHourMult[cumulus.Units.Wind]*historydata.followinginterval/60.0);
+					WindRunToday += (WindAverage.Value * WindRunHourMult[cumulus.Units.Wind] * historydata.followinginterval / 60.0);
+
+					// update dominant wind bearing
+					CalculateDominantWindBearing(Bearing, WindAverage, historydata.interval);
+
+					CheckForWindrunHighLow(timestamp);
+				}
 
 				// update heating/cooling degree days
 				UpdateDegreeDays(historydata.interval);
 
-				// update dominant wind bearing
-				CalculateDominantWindBearing(Bearing, WindAverage, historydata.interval);
-
-				CheckForWindrunHighLow(timestamp);
-
 				bw.ReportProgress((totalentries - datalist.Count)*100/totalentries, "processing");
 
-				cumulus.DoLogFile(timestamp,false);
-				cumulus.DoExtraLogFile(timestamp);
-				cumulus.MySqlRealtimeFile(999, false, timestamp);
+				_ = cumulus.DoLogFile(timestamp,false);
+				_ = cumulus.DoExtraLogFile(timestamp);
+				cumulus.MySqlStuff.DoRealtimeData(999, false, timestamp);
 
-				AddRecentDataWithAq(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, OutdoorTemperature, WindChill, OutdoorDewpoint, HeatIndex,
-					OutdoorHumidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemperature, IndoorTemperature, IndoorHumidity, CurrentSolarMax, RainRate);
+				AddRecentDataWithAq(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex,
+					Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate);
 				DoTrendValues(timestamp);
 
 				if (cumulus.StationOptions.CalculatedET && timestamp.Minute == 0)
@@ -732,6 +737,7 @@ namespace CumulusMX
 					buff[ptr++] = response[j];
 				}
 				cumulus.LogDataMessage(recData);
+				LogRawStationData(recData, false);
 			}
 			return true;
 		}
@@ -900,6 +906,7 @@ namespace CumulusMX
 				}
 
 				cumulus.LogDataMessage("Data read - " + BitConverter.ToString(data));
+				LogRawStationData(BitConverter.ToString(data), false);
 
 				DateTime now = DateTime.Now;
 
@@ -951,6 +958,7 @@ namespace CumulusMX
 					if (inhum > 100 || inhum < 0)
 					{
 						// bad value
+						DoIndoorHumidity(null);
 						Cumulus.LogMessage("Ignoring bad data: inhum = " + inhum);
 					}
 					else
@@ -999,7 +1007,7 @@ namespace CumulusMX
 						// Get station pressure in hPa by subtracting offset and calibrating
 						// EWpressure offset is difference between rel and abs in hPa
 						// PressOffset is user calibration in user units.
-						pressure = (pressure - pressureOffset) * ConvertUserPressureToHPa(cumulus.Calib.Press.Mult) + ConvertUserPressureToHPa(cumulus.Calib.Press.Offset);
+						pressure = (pressure - pressureOffset) * ConvertUserPressureToHPa(cumulus.Calib.Press.Mult).Value + ConvertUserPressureToHPa(cumulus.Calib.Press.Offset).Value;
 						StationPressure = ConvertPressMBToUser(pressure);
 
 						UpdatePressureTrendString();
@@ -1022,20 +1030,13 @@ namespace CumulusMX
 						if (outhum > 100 || outhum < 0)
 						{
 							// bad value
+							// 255 is the overflow value, when RH gets below 10%
+							Humidity = null;
 							Cumulus.LogMessage("Ignoring bad data: outhum = " + outhum);
 						}
 						else
 						{
-							// 255 is the overflow value, when RH gets below 10% - use 10%
-							if (outhum == 255)
-							{
-								outhum = 10;
-							}
-
-							if (outhum > 0)
-							{
-								DoOutdoorHumidity(outhum, now);
-							}
+							DoHumidity(outhum, now);
 						}
 
 						// Wind =============================================================
@@ -1066,16 +1067,17 @@ namespace CumulusMX
 						if (outtemp < -50 || outtemp > 70)
 						{
 							// bad value
+							DoTemperature(null, now);
 							Cumulus.LogMessage("Ignoring bad data: outtemp = " + outtemp);
 						}
 						else
 						{
-							DoOutdoorTemp(ConvertTempCToUser(outtemp), now);
+							DoTemperature(ConvertTempCToUser(outtemp), now);
 
 							// Use current humidity for dewpoint
-							if (OutdoorHumidity > 0)
+							if ((Humidity ?? -1) > 0)
 							{
-								OutdoorDewpoint = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(OutdoorTemperature), OutdoorHumidity));
+								Dewpoint = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(Temperature), Humidity));
 
 								CheckForDewpointHighLow(now);
 							}
@@ -1083,11 +1085,11 @@ namespace CumulusMX
 							// calculate wind chill
 							// The 'global average speed will have been determined by the call of DoWind
 							// so use that in the wind chill calculation
-							double avgspeedKPH = ConvertUserWindToKPH(WindAverage);
+							var avgspeedKPH = ConvertUserWindToKPH(WindAverage);
 
 							// windinMPH = calibwind * 2.23693629;
 							// calculate wind chill from calibrated C temp and calibrated win in KPH
-							double val = MeteoLib.WindChill(ConvertUserTempToC(OutdoorTemperature), avgspeedKPH);
+							var val = MeteoLib.WindChill(ConvertUserTempToC(Temperature), avgspeedKPH);
 
 							DoWindChill(ConvertTempCToUser(val), now);
 
@@ -1153,6 +1155,7 @@ namespace CumulusMX
 							if (UVreading < 0 || UVreading > 16)
 							{
 								Cumulus.LogMessage("Ignoring UV-I reading " + UVreading);
+								DoUV(null, now);
 							}
 							else
 							{

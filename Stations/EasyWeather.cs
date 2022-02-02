@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Timers;
 
 namespace CumulusMX
@@ -72,8 +73,6 @@ namespace CumulusMX
 		public EasyWeather(Cumulus cumulus) : base(cumulus)
 		{
 			tmrDataRead = new Timer();
-
-
 		}
 
 		public override void Start()
@@ -122,6 +121,7 @@ namespace CumulusMX
 						fs.Close();
 					}
 					cumulus.LogDataMessage("Data: " + line);
+					LogRawStationData(line, false);
 
 					// split string on commas and spaces
 					char[] charSeparators = { ',', ' ' };
@@ -145,16 +145,16 @@ namespace CumulusMX
 
 					DoIndoorHumidity(Convert.ToInt32(st[EW_INDOOR_HUM]));
 
-					DoOutdoorHumidity(Convert.ToInt32(st[EW_OUTDOOR_HUM]), now);
+					DoHumidity(Convert.ToInt32(st[EW_OUTDOOR_HUM]), now);
 
-					DoOutdoorDewpoint(ConvertTempCToUser(GetConvertedValue(st[EW_DEW_POINT])), now);
+					DoDewpoint(ConvertTempCToUser(GetConvertedValue(st[EW_DEW_POINT])), now);
 
 					DoPressure(ConvertPressMBToUser(GetConvertedValue(st[EW_REL_PRESSURE])), now);
 					UpdatePressureTrendString();
 
 					DoIndoorTemp(ConvertTempCToUser(GetConvertedValue(st[EW_INDOOR_TEMP])));
 
-					DoOutdoorTemp(ConvertTempCToUser(GetConvertedValue(st[EW_OUTDOOR_TEMP])), now);
+					DoTemperature(ConvertTempCToUser(GetConvertedValue(st[EW_OUTDOOR_TEMP])), now);
 
 					DoRain(ConvertRainMMToUser(GetConvertedValue(st[EW_RAIN_LAST_YEAR])), // use year as total
 							ConvertRainMMToUser(GetConvertedValue(st[EW_RAIN_LAST_HOUR])), // use last hour as current rate
@@ -176,13 +176,9 @@ namespace CumulusMX
 
 					var uVreading = GetConvertedValue(st[EW_UV]);
 
-					if (uVreading == 255)
+					if (uVreading == 255 || uVreading < 0)
 					{
-						// ignore
-					}
-					else if (uVreading < 0)
-					{
-						DoUV(0, now);
+						DoUV(null, now);
 					}
 					else if (uVreading > 16)
 					{

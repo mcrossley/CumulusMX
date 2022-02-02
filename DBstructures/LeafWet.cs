@@ -9,14 +9,14 @@ namespace CumulusMX
 	{
 		[PrimaryKey]
 		public DateTime Timestamp { get; set; }
-		public int? Wet1 { get; set; }
-		public int? Wet2 { get; set; }
-		public int? Wet3 { get; set; }
-		public int? Wet4 { get; set; }
-		public int? Wet5 { get; set; }
-		public int? Wet6 { get; set; }
-		public int? Wet7 { get; set; }
-		public int? Wet8 { get; set; }
+		public double? Wet1 { get; set; }
+		public double? Wet2 { get; set; }
+		public double? Wet3 { get; set; }
+		public double? Wet4 { get; set; }
+		public double? Wet5 { get; set; }
+		public double? Wet6 { get; set; }
+		public double? Wet7 { get; set; }
+		public double? Wet8 { get; set; }
 
 		public string ToCSV()
 		{

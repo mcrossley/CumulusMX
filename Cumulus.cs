@@ -11,22 +11,17 @@ using System.Net.Sockets;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Security.Authentication;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using FluentFTP;
-//using LinqToTwitter;
-using ServiceStack.Text;
 using EmbedIO;
 using EmbedIO.WebApi;
 using EmbedIO.Files;
 using Timer = System.Timers.Timer;
 using SQLite;
 using Renci.SshNet;
-using MySql.Data.MySqlClient;
-using System.Collections.Concurrent;
 using FluentFTP.Helpers;
 
 //using MQTTnet;
@@ -136,7 +131,7 @@ namespace CumulusMX
 			public double OutdoorDewpoint;
 			public double WindChill;
 			public int IndoorHumidity;
-			public int OutdoorHumidity;
+			public int Humidity;
 			public double Pressure;
 			public double WindLatest;
 			public double WindAverage;
@@ -221,21 +216,11 @@ namespace CumulusMX
 		private WebTags webtags;
 		private TokenParser tokenParser;
 		private TokenParser realtimeTokenParser;
-		private readonly TokenParser customMysqlSecondsTokenParser = new TokenParser();
-		private readonly TokenParser customMysqlMinutesTokenParser = new TokenParser();
-		private readonly TokenParser customMysqlRolloverTokenParser = new TokenParser();
 
 		private readonly NumberFormatInfo invNum = CultureInfo.InvariantCulture.NumberFormat;
 		private readonly DateTimeFormatInfo invDate = CultureInfo.InvariantCulture.DateTimeFormat;
 
 		public string CurrentActivity = "Stopped";
-
-
-
-		public string AirQualityUnitText = "µg/m³";
-		public string SoilMoistureUnitText = "cb";
-		public string LeafWetnessUnitText = "";  // Davis is unitless, Ecowitt uses %
-		public string CO2UnitText = "ppm";
 
 		public volatile int WebUpdating;
 
@@ -431,6 +416,9 @@ namespace CumulusMX
 
 		public string ETFormat;
 
+		internal int LeafWetDPlaces = 0;
+		public string LeafWetFormat = "F0";
+
 		public string ComportName;
 		public string DefaultComportName;
 
@@ -494,15 +482,14 @@ namespace CumulusMX
 
 		public bool SynchronisedWebUpdate;
 
-		private List<string> WundList = new List<string>();
-		private List<string> WindyList = new List<string>();
-		private List<string> PWSList = new List<string>();
-		private List<string> WOWList = new List<string>();
-		private List<string> OWMList = new List<string>();
 
-		// Use thread safe queues for the MySQL command lists
-		private readonly ConcurrentQueue<string> MySqlList = new ConcurrentQueue<string>();
-		private readonly ConcurrentQueue<string> MySqlFailedList = new ConcurrentQueue<string>();
+		internal string rawStationDataLogFile = "MXdiags/stationdata.log";
+		internal string rawExtraDataLogFile = "MXdiags/extradata.log";
+
+		internal DataLogger RawDataStation;
+		internal DataLogger RawDataExtraLog
+			;
+
 
 		// Calibration settings
 		/// <summary>
@@ -555,35 +542,35 @@ namespace CumulusMX
 		public bool RealtimeIntervalEnabled; // The timer is to be started
 		private int realtimeFTPRetries; // Count of failed realtime FTP attempts
 
-		// Twitter settings
+		// Twitter object
 		//public WebUploadTwitter Twitter = new WebUploadTwitter();
 
-		// Wunderground settings
-		public WebUploadWund Wund = new WebUploadWund();
+		// Wunderground object
+		internal ThirdParty.WebUploadWund Wund;
 
-		// Windy.com settings
-		public  WebUploadWindy Windy = new WebUploadWindy();
+		// Windy.com object
+		internal ThirdParty.WebUploadWindy Windy;
 
-		// Wind Guru settings
-		public WebUploadWindGuru WindGuru = new WebUploadWindGuru();
+		// Wind Guru object
+		internal ThirdParty.WebUploadWindGuru WindGuru;
 
-		// PWS Weather settings
-		public WebUploadService PWS = new WebUploadService();
+		// PWS Weather object
+		internal ThirdParty.WebUploadServiceBase PWS;
 
-		// WOW settings
-		public WebUploadService WOW = new WebUploadService();
+		// WOW object
+		internal ThirdParty.WebUploadWow WOW;
 
-		// APRS settings
-		public WebUploadAprs APRS = new WebUploadAprs();
+		// APRS object
+		internal ThirdParty.WebUploadAprs APRS;
 
-		// Awekas settings
-		public WebUploadAwekas AWEKAS = new WebUploadAwekas();
+		// Awekas object
+		internal ThirdParty.WebUploadAwekas AWEKAS;
 
-		// WeatherCloud settings
-		public WebUploadWCloud WCloud = new WebUploadWCloud();
+		// WeatherCloud object
+		internal ThirdParty.WebUploadWCloud WCloud;
 
-		// OpenWeatherMap settings
-		public WebUploadService OpenWeatherMap = new WebUploadService();
+		// OpenWeatherMap object
+		internal ThirdParty.WebUploadOWM OpenWeatherMap;
 
 
 		// MQTT settings
@@ -660,28 +647,6 @@ namespace CumulusMX
 		//public WebServer httpServer;
 		public MxWebSocket WebSock;
 
-		//private Thread httpThread;
-
-		private static readonly HttpClientHandler WUhttpHandler = new HttpClientHandler();
-		private readonly HttpClient WUhttpClient = new HttpClient(WUhttpHandler);
-
-		private static readonly HttpClientHandler WindyhttpHandler = new HttpClientHandler();
-		private readonly HttpClient WindyhttpClient = new HttpClient(WindyhttpHandler);
-
-		private static readonly HttpClientHandler WindGuruhttpHandler = new HttpClientHandler();
-		private readonly HttpClient WindGuruhttpClient = new HttpClient(WindGuruhttpHandler);
-
-		private static readonly HttpClientHandler AwekashttpHandler = new HttpClientHandler();
-		private readonly HttpClient AwekashttpClient = new HttpClient(AwekashttpHandler);
-
-		private static readonly HttpClientHandler WCloudhttpHandler = new HttpClientHandler();
-		private readonly HttpClient WCloudhttpClient = new HttpClient(WCloudhttpHandler);
-
-		private static readonly HttpClientHandler PWShttpHandler = new HttpClientHandler();
-		private readonly HttpClient PWShttpClient = new HttpClient(PWShttpHandler);
-
-		private static readonly HttpClientHandler WOWhttpHandler = new HttpClientHandler();
-		private readonly HttpClient WOWhttpClient = new HttpClient(WOWhttpHandler);
 
 		// Custom HTTP - seconds
 		private static readonly HttpClientHandler customHttpSecondsHandler = new HttpClientHandler();
@@ -712,32 +677,13 @@ namespace CumulusMX
 		internal string CustomHttpRolloverString;
 
 		public Thread ftpThread;
-		public Thread MySqlCatchupThread;
 
 		public string xapHeartbeat;
 		public string xapsource;
 
 		public string LatestBuild = "n/a";
 
-		public MySqlConnectionStringBuilder MySqlConnSettings = new MySqlConnectionStringBuilder();
-
-		public MySqlGeneralSettings MySqlSettings = new MySqlGeneralSettings();
-
-		private int RealtimeMySqlLastMinute = -1;
-
-		public string StartOfMonthlyInsertSQL;
-		public string StartOfDayfileInsertSQL;
-		public string StartOfRealtimeInsertSQL;
-
-		public string CreateMonthlySQL;
-		public string CreateDayfileSQL;
-		public string CreateRealtimeSQL;
-
-		public int CustomMySqlMinutesIntervalIndex;
-
-		private bool customMySqlSecondsUpdateInProgress;
-		private bool customMySqlMinutesUpdateInProgress;
-		private bool customMySqlRolloverUpdateInProgress;
+		internal MySqlHander MySqlStuff;
 
 		public AirLinkData airLinkDataIn;
 		public AirLinkData airLinkDataOut;
@@ -774,7 +720,7 @@ namespace CumulusMX
 		}
 
 
-		public async void Initialise(int HTTPport, bool DebugEnabled, string startParms)
+		public void Initialise(int HTTPport, bool DebugEnabled, string startParms)
 		{
 			var fullVer = Assembly.GetExecutingAssembly().GetName().Version;
 			Version = $"{fullVer.Major}.{fullVer.Minor}.{fullVer.Build}";
@@ -864,7 +810,18 @@ namespace CumulusMX
 			YearIniFile = Datapath + "year.ini";
 			//stringsFile = "strings.ini";
 
-			// Set the default upload intervals for web services
+			// initialise the third party uploads
+			Wund = new ThirdParty.WebUploadWund(this, "WUnderground");
+			Windy = new ThirdParty.WebUploadWindy(this, "Windy");
+			WindGuru = new ThirdParty.WebUploadWindGuru(this, "WindGuru");
+			PWS = new ThirdParty.WebUploadPWS(this, "PWS");
+			WOW = new ThirdParty.WebUploadWow(this, "WOW");
+			APRS = new ThirdParty.WebUploadAprs(this, "APRS");
+			AWEKAS = new ThirdParty.WebUploadAwekas(this, "AWEKAS");
+			WCloud = new ThirdParty.WebUploadWCloud(this, "WCloud");
+			OpenWeatherMap = new ThirdParty.WebUploadOWM(this, "OpenWeatherMap");
+
+			// Set the default upload intervals for third party uploads
 			Wund.DefaultInterval = 15;
 			Windy.DefaultInterval = 15;
 			WindGuru.DefaultInterval = 1;
@@ -873,6 +830,8 @@ namespace CumulusMX
 			AWEKAS.DefaultInterval = 15 * 60;
 			WCloud.DefaultInterval = 10;
 			OpenWeatherMap.DefaultInterval = 15;
+
+			MySqlStuff = new MySqlHander(this);
 
 			StdWebFiles = new FileGenerationFtpOptions[2];
 			StdWebFiles[0] = new FileGenerationFtpOptions()
@@ -1054,7 +1013,6 @@ namespace CumulusMX
 			HttpUploadAlarm = new Alarm(this, "HTTP Upload");
 			MySqlUploadAlarm = new Alarm(this, "MySQL Upload");
 
-
 			// Read the configuration file
 
 			ReadIniFile();
@@ -1146,7 +1104,7 @@ namespace CumulusMX
 					var msg2 = $"Start-up delay complete, continuing...";
 					LogConsoleMessage(msg1);
 					LogMessage(msg1);
-					await Task.Delay(ProgramOptions.StartupDelaySecs * 1000);
+					Thread.Sleep(ProgramOptions.StartupDelaySecs * 1000);
 					LogConsoleMessage(msg2);
 					LogMessage(msg2);
 				}
@@ -1185,7 +1143,7 @@ namespace CumulusMX
 
 						do
 						{
-							await Task.Delay(50);
+							Thread.Sleep(50);
 						} while (pingReply != null && DateTime.Now < pingTimeout);
 
 						if (DateTime.Now >= pingTimeout)
@@ -1204,7 +1162,7 @@ namespace CumulusMX
 					if (pingReply == null || pingReply.Status != IPStatus.Success)
 					{
 						// no response wait 10 seconds before trying again
-						await Task.Delay(10000);
+						Thread.Sleep(10000);
 						// Force a DNS refresh if not an IPv4 address
 						if (!Utils.ValidateIPv4(ProgramOptions.StartupPingHost))
 						{
@@ -1277,11 +1235,6 @@ namespace CumulusMX
 			TempTrendFormat = "+0.0;-0.0;0";
 			AirQualityFormat = "F" + AirQualityDPlaces;
 
-			SetMonthlySqlCreateString();
-
-			SetDayfileSqlCreateString();
-
-			SetRealtimeSqlCreateString();
 
 			if (FtpOptions.FtpMode == FtpProtocols.FTP || FtpOptions.FtpMode == FtpProtocols.FTPS)
 			{
@@ -1308,31 +1261,6 @@ namespace CumulusMX
 			ReadStringsFile();
 
 			SetUpHttpProxy();
-
-			if (MySqlSettings.Monthly.Enabled)
-			{
-				SetStartOfMonthlyInsertSQL();
-			}
-
-			if (MySqlSettings.Dayfile.Enabled)
-			{
-				SetStartOfDayfileInsertSQL();
-			}
-
-			if (MySqlSettings.Realtime.Enabled)
-			{
-				SetStartOfRealtimeInsertSQL();
-			}
-
-
-			customMysqlSecondsTokenParser.OnToken += TokenParserOnToken;
-			CustomMysqlSecondsTimer = new Timer { Interval = MySqlSettings.CustomSecs.Interval * 1000 };
-			CustomMysqlSecondsTimer.Elapsed += CustomMysqlSecondsTimerTick;
-			CustomMysqlSecondsTimer.AutoReset = true;
-
-			customMysqlMinutesTokenParser.OnToken += TokenParserOnToken;
-
-			customMysqlRolloverTokenParser.OnToken += TokenParserOnToken;
 
 			CustomHttpSecondsTimer = new Timer { Interval = CustomHttpSecondsInterval * 1000 };
 			CustomHttpSecondsTimer.Elapsed += CustomHttpSecondsTimerTick;
@@ -1377,7 +1305,7 @@ namespace CumulusMX
 			HighTempAlarm.Units = Units.TempText;
 			LowTempAlarm.Units = Units.TempText;
 
-			GetLatestVersion();
+			_ = GetLatestVersion(); // do not wait for this
 
 			LogMessage("Cumulus Starting");
 
@@ -1549,6 +1477,7 @@ namespace CumulusMX
 				Api.stationSettings.SetStation(station);
 				Api.dataEditor.SetStation(station);
 				Api.logfileEditor.SetStation(station);
+				Api.RecordsJson = new RecordsData(this, station);
 
 				if (StationType == StationTypes.HttpWund)
 				{
@@ -1585,6 +1514,20 @@ namespace CumulusMX
 					HttpStations.stationAmbientExtra = ambientExtra;
 				}
 
+				// set the third party upload station
+				Wund.station = station;
+				Windy.station = station;
+				WindGuru.station = station;
+				PWS.station = station;
+				WOW.station = station;
+				APRS.station = station;
+				AWEKAS.station = station;
+				WCloud.station = station;
+				OpenWeatherMap.station = station;
+
+				MySqlStuff.InitialConfig(station);
+
+
 				webtags = new WebTags(this, station);
 				webtags.InitialiseWebtags();
 
@@ -1602,8 +1545,6 @@ namespace CumulusMX
 
 				SetFtpLogging(FtpOptions.Logging);
 
-				WundTimer.Elapsed += WundTimerTick;
-				AwekasTimer.Elapsed += AwekasTimerTick;
 				WebTimer.Elapsed += WebTimerTick;
 
 				xapsource = "sanday.cumulus." + Environment.MachineName;
@@ -1634,6 +1575,9 @@ namespace CumulusMX
 
 				InitialiseRG11();
 
+				// do any history catch-up or other work required before starting for real
+				station.DoStartup();
+
 				if (station.timerStartNeeded)
 				{
 					StartTimersAndSensors();
@@ -1646,7 +1590,7 @@ namespace CumulusMX
 
 				// If enabled generate the daily graph data files, and upload at first opportunity
 				LogDebugMessage("Generating the daily graph data files");
-				station.CreateEodGraphDataFiles();
+				station.Graphs.CreateEodGraphDataFiles();
 			}
 
 			LogDebugMessage("Lock: Cumulus releasing the lock");
@@ -1657,44 +1601,48 @@ namespace CumulusMX
 		{
 			if (!string.IsNullOrEmpty(HTTPProxyName))
 			{
-				WUhttpHandler.Proxy = new WebProxy(HTTPProxyName, HTTPProxyPort);
-				WUhttpHandler.UseProxy = true;
+				var proxy = new WebProxy(HTTPProxyName, HTTPProxyPort);
 
-				PWShttpHandler.Proxy = new WebProxy(HTTPProxyName, HTTPProxyPort);
-				PWShttpHandler.UseProxy = true;
+				Wund.httpHandler.Proxy = proxy;
+				Wund.httpHandler.UseProxy = true;
 
-				WOWhttpHandler.Proxy = new WebProxy(HTTPProxyName, HTTPProxyPort);
-				WOWhttpHandler.UseProxy = true;
+				PWS.httpHandler.Proxy = proxy;
+				PWS.httpHandler.UseProxy = true;
 
-				AwekashttpHandler.Proxy = new WebProxy(HTTPProxyName, HTTPProxyPort);
-				AwekashttpHandler.UseProxy = true;
+				WOW.httpHandler.Proxy = proxy;
+				WOW.httpHandler.UseProxy = true;
 
-				WindyhttpHandler.Proxy = new WebProxy(HTTPProxyName, HTTPProxyPort);
-				WindyhttpHandler.UseProxy = true;
+				AWEKAS.httpHandler.Proxy = proxy;
+				AWEKAS.httpHandler.UseProxy = true;
 
-				WCloudhttpHandler.Proxy = new WebProxy(HTTPProxyName, HTTPProxyPort);
-				WCloudhttpHandler.UseProxy = true;
+				Windy.httpHandler.Proxy = proxy;
+				Windy.httpHandler.UseProxy = true;
 
-				customHttpSecondsHandler.Proxy = new WebProxy(HTTPProxyName, HTTPProxyPort);
+				WCloud.httpHandler.Proxy = proxy;
+				WCloud.httpHandler.UseProxy = true;
+
+				customHttpSecondsHandler.Proxy = proxy;
 				customHttpSecondsHandler.UseProxy = true;
 
-				customHttpMinutesHandler.Proxy = new WebProxy(HTTPProxyName, HTTPProxyPort);
+				customHttpMinutesHandler.Proxy = proxy;
 				customHttpMinutesHandler.UseProxy = true;
 
-				customHttpRolloverHandler.Proxy = new WebProxy(HTTPProxyName, HTTPProxyPort);
+				customHttpRolloverHandler.Proxy = proxy;
 				customHttpRolloverHandler.UseProxy = true;
 
 				if (!string.IsNullOrEmpty(HTTPProxyUser))
 				{
-					WUhttpHandler.Credentials = new NetworkCredential(HTTPProxyUser, HTTPProxyPassword);
-					PWShttpHandler.Credentials = new NetworkCredential(HTTPProxyUser, HTTPProxyPassword);
-					WOWhttpHandler.Credentials = new NetworkCredential(HTTPProxyUser, HTTPProxyPassword);
-					AwekashttpHandler.Credentials = new NetworkCredential(HTTPProxyUser, HTTPProxyPassword);
-					WindyhttpHandler.Credentials = new NetworkCredential(HTTPProxyUser, HTTPProxyPassword);
-					WCloudhttpHandler.Credentials = new NetworkCredential(HTTPProxyUser, HTTPProxyPassword);
-					customHttpSecondsHandler.Credentials = new NetworkCredential(HTTPProxyUser, HTTPProxyPassword);
-					customHttpMinutesHandler.Credentials = new NetworkCredential(HTTPProxyUser, HTTPProxyPassword);
-					customHttpRolloverHandler.Credentials = new NetworkCredential(HTTPProxyUser, HTTPProxyPassword);
+					var creds = new NetworkCredential(HTTPProxyUser, HTTPProxyPassword);
+
+					Wund.httpHandler.Credentials = creds;
+					PWS.httpHandler.Credentials = creds;
+					WOW.httpHandler.Credentials = creds;
+					AWEKAS.httpHandler.Credentials = creds;
+					Windy.httpHandler.Credentials = creds;
+					WCloud.httpHandler.Credentials = creds;
+					customHttpSecondsHandler.Credentials = creds;
+					customHttpMinutesHandler.Credentials = creds;
+					customHttpRolloverHandler.Credentials = creds;
 				}
 			}
 		}
@@ -1702,106 +1650,9 @@ namespace CumulusMX
 		private void CustomHttpSecondsTimerTick(object sender, ElapsedEventArgs e)
 		{
 			if (!station.DataStopped)
-				CustomHttpSecondsUpdate();
+				_ = CustomHttpSecondsUpdate();
 		}
 
-		internal void SetStartOfRealtimeInsertSQL()
-		{
-			StartOfRealtimeInsertSQL = "INSERT IGNORE INTO " + MySqlSettings.Realtime.TableName + " (" +
-				"LogDateTime,temp,hum,dew,wspeed,wlatest,bearing,rrate,rfall,press," +
-				"currentwdir,beaufortnumber,windunit,tempunitnodeg,pressunit,rainunit," +
-				"windrun,presstrendval,rmonth,ryear,rfallY,intemp,inhum,wchill,temptrend," +
-				"tempTH,TtempTH,tempTL,TtempTL,windTM,TwindTM,wgustTM,TwgustTM," +
-				"pressTH,TpressTH,pressTL,TpressTL,version,build,wgust,heatindex,humidex," +
-				"UV,ET,SolarRad,avgbearing,rhour,forecastnumber,isdaylight,SensorContactLost," +
-				"wdir,cloudbasevalue,cloudbaseunit,apptemp,SunshineHours,CurrentSolarMax,IsSunny," +
-				"FeelsLike)";
-		}
-
-		internal void SetRealtimeSqlCreateString()
-		{
-			CreateRealtimeSQL = "CREATE TABLE " + MySqlSettings.Realtime.TableName + " (LogDateTime DATETIME NOT NULL," +
-				"temp decimal(4," + TempDPlaces + ") NOT NULL," +
-				"hum decimal(4," + HumDPlaces + ") NOT NULL," +
-				"dew decimal(4," + TempDPlaces + ") NOT NULL," +
-				"wspeed decimal(4," + WindDPlaces + ") NOT NULL," +
-				"wlatest decimal(4," + WindDPlaces + ") NOT NULL," +
-				"bearing VARCHAR(3) NOT NULL," +
-				"rrate decimal(4," + RainDPlaces + ") NOT NULL," +
-				"rfall decimal(4," + RainDPlaces + ") NOT NULL," +
-				"press decimal(6," + PressDPlaces + ") NOT NULL," +
-				"currentwdir varchar(3) NOT NULL," +
-				"beaufortnumber varchar(2) NOT NULL," +
-				"windunit varchar(4) NOT NULL," +
-				"tempunitnodeg varchar(1) NOT NULL," +
-				"pressunit varchar(3) NOT NULL," +
-				"rainunit varchar(2) NOT NULL," +
-				"windrun decimal(4," + WindRunDPlaces + ") NOT NULL," +
-				"presstrendval varchar(6) NOT NULL," +
-				"rmonth decimal(4," + RainDPlaces + ") NOT NULL," +
-				"ryear decimal(4," + RainDPlaces + ") NOT NULL," +
-				"rfallY decimal(4," + RainDPlaces + ") NOT NULL," +
-				"intemp decimal(4," + TempDPlaces + ") NOT NULL," +
-				"inhum decimal(4," + HumDPlaces + ") NOT NULL," +
-				"wchill decimal(4," + TempDPlaces + ") NOT NULL," +
-				"temptrend varchar(5) NOT NULL," +
-				"tempTH decimal(4," + TempDPlaces + ") NOT NULL," +
-				"TtempTH varchar(5) NOT NULL," +
-				"tempTL decimal(4," + TempDPlaces + ") NOT NULL," +
-				"TtempTL varchar(5) NOT NULL," +
-				"windTM decimal(4," + WindDPlaces + ") NOT NULL," +
-				"TwindTM varchar(5) NOT NULL," +
-				"wgustTM decimal(4," + WindDPlaces + ") NOT NULL," +
-				"TwgustTM varchar(5) NOT NULL," +
-				"pressTH decimal(6," + PressDPlaces + ") NOT NULL," +
-				"TpressTH varchar(5) NOT NULL," +
-				"pressTL decimal(6," + PressDPlaces + ") NOT NULL," +
-				"TpressTL varchar(5) NOT NULL," +
-				"version varchar(8) NOT NULL," +
-				"build varchar(5) NOT NULL," +
-				"wgust decimal(4," + WindDPlaces + ") NOT NULL," +
-				"heatindex decimal(4," + TempDPlaces + ") NOT NULL," +
-				"humidex decimal(4," + TempDPlaces + ") NOT NULL," +
-				"UV decimal(3," + UVDPlaces + ") NOT NULL," +
-				"ET decimal(4," + RainDPlaces + ") NOT NULL," +
-				"SolarRad decimal(5,1) NOT NULL," +
-				"avgbearing varchar(3) NOT NULL," +
-				"rhour decimal(4," + RainDPlaces + ") NOT NULL," +
-				"forecastnumber varchar(2) NOT NULL," +
-				"isdaylight varchar(1) NOT NULL," +
-				"SensorContactLost varchar(1) NOT NULL," +
-				"wdir varchar(3) NOT NULL," +
-				"cloudbasevalue varchar(5) NOT NULL," +
-				"cloudbaseunit varchar(2) NOT NULL," +
-				"apptemp decimal(4," + TempDPlaces + ") NOT NULL," +
-				"SunshineHours decimal(3," + SunshineDPlaces + ") NOT NULL," +
-				"CurrentSolarMax decimal(5,1) NOT NULL," +
-				"IsSunny varchar(1) NOT NULL," +
-				"FeelsLike decimal(4," + TempDPlaces + ") NOT NULL," +
-				"PRIMARY KEY (LogDateTime)) COMMENT = \"Realtime log\"";
-		}
-
-		internal void SetStartOfDayfileInsertSQL()
-		{
-			StartOfDayfileInsertSQL = "INSERT IGNORE INTO " + MySqlSettings.Dayfile.TableName + " (" +
-				"LogDate,HighWindGust,HWindGBear,THWindG,MinTemp,TMinTemp,MaxTemp,TMaxTemp," +
-				"MinPress,TMinPress,MaxPress,TMaxPress,MaxRainRate,TMaxRR,TotRainFall,AvgTemp," +
-				"TotWindRun,HighAvgWSpeed,THAvgWSpeed,LowHum,TLowHum,HighHum,THighHum,TotalEvap," +
-				"HoursSun,HighHeatInd,THighHeatInd,HighAppTemp,THighAppTemp,LowAppTemp,TLowAppTemp," +
-				"HighHourRain,THighHourRain,LowWindChill,TLowWindChill,HighDewPoint,THighDewPoint," +
-				"LowDewPoint,TLowDewPoint,DomWindDir,HeatDegDays,CoolDegDays,HighSolarRad," +
-				"THighSolarRad,HighUV,THighUV,HWindGBearSym,DomWindDirSym," +
-				"MaxFeelsLike,TMaxFeelsLike,MinFeelsLike,TMinFeelsLike,MaxHumidex,TMaxHumidex)";
-		}
-
-		internal void SetStartOfMonthlyInsertSQL()
-		{
-			StartOfMonthlyInsertSQL = "INSERT IGNORE INTO " + MySqlSettings.Monthly.TableName + " (" +
-				"LogDateTime,Temp,Humidity,Dewpoint,Windspeed,Windgust,Windbearing,RainRate,TodayRainSoFar," +
-				"Pressure,Raincounter,InsideTemp,InsideHumidity,LatestWindGust,WindChill,HeatIndex,UVindex," +
-				"SolarRad,Evapotrans,AnnualEvapTran,ApparentTemp,MaxSolarRad,HrsSunShine,CurrWindBearing," +
-				"RG11rain,RainSinceMidnight,WindbearingSym,CurrWindBearingSym,FeelsLike,Humidex)";
-		}
 
 		internal void SetupUnitText()
 		{
@@ -2056,13 +1907,6 @@ namespace CumulusMX
 			}
 		}
 
-		private void APRSTimerTick(object sender, ElapsedEventArgs e)
-		{
-			if (!string.IsNullOrEmpty(APRS.ID))
-			{
-				station.UpdateAPRS();
-			}
-		}
 
 		private void WebTimerTick(object sender, ElapsedEventArgs e)
 		{
@@ -2096,7 +1940,7 @@ namespace CumulusMX
 		}
 
 		/*
-		internal async void UpdateTwitter()
+		internal async Task UpdateTwitter()
 		{
 			if (station.DataStopped)
 			{
@@ -2151,7 +1995,7 @@ namespace CumulusMX
 					status.Append($" Barometer {station.Pressure.ToString(PressFormat)} {Units.PressText}, {station.Presstrendstr}.");
 					status.Append($" Temperature {station.OutdoorTemperature.ToString(TempFormat)} {Units.TempText}.");
 					status.Append($" Rain today {station.RainToday.ToString(RainFormat)}{Units.RainText}.");
-					status.Append($" Humidity {station.OutdoorHumidity}%");
+					status.Append($" Humidity {station.Humidity}%");
 				}
 
 				LogDebugMessage($"Updating Twitter: {status}");
@@ -2194,552 +2038,13 @@ namespace CumulusMX
 		}
 		*/
 
-		private void WundTimerTick(object sender, ElapsedEventArgs e)
-		{
-			if (!string.IsNullOrWhiteSpace(Wund.ID))
-				UpdateWunderground(DateTime.Now);
-		}
-
-
-		private void AwekasTimerTick(object sender, ElapsedEventArgs e)
-		{
-			if (!string.IsNullOrWhiteSpace(AWEKAS.ID))
-				UpdateAwekas(DateTime.Now);
-		}
-
 		public void MQTTTimerTick(object sender, ElapsedEventArgs e)
 		{
 			if (!station.DataStopped)
 				MqttPublisher.UpdateMQTTfeed("Interval");
 		}
 
-		/*
-		 * 15/1020 - This does nothing!
-		public void AirLinkTimerTick(object sender, ElapsedEventArgs e)
-		{
-			if (AirLinkInEnabled && airLinkIn != null)
-			{
-				airLinkIn.GetAirQuality();
-			}
-			if (AirLinkOutEnabled && airLinkOut != null)
-			{
-				airLinkOut.GetAirQuality();
-			}
-		}
-		*/
 
-		internal async void UpdateWunderground(DateTime timestamp)
-		{
-			if (Wund.Updating || station.DataStopped)
-			{
-				// No data coming in, do not do anything
-				return;
-			}
-
-			Wund.Updating = true;
-
-			string pwstring;
-			string URL = station.GetWundergroundURL(out pwstring, timestamp, false);
-
-			string starredpwstring = "&PASSWORD=" + new string('*', Wund.PW.Length);
-
-			string logUrl = URL.Replace(pwstring, starredpwstring);
-			if (!Wund.RapidFireEnabled)
-			{
-				LogDebugMessage("Wunderground: URL = " + logUrl);
-			}
-
-			try
-			{
-				HttpResponseMessage response = await WUhttpClient.GetAsync(URL);
-				var responseBodyAsText = await response.Content.ReadAsStringAsync();
-				if (response.StatusCode != HttpStatusCode.OK)
-				{
-					// Flag the error immediately if no rapid fire
-					// Flag error after every 12 rapid fire failures (1 minute)
-					Wund.ErrorFlagCount++;
-					if (!Wund.RapidFireEnabled || Wund.ErrorFlagCount >= 12)
-					{
-						LogMessage("Wunderground: Response = " + response.StatusCode + ": " + responseBodyAsText);
-						HttpUploadAlarm.LastError = "Wunderground: HTTP response - " + response.StatusCode;
-						HttpUploadAlarm.Triggered = true;
-						Wund.ErrorFlagCount = 0;
-					}
-				}
-				else
-				{
-					HttpUploadAlarm.Triggered = false;
-					Wund.ErrorFlagCount = 0;
-				}
-			}
-			catch (Exception ex)
-			{
-				LogExceptionMessage(ex, "Wunderground: ERROR");
-				HttpUploadAlarm.LastError = "Wunderground: " + ex.Message;
-				HttpUploadAlarm.Triggered = true;
-			}
-			finally
-			{
-				Wund.Updating = false;
-			}
-		}
-
-		internal async void UpdateWindy(DateTime timestamp)
-		{
-			if (Windy.Updating || station.DataStopped)
-			{
-				// No data coming in, do not do anything
-				return;
-			}
-
-			Windy.Updating = true;
-
-			string apistring;
-			string url = station.GetWindyURL(out apistring, timestamp);
-			string logUrl = url.Replace(apistring, "<<API_KEY>>");
-
-			LogDebugMessage("Windy: URL = " + logUrl);
-
-			try
-			{
-				HttpResponseMessage response = await WindyhttpClient.GetAsync(url);
-				var responseBodyAsText = await response.Content.ReadAsStringAsync();
-				LogDebugMessage("Windy: Response = " + response.StatusCode + ": " + responseBodyAsText);
-				if (response.StatusCode != HttpStatusCode.OK)
-				{
-					LogMessage("Windy: ERROR - Response = " + response.StatusCode + ": " + responseBodyAsText);
-					HttpUploadAlarm.LastError = "Windy: HTTP response - " + response.StatusCode;
-					HttpUploadAlarm.Triggered = true;
-				}
-				else
-				{
-					HttpUploadAlarm.Triggered = false;
-				}
-			}
-			catch (Exception ex)
-			{
-				LogExceptionMessage(ex, "Windy: ERROR");
-				HttpUploadAlarm.LastError = "Windy: " + ex.Message;
-				HttpUploadAlarm.Triggered = true;
-			}
-			finally
-			{
-				Windy.Updating = false;
-			}
-		}
-
-		internal async void UpdateWindGuru(DateTime timestamp)
-		{
-			if (WindGuru.Updating || station.DataStopped)
-			{
-				// No data coming in, do not do anything
-				return;
-			}
-
-			WindGuru.Updating = true;
-
-			string apistring;
-			string url = station.GetWindGuruURL(out apistring, timestamp);
-			string logUrl = url.Replace(apistring, "<<StationUID>>");
-
-			LogDebugMessage("WindGuru: URL = " + logUrl);
-
-			try
-			{
-				HttpResponseMessage response = await WindGuruhttpClient.GetAsync(url);
-				var responseBodyAsText = await response.Content.ReadAsStringAsync();
-				LogDebugMessage("WindGuru: " + response.StatusCode + ": " + responseBodyAsText);
-				if (response.StatusCode != HttpStatusCode.OK)
-				{
-					LogMessage("WindGuru: ERROR - " + response.StatusCode + ": " + responseBodyAsText);
-					HttpUploadAlarm.LastError = "WindGuru: HTTP response - " + response.StatusCode;
-					HttpUploadAlarm.Triggered = true;
-				}
-				else
-				{
-					HttpUploadAlarm.Triggered = false;
-				}
-			}
-			catch (Exception ex)
-			{
-				LogExceptionMessage(ex, "WindGuru: ERROR");
-				HttpUploadAlarm.LastError = "WindGuru: " + ex.Message;
-				HttpUploadAlarm.Triggered = true;
-			}
-			finally
-			{
-				WindGuru.Updating = false;
-			}
-		}
-
-
-		internal async void UpdateAwekas(DateTime timestamp)
-		{
-			if (AWEKAS.Updating || station.DataStopped)
-			{
-				// No data coming in, do not do anything
-				return;
-			}
-
-			AWEKAS.Updating = true;
-
-			string pwstring;
-			string url = station.GetAwekasURLv4(out pwstring, timestamp);
-
-			string starredpwstring = "<password>";
-
-			string logUrl = url.Replace(pwstring, starredpwstring);
-
-			LogDebugMessage("AWEKAS: URL = " + logUrl);
-
-			try
-			{
-				using HttpResponseMessage response = await AwekashttpClient.GetAsync(url);
-				var responseBodyAsText = await response.Content.ReadAsStringAsync();
-				LogDebugMessage("AWEKAS Response code = " + response.StatusCode);
-				LogDataMessage("AWEKAS: Response text = " + responseBodyAsText);
-
-				if (response.StatusCode != HttpStatusCode.OK)
-				{
-					LogMessage($"AWEKAS: ERROR - Response code = {response.StatusCode}, body = {responseBodyAsText}");
-					HttpUploadAlarm.LastError = $"AWEKAS: HTTP Response code = {response.StatusCode}, body = {responseBodyAsText}";
-					HttpUploadAlarm.Triggered = true;
-				}
-				else
-				{
-					HttpUploadAlarm.Triggered = false;
-				}
-				//var respJson = JsonConvert.DeserializeObject<AwekasResponse>(responseBodyAsText);
-				var respJson = JsonSerializer.DeserializeFromString<AwekasResponse>(responseBodyAsText);
-
-				// Check the status response
-				if (respJson.status == 2)
-				{
-					LogDebugMessage("AWEKAS: Data stored OK");
-				}
-				else if (respJson.status == 1)
-				{
-					LogMessage("AWEKAS: Data PARIALLY stored");
-					// TODO: Check errors and disabled
-				}
-				else if (respJson.status == 0)  // Authentication error or rate limited
-				{
-					if (respJson.minuploadtime > 0 && respJson.authentication == 0)
-					{
-						LogMessage("AWEKAS: Authentication error");
-						if (AWEKAS.Interval < 300)
-						{
-							AWEKAS.RateLimited = true;
-							AWEKAS.OriginalInterval = AWEKAS.Interval;
-							AWEKAS.Interval = 300;
-							AwekasTimer.Enabled = false;
-							AWEKAS.SynchronisedUpdate = true;
-							LogMessage("AWEKAS: Temporarily increasing AWEKAS upload interval to 300 seconds due to authentication error");
-						}
-					}
-					else if (respJson.minuploadtime == 0)
-					{
-						LogMessage("AWEKAS: Too many requests, rate limited");
-						// AWEKAS PLus allows minimum of 60 second updates, try that first
-						if (!AWEKAS.RateLimited && AWEKAS.Interval < 60)
-						{
-							AWEKAS.OriginalInterval = AWEKAS.Interval;
-							AWEKAS.RateLimited = true;
-							AWEKAS.Interval = 60;
-							AwekasTimer.Enabled = false;
-							AWEKAS.SynchronisedUpdate = true;
-							LogMessage("AWEKAS: Temporarily increasing AWEKAS upload interval to 60 seconds due to rate limit");
-						}
-						// AWEKAS normal allows minimum of 300 second updates, revert to that
-						else
-						{
-							AWEKAS.RateLimited = true;
-							AWEKAS.Interval = 300;
-							AwekasTimer.Interval = AWEKAS.Interval * 1000;
-							AwekasTimer.Enabled = !AWEKAS.SynchronisedUpdate;
-							AWEKAS.SynchronisedUpdate = AWEKAS.Interval % 60 == 0;
-							LogMessage("AWEKAS: Temporarily increasing AWEKAS upload interval to 300 seconds due to rate limit");
-						}
-					}
-					else
-					{
-						LogMessage("AWEKAS: Unknown error");
-						HttpUploadAlarm.LastError = "AWEKAS: Unknown error";
-						HttpUploadAlarm.Triggered = true;
-					}
-				}
-
-				// check the min upload time is greater than our upload time
-				if (respJson.status > 0 && respJson.minuploadtime > AWEKAS.OriginalInterval)
-				{
-					LogMessage($"AWEKAS: The minimum upload time to AWEKAS for your station is {respJson.minuploadtime} sec, Cumulus is configured for {AWEKAS.OriginalInterval} sec, increasing Cumulus interval to match AWEKAS");
-					AWEKAS.Interval = respJson.minuploadtime;
-					WriteIniFile();
-					AwekasTimer.Interval = AWEKAS.Interval * 1000;
-					AWEKAS.SynchronisedUpdate = AWEKAS.Interval % 60 == 0;
-					AwekasTimer.Enabled = !AWEKAS.SynchronisedUpdate;
-					// we got a successful upload, and reset the interval, so clear the rate limited values
-					AWEKAS.OriginalInterval = AWEKAS.Interval;
-					AWEKAS.RateLimited = false;
-				}
-				else if (AWEKAS.RateLimited && respJson.status > 0)
-				{
-					// We are currently rate limited, it could have been a transient thing because
-					// we just got a valid response, and our interval is >= the minimum allowed.
-					// So we just undo the limit, and resume as before
-					LogMessage($"AWEKAS: Removing temporary increase in upload interval to 60 secs, resuming uploads every {AWEKAS.OriginalInterval} secs");
-					AWEKAS.Interval = AWEKAS.OriginalInterval;
-					AwekasTimer.Interval = AWEKAS.Interval * 1000;
-					AWEKAS.SynchronisedUpdate = AWEKAS.Interval % 60 == 0;
-					AwekasTimer.Enabled = !AWEKAS.SynchronisedUpdate;
-					AWEKAS.RateLimited = false;
-				}
-			}
-			catch (Exception ex)
-			{
-				LogExceptionMessage(ex, "AWEKAS: Error");
-				HttpUploadAlarm.LastError = "AWEKAS: " + ex.Message;
-				HttpUploadAlarm.Triggered = true;
-			}
-			finally
-			{
-				AWEKAS.Updating = false;
-			}
-		}
-
-		internal async void UpdateWCloud(DateTime timestamp)
-		{
-			if (WCloud.Updating || station.DataStopped)
-			{
-				// No data coming in, do not do anything
-				return;
-			}
-
-			WCloud.Updating = true;
-
-			string pwstring;
-			string url = station.GetWCloudURL(out pwstring, timestamp);
-
-			string starredpwstring = "<key>";
-
-			string logUrl = url.Replace(pwstring, starredpwstring);
-
-			LogDebugMessage("WeatherCloud: URL = " + logUrl);
-
-			try
-			{
-				HttpResponseMessage response = await WCloudhttpClient.GetAsync(url);
-				var responseBodyAsText = await response.Content.ReadAsStringAsync();
-				var msg = "";
-				switch ((int)response.StatusCode)
-				{
-					case 200:
-						msg = "Success";
-						HttpUploadAlarm.Triggered = false;
-						break;
-					case 400:
-						msg = "Bad request";
-						HttpUploadAlarm.LastError = "WeatherCloud: " + msg;
-						HttpUploadAlarm.Triggered = true;
-						break;
-					case 401:
-						msg = "Incorrect WID or Key";
-						HttpUploadAlarm.LastError = "WeatherCloud: " + msg;
-						HttpUploadAlarm.Triggered = true;
-						break;
-					case 429:
-						msg = "Too many requests";
-						HttpUploadAlarm.LastError = "WeatherCloud: " + msg;
-						HttpUploadAlarm.Triggered = true;
-						break;
-					case 500:
-						msg = "Server error";
-						HttpUploadAlarm.LastError = "WeatherCloud: " + msg;
-						HttpUploadAlarm.Triggered = true;
-						break;
-					default:
-						msg = "Unknown error";
-						HttpUploadAlarm.LastError = "WeatherCloud: " + msg;
-						HttpUploadAlarm.Triggered = true;
-						break;
-				}
-				if ((int)response.StatusCode == 200)
-					LogDebugMessage($"WeatherCloud: Response = {msg} ({response.StatusCode}): {responseBodyAsText}");
-				else
-					LogMessage($"WeatherCloud: ERROR - Response = {msg} ({response.StatusCode}): {responseBodyAsText}");
-			}
-			catch (Exception ex)
-			{
-				LogExceptionMessage(ex, "WeatherCloud: ERROR");
-				HttpUploadAlarm.LastError = "WeatherCloud: " + ex.Message;
-				HttpUploadAlarm.Triggered = true;
-			}
-			finally
-			{
-				WCloud.Updating = false;
-			}
-		}
-
-		internal async void UpdateOpenWeatherMap(DateTime timestamp)
-		{
-			if (OpenWeatherMap.Updating || station.DataStopped)
-			{
-				// No data coming in, do not do anything
-				return;
-			}
-
-			OpenWeatherMap.Updating = true;
-
-			string url = "http://api.openweathermap.org/data/3.0/measurements?appid=" + OpenWeatherMap.PW;
-			string logUrl = url.Replace(OpenWeatherMap.PW, "<key>");
-
-			string jsonData = station.GetOpenWeatherMapData(timestamp);
-
-			LogDebugMessage("OpenWeatherMap: URL = " + logUrl);
-			LogDataMessage("OpenWeatherMap: Body = " + jsonData);
-
-			try
-			{
-				using var client = new HttpClient();
-				var data = new StringContent(jsonData, Encoding.UTF8, "application/json");
-				HttpResponseMessage response = await client.PostAsync(url, data);
-				var responseBodyAsText = await response.Content.ReadAsStringAsync();
-				var status = response.StatusCode == HttpStatusCode.NoContent ? "OK" : "Error";  // Returns a 204 response for OK!
-				LogDebugMessage($"OpenWeatherMap: Response code = {status} - {response.StatusCode}");
-				if (response.StatusCode != HttpStatusCode.NoContent)
-				{
-					LogMessage($"OpenWeatherMap: ERROR - Response code = {response.StatusCode}, Response data = {responseBodyAsText}");
-					HttpUploadAlarm.LastError = $"OpenWeatherMap: HTTP response - {response.StatusCode}, Response data = {responseBodyAsText}";
-					HttpUploadAlarm.Triggered = true;
-				}
-				else
-				{
-					HttpUploadAlarm.Triggered = false;
-				}
-			}
-			catch (Exception ex)
-			{
-				LogExceptionMessage(ex, "OpenWeatherMap: ERROR");
-				HttpUploadAlarm.LastError = "OpenWeatherMap: " + ex.Message;
-				HttpUploadAlarm.Triggered = true;
-			}
-			finally
-			{
-				OpenWeatherMap.Updating = false;
-			}
-		}
-
-		// Find all stations associated with the users API key
-		internal OpenWeatherMapStation[] GetOpenWeatherMapStations()
-		{
-			OpenWeatherMapStation[] retVal = Array.Empty<OpenWeatherMapStation>();
-			string url = "http://api.openweathermap.org/data/3.0/stations?appid=" + OpenWeatherMap.PW;
-			try
-			{
-				using var client = new HttpClient();
-				HttpResponseMessage response = client.GetAsync(url).Result;
-				var responseBodyAsText = response.Content.ReadAsStringAsync().Result;
-				LogDataMessage("OpenWeatherMap: Get Stations Response: " + response.StatusCode + ": " + responseBodyAsText);
-
-				if (responseBodyAsText.Length > 10)
-				{
-					var respJson = JsonSerializer.DeserializeFromString<OpenWeatherMapStation[]>(responseBodyAsText);
-					retVal = respJson;
-				}
-			}
-			catch (Exception ex)
-			{
-				LogExceptionMessage(ex, "OpenWeatherMap: Get Stations ERROR");
-			}
-
-			return retVal;
-		}
-
-		// Create a new OpenWeatherMap station
-		internal void CreateOpenWeatherMapStation()
-		{
-			var invC = new CultureInfo("");
-
-			string url = "http://api.openweathermap.org/data/3.0/stations?appid=" + OpenWeatherMap.PW;
-			try
-			{
-				var datestr = DateTime.Now.ToUniversalTime().ToString("yyMMddHHmm");
-				StringBuilder sb = new StringBuilder($"{{\"external_id\":\"CMX-{datestr}\",");
-				sb.Append($"\"name\":\"{LocationName}\",");
-				sb.Append($"\"latitude\":{Latitude.ToString(invC)},");
-				sb.Append($"\"longitude\":{Longitude.ToString(invC)},");
-				sb.Append($"\"altitude\":{(int)station.AltitudeM(Altitude)}}}");
-
-				LogMessage($"OpenWeatherMap: Creating new station");
-				LogMessage($"OpenWeatherMap: - {sb}");
-
-
-				using var client = new HttpClient();
-				var data = new StringContent(sb.ToString(), Encoding.UTF8, "application/json");
-
-				HttpResponseMessage response = client.PostAsync(url, data).Result;
-				var responseBodyAsText = response.Content.ReadAsStringAsync().Result;
-				var status = response.StatusCode == HttpStatusCode.Created ? "OK" : "Error";  // Returns a 201 response for OK
-				LogDebugMessage($"OpenWeatherMap: Create station response code = {status} - {response.StatusCode}");
-				LogDataMessage($"OpenWeatherMap: Create station response data = {responseBodyAsText}");
-
-				if (response.StatusCode == HttpStatusCode.Created)
-				{
-					// It worked, save the result
-					var respJson = JsonSerializer.DeserializeFromString<OpenWeatherMapNewStation>(responseBodyAsText);
-
-					LogMessage($"OpenWeatherMap: Created new station, id = {respJson.ID}, name = {respJson.name}");
-					OpenWeatherMap.ID = respJson.ID;
-					WriteIniFile();
-				}
-				else
-				{
-					LogMessage($"OpenWeatherMap: Failed to create new station. Error - {response.StatusCode}, text - {responseBodyAsText}");
-				}
-			}
-			catch (Exception ex)
-			{
-				LogExceptionMessage(ex, "OpenWeatherMap: Create station ERROR");
-			}
-		}
-
-		internal void EnableOpenWeatherMap()
-		{
-			if (OpenWeatherMap.Enabled && string.IsNullOrWhiteSpace(OpenWeatherMap.ID))
-			{
-				// oh, oh! OpenWeatherMap is enabled, but we do not have a station id
-				// first check if one already exists
-				var stations = GetOpenWeatherMapStations();
-
-				if (stations.Length == 0)
-				{
-					// No stations defined, we will create one
-					LogMessage($"OpenWeatherMap: No station defined, attempting to create one");
-					CreateOpenWeatherMapStation();
-				}
-				else if (stations.Length == 1)
-				{
-					// We have one station defined, lets use it!
-					LogMessage($"OpenWeatherMap: No station defined, but found one associated with this API key, using this station - {stations[0].id} : {stations[0].name}");
-					OpenWeatherMap.ID = stations[0].id;
-					// save the setting
-					WriteIniFile();
-				}
-				else
-				{
-					// multiple stations defined, the user must select which one to use
-					var msg = $"Multiple OpenWeatherMap stations found, please select the correct station id and enter it into your configuration";
-					LogConsoleMessage(msg);
-					LogMessage("OpenWeatherMap: " + msg);
-					foreach (var station in stations)
-					{
-						msg = $"  Station Id = {station.id}, Name = {station.name}";
-						LogConsoleMessage(msg);
-						LogMessage("OpenWeatherMap: " + msg);
-					}
-				}
-			}
-		}
 
 		internal void RealtimeTimerTick(object sender, ElapsedEventArgs elapsedEventArgs)
 		{
@@ -2749,6 +2054,12 @@ namespace CumulusMX
 			if (station.DataStopped)
 			{
 				// No data coming in, do not do anything
+				return;
+			}
+
+			if ((!station.PressReadyToPlot || !station.TempReadyToPlot || !station.WindReadyToPlot) && !StationOptions.NoSensorCheck)
+			{
+				// not all the data is ready and NoSensorCheck is not enabled
 				return;
 			}
 
@@ -2763,15 +2074,15 @@ namespace CumulusMX
 				else
 				{
 					RealtimeCopyInProgress = true;
-					CreateRealtimeFile(cycle);
-					CreateRealtimeHTMLfiles(cycle);
+					CreateRealtimeFile(cycle).Wait();
+					CreateRealtimeHTMLfiles(cycle).Wait();
 					RealtimeCopyInProgress = false;
 
-					MySqlRealtimeFile(cycle, true);
+					MySqlStuff.DoRealtimeData(cycle, true);
 
 					if (FtpOptions.LocalCopyEnabled)
 					{
-						RealtimeLocalCopy(cycle);
+						_ = RealtimeLocalCopy(cycle); // let this run in background
 					}
 
 					if (FtpOptions.RealtimeEnabled && FtpOptions.Enabled && !RealtimeFtpReconnecting)
@@ -2785,7 +2096,7 @@ namespace CumulusMX
 							{
 								LogMessage($"Realtime[{cycle}]: Realtime has been in progress for more than 3 minutes, attempting to reconnect.");
 								//RealtimeFTPConnectionTest(cycle);
-								RealtimeFTPReconnect();
+								_ = RealtimeFTPReconnect(); // let this run in background
 							}
 							else
 							{
@@ -2797,12 +2108,12 @@ namespace CumulusMX
 							// This only happens if the user enables realtime FTP after starting Cumulus
 							if (FtpOptions.FtpMode == FtpProtocols.SFTP && (RealtimeSSH == null || !RealtimeSSH.ConnectionInfo.IsAuthenticated))
 							{
-								RealtimeFTPReconnect();
+								_ = RealtimeFTPReconnect(); // let this run in background
 								reconnecting = true;
 							}
 							if (FtpOptions.FtpMode != FtpProtocols.SFTP && !RealtimeFTP.IsConnected)
 							{
-								RealtimeFTPReconnect();
+								_ = RealtimeFTPReconnect(); // let this run in background
 								reconnecting = true;
 							}
 
@@ -2819,7 +2130,7 @@ namespace CumulusMX
 								catch (Exception)
 								{
 									LogMessage($"Realtime[{cycle}]: Error during realtime FTP update that requires reconnection");
-									RealtimeFTPReconnect();
+									_ = RealtimeFTPReconnect(); // let this run in background
 								}
 								RealtimeFtpInProgress = false;
 							}
@@ -2838,14 +2149,14 @@ namespace CumulusMX
 				LogExceptionMessage(ex, $"Realtime[{cycle}]: Error during update");
 				if (FtpOptions.RealtimeEnabled && FtpOptions.Enabled)
 				{
-					RealtimeFTPReconnect();
+					_ = RealtimeFTPReconnect(); // let this run in background
 					RealtimeFtpInProgress = false;
 				}
 			}
 			LogDebugMessage($"Realtime[{cycle}]: End cycle");
 		}
 
-		private async void RealtimeFTPReconnect()
+		private async Task RealtimeFTPReconnect()
 		{
 			RealtimeFtpReconnecting = true;
 			await Task.Run(() =>
@@ -2995,7 +2306,7 @@ namespace CumulusMX
 			});
 		}
 
-		private void RealtimeLocalCopy(byte cycle)
+		private async Task RealtimeLocalCopy(byte cycle)
 		{
 			var dstPath = "";
 			var folderSep1 = Path.DirectorySeparatorChar.ToString();
@@ -3017,7 +2328,7 @@ namespace CumulusMX
 					try
 					{
 						LogDebugMessage($"RealtimeLocalCopy[{cycle}]: Copying - {RealtimeFiles[i].LocalFileName}");
-						File.Copy(srcFile, dstFile, true);
+						await Utils.CopyFileAsync(srcFile, dstFile);
 					}
 					catch (Exception ex)
 					{
@@ -3107,7 +2418,7 @@ namespace CumulusMX
 			}
 		}
 
-		private void CreateRealtimeHTMLfiles(int cycle)
+		private async Task CreateRealtimeHTMLfiles(int cycle)
 		{
 			// Process realtime files
 			for (var i = 0; i < RealtimeFiles.Length; i++)
@@ -3118,7 +2429,7 @@ namespace CumulusMX
 					try
 					{
 						LogDebugMessage($"Realtime[{cycle}]: Processing realtime file - {RealtimeFiles[i].LocalFileName}");
-						ProcessTemplateFile(RealtimeFiles[i].TemplateFileName, destFile, realtimeTokenParser, true);
+						await ProcessTemplateFile(RealtimeFiles[i].TemplateFileName, destFile, realtimeTokenParser, true);
 					}
 					catch (Exception ex)
 					{
@@ -3148,7 +2459,7 @@ namespace CumulusMX
 								try
 								{
 									LogDebugMessage($"Realtime[{cycle}]: Processing extra file[{i}] - {uploadfile}");
-									ProcessTemplateFile(uploadfile, uploadfile + "tmp", realtimeTokenParser, false);
+									ProcessTemplateFile(uploadfile, uploadfile + "tmp", realtimeTokenParser, false).Wait();
 								}
 								catch (Exception ex)
 								{
@@ -3164,7 +2475,7 @@ namespace CumulusMX
 								try
 								{
 									LogDebugMessage($"Realtime[{cycle}]: Copying extra file[{i}] {uploadfile} to {remotefile}");
-									File.Copy(uploadfile, remotefile, true);
+									await Utils.CopyFileAsync(uploadfile, remotefile);
 								}
 								catch (Exception ex)
 								{
@@ -3774,7 +3085,7 @@ namespace CumulusMX
 		{
 			const int maxEntries = 12;
 
-			List<string> fileEntries = new List<string>(Directory.GetFiles(directory).Where(f => System.Text.RegularExpressions.Regex.Match(f, @"\d{8}-\d{6}\.txt").Success));
+			List<string> fileEntries = new List<string>(Directory.GetFiles(directory).Where(f => System.Text.RegularExpressions.Regex.Match(f, @"[\\/]+\d{8}-\d{6}\.txt").Success));
 
 			fileEntries.Sort();
 
@@ -3864,6 +3175,8 @@ namespace CumulusMX
 				ProgramOptions.DebugLogging = ini.GetValue("Station", "Logging", false);
 				ProgramOptions.DataLogging = ini.GetValue("Station", "DataLogging", false);
 			}
+			ProgramOptions.LogRawStationData = ini.GetValue("Station", "LogRawStationData", false);
+			ProgramOptions.LogRawExtraData = ini.GetValue("Station", "LogRawExtraData", false);
 
 			ComportName = ini.GetValue("Station", "ComportName", DefaultComportName);
 
@@ -4248,7 +3561,21 @@ namespace CumulusMX
 			EcowittExtraUseAQI = ini.GetValue("GW1000", "ExtraSensorUseAQI", true);
 			EcowittExtraUseCo2= ini.GetValue("GW1000", "ExtraSensorUseCo2", true);
 			EcowittExtraUseLightning = ini.GetValue("GW1000", "ExtraSensorUseLightning", true);
-			EcowittExtraUseLeak= ini.GetValue("GW1000", "ExtraSensorUseLeak", true);
+			EcowittExtraUseLeak = ini.GetValue("GW1000", "ExtraSensorUseLeak", true);
+			EcowittSetCustomServer = ini.GetValue("GW1000", "SetCustomServer", false);
+			EcowittGwAddr = ini.GetValue("GW1000", "EcowittGwAddr", "0.0.0.0");
+			var localIp = Utils.GetIpWithDefaultGateway();
+			EcowittLocalAddr = ini.GetValue("GW1000", "EcowittLocalAddr", localIp.ToString());
+			EcowittCustomInterval = ini.GetValue("GW1000", "EcowittCustomInterval", 16);
+			// api
+			EcowittAppKey = ini.GetValue("GW1000", "EcowittAppKey", "");
+			EcowittUserApiKey = ini.GetValue("GW1000", "EcowittUserKey", "");
+			EcowittMacAddress = ini.GetValue("GW1000", "EcowittMacAddress", "");
+			if (string.IsNullOrEmpty(EcowittMacAddress) && !string.IsNullOrEmpty(Gw1000MacAddress))
+			{
+				EcowittMacAddress = Gw1000MacAddress;
+			}
+
 
 			// Ambient settings
 			AmbientExtraEnabled = ini.GetValue("Ambient", "ExtraSensorDataEnabled", false);
@@ -4608,6 +3935,8 @@ namespace CumulusMX
 			}
 			WOW.SendUV = ini.GetValue("WOW", "SendUV", false);
 			WOW.SendSolar = ini.GetValue("WOW", "SendSR", false);
+			WOW.SendSoilTemp = ini.GetValue("WOW", "SendSoilTemp", false);
+			WOW.SoilTempSensor = ini.GetValue("WOW", "SoilTempSensor", 1);
 			WOW.CatchUp = ini.GetValue("WOW", "CatchUp", false);
 
 			APRS.ID = ini.GetValue("APRS", "ID", "");
@@ -5041,50 +4370,50 @@ namespace CumulusMX
 			DisplayOptions.ShowUV = ini.GetValue("Display", "DisplayUvData", false);
 
 			// MySQL - common
-			MySqlConnSettings.Server = ini.GetValue("MySQL", "Host", "127.0.0.1");
-			MySqlConnSettings.Port = (uint)ini.GetValue("MySQL", "Port", 3306);
-			MySqlConnSettings.UserID = ini.GetValue("MySQL", "User", "");
-			MySqlConnSettings.Password = ini.GetValue("MySQL", "Pass", "");
-			MySqlConnSettings.Database = ini.GetValue("MySQL", "Database", "database");
-			MySqlSettings.UpdateOnEdit = ini.GetValue("MySQL", "UpdateOnEdit", true);
-			MySqlSettings.BufferOnfailure = ini.GetValue("MySQL", "BufferOnFailure", false);
+			MySqlStuff.ConnSettings.Server = ini.GetValue("MySQL", "Host", "127.0.0.1");
+			MySqlStuff.ConnSettings.Port = (uint)ini.GetValue("MySQL", "Port", 3306);
+			MySqlStuff.ConnSettings.UserID = ini.GetValue("MySQL", "User", "");
+			MySqlStuff.ConnSettings.Password = ini.GetValue("MySQL", "Pass", "");
+			MySqlStuff.ConnSettings.Database = ini.GetValue("MySQL", "Database", "database");
+			MySqlStuff.Settings.UpdateOnEdit = ini.GetValue("MySQL", "UpdateOnEdit", true);
+			MySqlStuff.Settings.BufferOnfailure = ini.GetValue("MySQL", "BufferOnFailure", false);
 
-			if (string.IsNullOrEmpty(MySqlConnSettings.Server) || string.IsNullOrEmpty(MySqlConnSettings.UserID) || string.IsNullOrEmpty(MySqlConnSettings.Password))
-				MySqlSettings.UpdateOnEdit = false;
+			if (string.IsNullOrEmpty(MySqlStuff.ConnSettings.Server) || string.IsNullOrEmpty(MySqlStuff.ConnSettings.UserID) || string.IsNullOrEmpty(MySqlStuff.ConnSettings.Password))
+				MySqlStuff.Settings.UpdateOnEdit = false;
 
 			// MySQL - monthly log file
-			MySqlSettings.Monthly.Enabled = ini.GetValue("MySQL", "MonthlyMySqlEnabled", false);
-			MySqlSettings.Monthly.TableName = ini.GetValue("MySQL", "MonthlyTable", "Monthly");
+			MySqlStuff.Settings.Monthly.Enabled = ini.GetValue("MySQL", "MonthlyMySqlEnabled", false);
+			MySqlStuff.Settings.Monthly.TableName = ini.GetValue("MySQL", "MonthlyTable", "Monthly");
 			// MySQL - real-time
-			MySqlSettings.Realtime.Enabled = ini.GetValue("MySQL", "RealtimeMySqlEnabled", false);
-			MySqlSettings.Realtime.TableName = ini.GetValue("MySQL", "RealtimeTable", "Realtime");
-			MySqlSettings.RealtimeRetention = ini.GetValue("MySQL", "RealtimeRetention", "");
-			MySqlSettings.RealtimeLimit1Minute = ini.GetValue("MySQL", "RealtimeMySql1MinLimit", false) && RealtimeInterval < 60000; // do not enable if real time interval is greater than 1 minute
-			// MySQL - dayfile
-			MySqlSettings.Dayfile.Enabled = ini.GetValue("MySQL", "DayfileMySqlEnabled", false);
-			MySqlSettings.Dayfile.TableName = ini.GetValue("MySQL", "DayfileTable", "Dayfile");
+			MySqlStuff.Settings.Realtime.Enabled = ini.GetValue("MySQL", "RealtimeMySqlEnabled", false);
+			MySqlStuff.Settings.Realtime.TableName = ini.GetValue("MySQL", "RealtimeTable", "Realtime");
+			MySqlStuff.Settings.RealtimeRetention = ini.GetValue("MySQL", "RealtimeRetention", "");
+			MySqlStuff.Settings.RealtimeLimit1Minute = ini.GetValue("MySQL", "RealtimeMySql1MinLimit", false) && RealtimeInterval < 60000; // do not enable if real time interval is greater than 1 minute
+																																				// MySQL - dayfile
+			MySqlStuff.Settings.Dayfile.Enabled = ini.GetValue("MySQL", "DayfileMySqlEnabled", false);
+			MySqlStuff.Settings.Dayfile.TableName = ini.GetValue("MySQL", "DayfileTable", "Dayfile");
 			// MySQL - custom seconds
-			MySqlSettings.CustomSecs.Command = ini.GetValue("MySQL", "CustomMySqlSecondsCommandString", "");
-			MySqlSettings.CustomSecs.Enabled = ini.GetValue("MySQL", "CustomMySqlSecondsEnabled", false);
-			MySqlSettings.CustomSecs.Interval = ini.GetValue("MySQL", "CustomMySqlSecondsInterval", 10);
-			if (MySqlSettings.CustomSecs.Interval < 1) { MySqlSettings.CustomSecs.Interval = 1; }
+			MySqlStuff.Settings.CustomSecs.Command = ini.GetValue("MySQL", "CustomMySqlSecondsCommandString", "");
+			MySqlStuff.Settings.CustomSecs.Enabled = ini.GetValue("MySQL", "CustomMySqlSecondsEnabled", false);
+			MySqlStuff.Settings.CustomSecs.Interval = ini.GetValue("MySQL", "CustomMySqlSecondsInterval", 10);
+			if (MySqlStuff.Settings.CustomSecs.Interval < 1) { MySqlStuff.Settings.CustomSecs.Interval = 1; }
 			// MySQL - custom minutes
-			MySqlSettings.CustomMins.Command = ini.GetValue("MySQL", "CustomMySqlMinutesCommandString", "");
-			MySqlSettings.CustomMins.Enabled = ini.GetValue("MySQL", "CustomMySqlMinutesEnabled", false);
-			CustomMySqlMinutesIntervalIndex = ini.GetValue("MySQL", "CustomMySqlMinutesIntervalIndex", -1);
-			if (CustomMySqlMinutesIntervalIndex >= 0 && CustomMySqlMinutesIntervalIndex < FactorsOf60.Length)
+			MySqlStuff.Settings.CustomMins.Command = ini.GetValue("MySQL", "CustomMySqlMinutesCommandString", "");
+			MySqlStuff.Settings.CustomMins.Enabled = ini.GetValue("MySQL", "CustomMySqlMinutesEnabled", false);
+			MySqlStuff.CustomMinutesIntervalIndex = ini.GetValue("MySQL", "CustomMySqlMinutesIntervalIndex", -1);
+			if (MySqlStuff.CustomMinutesIntervalIndex >= 0 && MySqlStuff.CustomMinutesIntervalIndex < FactorsOf60.Length)
 			{
-				MySqlSettings.CustomMins.Interval = FactorsOf60[CustomMySqlMinutesIntervalIndex];
+				MySqlStuff.Settings.CustomMins.Interval = FactorsOf60[MySqlStuff.CustomMinutesIntervalIndex];
 			}
 			else
 			{
-				MySqlSettings.CustomMins.Interval = 10;
-				CustomMySqlMinutesIntervalIndex = 6;
+				MySqlStuff.Settings.CustomMins.Interval = 10;
+				MySqlStuff.CustomMinutesIntervalIndex = 6;
 				rewriteRequired = true;
 			}
 			// MySQL - custom roll-over
-			MySqlSettings.CustomRollover.Command = ini.GetValue("MySQL", "CustomMySqlRolloverCommandString", "");
-			MySqlSettings.CustomRollover.Enabled = ini.GetValue("MySQL", "CustomMySqlRolloverEnabled", false);
+			MySqlStuff.Settings.CustomRollover.Command = ini.GetValue("MySQL", "CustomMySqlRolloverCommandString", "");
+			MySqlStuff.Settings.CustomRollover.Enabled = ini.GetValue("MySQL", "CustomMySqlRolloverEnabled", false);
 
 			// Custom HTTP - seconds
 			CustomHttpSecondsString = ini.GetValue("HTTP", "CustomHttpSecondsString", "");
@@ -5175,12 +4504,14 @@ namespace CumulusMX
 				OpenWeatherMap.PW = Crypto.DecryptString(OpenWeatherMap.PW, Program.InstanceId);
 				MQTT.Username = Crypto.DecryptString(MQTT.Username, Program.InstanceId);
 				MQTT.Password = Crypto.DecryptString(MQTT.Password, Program.InstanceId);
-				MySqlConnSettings.UserID = Crypto.DecryptString(MySqlConnSettings.UserID, Program.InstanceId);
-				MySqlConnSettings.Password = Crypto.DecryptString(MySqlConnSettings.Password, Program.InstanceId);
+				MySqlStuff.ConnSettings.UserID = Crypto.DecryptString(MySqlStuff.ConnSettings.UserID, Program.InstanceId);
+				MySqlStuff.ConnSettings.Password = Crypto.DecryptString(MySqlStuff.ConnSettings.Password, Program.InstanceId);
 				SmtpOptions.User = Crypto.DecryptString(SmtpOptions.User, Program.InstanceId);
 				SmtpOptions.Password = Crypto.DecryptString(SmtpOptions.Password, Program.InstanceId);
 				HTTPProxyUser = Crypto.DecryptString(HTTPProxyUser, Program.InstanceId);
 				HTTPProxyPassword = Crypto.DecryptString(HTTPProxyPassword, Program.InstanceId);
+				EcowittAppKey = Crypto.DecryptString(EcowittAppKey, Program.InstanceId);
+				EcowittUserApiKey = Crypto.DecryptString(EcowittUserApiKey, Program.InstanceId);
 			}
 			else
 			{
@@ -5248,6 +4579,8 @@ namespace CumulusMX
 
 			ini.SetValue("Station", "Logging", ProgramOptions.DebugLogging);
 			ini.SetValue("Station", "DataLogging", ProgramOptions.DataLogging);
+			ini.SetValue("Station", "LogRawStationData", ProgramOptions.LogRawStationData);
+			ini.SetValue("Station", "LogRawExtraData", ProgramOptions.LogRawExtraData);
 
 			ini.SetValue("Station", "DavisReadReceptionStats", DavisOptions.ReadReceptionStats);
 			ini.SetValue("Station", "DavisSetLoggerInterval", DavisOptions.SetLoggerInterval);
@@ -5422,6 +4755,14 @@ namespace CumulusMX
 			ini.SetValue("GW1000", "ExtraSensorUseCo2", EcowittExtraUseCo2);
 			ini.SetValue("GW1000", "ExtraSensorUseLightning", EcowittExtraUseLightning);
 			ini.SetValue("GW1000", "ExtraSensorUseLeak", EcowittExtraUseLeak);
+			ini.SetValue("GW1000", "SetCustomServer", EcowittSetCustomServer);
+			ini.SetValue("GW1000", "EcowittGwAddr", EcowittGwAddr);
+			ini.SetValue("GW1000", "EcowittLocalAddr", EcowittLocalAddr);
+			ini.SetValue("GW1000", "EcowittCustomInterval", EcowittCustomInterval);
+			// api
+			ini.SetValue("GW1000", "EcowittAppKey", Crypto.EncryptString(EcowittAppKey, Program.InstanceId));
+			ini.SetValue("GW1000", "EcowittUserKey", Crypto.EncryptString(EcowittUserApiKey, Program.InstanceId));
+			ini.SetValue("GW1000", "EcowittMacAddress", EcowittMacAddress);
 
 			// Ambient settings
 			ini.SetValue("Ambient", "ExtraSensorDataEnabled", AmbientExtraEnabled);
@@ -5627,6 +4968,8 @@ namespace CumulusMX
 			ini.SetValue("WOW", "Interval", WOW.Interval);
 			ini.SetValue("WOW", "SendUV", WOW.SendUV);
 			ini.SetValue("WOW", "SendSR", WOW.SendSolar);
+			ini.SetValue("WOW", "SendSoilTemp", WOW.SendSoilTemp);
+			ini.SetValue("WOW", "SoilTempSensor", WOW.SoilTempSensor);
 			ini.SetValue("WOW", "CatchUp", WOW.CatchUp);
 
 			ini.SetValue("APRS", "ID", APRS.ID);
@@ -5953,33 +5296,33 @@ namespace CumulusMX
 			ini.SetValue("Graphs", "TempSumVisible2", GraphOptions.TempSumVisible2);
 
 
-			ini.SetValue("MySQL", "Host", MySqlConnSettings.Server);
-			ini.SetValue("MySQL", "Port", MySqlConnSettings.Port);
-			ini.SetValue("MySQL", "User", Crypto.EncryptString(MySqlConnSettings.UserID, Program.InstanceId));
-			ini.SetValue("MySQL", "Pass", Crypto.EncryptString(MySqlConnSettings.Password, Program.InstanceId));
-			ini.SetValue("MySQL", "Database", MySqlConnSettings.Database);
-			ini.SetValue("MySQL", "MonthlyMySqlEnabled", MySqlSettings.Monthly.Enabled);
-			ini.SetValue("MySQL", "RealtimeMySqlEnabled", MySqlSettings.Realtime.Enabled);
-			ini.SetValue("MySQL", "RealtimeMySql1MinLimit", MySqlSettings.RealtimeLimit1Minute);
-			ini.SetValue("MySQL", "DayfileMySqlEnabled", MySqlSettings.Dayfile.Enabled);
-			ini.SetValue("MySQL", "UpdateOnEdit", MySqlSettings.UpdateOnEdit);
-			ini.SetValue("MySQL", "BufferOnFailure", MySqlSettings.BufferOnfailure);
+			ini.SetValue("MySQL", "Host", MySqlStuff.ConnSettings.Server);
+			ini.SetValue("MySQL", "Port", MySqlStuff.ConnSettings.Port);
+			ini.SetValue("MySQL", "User", Crypto.EncryptString(MySqlStuff.ConnSettings.UserID, Program.InstanceId));
+			ini.SetValue("MySQL", "Pass", Crypto.EncryptString(MySqlStuff.ConnSettings.Password, Program.InstanceId));
+			ini.SetValue("MySQL", "Database", MySqlStuff.ConnSettings.Database);
+			ini.SetValue("MySQL", "MonthlyMySqlEnabled", MySqlStuff.Settings.Monthly.Enabled);
+			ini.SetValue("MySQL", "RealtimeMySqlEnabled", MySqlStuff.Settings.Realtime.Enabled);
+			ini.SetValue("MySQL", "RealtimeMySql1MinLimit", MySqlStuff.Settings.RealtimeLimit1Minute);
+			ini.SetValue("MySQL", "DayfileMySqlEnabled", MySqlStuff.Settings.Dayfile.Enabled);
+			ini.SetValue("MySQL", "UpdateOnEdit", MySqlStuff.Settings.UpdateOnEdit);
+			ini.SetValue("MySQL", "BufferOnFailure", MySqlStuff.Settings.BufferOnfailure);
 
 
-			ini.SetValue("MySQL", "MonthlyTable", MySqlSettings.Monthly.TableName);
-			ini.SetValue("MySQL", "DayfileTable", MySqlSettings.Dayfile.TableName);
-			ini.SetValue("MySQL", "RealtimeTable", MySqlSettings.Realtime.TableName);
-			ini.SetValue("MySQL", "RealtimeRetention", MySqlSettings.RealtimeRetention);
-			ini.SetValue("MySQL", "CustomMySqlSecondsCommandString", MySqlSettings.CustomSecs.Command);
-			ini.SetValue("MySQL", "CustomMySqlMinutesCommandString", MySqlSettings.CustomMins.Command);
-			ini.SetValue("MySQL", "CustomMySqlRolloverCommandString", MySqlSettings.CustomRollover.Command);
+			ini.SetValue("MySQL", "MonthlyTable", MySqlStuff.Settings.Monthly.TableName);
+			ini.SetValue("MySQL", "DayfileTable", MySqlStuff.Settings.Dayfile.TableName);
+			ini.SetValue("MySQL", "RealtimeTable", MySqlStuff.Settings.Realtime.TableName);
+			ini.SetValue("MySQL", "RealtimeRetention", MySqlStuff.Settings.RealtimeRetention);
+			ini.SetValue("MySQL", "CustomMySqlSecondsCommandString", MySqlStuff.Settings.CustomSecs.Command);
+			ini.SetValue("MySQL", "CustomMySqlMinutesCommandString", MySqlStuff.Settings.CustomMins.Command);
+			ini.SetValue("MySQL", "CustomMySqlRolloverCommandString", MySqlStuff.Settings.CustomRollover.Command);
 
-			ini.SetValue("MySQL", "CustomMySqlSecondsEnabled", MySqlSettings.CustomSecs.Enabled);
-			ini.SetValue("MySQL", "CustomMySqlMinutesEnabled", MySqlSettings.CustomMins.Enabled);
-			ini.SetValue("MySQL", "CustomMySqlRolloverEnabled", MySqlSettings.CustomRollover.Enabled);
+			ini.SetValue("MySQL", "CustomMySqlSecondsEnabled", MySqlStuff.Settings.CustomSecs.Enabled);
+			ini.SetValue("MySQL", "CustomMySqlMinutesEnabled", MySqlStuff.Settings.CustomMins.Enabled);
+			ini.SetValue("MySQL", "CustomMySqlRolloverEnabled", MySqlStuff.Settings.CustomRollover.Enabled);
 
-			ini.SetValue("MySQL", "CustomMySqlSecondsInterval", MySqlSettings.CustomSecs.Interval);
-			ini.SetValue("MySQL", "CustomMySqlMinutesIntervalIndex", CustomMySqlMinutesIntervalIndex);
+			ini.SetValue("MySQL", "CustomMySqlSecondsInterval", MySqlStuff.Settings.CustomSecs.Interval);
+			ini.SetValue("MySQL", "CustomMySqlMinutesIntervalIndex", MySqlStuff.CustomMinutesIntervalIndex);
 
 			ini.SetValue("HTTP", "CustomHttpSecondsString", CustomHttpSecondsString);
 			ini.SetValue("HTTP", "CustomHttpMinutesString", CustomHttpMinutesString);
@@ -6359,8 +5702,6 @@ namespace CumulusMX
 
 		public Timer RealtimeTimer = new Timer();
 
-		internal Timer CustomMysqlSecondsTimer;
-
 		public bool WebIntervalEnabled { get; set; }
 
 		public bool WebAutoUpdate { get; set; }
@@ -6380,6 +5721,10 @@ namespace CumulusMX
 		public bool AirLinkInEnabled { get; set; }
 		public bool AirLinkOutEnabled { get; set; }
 
+		public bool EcowittSetCustomServer { get; set; }
+		public string EcowittGwAddr { get; set; }
+		public string EcowittLocalAddr { get; set; }
+		public int EcowittCustomInterval { get; set; }
 		public bool EcowittExtraEnabled { get; set; }
 		public bool EcowittExtraUseSolar { get; set; }
 		public bool EcowittExtraUseUv { get; set; }
@@ -6392,6 +5737,9 @@ namespace CumulusMX
 		public bool EcowittExtraUseCo2 { get; set; }
 		public bool EcowittExtraUseLightning { get; set; }
 		public bool EcowittExtraUseLeak { get; set; }
+		public string EcowittAppKey { get; set; }
+		public string EcowittUserApiKey { get; set; }
+		public string EcowittMacAddress { get; set; }
 
 		public bool AmbientExtraEnabled { get; set; }
 		public bool AmbientExtraUseSolar { get; set; }
@@ -6605,9 +5953,7 @@ namespace CumulusMX
 		public string Gw1000MacAddress;
 		public bool Gw1000AutoUpdateIpAddress = true;
 
-		public Timer WundTimer = new Timer();
 		public Timer WebTimer = new Timer();
-		public Timer AwekasTimer = new Timer();
 		public Timer MQTTTimer = new Timer();
 		//public Timer AirLinkTimer = new Timer();
 
@@ -6831,7 +6177,7 @@ namespace CumulusMX
 
 		public const int NumLogFileFields = 29;
 
-		public void DoLogFile(DateTime timestamp, bool live)
+		public async Task DoLogFile(DateTime timestamp, bool live)
 		{
 			// Writes an entry to the n-minute log file. Fields are comma-separated:
 			// 0  Date in the form dd/mm/yy hh:mm
@@ -6869,16 +6215,16 @@ namespace CumulusMX
 
 			// make sure solar max is calculated for those stations without a solar sensor
 			LogMessage("DoLogFile: Writing log entry for " + timestamp);
-			LogDebugMessage("DoLogFile: max gust: " + station.RecentMaxGust.ToString(WindFormat));
+			LogDebugMessage("DoLogFile: max gust: " + (station.RecentMaxGust.HasValue ? station.RecentMaxGust.Value.ToString(WindFormat) : "null"));
 			station.CurrentSolarMax = AstroLib.SolarMax(timestamp, Longitude, Latitude, station.AltitudeM(Altitude), out station.SolarElevation, SolarOptions);
 
 
 			var newRec = new IntervalData()
 			{
 				Timestamp = timestamp,
-				Temp = station.OutdoorTemperature,
-				Humidity = station.OutdoorHumidity,
-				DewPoint = station.OutdoorDewpoint,
+				Temp = station.Temperature,
+				Humidity = station.Humidity,
+				DewPoint = station.Dewpoint,
 				WindAvg = station.WindAverage,
 				WindGust10m = station.RecentMaxGust,
 				WindAvgDir = station.AvgBearing,
@@ -6886,17 +6232,17 @@ namespace CumulusMX
 				RainToday = station.RainToday,
 				Pressure = station.Pressure,
 				RainCounter = station.Raincounter,
-				InsideTemp = station.IndoorTemperature,
-				InsideHumidity = station.IndoorHumidity,
+				InsideTemp = station.IndoorTemp,
+				InsideHumidity = station.IndoorHum,
 				WindLatest = station.WindLatest,
 				WindChill = station.WindChill,
 				HeatIndex = station.HeatIndex,
 				UV = station.UV,
-				SolarRad = (int)station.SolarRad,
+				SolarRad = station.SolarRad,
 				ET = station.ET,
 				AnnualET = station.AnnualETTotal,
-				Apparent = station.ApparentTemperature,
-				SolarMax = (int)station.CurrentSolarMax,
+				Apparent = station.ApparentTemp,
+				SolarMax = station.CurrentSolarMax,
 				Sunshine = station.SunshineHours,
 				WindDir = station.Bearing,
 				RG11Rain = station.RG11RainToday,
@@ -6915,33 +6261,33 @@ namespace CumulusMX
 			var sb = new StringBuilder(256);
 			sb.Append(timestamp.ToString("dd/MM/yy HH:mm", invDate) + sep);
 			sb.Append(Utils.ToUnixTime(timestamp) + sep);
-			sb.Append(station.OutdoorTemperature.ToString(TempFormat, invNum) + sep);
-			sb.Append(station.OutdoorHumidity + sep);
-			sb.Append(station.OutdoorDewpoint.ToString(TempFormat, invNum) + sep);
-			sb.Append(station.WindAverage.ToString(WindAvgFormat, invNum) + sep);
-			sb.Append(station.RecentMaxGust.ToString(WindFormat, invNum) + sep);
+			sb.Append((station.Temperature.HasValue ? station.Temperature.Value.ToString(TempFormat, invNum) : "") + sep);
+			sb.Append((station.Humidity.HasValue ? station.Humidity.Value : "") + sep);
+			sb.Append((station.Dewpoint.HasValue ? station.Dewpoint.Value.ToString(TempFormat, invNum) : "") + sep);
+			sb.Append((station.WindAverage.HasValue ? station.WindAverage.Value.ToString(WindAvgFormat, invNum) : "") + sep);
+			sb.Append((station.RecentMaxGust.HasValue ? station.RecentMaxGust.Value.ToString(WindFormat, invNum) : "") + sep);
 			sb.Append(station.AvgBearing + sep);
-			sb.Append(station.RainRate.ToString(RainFormat, invNum) + sep);
-			sb.Append(station.RainToday.ToString(RainFormat, invNum) + sep);
-			sb.Append(station.Pressure.ToString(PressFormat, invNum) + sep);
+			sb.Append((station.RainRate.HasValue ? station.RainRate.Value.ToString(RainFormat, invNum) : "") + sep);
+			sb.Append((station.RainToday.HasValue ? station.RainToday.Value.ToString(RainFormat, invNum) : "") + sep);
+			sb.Append((station.Pressure.HasValue ? station.Pressure.Value.ToString(PressFormat, invNum) : "") + sep);
 			sb.Append(station.Raincounter.ToString(RainFormat, invNum) + sep);
-			sb.Append(station.IndoorTemperature.ToString(TempFormat, invNum) + sep);
-			sb.Append(station.IndoorHumidity + sep);
-			sb.Append(station.WindLatest.ToString(WindFormat, invNum) + sep);
-			sb.Append(station.WindChill.ToString(TempFormat, invNum) + sep);
-			sb.Append(station.HeatIndex.ToString(TempFormat, invNum) + sep);
-			sb.Append(station.UV.ToString(UVFormat, invNum) + sep);
-			sb.Append(station.SolarRad + sep);
+			sb.Append((station.IndoorTemp.HasValue ? station.IndoorTemp.Value.ToString(TempFormat, invNum) : "") + sep);
+			sb.Append((station.IndoorHum.HasValue ? station.IndoorHum.Value : "") + sep);
+			sb.Append((station.WindLatest.HasValue ? station.WindLatest.Value.ToString(WindFormat, invNum) : "") + sep);
+			sb.Append((station.WindChill.HasValue ? station.WindChill.Value.ToString(TempFormat, invNum) : "") + sep);
+			sb.Append((station.HeatIndex.HasValue ? station.HeatIndex.Value.ToString(TempFormat, invNum) : "") + sep);
+			sb.Append((station.UV.HasValue ? station.UV.Value.ToString(UVFormat, invNum) : "") + sep);
+			sb.Append((station.SolarRad.HasValue ? station.SolarRad.Value : "") + sep);
 			sb.Append(station.ET.ToString(ETFormat, invNum) + sep);
 			sb.Append(station.AnnualETTotal.ToString(ETFormat, invNum) + sep);
-			sb.Append(station.ApparentTemperature.ToString(TempFormat, invNum) + sep);
-			sb.Append((Math.Round(station.CurrentSolarMax)) + sep);
+			sb.Append((station.ApparentTemp.HasValue ? station.ApparentTemp.Value.ToString(TempFormat, invNum) : "") + sep);
+			sb.Append((station.CurrentSolarMax.HasValue ? station.CurrentSolarMax.Value : "") + sep);
 			sb.Append(station.SunshineHours.ToString(SunFormat, invNum) + sep);
 			sb.Append(station.Bearing + sep);
 			sb.Append(station.RG11RainToday.ToString(RainFormat, invNum) + sep);
 			sb.Append(station.RainSinceMidnight.ToString(RainFormat, invNum) + sep);
-			sb.Append(station.FeelsLike.ToString(TempFormat, invNum) + sep);
-			sb.Append(station.Humidex.ToString(TempFormat, invNum));
+			sb.Append((station.FeelsLike.HasValue ? station.FeelsLike.Value.ToString(TempFormat, invNum) : "") + sep);
+			sb.Append((station.Humidex.HasValue ? station.Humidex.Value.ToString(TempFormat, invNum) : ""));
 
 			var success = false;
 			var retries = LogFileRetries;
@@ -6952,7 +6298,7 @@ namespace CumulusMX
 					using (FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read))
 					using (StreamWriter file = new StreamWriter(fs))
 					{
-						file.WriteLine(sb.ToString());
+						await file.WriteLineAsync(sb.ToString());
 						file.Close();
 						fs.Close();
 					}
@@ -6986,83 +6332,15 @@ namespace CumulusMX
 
 			station.WriteTodayFile(timestamp, true);
 
-			if (MySqlSettings.Monthly.Enabled)
+			if (MySqlStuff.Settings.Monthly.Enabled)
 			{
-				if (!MySqlFailedList.IsEmpty)
-				{
-					// We have buffered commands run the catch up
-					LogMessage("DoLogFile: We have buffered MySQL commands to send, checking connection to server...");
-					if (MySqlCheckConnection())
-					{
-						Thread.Sleep(500);
-						LogMessage("DoLogFile: MySQL server connection OK, trying to send the buffered commands...");
-
-						try
-						{
-							MySqlCommandSync(MySqlFailedList, "Buffered");
-						}
-						catch
-						{
-						}
-					}
-					else if (MySqlSettings.BufferOnfailure)
-					{
-						LogMessage("DoLogFile: MySQL server connection failed. Try again at next update");
-					}
-				}
-
-				StringBuilder values = new StringBuilder(StartOfMonthlyInsertSQL, 600);
-				values.Append(" Values('");
-				values.Append(timestamp.ToString("yy-MM-dd HH:mm", invDate) + "',");
-				values.Append(station.OutdoorTemperature.ToString(TempFormat, invNum) + ",");
-				values.Append(station.OutdoorHumidity + ",");
-				values.Append(station.OutdoorDewpoint.ToString(TempFormat, invNum) + ",");
-				values.Append(station.WindAverage.ToString(WindAvgFormat, invNum) + ",");
-				values.Append(station.RecentMaxGust.ToString(WindFormat, invNum) + ",");
-				values.Append(station.AvgBearing + ",");
-				values.Append(station.RainRate.ToString(RainFormat, invNum) + ",");
-				values.Append(station.RainToday.ToString(RainFormat, invNum) + ",");
-				values.Append(station.Pressure.ToString(PressFormat, invNum) + ",");
-				values.Append(station.Raincounter.ToString(RainFormat, invNum) + ",");
-				values.Append(station.IndoorTemperature.ToString(TempFormat, invNum) + ",");
-				values.Append(station.IndoorHumidity + ",");
-				values.Append(station.WindLatest.ToString(WindFormat, invNum) + ",");
-				values.Append(station.WindChill.ToString(TempFormat, invNum) + ",");
-				values.Append(station.HeatIndex.ToString(TempFormat, invNum) + ",");
-				values.Append(station.UV.ToString(UVFormat, invNum) + ",");
-				values.Append(station.SolarRad + ",");
-				values.Append(station.ET.ToString(ETFormat, invNum) + ",");
-				values.Append(station.AnnualETTotal.ToString(ETFormat, invNum) + ",");
-				values.Append(station.ApparentTemperature.ToString(TempFormat, invNum) + ",");
-				values.Append((Math.Round(station.CurrentSolarMax)) + ",");
-				values.Append(station.SunshineHours.ToString(SunFormat, invNum) + ",");
-				values.Append(station.Bearing + ",");
-				values.Append(station.RG11RainToday.ToString(RainFormat, invNum) + ",");
-				values.Append(station.RainSinceMidnight.ToString(RainFormat, invNum) + ",'");
-				values.Append(station.CompassPoint(station.AvgBearing) + "','");
-				values.Append(station.CompassPoint(station.Bearing) + "',");
-				values.Append(station.FeelsLike.ToString(TempFormat, invNum) + ",");
-				values.Append(station.Humidex.ToString(TempFormat, invNum));
-				values.Append(')');
-
-				string queryString = values.ToString();
-
-				if (live)
-				{
-					// do the update
-					MySqlCommandSync(queryString, "DoLogFile");
-				}
-				else
-				{
-					// save the string for later
-					MySqlList.Enqueue(queryString);
-				}
+				MySqlStuff.DoIntervalData(timestamp, live);
 			}
 		}
 
 		public const int NumExtraLogFileFields = 92;
 
-		public void DoExtraLogFile(DateTime timestamp)
+		public async Task DoExtraLogFile(DateTime timestamp)
 		{
 			// Writes an entry to the n-minute extralogfile. Fields are comma-separated:
 			// 0  Date/time  in the form dd/mm/yy hh:mm
@@ -7324,11 +6602,12 @@ namespace CumulusMX
 					sb.Append(sep);
 				}
 
-				sb.Append((station.LeafTemp[1].HasValue ? station.LeafTemp[1].Value.ToString(TempFormat, invNum) : "") + sep);     //40
-				sb.Append((station.LeafTemp[2].HasValue ? station.LeafTemp[2].Value.ToString(TempFormat, invNum) : "") + sep);     //41
+				sb.Append((station.LeafTemp[1].HasValue ? station.LeafTemp[1].Value.ToString(TempFormat, invNum) : "") + sep);		//40
+				sb.Append((station.LeafTemp[2].HasValue ? station.LeafTemp[2].Value.ToString(TempFormat, invNum) : "") + sep);		//41
 
-				sb.Append((station.LeafWetness[1].HasValue ? station.LeafWetness[1] : "") + sep);                       //42
-				sb.Append((station.LeafWetness[2].HasValue ? station.LeafWetness[2] : "") + sep);                       //43
+				sb.Append((station.LeafWetness[1].HasValue ? station.LeafWetness[1].Value.ToString(LeafWetFormat) : "") + sep);		//42
+				sb.Append((station.LeafWetness[2].HasValue ? station.LeafWetness[2].Value.ToString(LeafWetFormat) : "") + sep);		//43
+
 				for (int i = 5; i <= 16; i++)
 				{
 					if (station.SoilTemp[i].HasValue)
@@ -7378,7 +6657,7 @@ namespace CumulusMX
 					{
 						using FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read);
 						using StreamWriter file = new StreamWriter(fs);
-						file.WriteLine(sb.ToString());
+						await file.WriteLineAsync(sb.ToString());
 						file.Close();
 						fs.Close();
 
@@ -7409,7 +6688,7 @@ namespace CumulusMX
 			}
 		}
 
-		public void DoAirLinkLogFile(DateTime timestamp)
+		public async Task DoAirLinkLogFile(DateTime timestamp)
 		{
 			// Writes an entry to the n-minute airlinklogfile. Fields are comma-separated:
 			// 0  Date in the form dd/mm/yy hh:mm
@@ -7585,7 +6864,7 @@ namespace CumulusMX
 				{
 					using FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read);
 					using StreamWriter file = new StreamWriter(fs);
-					file.WriteLine(sb);
+					await file.WriteLineAsync(sb);
 					file.Close();
 					fs.Close();
 
@@ -7712,17 +6991,34 @@ namespace CumulusMX
 					CopyBackupFile(diaryfile, diarybackup);
 					CopyBackupFile("Cumulus.ini", configbackup);
 					CopyBackupFile("UniqueId.txt", uniquebackup);
+
 					if (daily)
 					{
-						// for daily backup the db is in use, so use an aync online backup
-						station.DatabaseAsync.BackupAsync(dbBackup);
+						// for daily backup the db is in use, so use an online backup
+						try
+						{
+							// Take the backup before attempting to compress!
+							LogDebugMessage("Making backup copy of the database");
+							station.Database.Backup(dbBackup);
+							LogDebugMessage("Completed backup copy of the database");
+
+							// now vacuum the database
+							LogDebugMessage("Compressing the database");
+							station.Database.Execute("VACUUM");
+							LogDebugMessage("Completed compressing the database");
+						}
+						catch (Exception ex)
+						{
+							LogExceptionMessage(ex, "Error making db backup");
+						}
 					}
 					else
 					{
 						// start-up backup - the db is not yet in use, do a file copy including any recovery files
 						CopyBackupFile(dbfile, dbBackup);
-						CopyBackupFile(dbfile + "-shm", dbBackup + "-shm");
-						CopyBackupFile(dbfile + "-wal", dbBackup + "-wal");
+						CopyBackupFile(dbfile + "-journal", dbBackup + "-journal");
+						//CopyBackupFile(dbfile + "-shm", dbBackup + "-shm");
+						//CopyBackupFile(dbfile + "-wal", dbBackup + "-wal");
 					}
 					CopyBackupFile(extraFile, extraBackup);
 					CopyBackupFile(AirLinkFile, AirLinkBackup);
@@ -7754,21 +7050,19 @@ namespace CumulusMX
 			}
 		}
 
-		private static async void CopyBackupFile(string src, string dest)
+		private static void CopyBackupFile(string src, string dest)
 		{
 			try
 			{
 				if (File.Exists(src))
 				{
-					using FileStream SourceStream = File.Open(src, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-					using FileStream DestinationStream = File.Create(dest, 4096, FileOptions.Asynchronous);
-
-					await SourceStream.CopyToAsync(DestinationStream);
+					// don't wait for this to complete
+					_ = Utils.CopyFileAsync(src, dest);
 				}
 			}
 			catch (Exception e)
 			{
-				LogMessage($"BackupData: Error copying {src} - {e}");
+				LogMessage($"BackupData: Error copying {src} to {dest} - {e}");
 			}
 		}
 
@@ -7792,7 +7086,7 @@ namespace CumulusMX
 				currentData.IndoorHumidity = station.IndoorHumidity;
 				currentData.IndoorTemperature = station.IndoorTemperature;
 				currentData.OutdoorDewpoint = station.OutdoorDewpoint;
-				currentData.OutdoorHumidity = station.OutdoorHumidity;
+				currentData.Humidity = station.Humidity;
 				currentData.OutdoorTemperature = station.OutdoorTemperature;
 				currentData.AvgTempToday = station.TempTotalToday / station.tempsamplestoday;
 				currentData.Pressure = station.Pressure;
@@ -8095,12 +7389,12 @@ namespace CumulusMX
 		}
 		*/
 
-		public string Beaufort(double Bspeed) // Takes speed in current unit, returns Bft number as text
+		public string Beaufort(double? Bspeed) // Takes speed in current unit, returns Bft number as text
 		{
-			return station.Beaufort(Bspeed).ToString();
+			return station.Beaufort(Bspeed).ToString() ;
 		}
 
-		public string BeaufortDesc(double Bspeed)
+		public string BeaufortDesc(double? Bspeed)
 		{
 			// Takes speed in current units, returns Bft description
 
@@ -8152,20 +7446,17 @@ namespace CumulusMX
 			catch { }
 
 			// Stop the timers
-			try
-			{
-				LogMessage("Stopping timers");
-				RealtimeTimer.Stop();
-				WundTimer.Stop();
-				WebTimer.Stop();
-				AwekasTimer.Stop();
-				MQTTTimer.Stop();
-				//AirLinkTimer.Stop();
-				CustomHttpSecondsTimer.Stop();
-				CustomMysqlSecondsTimer.Stop();
-				MQTTTimer.Stop();
-			}
-			catch { }
+			LogMessage("Stopping timers");
+			try { RealtimeTimer.Stop(); } catch { }
+			try { Wund.IntTimer.Stop(); } catch { }
+			try { WebTimer.Stop(); } catch { }
+			try { AWEKAS.IntTimer.Stop(); } catch { }
+			try { MQTTTimer.Stop(); } catch { }
+			//AirLinkTimer.Stop();
+			try { CustomHttpSecondsTimer.Stop(); } catch { }
+			try { MySqlStuff.CustomSecondsTimer.Stop(); } catch { }
+			try { MQTTTimer.Stop(); } catch { }
+
 
 			if (station != null)
 			{
@@ -8227,8 +7518,8 @@ namespace CumulusMX
 			{
 				if (!RealtimeIntervalEnabled)
 				{
-					CreateRealtimeFile(999);
-					MySqlRealtimeFile(999, true);
+					CreateRealtimeFile(999).Wait();
+					MySqlStuff.DoRealtimeData(999, true);
 				}
 
 				LogDebugMessage("Creating standard web files");
@@ -8237,13 +7528,13 @@ namespace CumulusMX
 					if (StdWebFiles[i].Create && !string.IsNullOrWhiteSpace(StdWebFiles[i].TemplateFileName))
 					{
 						var destFile = StdWebFiles[i].LocalPath + StdWebFiles[i].LocalFileName;
-						ProcessTemplateFile(StdWebFiles[i].TemplateFileName, destFile, tokenParser, true);
+						ProcessTemplateFile(StdWebFiles[i].TemplateFileName, destFile, tokenParser, true).Wait();
 					}
 				}
 				LogDebugMessage("Done creating standard Data file");
 
 				LogDebugMessage("Creating graph data files");
-				station.CreateGraphDataFiles();
+				station.Graphs.CreateGraphDataFiles().Wait();
 				LogDebugMessage("Done creating graph data files");
 
 				//LogDebugMessage("Creating extra files");
@@ -8267,7 +7558,7 @@ namespace CumulusMX
 								{
 									LogDebugMessage($"Interval: Processing extra file[{i}] - {uploadfile}");
 									// process the file
-									ProcessTemplateFile(uploadfile, uploadfile + "tmp", tokenParser, false);
+									ProcessTemplateFile(uploadfile, uploadfile + "tmp", tokenParser, false).Wait();
 									uploadfile += "tmp";
 								}
 
@@ -8277,7 +7568,7 @@ namespace CumulusMX
 									LogDebugMessage($"Interval: Copying extra file[{i}] {uploadfile} to {remotefile}");
 									try
 									{
-										File.Copy(uploadfile, remotefile, true);
+										Utils.CopyFileSync(uploadfile, remotefile);
 									}
 									catch (Exception ex)
 									{
@@ -8310,7 +7601,7 @@ namespace CumulusMX
 
 				//LogDebugMessage("Done creating extra files");
 
-				DoLocalCopy();
+				_ = DoLocalCopy();
 
 				DoFTPLogin();
 			}
@@ -8320,7 +7611,7 @@ namespace CumulusMX
 			}
 		}
 
-		public void DoLocalCopy()
+		public async Task DoLocalCopy()
 		{
 			var remotePath = "";
 			var folderSep1 = Path.DirectorySeparatorChar.ToString();
@@ -8348,13 +7639,11 @@ namespace CumulusMX
 
 					srcfile = ReportPath + NOAAconf.LatestMonthReport;
 					dstfile = dstPath + folderSep1 + NOAAconf.LatestMonthReport;
-
-					File.Copy(srcfile, dstfile, true);
+					await Utils.CopyFileAsync(srcfile, dstfile);
 
 					srcfile = ReportPath + NOAAconf.LatestYearReport;
 					dstfile = dstPath + folderSep1 + NOAAconf.LatestYearReport;
-
-					File.Copy(srcfile, dstfile, true);
+					await Utils.CopyFileAsync(srcfile, dstfile);
 
 					NOAAconf.NeedCopy = false;
 
@@ -8376,7 +7665,7 @@ namespace CumulusMX
 					{
 						srcfile = StdWebFiles[i].LocalPath + StdWebFiles[i].LocalFileName;
 						dstfile = remotePath + StdWebFiles[i].RemoteFileName;
-						File.Copy(srcfile, dstfile, true);
+						await Utils.CopyFileAsync(srcfile, dstfile);
 					}
 					catch (Exception e)
 					{
@@ -8397,7 +7686,7 @@ namespace CumulusMX
 
 					try
 					{
-						File.Copy(srcfile, dstfile, true);
+						await Utils.CopyFileAsync(srcfile, dstfile);
 						// The config files only need uploading once per change
 						if (GraphDataFiles[i].LocalFileName == "availabledata.json" ||
 							GraphDataFiles[i].LocalFileName == "graphconfig.json")
@@ -8423,7 +7712,7 @@ namespace CumulusMX
 					dstfile = remotePath + GraphDataEodFiles[i].RemoteFileName;
 					try
 					{
-						File.Copy(srcfile, dstfile, true);
+						await Utils.CopyFileAsync(srcfile, dstfile);
 						// Uploaded OK, reset the upload required flag
 						GraphDataEodFiles[i].CopyRequired = false;
 					}
@@ -8441,7 +7730,8 @@ namespace CumulusMX
 				try
 				{
 					LogDebugMessage("LocalCopy: Copying Moon image file");
-					File.Copy("web" + DirectorySeparator + "moon.png", MoonImage.CopyDest, true);
+					await Utils.CopyFileAsync("web" + DirectorySeparator + "moon.png", MoonImage.CopyDest);
+
 					LogDebugMessage("LocalCopy: Done copying Moon image file");
 					// clear the image ready for FTP flag, only upload once an hour
 					MoonImage.ReadyToCopy = false;
@@ -9180,6 +8470,50 @@ namespace CumulusMX
 			}
 		}
 
+
+		public void RollOverDataLogs()
+		{
+			try
+			{
+				if (ProgramOptions.LogRawStationData && (RawDataStation == null || RawDataStation.disposed))
+				{
+					if (File.Exists(rawStationDataLogFile))
+					{
+						if (File.Exists(rawStationDataLogFile + ".2"))
+							File.Move(rawStationDataLogFile + ".2", rawStationDataLogFile + ".3", true);
+
+						if (File.Exists(rawStationDataLogFile + ".1"))
+							File.Move(rawStationDataLogFile + ".1", rawStationDataLogFile + ".2", true);
+
+						File.Move(rawStationDataLogFile, rawStationDataLogFile + ".1", true);
+					}
+
+					RawDataStation = new DataLogger(rawStationDataLogFile);
+				}
+
+				if (ProgramOptions.LogRawExtraData && (RawDataExtraLog == null || RawDataExtraLog.disposed))
+				{
+					if (File.Exists(rawExtraDataLogFile))
+					{
+						if (File.Exists(rawExtraDataLogFile + ".2"))
+							File.Move(rawExtraDataLogFile + ".2", rawExtraDataLogFile + ".3", true);
+
+						if (File.Exists(rawExtraDataLogFile + ".1"))
+							File.Move(rawExtraDataLogFile + ".1", rawExtraDataLogFile + ".2", true);
+
+						File.Move(rawExtraDataLogFile, rawExtraDataLogFile + ".1", true);
+					}
+
+					RawDataExtraLog = new DataLogger(rawExtraDataLogFile);
+				}
+			}
+			catch (Exception ex)
+			{
+				LogExceptionMessage(ex, "RollOverDataLogs");
+			}
+		}
+
+
 		/*
 		public string ReplaceCommas(string AStr)
 		{
@@ -9187,7 +8521,7 @@ namespace CumulusMX
 		}
 		*/
 
-		private void CreateRealtimeFile(int cycle)
+		private async Task CreateRealtimeFile(int cycle)
 		{
 			/*
 			Example: 18/10/08 16:03:45 8.4 84 5.8 24.2 33.0 261 0.0 1.0 999.7 W 6 mph C mb mm 146.6 +0.1 85.2 588.4 11.6 20.3 57 3.6 -0.7 10.9 12:00 7.8 14:41 37.4 14:38 44.0 14:28 999.8 16:01 998.4 12:06 1.8.2 448 36.0 10.3 10.5 0 9.3
@@ -9266,69 +8600,71 @@ namespace CumulusMX
 			try
 			{
 				LogDebugMessage($"Realtime[{cycle}]: Creating realtime.txt");
-				using StreamWriter file = new StreamWriter(filename, false);
-				file.Write(timestamp.ToString("dd/MM/yy HH:mm:ss ", invDate));                   // 1, 2
-				file.Write(station.OutdoorTemperature.ToString(TempFormat, invNum) + ' ');       // 3
-				file.Write(station.OutdoorHumidity.ToString() + ' ');                            // 4
-				file.Write(station.OutdoorDewpoint.ToString(TempFormat, invNum) + ' ');          // 5
-				file.Write(station.WindAverage.ToString(WindAvgFormat, invNum) + ' ');           // 6
-				file.Write(station.WindLatest.ToString(WindFormat, invNum) + ' ');               // 7
-				file.Write(station.Bearing.ToString() + ' ');                                    // 8
-				file.Write(station.RainRate.ToString(RainFormat, invNum) + ' ');                 // 9
-				file.Write(station.RainToday.ToString(RainFormat, invNum) + ' ');                // 10
-				file.Write(station.Pressure.ToString(PressFormat, invNum) + ' ');                // 11
-				file.Write(station.CompassPoint(station.Bearing) + ' ');                         // 12
-				file.Write(Beaufort(station.WindAverage) + ' ');                                 // 13
-				file.Write(Units.WindText + ' ');                                                // 14
-				file.Write(Units.TempText[1].ToString() + ' ');                                  // 15
-				file.Write(Units.PressText + ' ');                                               // 16
-				file.Write(Units.RainText + ' ');                                                // 17
-				file.Write(station.WindRunToday.ToString(WindRunFormat, invNum) + ' ');          // 18
+				var sb = new StringBuilder();
+				sb.Append(timestamp.ToString("dd/MM/yy HH:mm:ss ", invDate));                   // 1, 2
+				sb.Append((station.Temperature ?? 0).ToString(TempFormat, invNum) + ' ');       // 3
+				sb.Append((station.Humidity ?? 0).ToString() + ' ');                            // 4
+				sb.Append((station.Dewpoint ?? 0).ToString(TempFormat, invNum) + ' ');          // 5
+				sb.Append((station.WindAverage ?? 0).ToString(WindAvgFormat, invNum) + ' ');    // 6
+				sb.Append((station.WindLatest ?? 0).ToString(WindFormat, invNum) + ' ');        // 7
+				sb.Append(station.Bearing.ToString() + ' ');                                    // 8
+				sb.Append((station.RainRate ?? 0).ToString(RainFormat, invNum) + ' ');          // 9
+				sb.Append((station.RainToday ?? 0).ToString(RainFormat, invNum) + ' ');         // 10
+				sb.Append((station.Pressure ?? 0).ToString(PressFormat, invNum) + ' ');         // 11
+				sb.Append(station.CompassPoint(station.Bearing) + ' ');                         // 12
+				sb.Append(Beaufort(station.WindAverage ?? 0) + ' ');                            // 13
+				sb.Append(Units.WindText + ' ');                                                // 14
+				sb.Append(Units.TempText[1].ToString() + ' ');                                  // 15
+				sb.Append(Units.PressText + ' ');                                               // 16
+				sb.Append(Units.RainText + ' ');                                                // 17
+				sb.Append(station.WindRunToday.ToString(WindRunFormat, invNum) + ' ');          // 18
 				if (station.presstrendval > 0)
-					file.Write('+' + station.presstrendval.ToString(PressFormat, invNum) + ' '); // 19
+					sb.Append('+' + station.presstrendval.ToString(PressFormat, invNum) + ' '); // 19
 				else
-					file.Write(station.presstrendval.ToString(PressFormat, invNum) + ' ');
-				file.Write(station.RainMonth.ToString(RainFormat, invNum) + ' ');                // 20
-				file.Write(station.RainYear.ToString(RainFormat, invNum) + ' ');                 // 21
-				file.Write(station.RainYesterday.ToString(RainFormat, invNum) + ' ');            // 22
-				file.Write(station.IndoorTemperature.ToString(TempFormat, invNum) + ' ');        // 23
-				file.Write(station.IndoorHumidity.ToString() + ' ');                             // 24
-				file.Write(station.WindChill.ToString(TempFormat, invNum) + ' ');                // 25
-				file.Write(station.temptrendval.ToString(TempTrendFormat, invNum) + ' ');        // 26
-				file.Write(station.HiLoToday.HighTemp.ToString(TempFormat, invNum) + ' ');       // 27
-				file.Write(station.HiLoToday.HighTempTime.ToString("HH:mm ", invDate));          // 28
-				file.Write(station.HiLoToday.LowTemp.ToString(TempFormat, invNum) + ' ');        // 29
-				file.Write(station.HiLoToday.LowTempTime.ToString("HH:mm ", invDate));           // 30
-				file.Write(station.HiLoToday.HighWind.ToString(WindAvgFormat, invNum) + ' ');    // 31
-				file.Write(station.HiLoToday.HighWindTime.ToString("HH:mm ", invDate));          // 32
-				file.Write(station.HiLoToday.HighGust.ToString(WindFormat, invNum) + ' ');       // 33
-				file.Write(station.HiLoToday.HighGustTime.ToString("HH:mm ", invDate));          // 34
-				file.Write(station.HiLoToday.HighPress.ToString(PressFormat, invNum) + ' ');     // 35
-				file.Write(station.HiLoToday.HighPressTime.ToString("HH:mm ", invDate));         // 36
-				file.Write(station.HiLoToday.LowPress.ToString(PressFormat, invNum) + ' ');      // 37
-				file.Write(station.HiLoToday.LowPressTime.ToString("HH:mm ", invDate));          // 38
-				file.Write(Version + ' ');                                                       // 39
-				file.Write(Build + ' ');                                                         // 40
-				file.Write(station.RecentMaxGust.ToString(WindFormat, invNum) + ' ');            // 41
-				file.Write(station.HeatIndex.ToString(TempFormat, invNum) + ' ');                // 42
-				file.Write(station.Humidex.ToString(TempFormat, invNum) + ' ');                  // 43
-				file.Write(station.UV.ToString(UVFormat, invNum) + ' ');                         // 44
-				file.Write(station.ET.ToString(ETFormat, invNum) + ' ');                         // 45
-				file.Write((Convert.ToInt32(station.SolarRad)).ToString() + ' ');                // 46
-				file.Write(station.AvgBearing.ToString() + ' ');                                 // 47
-				file.Write(station.RainLastHour.ToString(RainFormat, invNum) + ' ');             // 48
-				file.Write(station.Forecastnumber.ToString() + ' ');                             // 49
-				file.Write(IsDaylight() ? "1 " : "0 ");                                          // 50
-				file.Write(station.SensorContactLost ? "1 " : "0 ");                             // 51
-				file.Write(station.CompassPoint(station.AvgBearing) + ' ');                      // 52
-				file.Write((Convert.ToInt32(station.CloudBase)).ToString() + ' ');               // 53
-				file.Write(CloudBaseInFeet ? "ft " : "m ");                                      // 54
-				file.Write(station.ApparentTemperature.ToString(TempFormat, invNum) + ' ');      // 55
-				file.Write(station.SunshineHours.ToString(SunFormat, invNum) + ' ');             // 56
-				file.Write(Convert.ToInt32(station.CurrentSolarMax).ToString() + ' ');           // 57
-				file.Write(station.IsSunny ? "1 " : "0 ");                                       // 58
-				file.WriteLine(station.FeelsLike.ToString(TempFormat, invNum));                  // 59
+					sb.Append(station.presstrendval.ToString(PressFormat, invNum) + ' ');
+				sb.Append(station.RainMonth.ToString(RainFormat, invNum) + ' ');                // 20
+				sb.Append(station.RainYear.ToString(RainFormat, invNum) + ' ');                 // 21
+				sb.Append((station.RainYesterday ?? 0).ToString(RainFormat, invNum) + ' ');     // 22
+				sb.Append((station.IndoorTemp ?? 0).ToString(TempFormat, invNum) + ' ');        // 23
+				sb.Append((station.IndoorHum ?? 0).ToString() + ' ');                           // 24
+				sb.Append((station.WindChill ?? 0).ToString(TempFormat, invNum) + ' ');         // 25
+				sb.Append(station.temptrendval.ToString(TempTrendFormat, invNum) + ' ');        // 26
+				sb.Append((station.HiLoToday.HighTemp ?? 0).ToString(TempFormat, invNum) + ' ');	// 27
+				sb.Append(station.HiLoToday.HighTempTime.ToString("HH:mm ", invDate));          // 28
+				sb.Append((station.HiLoToday.LowTemp ?? 0).ToString(TempFormat, invNum) + ' ');	// 29
+				sb.Append(station.HiLoToday.LowTempTime.ToString("HH:mm ", invDate));           // 30
+				sb.Append((station.HiLoToday.HighWind ?? 0).ToString(WindAvgFormat, invNum) + ' ');    // 31
+				sb.Append(station.HiLoToday.HighWindTime.ToString("HH:mm ", invDate));          // 32
+				sb.Append((station.HiLoToday.HighGust ?? 0).ToString(WindFormat, invNum) + ' ');// 33
+				sb.Append(station.HiLoToday.HighGustTime.ToString("HH:mm ", invDate));          // 34
+				sb.Append((station.HiLoToday.HighPress ?? 0).ToString(PressFormat, invNum) + ' ');     // 35
+				sb.Append(station.HiLoToday.HighPressTime.ToString("HH:mm ", invDate));         // 36
+				sb.Append((station.HiLoToday.LowPress ?? 0).ToString(PressFormat, invNum) + ' ');      // 37
+				sb.Append(station.HiLoToday.LowPressTime.ToString("HH:mm ", invDate));          // 38
+				sb.Append(Version + ' ');                                                       // 39
+				sb.Append(Build + ' ');                                                         // 40
+				sb.Append((station.RecentMaxGust ?? 0).ToString(WindFormat, invNum) + ' ');     // 41
+				sb.Append((station.HeatIndex ?? 0).ToString(TempFormat, invNum) + ' ');         // 42
+				sb.Append((station.Humidex ?? 0).ToString(TempFormat, invNum) + ' ');           // 43
+				sb.Append((station.UV ?? 0).ToString(UVFormat, invNum) + ' ');                  // 44
+				sb.Append(station.ET.ToString(ETFormat, invNum) + ' ');                         // 45
+				sb.Append((station.SolarRad ?? 0).ToString() + ' ');                            // 46
+				sb.Append(station.AvgBearing.ToString() + ' ');                                 // 47
+				sb.Append(station.RainLastHour.ToString(RainFormat, invNum) + ' ');             // 48
+				sb.Append(station.Forecastnumber.ToString() + ' ');                             // 49
+				sb.Append(IsDaylight() ? "1 " : "0 ");                                          // 50
+				sb.Append(station.SensorContactLost ? "1 " : "0 ");                             // 51
+				sb.Append(station.CompassPoint(station.AvgBearing) + ' ');                      // 52
+				sb.Append((station.CloudBase ?? 0).ToString() + ' ');                           // 53
+				sb.Append(CloudBaseInFeet ? "ft " : "m ");                                      // 54
+				sb.Append((station.ApparentTemp ?? 0).ToString(TempFormat, invNum) + ' ');      // 55
+				sb.Append(station.SunshineHours.ToString(SunFormat, invNum) + ' ');             // 56
+				sb.Append((station.CurrentSolarMax ?? 0).ToString() + ' ');						// 57
+				sb.Append(station.IsSunny ? "1 " : "0 ");                                       // 58
+				sb.Append((station.FeelsLike ?? 0).ToString(TempFormat, invNum));               // 59
 
+				using StreamWriter file = new StreamWriter(filename, false);
+				await file.WriteLineAsync(sb.ToString());
 				file.Close();
 			}
 			catch (Exception ex)
@@ -9337,101 +8673,8 @@ namespace CumulusMX
 			}
 		}
 
-		public void MySqlRealtimeFile(int cycle, bool live, DateTime? logdate = null)
-		{
-			DateTime timestamp = (DateTime)(live ? DateTime.Now : logdate);
 
-			if (!MySqlSettings.Realtime.Enabled)
-				return;
-
-			if (MySqlSettings.RealtimeLimit1Minute && RealtimeMySqlLastMinute == timestamp.Minute)
-				return;
-
-			RealtimeMySqlLastMinute = timestamp.Minute;
-
-			StringBuilder values = new StringBuilder(StartOfRealtimeInsertSQL, 1024);
-			values.Append(" Values('");
-			values.Append(timestamp.ToString("yy-MM-dd HH:mm:ss", invDate) + "',");
-			values.Append(station.OutdoorTemperature.ToString(TempFormat, invNum) + ',');
-			values.Append(station.OutdoorHumidity.ToString() + ',');
-			values.Append(station.OutdoorDewpoint.ToString(TempFormat, invNum) + ',');
-			values.Append(station.WindAverage.ToString(WindAvgFormat, invNum) + ',');
-			values.Append(station.WindLatest.ToString(WindFormat, invNum) + ',');
-			values.Append(station.Bearing.ToString() + ',');
-			values.Append(station.RainRate.ToString(RainFormat, invNum) + ',');
-			values.Append(station.RainToday.ToString(RainFormat, invNum) + ',');
-			values.Append(station.Pressure.ToString(PressFormat, invNum) + ",'");
-			values.Append(station.CompassPoint(station.Bearing) + "','");
-			values.Append(Beaufort(station.WindAverage) + "','");
-			values.Append(Units.WindText + "','");
-			values.Append(Units.TempText[1].ToString() + "','");
-			values.Append(Units.PressText + "','");
-			values.Append(Units.RainText + "',");
-			values.Append(station.WindRunToday.ToString(WindRunFormat, invNum) + ",'");
-			values.Append((station.presstrendval > 0 ? '+' + station.presstrendval.ToString(PressFormat, invNum) : station.presstrendval.ToString(PressFormat, invNum)) + "',");
-			values.Append(station.RainMonth.ToString(RainFormat, invNum) + ',');
-			values.Append(station.RainYear.ToString(RainFormat, invNum) + ',');
-			values.Append(station.RainYesterday.ToString(RainFormat, invNum) + ',');
-			values.Append(station.IndoorTemperature.ToString(TempFormat, invNum) + ',');
-			values.Append(station.IndoorHumidity.ToString() + ',');
-			values.Append(station.WindChill.ToString(TempFormat, invNum) + ',');
-			values.Append(station.temptrendval.ToString(TempTrendFormat, invNum) + ',');
-			values.Append(station.HiLoToday.HighTemp.ToString(TempFormat, invNum) + ",'");
-			values.Append(station.HiLoToday.HighTempTime.ToString("HH:mm", invDate) + "',");
-			values.Append(station.HiLoToday.LowTemp.ToString(TempFormat, invNum) + ",'");
-			values.Append(station.HiLoToday.LowTempTime.ToString("HH:mm", invDate) + "',");
-			values.Append(station.HiLoToday.HighWind.ToString(WindAvgFormat, invNum) + ",'");
-			values.Append(station.HiLoToday.HighWindTime.ToString("HH:mm", invDate) + "',");
-			values.Append(station.HiLoToday.HighGust.ToString(WindFormat, invNum) + ",'");
-			values.Append(station.HiLoToday.HighGustTime.ToString("HH:mm", invDate) + "',");
-			values.Append(station.HiLoToday.HighPress.ToString(PressFormat, invNum) + ",'");
-			values.Append(station.HiLoToday.HighPressTime.ToString("HH:mm", invDate) + "',");
-			values.Append(station.HiLoToday.LowPress.ToString(PressFormat, invNum) + ",'");
-			values.Append(station.HiLoToday.LowPressTime.ToString("HH:mm", invDate) + "','");
-			values.Append(Version + "','");
-			values.Append(Build + "',");
-			values.Append(station.RecentMaxGust.ToString(WindFormat, invNum) + ',');
-			values.Append(station.HeatIndex.ToString(TempFormat, invNum) + ',');
-			values.Append(station.Humidex.ToString(TempFormat, invNum) + ',');
-			values.Append(station.UV.ToString(UVFormat, invNum) + ',');
-			values.Append(station.ET.ToString(ETFormat, invNum) + ',');
-			values.Append(((int)station.SolarRad).ToString() + ',');
-			values.Append(station.AvgBearing.ToString() + ',');
-			values.Append(station.RainLastHour.ToString(RainFormat, invNum) + ',');
-			values.Append(station.Forecastnumber.ToString() + ",'");
-			values.Append((IsDaylight() ? "1" : "0") + "','");
-			values.Append((station.SensorContactLost ? "1" : "0") + "','");
-			values.Append(station.CompassPoint(station.AvgBearing) + "',");
-			values.Append((station.CloudBase).ToString() + ",'");
-			values.Append((CloudBaseInFeet ? "ft" : "m") + "',");
-			values.Append(station.ApparentTemperature.ToString(TempFormat, invNum) + ',');
-			values.Append(station.SunshineHours.ToString(SunFormat, invNum) + ',');
-			values.Append(((int)Math.Round(station.CurrentSolarMax)).ToString() + ",'");
-			values.Append((station.IsSunny ? "1" : "0") + "',");
-			values.Append(station.FeelsLike.ToString(TempFormat, invNum));
-			values.Append(')');
-
-			string valuesString = values.ToString();
-			List<string> cmds = new List<string>() { valuesString };
-
-			if (live)
-			{
-				if (!string.IsNullOrEmpty(MySqlSettings.RealtimeRetention))
-				{
-					cmds.Add($"DELETE IGNORE FROM {MySqlSettings.Realtime.TableName} WHERE LogDateTime < DATE_SUB('{DateTime.Now:yyyy-MM-dd HH:mm}', INTERVAL {MySqlSettings.RealtimeRetention});");
-				}
-
-				// do the update
-				_ = MySqlCommandAsync(cmds, $"Realtime[{cycle}]");
-			}
-			else
-			{
-				// not live, buffer the command for later
-				MySqlList.Enqueue(cmds[0]);
-			}
-		}
-
-		private void ProcessTemplateFile(string template, string outputfile, TokenParser parser, bool useAppDir)
+		private async Task ProcessTemplateFile(string template, string outputfile, TokenParser parser, bool useAppDir)
 		{
 			string templatefile = template;
 
@@ -9451,7 +8694,7 @@ namespace CumulusMX
 				try
 				{
 					using StreamWriter file = new StreamWriter(outputfile, false, encoding);
-					file.Write(output);
+					await file.WriteAsync(output);
 					file.Close();
 				}
 				catch (Exception e)
@@ -9504,131 +8747,43 @@ namespace CumulusMX
 
 			RealtimeTimer.Enabled = RealtimeIntervalEnabled;
 
-			CustomMysqlSecondsTimer.Enabled = MySqlSettings.CustomSecs.Enabled;
+			MySqlStuff.CustomSecondsTimer.Enabled = MySqlStuff.Settings.CustomSecs.Enabled;
 
 			CustomHttpSecondsTimer.Enabled = CustomHttpSecondsEnabled;
 
 			if (Wund.RapidFireEnabled)
 			{
-				WundTimer.Interval = 5000; // 5 seconds in rapid-fire mode
+				Wund.IntTimer.Interval = 5000; // 5 seconds in rapid-fire mode
 			}
 			else
 			{
-				WundTimer.Interval = Wund.Interval * 60 * 1000; // mins to millisecs
+				Wund.IntTimer.Interval = Wund.Interval * 60 * 1000; // mins to millisecs
 			}
 
 
-			AwekasTimer.Interval = AWEKAS.Interval * 1000;
+			AWEKAS.IntTimer.Interval = AWEKAS.Interval * 1000;
+			AWEKAS.IntTimer.Enabled = AWEKAS.Enabled && !AWEKAS.SynchronisedUpdate;
+
 
 			MQTTTimer.Interval = MQTT.IntervalTime * 1000; // secs to millisecs
-
-
-			// 15/10/20 What is doing? Nothing
-			/*
-			if (AirLinkInEnabled || AirLinkOutEnabled)
-			{
-				AirLinkTimer.Interval = 60 * 1000; // 1 minute
-				AirLinkTimer.Enabled = true;
-				AirLinkTimer.Elapsed += AirLinkTimerTick;
-			}
-			*/
-
 			if (MQTT.EnableInterval)
 			{
 				MQTTTimer.Enabled = true;
 			}
 
-			if (WundList == null)
-			{
-				// we've already been through here
-				// do nothing
-				LogDebugMessage("Wundlist is null");
-			}
-			else if (WundList.Count == 0)
-			{
-				// No archived entries to upload
-				WundList = null;
-				LogDebugMessage("Wundlist count is zero");
-				WundTimer.Enabled = Wund.Enabled && !Wund.SynchronisedUpdate;
-			}
-			else
-			{
-				// start the archive upload thread
-				Wund.CatchingUp = true;
-				WundCatchup();
-			}
 
-			if (WindyList == null)
-			{
-				// we've already been through here
-				// do nothing
-				LogDebugMessage("Windylist is null");
-			}
-			else if (WindyList.Count == 0)
-			{
-				// No archived entries to upload
-				WindyList = null;
-				LogDebugMessage("Windylist count is zero");
-			}
-			else
-			{
-				// start the archive upload thread
-				Windy.CatchingUp = true;
-				WindyCatchUp();
-			}
+			Wund.CatchUpIfRequired();
 
-			if (PWSList == null)
-			{
-				// we've already been through here
-				// do nothing
-			}
-			else if (PWSList.Count == 0)
-			{
-				// No archived entries to upload
-				PWSList = null;
-			}
-			else
-			{
-				// start the archive upload thread
-				PWS.CatchingUp = true;
-				PWSCatchUp();
-			}
+			Windy.CatchUpIfRequired();
 
-			if (WOWList == null)
-			{
-				// we've already been through here
-				// do nothing
-			}
-			else if (WOWList.Count == 0)
-			{
-				// No archived entries to upload
-				WOWList = null;
-			}
-			else
-			{
-				// start the archive upload thread
-				WOW.CatchingUp = true;
-				WOWCatchUp();
-			}
+			PWS.CatchUpIfRequired();
 
-			if (OWMList == null)
-			{
-				// we've already been through here
-				// do nothing
-			}
-			else if (OWMList.Count == 0)
-			{
-				// No archived entries to upload
-				OWMList = null;
-			}
-			else
-			{
-				// start the archive upload thread
-				OpenWeatherMap.CatchingUp = true;
-				OpenWeatherMapCatchUp();
-			}
+			WOW.CatchUpIfRequired();
 
-			if (MySqlList.IsEmpty)
+			OpenWeatherMap.CatchUpIfRequired();
+
+
+			if (MySqlStuff.CatchUpList.IsEmpty)
 			{
 				// No archived entries to upload
 				//MySqlList = null;
@@ -9638,148 +8793,21 @@ namespace CumulusMX
 			{
 				// start the archive upload thread
 				LogMessage("Starting MySQL catchup thread");
-				_ = MySqlCommandAsync(MySqlList, "MySQL Archive");
+				_ = MySqlStuff.CommandAsync(MySqlStuff.CatchUpList, "MySQL Archive");
 			}
 
 			WebTimer.Interval = UpdateInterval * 60 * 1000; // mins to millisecs
 			WebTimer.Enabled = WebIntervalEnabled && !SynchronisedWebUpdate;
 
-			AwekasTimer.Enabled = AWEKAS.Enabled && !AWEKAS.SynchronisedUpdate;
 
-			EnableOpenWeatherMap();
+			OpenWeatherMap.EnableOpenWeatherMap();
 
 			LogMessage("Normal running");
 			LogConsoleMessage("Normal running", ConsoleColor.Green);
 		}
 
-		private async void CustomMysqlSecondsTimerTick(object sender, ElapsedEventArgs e)
-		{
-			if (station.DataStopped)
-			{
-				// No data coming in, do not do anything
-				return;
-			}
 
-			if (station.DataStopped)
-			{
-				// No data coming in, do not do anything
-				return;
-			}
-
-			if (!customMySqlSecondsUpdateInProgress)
-			{
-				customMySqlSecondsUpdateInProgress = true;
-
-				customMysqlSecondsTokenParser.InputText = MySqlSettings.CustomSecs.Command;
-
-				if (!MySqlFailedList.IsEmpty)
-				{
-					LogMessage("CustomSqlSecs: Failed MySQL updates are present");
-					if (MySqlCheckConnection())
-					{
-						Thread.Sleep(500);
-						LogMessage("CustomSqlSecs: Connection to MySQL server is OK, trying to upload failed commands");
-
-						await MySqlCommandAsync(MySqlFailedList, "CustomSqlSecs");
-						LogMessage("CustomSqlSecs: Upload of failed MySQL commands complete");
-					}
-					else if (MySqlSettings.BufferOnfailure)
-					{
-						LogMessage("CustomSqlSecs: Connection to MySQL server has failed, adding this update to the failed list");
-						MySqlFailedList.Enqueue(customMysqlSecondsTokenParser.ToStringFromString());
-					}
-				}
-				else
-				{
-					await MySqlCommandAsync(customMysqlSecondsTokenParser.ToStringFromString(), "CustomSqlSecs");
-				}
-
-				customMySqlSecondsUpdateInProgress = false;
-			}
-		}
-
-
-		internal async void CustomMysqlMinutesTimerTick()
-		{
-			if (station.DataStopped)
-			{
-				// No data coming in, do not do anything
-				return;
-			}
-
-			if (!customMySqlMinutesUpdateInProgress)
-			{
-				customMySqlMinutesUpdateInProgress = true;
-
-				customMysqlMinutesTokenParser.InputText = MySqlSettings.CustomMins.Command;
-
-				if (!MySqlFailedList.IsEmpty)
-				{
-					LogMessage("CustomSqlMins: Failed MySQL updates are present");
-					if (MySqlCheckConnection())
-					{
-						Thread.Sleep(500);
-						LogMessage("CustomSqlMins: Connection to MySQL server is OK, trying to upload failed commands");
-
-						await MySqlCommandAsync(MySqlFailedList, "CustomSqlMins");
-						LogMessage("CustomSqlMins: Upload of failed MySQL commands complete");
-					}
-					else if (MySqlSettings.BufferOnfailure)
-					{
-						LogMessage("CustomSqlMins: Connection to MySQL server has failed, adding this update to the failed list");
-						MySqlFailedList.Enqueue(customMysqlMinutesTokenParser.ToStringFromString());
-					}
-				}
-				else
-				{
-					await MySqlCommandAsync(customMysqlMinutesTokenParser.ToStringFromString(), "CustomSqlMins");
-				}
-
-				customMySqlMinutesUpdateInProgress = false;
-			}
-		}
-
-		internal async void CustomMysqlRolloverTimerTick()
-		{
-			if (station.DataStopped)
-			{
-				// No data coming in, do not do anything
-				return;
-			}
-
-			if (!customMySqlRolloverUpdateInProgress)
-			{
-				customMySqlRolloverUpdateInProgress = true;
-
-				customMysqlRolloverTokenParser.InputText = MySqlSettings.CustomRollover.Command;
-
-				if (!MySqlFailedList.IsEmpty)
-				{
-					LogMessage("CustomSqlRollover: Failed MySQL updates are present");
-					if (MySqlCheckConnection())
-					{
-						Thread.Sleep(500);
-						LogMessage("CustomSqlRollover: Connection to MySQL server is OK, trying to upload failed commands");
-
-						await MySqlCommandAsync(MySqlFailedList, "CustomSqlRollover");
-						LogMessage("CustomSqlRollover: Upload of failed MySQL commands complete");
-					}
-					else if (MySqlSettings.BufferOnfailure)
-					{
-						LogMessage("CustomSqlRollover: Connection to MySQL server has failed, adding this update to the failed list");
-						MySqlFailedList.Enqueue(customMysqlRolloverTokenParser.ToStringFromString());
-					}
-				}
-				else
-				{
-					await MySqlCommandAsync(customMysqlRolloverTokenParser.ToStringFromString(), "CustomSqlRollover");
-				}
-
-				customMySqlRolloverUpdateInProgress = false;
-			}
-		}
-
-		public void DoExtraEndOfDayFiles()
+		public async Task DoExtraEndOfDayFiles()
 		{
 			int i;
 
@@ -9815,7 +8843,7 @@ namespace CumulusMX
 								try
 								{
 									using StreamWriter file = new StreamWriter(uploadfile, false, encoding);
-									file.Write(output);
+									await file.WriteAsync(output);
 									file.Close();
 								}
 								catch (Exception ex)
@@ -9836,7 +8864,7 @@ namespace CumulusMX
 								LogDebugMessage($"EOD: Copying extra file {uploadfile} to {remotefile}");
 								try
 								{
-									File.Copy(uploadfile, remotefile, true);
+									await Utils.CopyFileAsync(uploadfile, remotefile);
 								}
 								catch (Exception ex)
 								{
@@ -9985,416 +9013,8 @@ namespace CumulusMX
 			}
 		}
 
-		/// <summary>
-		/// Process the list of WU updates created at start-up from logger entries
-		/// </summary>
-		private async void WundCatchup()
-		{
-			Wund.Updating = true;
-			for (int i = 0; i < WundList.Count; i++)
-			{
-				LogMessage("Uploading WU archive #" + (i + 1));
-				try
-				{
-					HttpResponseMessage response = await WUhttpClient.GetAsync(WundList[i]);
-					LogMessage("WU Response: " + response.StatusCode + ": " + response.ReasonPhrase);
-				}
-				catch (Exception ex)
-				{
-					LogExceptionMessage(ex, "WU update error");
-				}
-			}
 
-			LogMessage("End of WU archive upload");
-			WundList.Clear();
-			Wund.CatchingUp = false;
-			WundTimer.Enabled = Wund.Enabled && !Wund.SynchronisedUpdate;
-			Wund.Updating = false;
-		}
-
-		private async void WindyCatchUp()
-		{
-			Windy.Updating = true;
-			for (int i = 0; i < WindyList.Count; i++)
-			{
-				LogMessage("Uploading Windy archive #" + (i + 1));
-				try
-				{
-					HttpResponseMessage response = await WindyhttpClient.GetAsync(WindyList[i]);
-					LogMessage("Windy Response: " + response.StatusCode + ": " + response.ReasonPhrase);
-				}
-				catch (Exception ex)
-				{
-					LogExceptionMessage(ex, "Windy update error");
-				}
-			}
-
-			LogMessage("End of Windy archive upload");
-			WindyList.Clear();
-			Windy.CatchingUp = false;
-			Windy.Updating = false;
-		}
-
-		/// <summary>
-		/// Process the list of PWS Weather updates created at start-up from logger entries
-		/// </summary>
-		private async void PWSCatchUp()
-		{
-			PWS.Updating = true;
-
-			for (int i = 0; i < PWSList.Count; i++)
-			{
-				LogMessage("Uploading PWS archive #" + (i + 1));
-				try
-				{
-					HttpResponseMessage response = await PWShttpClient.GetAsync(PWSList[i]);
-					var responseBodyAsText = await response.Content.ReadAsStringAsync();
-					LogMessage("PWS Response: " + response.StatusCode + ": " + responseBodyAsText);
-				}
-				catch (Exception ex)
-				{
-					LogExceptionMessage(ex, "PWS update error");
-				}
-			}
-
-			LogMessage("End of PWS archive upload");
-			PWSList.Clear();
-			PWS.CatchingUp = false;
-			PWS.Updating = false;
-		}
-
-		/// <summary>
-		/// Process the list of WOW updates created at start-up from logger entries
-		/// </summary>
-		private async void WOWCatchUp()
-		{
-			WOW.Updating = true;
-
-			for (int i = 0; i < WOWList.Count; i++)
-			{
-				LogMessage("Uploading WOW archive #" + (i + 1));
-				try
-				{
-					HttpResponseMessage response = await PWShttpClient.GetAsync(WOWList[i]);
-					var responseBodyAsText = await response.Content.ReadAsStringAsync();
-					LogMessage("WOW Response: " + response.StatusCode + ": " + responseBodyAsText);
-				}
-				catch (Exception ex)
-				{
-					LogExceptionMessage(ex, "WOW update error");
-				}
-			}
-
-			LogMessage("End of WOW archive upload");
-			WOWList.Clear();
-			WOW.CatchingUp = false;
-			WOW.Updating = false;
-		}
-
-		/// <summary>
-		/// Process the list of OpenWeatherMap updates created at start-up from logger entries
-		/// </summary>
-		private async void OpenWeatherMapCatchUp()
-		{
-			OpenWeatherMap.Updating = true;
-
-			string url = "http://api.openweathermap.org/data/3.0/measurements?appid=" + OpenWeatherMap.PW;
-			string logUrl = url.Replace(OpenWeatherMap.PW, "<key>");
-
-			using (var client = new HttpClient())
-			{
-				for (int i = 0; i < OWMList.Count; i++)
-				{
-					LogMessage("Uploading OpenWeatherMap archive #" + (i + 1));
-					LogDebugMessage("OpenWeatherMap: URL = " + logUrl);
-					LogDataMessage("OpenWeatherMap: Body = " + OWMList[i]);
-
-					try
-					{
-						var data = new StringContent(OWMList[i], Encoding.UTF8, "application/json");
-						HttpResponseMessage response = await client.PostAsync(url, data);
-						var responseBodyAsText = await response.Content.ReadAsStringAsync();
-						var status = response.StatusCode == HttpStatusCode.NoContent ? "OK" : "Error";  // Returns a 204 response for OK!
-						LogDebugMessage($"OpenWeatherMap: Response code = {status} - {response.StatusCode}");
-						if (response.StatusCode != HttpStatusCode.NoContent)
-							LogDataMessage($"OpenWeatherMap: Response data = {responseBodyAsText}");
-					}
-					catch (Exception ex)
-					{
-						LogExceptionMessage(ex, "OpenWeatherMap: Update error");
-					}
-				}
-			}
-
-			LogMessage("End of OpenWeatherMap archive upload");
-			OWMList.Clear();
-			OpenWeatherMap.CatchingUp = false;
-			OpenWeatherMap.Updating = false;
-		}
-
-
-		public async void UpdatePWSweather(DateTime timestamp)
-		{
-			if (!PWS.Updating)
-			{
-				PWS.Updating = true;
-
-				string pwstring;
-				string URL = station.GetPWSURL(out pwstring, timestamp);
-
-				string starredpwstring = "&PASSWORD=" + new string('*', PWS.PW.Length);
-
-				string LogURL = URL.Replace(pwstring, starredpwstring);
-				LogDebugMessage(LogURL);
-
-				try
-				{
-					HttpResponseMessage response = await PWShttpClient.GetAsync(URL);
-					var responseBodyAsText = await response.Content.ReadAsStringAsync();
-					if (response.StatusCode != HttpStatusCode.OK)
-					{
-						LogMessage($"PWS Response: ERROR - Response code = {response.StatusCode},  Body = {responseBodyAsText}");
-						HttpUploadAlarm.LastError = $"PWS: HTTP Response code = {response.StatusCode},  Body = {responseBodyAsText}";
-						HttpUploadAlarm.Triggered = true;
-					}
-					else
-					{
-						LogDebugMessage("PWS Response: " + response.StatusCode + ": " + responseBodyAsText);
-						HttpUploadAlarm.Triggered = false;
-					}
-				}
-				catch (Exception ex)
-				{
-					LogExceptionMessage(ex, "PWS update error");
-					HttpUploadAlarm.LastError = "PWS: " + ex.Message;
-					HttpUploadAlarm.Triggered = true;
-				}
-				finally
-				{
-					PWS.Updating = false;
-				}
-			}
-		}
-
-		public async void UpdateWOW(DateTime timestamp)
-		{
-			if (!WOW.Updating)
-			{
-				WOW.Updating = true;
-
-				string pwstring;
-				string URL = station.GetWOWURL(out pwstring, timestamp);
-
-				string starredpwstring = "&siteAuthenticationKey=" + new string('*', WOW.PW.Length);
-
-				string LogURL = URL.Replace(pwstring, starredpwstring);
-				LogDebugMessage("WOW URL = " + LogURL);
-
-				try
-				{
-					HttpResponseMessage response = await WOWhttpClient.GetAsync(URL);
-					var responseBodyAsText = await response.Content.ReadAsStringAsync();
-					if (response.StatusCode != HttpStatusCode.OK)
-					{
-						LogMessage($"WOW Response: ERROR - Response code = {response.StatusCode}, body = {responseBodyAsText}");
-						HttpUploadAlarm.LastError = $"WOW: HTTP response - Response code = {response.StatusCode}, body = {responseBodyAsText}";
-						HttpUploadAlarm.Triggered = true;
-					}
-					else
-					{
-						LogDebugMessage("WOW Response: " + response.StatusCode + ": " + responseBodyAsText);
-						HttpUploadAlarm.Triggered = false;
-					}
-				}
-				catch (Exception ex)
-				{
-					LogExceptionMessage(ex, "WOW update error");
-					HttpUploadAlarm.LastError = "WOW: " + ex.Message;
-					HttpUploadAlarm.Triggered = true;
-				}
-				finally
-				{
-					WOW.Updating = false;
-				}
-			}
-		}
-
-		public async Task MySqlCommandAsync(string Cmd, string CallingFunction)
-		{
-			var Cmds = new ConcurrentQueue<string>();
-			Cmds.Enqueue(Cmd);
-			await MySqlCommandAsync(Cmds, CallingFunction);
-		}
-
-		public async Task MySqlCommandAsync(List<string> Cmds, string CallingFunction)
-		{
-			var tempQ = new ConcurrentQueue<string>();
-			foreach (var cmd in Cmds)
-			{
-				tempQ.Enqueue(cmd);
-			}
-			await MySqlCommandAsync(tempQ, CallingFunction);
-		}
-
-		public async Task MySqlCommandAsync(ConcurrentQueue<string> Cmds, string CallingFunction)
-		{
-			await Task.Run(() =>
-			{
-				string lastCmd = string.Empty;
-				try
-				{
-					using (var mySqlConn = new MySqlConnection(MySqlConnSettings.ToString()))
-					{
-						var updated = 0;
-
-						mySqlConn.Open();
-
-						using var transaction = Cmds.Count > 2 ? mySqlConn.BeginTransaction() : null;
-
-						foreach (var cmdStr in Cmds)
-						{
-							lastCmd = cmdStr;
-							using MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn);
-
-							if (Cmds.Count == 1)
-								LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
-
-							if (transaction != null)
-							{
-								cmd.Transaction = transaction;
-							}
-
-							updated += cmd.ExecuteNonQuery();
-
-							if (Cmds.Count == 1)
-								LogDebugMessage($"{CallingFunction}: MySQL {updated} rows were affected.");
-
-						}
-
-						if (transaction != null)
-						{
-							LogDebugMessage($"{CallingFunction}: Committing {updated} updates to DB");
-							transaction.Commit();
-							LogDebugMessage($"{CallingFunction}: Commit complete");
-						}
-
-						mySqlConn.Close();
-					}
-
-					MySqlUploadAlarm.Triggered = false;
-				}
-				catch (Exception ex)
-				{
-					LogExceptionMessage(ex, $"{CallingFunction}: Error encountered during MySQL operation");
-
-					MySqlUploadAlarm.LastError = ex.Message;
-					MySqlUploadAlarm.Triggered = true;
-
-					// do we save this command/commands on failure to be resubmitted?
-					// if we have a syntax error, it is never going to work so do not save it for retry
-					if (!ex.Message.Contains("syntax")) // TODO: Change to checking error code
-					{
-						if (MySqlSettings.BufferOnfailure)
-						{
-							if (!string.IsNullOrEmpty(lastCmd))
-							{
-								MySqlFailedList.Enqueue(lastCmd);
-							}
-							_ = MySqlFailedList.Concat(Cmds);
-						}
-					}
-				}
-			});
-		}
-
-		public void MySqlCommandSync(string Cmd, string CallingFunction)
-		{
-			var Cmds = new ConcurrentQueue<string>();
-			Cmds.Enqueue(Cmd);
-			MySqlCommandSync(Cmds, CallingFunction);
-		}
-
-		public void MySqlCommandSync(ConcurrentQueue<string> Cmds, string CallingFunction)
-		{
-			string lastCmd = string.Empty;
-
-			try
-			{
-				using var mySqlConn = new MySqlConnection(MySqlConnSettings.ToString());
-				using var transaction = Cmds.Count > 2 ? mySqlConn.BeginTransaction() : null;
-				mySqlConn.Open();
-
-				var updated = 0;
-
-				foreach (var cmdStr in Cmds)
-				{
-					lastCmd = cmdStr;
-
-					using (MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn))
-					{
-						if (Cmds.Count == 1)
-							LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
-
-						if (transaction != null)
-							cmd.Transaction = transaction;
-
-						updated += cmd.ExecuteNonQuery();
-
-						if (Cmds.Count == 1)
-							LogDebugMessage($"{CallingFunction}: MySQL {updated} rows were affected.");
-					}
-
-					MySqlUploadAlarm.Triggered = false;
-				}
-
-				if (transaction != null)
-				{
-					LogDebugMessage($"{CallingFunction}: Committing {updated} updates to DB");
-					transaction.Commit();
-					LogDebugMessage($"{CallingFunction}: Commit complete");
-				}
-
-				mySqlConn.Close();
-			}
-			catch (Exception ex)
-			{
-				LogExceptionMessage(ex, $"{CallingFunction}: Error encountered during MySQL operation");
-				MySqlUploadAlarm.LastError = ex.Message;
-				MySqlUploadAlarm.Triggered = true;
-
-				// do we save this command/commands on failure to be resubmitted?
-				// if we have a syntax error, it is never going to work so do not save it for retry
-				if (!ex.Message.Contains("syntax")) // TODO: Change to using error code
-				{
-					if (!string.IsNullOrEmpty(lastCmd))
-					{
-						MySqlFailedList.Enqueue(lastCmd);
-					}
-					_ = MySqlFailedList.Concat(Cmds);
-				}
-				throw;
-			}
-		}
-
-		public bool MySqlCheckConnection()
-		{
-			try
-			{
-				using var mySqlConn = new MySqlConnection(MySqlConnSettings.ToString());
-				mySqlConn.Open();
-				// get the database name to check 100% we have a connection
-				var db = mySqlConn.Database;
-				LogMessage("MySqlCheckConnection: Connected to server ok, default database = " + db);
-				mySqlConn.Close();
-				return true;
-			}
-			catch
-			{
-				return false;
-			}
-		}
-
-		public async void GetLatestVersion()
+		public async Task GetLatestVersion()
 		{
 			var http = new HttpClient();
 			// Let this default to highest available version in the OS
@@ -10432,7 +9052,7 @@ namespace CumulusMX
 			}
 		}
 
-		public async void CustomHttpSecondsUpdate()
+		public async Task CustomHttpSecondsUpdate()
 		{
 			if (!updatingCustomHttpSeconds)
 			{
@@ -10460,7 +9080,7 @@ namespace CumulusMX
 			}
 		}
 
-		public async void CustomHttpMinutesUpdate()
+		public async Task CustomHttpMinutesUpdate()
 		{
 			if (!updatingCustomHttpMinutes)
 			{
@@ -10487,7 +9107,7 @@ namespace CumulusMX
 			}
 		}
 
-		public async void CustomHttpRolloverUpdate()
+		public async Task CustomHttpRolloverUpdate()
 		{
 			if (!updatingCustomHttpRollover)
 			{
@@ -10516,100 +9136,13 @@ namespace CumulusMX
 
 		public void AddToWebServiceLists(DateTime timestamp)
 		{
-			AddToWundList(timestamp);
-			AddToWindyList(timestamp);
-			AddToPWSList(timestamp);
-			AddToWOWList(timestamp);
-			AddToOpenWeatherMapList(timestamp);
+			Wund.AddToList(timestamp);
+			Windy.AddToList(timestamp);
+			PWS.AddToList(timestamp);
+			WOW.AddToList(timestamp);
+			OpenWeatherMap.AddToList(timestamp);
 		}
 
-		/// <summary>
-		/// Add an archive entry to the WU 'catchup' list for sending to WU
-		/// </summary>
-		/// <param name="timestamp"></param>
-		private void AddToWundList(DateTime timestamp)
-		{
-			if (Wund.Enabled && Wund.CatchUp)
-			{
-				string pwstring;
-				string URL = station.GetWundergroundURL(out pwstring, timestamp, true);
-
-				WundList.Add(URL);
-
-				string starredpwstring = "&PASSWORD=" + new string('*', Wund.PW.Length);
-
-				string LogURL = URL.Replace(pwstring, starredpwstring);
-
-				LogMessage("Creating WU URL #" + WundList.Count);
-
-				LogMessage(LogURL);
-			}
-		}
-
-		private void AddToWindyList(DateTime timestamp)
-		{
-			if (Windy.Enabled && Windy.CatchUp)
-			{
-				string apistring;
-				string URL = station.GetWindyURL(out apistring, timestamp);
-
-				WindyList.Add(URL);
-
-				string LogURL = URL.Replace(apistring, "<<API_KEY>>");
-
-				LogMessage("Creating Windy URL #" + WindyList.Count);
-
-				LogMessage(LogURL);
-			}
-		}
-
-		private void AddToPWSList(DateTime timestamp)
-		{
-			if (PWS.Enabled && PWS.CatchUp)
-			{
-				string pwstring;
-				string URL = station.GetPWSURL(out pwstring, timestamp);
-
-				PWSList.Add(URL);
-
-				string starredpwstring = "&PASSWORD=" + new string('*', PWS.PW.Length);
-
-				string LogURL = URL.Replace(pwstring, starredpwstring);
-
-				LogMessage("Creating PWS URL #" + PWSList.Count);
-
-				LogMessage(LogURL);
-			}
-		}
-
-		private void AddToWOWList(DateTime timestamp)
-		{
-			if (WOW.Enabled && WOW.CatchUp)
-			{
-				string pwstring;
-				string URL = station.GetWOWURL(out pwstring, timestamp);
-
-				WOWList.Add(URL);
-
-				string starredpwstring = "&siteAuthenticationKey=" + new string('*', WOW.PW.Length);
-
-				string LogURL = URL.Replace(pwstring, starredpwstring);
-
-				LogMessage("Creating WOW URL #" + WOWList.Count);
-
-				LogMessage(LogURL);
-			}
-		}
-
-		private void AddToOpenWeatherMapList(DateTime timestamp)
-		{
-			if (OpenWeatherMap.Enabled && OpenWeatherMap.CatchUp)
-			{
-				OWMList.Add(station.GetOpenWeatherMapData(timestamp));
-
-				LogMessage("Creating OpenWeatherMap data #" + OWMList.Count);
-			}
-		}
 
 		private string GetUploadFilename(string input, DateTime dat)
 		{
@@ -10665,103 +9198,6 @@ namespace CumulusMX
 			}
 
 			return input;
-		}
-
-		public void SetMonthlySqlCreateString()
-		{
-			StringBuilder strb = new StringBuilder("CREATE TABLE " + MySqlSettings.Monthly.TableName + " (", 1500);
-			strb.Append("LogDateTime DATETIME NOT NULL,");
-			strb.Append("Temp decimal(4," + TempDPlaces + ") NOT NULL,");
-			strb.Append("Humidity decimal(4," + HumDPlaces + ") NOT NULL,");
-			strb.Append("Dewpoint decimal(4," + TempDPlaces + ") NOT NULL,");
-			strb.Append("Windspeed decimal(4," + WindAvgDPlaces + ") NOT NULL,");
-			strb.Append("Windgust decimal(4," + WindDPlaces + ") NOT NULL,");
-			strb.Append("Windbearing VARCHAR(3) NOT NULL,");
-			strb.Append("RainRate decimal(4," + RainDPlaces + ") NOT NULL,");
-			strb.Append("TodayRainSoFar decimal(4," + RainDPlaces + ") NOT NULL,");
-			strb.Append("Pressure decimal(6," + PressDPlaces + ") NOT NULL,");
-			strb.Append("Raincounter decimal(6," + RainDPlaces + ") NOT NULL,");
-			strb.Append("InsideTemp decimal(4," + TempDPlaces + ") NOT NULL,");
-			strb.Append("InsideHumidity decimal(4," + HumDPlaces + ") NOT NULL,");
-			strb.Append("LatestWindGust decimal(5," + WindDPlaces + ") NOT NULL,");
-			strb.Append("WindChill decimal(4," + TempDPlaces + ") NOT NULL,");
-			strb.Append("HeatIndex decimal(4," + TempDPlaces + ") NOT NULL,");
-			strb.Append("UVindex decimal(4," + UVDPlaces + "),");
-			strb.Append("SolarRad decimal(5,1),");
-			strb.Append("Evapotrans decimal(4," + RainDPlaces + "),");
-			strb.Append("AnnualEvapTran decimal(5," + RainDPlaces + "),");
-			strb.Append("ApparentTemp decimal(4," + TempDPlaces + "),");
-			strb.Append("MaxSolarRad decimal(5,1),");
-			strb.Append("HrsSunShine decimal(3," + SunshineDPlaces + "),");
-			strb.Append("CurrWindBearing varchar(3),");
-			strb.Append("RG11rain decimal(4," + RainDPlaces + "),");
-			strb.Append("RainSinceMidnight decimal(4," + RainDPlaces + "),");
-			strb.Append("WindbearingSym varchar(3),");
-			strb.Append("CurrWindBearingSym varchar(3),");
-			strb.Append("FeelsLike decimal(4," + TempDPlaces + "),");
-			strb.Append("Humidex decimal(4," + TempDPlaces + "),");
-			strb.Append("PRIMARY KEY (LogDateTime)) COMMENT = \"Monthly logs from Cumulus\"");
-			CreateMonthlySQL = strb.ToString();
-		}
-
-		internal void SetDayfileSqlCreateString()
-		{
-			StringBuilder strb = new StringBuilder("CREATE TABLE " + MySqlSettings.Dayfile.TableName + " (", 2048);
-			strb.Append("LogDate date NOT NULL ,");
-			strb.Append("HighWindGust decimal(4," + WindDPlaces + ") NOT NULL,");
-			strb.Append("HWindGBear varchar(3) NOT NULL,");
-			strb.Append("THWindG varchar(5) NOT NULL,");
-			strb.Append("MinTemp decimal(5," + TempDPlaces + ") NOT NULL,");
-			strb.Append("TMinTemp varchar(5) NOT NULL,");
-			strb.Append("MaxTemp decimal(5," + TempDPlaces + ") NOT NULL,");
-			strb.Append("TMaxTemp varchar(5) NOT NULL,");
-			strb.Append("MinPress decimal(6," + PressDPlaces + ") NOT NULL,");
-			strb.Append("TMinPress varchar(5) NOT NULL,");
-			strb.Append("MaxPress decimal(6," + PressDPlaces + ") NOT NULL,");
-			strb.Append("TMaxPress varchar(5) NOT NULL,");
-			strb.Append("MaxRainRate decimal(4," + RainDPlaces + ") NOT NULL,");
-			strb.Append("TMaxRR varchar(5) NOT NULL,TotRainFall decimal(6," + RainDPlaces + ") NOT NULL,");
-			strb.Append("AvgTemp decimal(4," + TempDPlaces + ") NOT NULL,");
-			strb.Append("TotWindRun decimal(5," + WindRunDPlaces +") NOT NULL,");
-			strb.Append("HighAvgWSpeed decimal(3," + WindAvgDPlaces + "),");
-			strb.Append("THAvgWSpeed varchar(5),LowHum decimal(4," + HumDPlaces + "),");
-			strb.Append("TLowHum varchar(5),");
-			strb.Append("HighHum decimal(4," + HumDPlaces + "),");
-			strb.Append("THighHum varchar(5),TotalEvap decimal(5," + RainDPlaces + "),");
-			strb.Append("HoursSun decimal(3," + SunshineDPlaces + "),");
-			strb.Append("HighHeatInd decimal(4," + TempDPlaces + "),");
-			strb.Append("THighHeatInd varchar(5),");
-			strb.Append("HighAppTemp decimal(4," + TempDPlaces + "),");
-			strb.Append("THighAppTemp varchar(5),");
-			strb.Append("LowAppTemp decimal(4," + TempDPlaces + "),");
-			strb.Append("TLowAppTemp varchar(5),");
-			strb.Append("HighHourRain decimal(4," + RainDPlaces + "),");
-			strb.Append("THighHourRain varchar(5),");
-			strb.Append("LowWindChill decimal(4," + TempDPlaces + "),");
-			strb.Append("TLowWindChill varchar(5),");
-			strb.Append("HighDewPoint decimal(4," + TempDPlaces + "),");
-			strb.Append("THighDewPoint varchar(5),");
-			strb.Append("LowDewPoint decimal(4," + TempDPlaces + "),");
-			strb.Append("TLowDewPoint varchar(5),");
-			strb.Append("DomWindDir varchar(3),");
-			strb.Append("HeatDegDays decimal(4,1),");
-			strb.Append("CoolDegDays decimal(4,1),");
-			strb.Append("HighSolarRad decimal(5,1),");
-			strb.Append("THighSolarRad varchar(5),");
-			strb.Append("HighUV decimal(3," + UVDPlaces + "),");
-			strb.Append("THighUV varchar(5),");
-			strb.Append("HWindGBearSym varchar(3),");
-			strb.Append("DomWindDirSym varchar(3),");
-			strb.Append("MaxFeelsLike decimal(5," + TempDPlaces + "),");
-			strb.Append("TMaxFeelsLike varchar(5),");
-			strb.Append("MinFeelsLike decimal(5," + TempDPlaces + "),");
-			strb.Append("TMinFeelsLike varchar(5),");
-			strb.Append("MaxHumidex decimal(5," + TempDPlaces + "),");
-			strb.Append("TMaxHumidex varchar(5),");
-			//strb.Append("MinHumidex decimal(5," + TempDPlaces + "),");
-			//strb.Append("TMinHumidex varchar(5),");
-			strb.Append("PRIMARY KEY(LogDate)) COMMENT = \"Dayfile from Cumulus\"");
-			CreateDayfileSQL = strb.ToString();
 		}
 
 		public void LogOffsetsMultipliers()
@@ -10928,6 +9364,8 @@ namespace CumulusMX
 		public bool EncryptedCreds { get; set; }
 		public bool UpdateDayfile { get; set; }
 		public bool UpdateLogfile { get; set; }
+		public bool LogRawStationData { get; set; }
+		public bool LogRawExtraData { get; set; }
 	}
 
 	public class CultureConfig
@@ -10958,12 +9396,14 @@ namespace CumulusMX
 		public string AirQualityUnitText { get; set; }
 		public string SoilMoistureUnitText { get; set; }
 		public string CO2UnitText { get; set; }
+		public string LeafWetnessUnitText { get; set; }
 
 		public StationUnits()
 		{
 			AirQualityUnitText = "µg/m³";
 			SoilMoistureUnitText = "cb";
 			CO2UnitText = "ppm";
+			LeafWetnessUnitText = "";  // Davis is unitless, Ecowitt uses %
 		}
 	}
 
@@ -11157,176 +9597,9 @@ namespace CumulusMX
 		}
 	}
 
-	public class AwekasResponse
-	{
-		public int status { get; set; }
-		public int authentication { get; set; }
-		public int minuploadtime { get; set; }
-		public AwekasErrors error { get; set; }
-		public AwekasDisabled disabled { get; set; }
-	}
 
-	public class AwekasErrors
-	{
-		public int count { get; set; }
-		public int time { get; set; }
-		public int date { get; set; }
-		public int temp { get; set; }
-		public int hum { get; set; }
-		public int airp { get; set; }
-		public int rain { get; set; }
-		public int rainrate { get; set; }
-		public int wind { get; set; }
-		public int gust { get; set; }
-		public int snow { get; set; }
-		public int solar { get; set; }
-		public int uv { get; set; }
-		public int brightness { get; set; }
-		public int suntime { get; set; }
-		public int indoortemp { get; set; }
-		public int indoorhumidity { get; set; }
-		public int soilmoisture1 { get; set; }
-		public int soilmoisture2 { get; set; }
-		public int soilmoisture3 { get; set; }
-		public int soilmoisture4 { get; set; }
-		public int soiltemp1 { get; set; }
-		public int soiltemp2 { get; set; }
-		public int soiltemp3 { get; set; }
-		public int soiltemp4 { get; set; }
-		public int leafwetness1 { get; set; }
-		public int leafwetness2 { get; set; }
-		public int warning { get; set; }
-	}
 
-	public class AwekasDisabled
-	{
-		public int temp { get; set; }
-		public int hum { get; set; }
-		public int airp { get; set; }
-		public int rain { get; set; }
-		public int rainrate { get; set; }
-		public int wind { get; set; }
-		public int snow { get; set; }
-		public int solar { get; set; }
-		public int uv { get; set; }
-		public int indoortemp { get; set; }
-		public int indoorhumidity { get; set; }
-		public int soilmoisture1 { get; set; }
-		public int soilmoisture2 { get; set; }
-		public int soilmoisture3 { get; set; }
-		public int soilmoisture4 { get; set; }
-		public int soiltemp1 { get; set; }
-		public int soiltemp2 { get; set; }
-		public int soiltemp3 { get; set; }
-		public int soiltemp4 { get; set; }
-		public int leafwetness1 { get; set; }
-		public int leafwetness2 { get; set; }
-		public int report { get; set; }
-	}
 
-	public class OpenWeatherMapStation
-	{
-		public string id { get; set; }
-		public string created_at { get; set; }
-		public string updated_at { get; set; }
-		public string external_id { get; set; }
-		public string name { get; set; }
-		public double longitude { get; set; }
-		public double latitude { get; set; }
-		public int altitude { get; set; }
-		public int rank { get; set; }
-	}
-
-	public class OpenWeatherMapNewStation
-	{
-		public string ID { get; set; }
-		public string created_at { get; set; }
-		public string updated_at { get; set; }
-		public string user_id { get; set; }
-		public string external_id { get; set; }
-		public string name { get; set; }
-		public double longitude { get; set; }
-		public double latitude { get; set; }
-		public int altitude { get; set; }
-		public int source_type { get; set; }
-	}
-
-	public class WebUploadService
-	{
-		public string Server;
-		public int Port;
-		public string ID;
-		public string PW;
-		public bool Enabled;
-		public int Interval;
-		public int DefaultInterval;
-		public bool SynchronisedUpdate;
-		public bool SendUV;
-		public bool SendSolar;
-		public bool SendIndoor;
-		public bool SendAirQuality;
-		public bool CatchUp;
-		public bool CatchingUp;
-		public bool Updating;
-	}
-
-	public class WebUploadTwitter : WebUploadService
-	{
-		public string OauthToken;
-		public string OauthTokenSecret;
-		public bool SendLocation;
-	}
-
-	public class WebUploadWund : WebUploadService
-	{
-		public bool RapidFireEnabled;
-		public bool SendAverage;
-		public bool SendSoilTemp1;
-		public bool SendSoilTemp2;
-		public bool SendSoilTemp3;
-		public bool SendSoilTemp4;
-		public bool SendSoilMoisture1;
-		public bool SendSoilMoisture2;
-		public bool SendSoilMoisture3;
-		public bool SendSoilMoisture4;
-		public bool SendLeafWetness1;
-		public bool SendLeafWetness2;
-		public int ErrorFlagCount;
-	}
-
-	public class WebUploadWindy : WebUploadService
-	{
-		public string ApiKey;
-		public int StationIdx;
-	}
-
-	public class WebUploadWindGuru : WebUploadService
-	{
-		public bool SendRain;
-	}
-
-	public class WebUploadAwekas : WebUploadService
-	{
-		public bool RateLimited;
-		public int OriginalInterval;
-		public string Lang;
-		public bool SendSoilTemp;
-		public bool SendSoilMoisture;
-		public bool SendLeafWetness;
-	}
-
-	public class WebUploadWCloud : WebUploadService
-	{
-		public bool SendSoilMoisture;
-		public int SoilMoistureSensor;
-		public bool SendLeafWetness;
-		public int LeafWetnessSensor;
-	}
-
-	public class WebUploadAprs : WebUploadService
-	{
-		public bool HumidityCutoff;
-	}
 
 	public class DisplayOptions
 	{

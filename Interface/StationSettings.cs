@@ -146,6 +146,13 @@ namespace CumulusMX
 				macaddress = cumulus.Gw1000MacAddress
 			};
 
+			var ecowittapi = new EcowittApi()
+			{
+				applicationkey = cumulus.EcowittAppKey,
+				userkey = cumulus.EcowittUserApiKey,
+				mac = cumulus.EcowittMacAddress
+			};
+
 			var logrollover = new LogRolloverJson()
 			{
 				time = cumulus.RolloverHour == 9 ? "9am" : "midnight",
@@ -199,6 +206,13 @@ namespace CumulusMX
 				advanced = imetAdvanced
 			};
 
+			var ecowitt = new EcowittSettingsJson()
+			{ 
+				setcustom = cumulus.EcowittSetCustomServer,
+				gwaddr = cumulus.EcowittGwAddr,
+				localaddr = cumulus.EcowittLocalAddr,
+				interval = cumulus.EcowittCustomInterval
+			};
 
 			int deg, min, sec;
 			string hem;
@@ -440,6 +454,7 @@ namespace CumulusMX
 				davisvp2 = davisvp2,
 				daviswll = wll,
 				gw1000 = gw1000,
+				ecowitt = ecowitt,
 				weatherflow = weatherflow,
 				fineoffset = fineoffset,
 				easyw = easyweather,
@@ -982,6 +997,25 @@ namespace CumulusMX
 					context.Response.StatusCode = 500;
 				}
 
+				// Ecowitt settings
+				try
+				{
+					if (settings.ecowitt != null)
+					{
+						cumulus.EcowittSetCustomServer = settings.ecowitt.setcustom;
+						cumulus.EcowittGwAddr = settings.ecowitt.gwaddr;
+						cumulus.EcowittLocalAddr = settings.ecowitt.localaddr;
+						cumulus.EcowittCustomInterval = settings.ecowitt.interval;
+					}
+				}
+				catch (Exception ex)
+				{
+					var msg = "Error processing Ecowitt settings";
+					cumulus.LogExceptionMessage(ex, msg);
+					errorMsg += msg + "\n\n";
+					context.Response.StatusCode = 500;
+				}
+
 				// weatherflow connection details
 				try
 				{
@@ -1076,6 +1110,24 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					var msg = "Error processing WMR928 settings";
+					cumulus.LogExceptionMessage(ex, msg);
+					errorMsg += msg + "\n\n";
+					context.Response.StatusCode = 500;
+				}
+
+				// Ecowitt API
+				try
+				{
+					if (settings.ecowittapi != null)
+					{
+						cumulus.EcowittAppKey = settings.ecowittapi.applicationkey;
+						cumulus.EcowittUserApiKey = settings.ecowittapi.userkey;
+						cumulus.EcowittMacAddress = settings.ecowittapi.mac;
+					}
+				}
+				catch (Exception ex)
+				{
+					var msg = "Error processing Ecowitt API settings: " + ex.Message;
 					cumulus.LogExceptionMessage(ex, msg);
 					errorMsg += msg + "\n\n";
 					context.Response.StatusCode = 500;
@@ -1268,11 +1320,11 @@ namespace CumulusMX
 						cumulus.GraphDataFiles[i].CopyRequired = true;
 					}
 					cumulus.LogDebugMessage("FTP Now: Re-Generating the graph data files, if required");
-					station.CreateGraphDataFiles();
+					station.Graphs.CreateGraphDataFiles().Wait();
 
 					// (re)generate the daily graph data files, and upload if required
 					cumulus.LogDebugMessage("FTP Now: Generating the daily graph data files, if required");
-					station.CreateEodGraphDataFiles();
+					station.Graphs.CreateEodGraphDataFiles();
 
 					Cumulus.LogMessage("FTP Now: Trying new web update");
 					cumulus.WebUpdating = 1;
@@ -1289,11 +1341,11 @@ namespace CumulusMX
 					cumulus.GraphDataFiles[i].CopyRequired = true;
 				}
 				cumulus.LogDebugMessage("FTP Now: Re-Generating the graph data files, if required");
-				station.CreateGraphDataFiles();
+				station.Graphs.CreateGraphDataFiles().Wait();
 
 				// (re)generate the daily graph data files, and upload if required
 				cumulus.LogDebugMessage("FTP Now: Generating the daily graph data files, if required");
-				station.CreateEodGraphDataFiles();
+				station.Graphs.CreateEodGraphDataFiles();
 
 				cumulus.WebUpdating = 1;
 				cumulus.ftpThread = new Thread(cumulus.DoHTMLFiles) { IsBackground = true };
@@ -1370,12 +1422,14 @@ namespace CumulusMX
 			public GeneralJson general { get; set; }
 			public DavisVp2Json davisvp2 { get; set; }
 			public Gw1000ConnJson gw1000 { get; set; }
+			public EcowittSettingsJson ecowitt { get; set; }
 			public WeatherFlowJson weatherflow { get; set; }
 			public WLLJson daviswll { get; set; }
 			public FineOffsetJson fineoffset { get; set; }
 			public EasyWeatherJson easyw { get; set; }
 			public JImetJson imet { get; set; }
 			public WMR928Json wmr928 { get; set; }
+			public EcowittApi ecowittapi { get; set; }
 			public OptionsJson Options { get; set; }
 			public ForecastJson Forecast { get; set; }
 			public SolarJson Solar { get; set; }
@@ -1549,6 +1603,13 @@ namespace CumulusMX
 			public string ipaddress { get; set; }
 			public bool autoDiscover { get; set; }
 			public string macaddress { get; set; }
+		}
+
+		internal class EcowittApi
+		{
+			public string applicationkey { get; set; }
+			public string userkey { get; set; }
+			public string mac { get; set; }
 		}
 
 		public class WMR928Json
@@ -1810,6 +1871,14 @@ namespace CumulusMX
 		{
 			public double threshold { get; set; }
 			public int month { get; set; }
+		}
+
+		private class EcowittSettingsJson
+		{
+			public bool setcustom { get; set; }
+			public string gwaddr { get; set; }
+			public string localaddr { get; set; }
+			public int interval { get; set; }
 		}
 	}
 }

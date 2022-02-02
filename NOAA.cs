@@ -187,7 +187,7 @@ namespace CumulusMX
 			return avg;
 		}
 
-		public async Task<List<string>> CreateMonthlyReport(DateTime thedate)
+		public List<string> CreateMonthlyReport(DateTime thedate)
 		{
 			var output = new List<string>();
 
@@ -237,7 +237,7 @@ namespace CumulusMX
 			try
 			{
 				var toDate = thedate.AddMonths(1);
-				var rows = await station.DatabaseAsync.QueryAsync<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", thedate, toDate);
+				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", thedate, toDate);
 
 				foreach (var row in rows)
 				{
@@ -663,7 +663,7 @@ namespace CumulusMX
 		}
 
 
-		public async Task<List<string>> CreateYearlyReport(DateTime thedate)
+		public List<string> CreateYearlyReport(DateTime thedate)
 		{
 			var output = new List<string>();
 
@@ -740,7 +740,7 @@ namespace CumulusMX
 			}
 			try
 			{
-				var rows = await station.DatabaseAsync.QueryAsync<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ?", thedate, thedate.AddYears(1));
+				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ?", thedate, thedate.AddYears(1));
 
 				foreach (var row in rows)
 				{

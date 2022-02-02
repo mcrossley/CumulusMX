@@ -4,7 +4,7 @@ namespace CumulusMX
 {
 	internal static class AstroLib
 	{
-		public static double BrasSolar(double el, double r, double nfac)
+		public static int BrasSolar(double el, double r, double nfac)
 		{
 			// el      solar elevation deg from horizon
 			// r       distance from earth to sun in AU
@@ -25,10 +25,10 @@ namespace CumulusMX
 			double al = 0.128 - (0.054 * Math.Log(m) / Math.Log(10));
 
 			// clear-sky solar radiation at earth surface on horizontal surface (W/m^2)
-			return i0 * Math.Exp(-nfac * al * m);
+			return (int)Math.Round(i0 * Math.Exp(-nfac * al * m));
 		}
 
-		public static double RyanStolzSolar(double el, double erv, double atc, double z)
+		public static int RyanStolzSolar(double el, double erv, double atc, double z)
 		{
 			// el      solar elevation deg from horizon
 			// erv     distance from earth to sun in AU
@@ -47,12 +47,12 @@ namespace CumulusMX
 
 			double rsToa = 1360*sinal/(erv*erv); // RS on the top of atmosphere
 
-			return rsToa * Math.Pow(atc, rm); //RS on the ground
+			return (int)Math.Round(rsToa * Math.Pow(atc, rm)); //RS on the ground
 		}
 
 
 
-		public static double SolarMax(DateTime timestamp, double longitude, double latitude, double altitude,
+		public static int SolarMax(DateTime timestamp, double longitude, double latitude, double altitude,
 									  out double solarelevation, SolarOptions options)
 		{
 			double factor = 0;
@@ -68,7 +68,7 @@ namespace CumulusMX
 		}
 
 
-		public static double SolarMax(DateTime timestamp, double longitude, double latitude, double altitude,
+		public static int SolarMax(DateTime timestamp, double longitude, double latitude, double altitude,
 									  out double solarelevation, double factor, int method)
 		{
 			DateTime utctime = timestamp.ToUniversalTime();

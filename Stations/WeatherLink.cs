@@ -344,7 +344,7 @@ namespace CumulusMX
 
 		public object GetPropValue(string propName)
 		{
-			return this.GetType().GetProperty(propName).GetValue(this, null);
+			return GetType().GetProperty(propName).GetValue(this, null);
 		}
 
 		public VPLoopData()
@@ -575,7 +575,7 @@ namespace CumulusMX
 
 		public object GetPropValue(string propName)
 		{
-			return this.GetType().GetProperty(propName).GetValue(this, null);
+			return GetType().GetProperty(propName).GetValue(this, null);
 		}
 
 		public VPArchiveData()
@@ -624,7 +624,7 @@ namespace CumulusMX
 			/*  station.IndoorTemperature = station.ConvertTempFToUser(InsideTemperature);
 			station.OutdoorTemperature = station.ConvertTempFToUser(OutsideTemperature);
 			station.IndoorHumidity = InsideHumidity;
-			station.OutdoorHumidity = OutsideHumidity;
+			station.Humidity = OutsideHumidity;
 			station.Pressure = station.ConvertPressToInternal(Pressure);
 			station.WindLatest = station.ConvertWindToInternal(HiWindSpeed);
 			station.WindAverage = station.ConvertWindToInternal(AvgWindSpeed);

@@ -6,8 +6,8 @@
     <StartupObject>CumulusMX.Program</StartupObject>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <NoWin32Manifest>true</NoWin32Manifest>
-    <AssemblyVersion>4.0.0.4006</AssemblyVersion>
-    <FileVersion>4.0.0.4006</FileVersion>
+    <AssemblyVersion>4.0.0.4007</AssemblyVersion>
+    <FileVersion>4.0.0.4007</FileVersion>
     <PackageIcon>icon.ico</PackageIcon>
     <PackageIconUrl />
     <UserSecretsId>06d97cbf-708b-41a7-b6fa-82bb67d5da0c</UserSecretsId>
@@ -34,6 +34,8 @@
   <ItemGroup>
     <Compile Remove="MxFtpClient.cs" />
     <Compile Remove="ServiceCumulusInstaller.cs" />
+    <Compile Remove="Stations\GW1000Station - Copy.cs" />
+    <Compile Remove="ThirdParty\WebUploadTwitter.cs" />
     <Compile Remove="WeatherStation-streaming.cs" />
   </ItemGroup>
 

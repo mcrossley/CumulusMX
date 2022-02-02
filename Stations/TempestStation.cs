@@ -26,10 +26,15 @@ namespace CumulusMX
 			// Tempest does not provide wind chill
 			cumulus.StationOptions.CalculatedWC = true;
 
+			// Tempest does not provide dew point
+			cumulus.StationOptions.CalculatedDP = true;
+
 			LoadLastHoursFromDataLogs(cumulus.LastUpdateTime);
+		}
 
+		public override void DoStartup()
+		{
 			Task.Run(getAndProcessHistoryData);// grab old data, then start the station
-
 		}
 
 		public override void getAndProcessHistoryData()
@@ -116,20 +121,20 @@ namespace CumulusMX
 				DoPressure(ConvertPressMBToUser(seaLevel), timestamp);
 
 				// Outdoor Humidity =====================================================
-				DoOutdoorHumidity((int) historydata.Humidity, timestamp);
+				DoHumidity((int) historydata.Humidity, timestamp);
 
 				// Wind =================================================================
 				DoWind(ConvertWindMSToUser((double) historydata.WindGust), historydata.WindDirection,
 					ConvertWindMSToUser((double) historydata.WindAverage), timestamp);
 
 				// Outdoor Temperature ==================================================
-				DoOutdoorTemp(ConvertTempCToUser((double) historydata.Temperature), timestamp);
+				DoTemperature(ConvertTempCToUser((double) historydata.Temperature), timestamp);
 				// add in 'archivePeriod' minutes worth of temperature to the temp samples
 				tempsamplestoday += historydata.ReportInterval;
-				TempTotalToday += OutdoorTemperature * historydata.ReportInterval;
+				TempTotalToday += Temperature.Value * historydata.ReportInterval;
 
 				// update chill hours
-				if (OutdoorTemperature < cumulus.ChillHourThreshold)
+				if (Temperature < cumulus.ChillHourThreshold)
 					// add 1 minute to chill hours
 					ChillHours += historydata.ReportInterval / 60.0;
 
@@ -144,26 +149,18 @@ namespace CumulusMX
 				Cumulus.LogMessage(
 					$"TempestDoRainHist: Total Precip for Day: {Raincounter}");
 
-				OutdoorDewpoint =
-					ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(OutdoorTemperature),
-						OutdoorHumidity));
+				if (Temperature.HasValue && Humidity.HasValue)
+				{
+					Dewpoint = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(Temperature.Value), Humidity.Value));
 
-				CheckForDewpointHighLow(timestamp);
+					CheckForDewpointHighLow(timestamp);
 
-				// calculate wind chill
-
-				if (ConvertUserWindToMS(WindAverage) < 1.5)
-					DoWindChill(OutdoorTemperature, timestamp);
-				else
-					// calculate wind chill from calibrated C temp and calibrated win in KPH
-					DoWindChill(
-						ConvertTempCToUser(MeteoLib.WindChill(ConvertUserTempToC(OutdoorTemperature),
-							ConvertUserWindToKPH(WindAverage))), timestamp);
-
-				DoApparentTemp(timestamp);
-				DoFeelsLike(timestamp);
-				DoHumidex(timestamp);
-
+					// calculate wind chill
+					DoWindChill(null, timestamp);
+					DoApparentTemp(timestamp);
+					DoFeelsLike(timestamp);
+					DoHumidex(timestamp);
+				}
 
 				DoUV((double) historydata.UV, timestamp);
 
@@ -176,34 +173,36 @@ namespace CumulusMX
 
 				LightValue = historydata.Illuminance;
 
+				if (WindAverage.HasValue)
+				{
+					// add in 'following interval' minutes worth of wind speed to windrun
+					Cumulus.LogMessage("Windrun: " + WindAverage.Value.ToString(cumulus.WindFormat) + cumulus.Units.WindText + " for " + historydata.ReportInterval + " minutes = " +
+									   (WindAverage.Value * WindRunHourMult[cumulus.Units.Wind] * historydata.ReportInterval / 60.0).ToString(cumulus.WindRunFormat) + cumulus.Units.WindRunText);
 
-				// add in 'following interval' minutes worth of wind speed to windrun
-				Cumulus.LogMessage("Windrun: " + WindAverage.ToString(cumulus.WindFormat) + cumulus.Units.WindText + " for " + historydata.ReportInterval + " minutes = " +
-								   (WindAverage*WindRunHourMult[cumulus.Units.Wind]*historydata.ReportInterval/60.0).ToString(cumulus.WindRunFormat) + cumulus.Units.WindRunText);
+					WindRunToday += WindAverage.Value * WindRunHourMult[cumulus.Units.Wind] * historydata.ReportInterval / 60.0;
 
-				WindRunToday += WindAverage * WindRunHourMult[cumulus.Units.Wind] * historydata.ReportInterval / 60.0;
+					// update dominant wind bearing
+					CalculateDominantWindBearing(Bearing, WindAverage, historydata.ReportInterval);
+
+					CheckForWindrunHighLow(timestamp);
+				}
 
 				// update heating/cooling degree days
 				UpdateDegreeDays(historydata.ReportInterval);
-
-				// update dominant wind bearing
-				CalculateDominantWindBearing(Bearing, WindAverage, historydata.ReportInterval);
-
-				CheckForWindrunHighLow(timestamp);
 
 				bw?.ReportProgress((totalentries - datalist.Count) * 100 / totalentries, "processing");
 
 				//UpdateDatabase(timestamp.ToUniversalTime(), historydata.interval, false);
 
-				cumulus.DoLogFile(timestamp, false);
-				cumulus.DoExtraLogFile(timestamp);
+				_ = cumulus.DoLogFile(timestamp, false);  // let this run in background
+				_ = cumulus.DoExtraLogFile(timestamp);  // let this run in background
 
 				//AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing,
 				//    OutdoorTemperature, WindChill, OutdoorDewpoint, HeatIndex,
-				//    OutdoorHumidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex);
+				//    Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex);
 
-				AddRecentDataWithAq(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, OutdoorTemperature, WindChill, OutdoorDewpoint, HeatIndex,
-					OutdoorHumidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemperature, IndoorTemperature, IndoorHumidity, CurrentSolarMax, RainRate);
+				AddRecentDataWithAq(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex,
+					Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate);
 
 				if (cumulus.StationOptions.CalculatedET && timestamp.Minute == 0)
 				{
@@ -271,7 +270,7 @@ namespace CumulusMX
 						ts = wp.Observation.Timestamp;
 						var userTemp = ConvertTempCToUser(Convert.ToDouble(wp.Observation.Temperature));
 
-						DoOutdoorTemp(userTemp,ts);
+						DoTemperature(userTemp,ts);
 						DoWind(ConvertWindMSToUser((double) wp.Observation.WindGust),
 							wp.Observation.WindDirection,
 							ConvertWindMSToUser((double) wp.Observation.WindAverage),
@@ -281,8 +280,7 @@ namespace CumulusMX
 						var seaLevel = MeteoLib.GetSeaLevelPressure(alt, (double) wp.Observation.StationPressure,
 							(double) wp.Observation.Temperature);
 						DoPressure(ConvertPressMBToUser(seaLevel), ts);
-						cumulus.LogDebugMessage(
-							$"TempestPressure: Station:{wp.Observation.StationPressure} mb, Sea Level:{seaLevel} mb, Altitude:{alt}");
+						cumulus.LogDebugMessage($"TempestPressure: Station:{wp.Observation.StationPressure} mb, Sea Level:{seaLevel} mb, Altitude:{alt}");
 
 						DoSolarRad(wp.Observation.SolarRadiation, ts);
 						DoUV((double) wp.Observation.UV, ts);
@@ -290,25 +288,22 @@ namespace CumulusMX
 													(60d / wp.Observation.ReportInterval));
 
 						var newRain = Raincounter + ConvertRainMMToUser((double) wp.Observation.Precipitation);
-						cumulus.LogDebugMessage(
-							$"TempestDoRain: New Precip: {wp.Observation.Precipitation}, Type: {wp.Observation.PrecipType}, Rate: {rainrate}");
+						cumulus.LogDebugMessage($"TempestDoRain: New Precip: {wp.Observation.Precipitation}, Type: {wp.Observation.PrecipType}, Rate: {rainrate}");
 
 						DoRain(newRain, rainrate, ts);
-						cumulus.LogDebugMessage(
-							$"TempestDoRain: Total Precip for Day: {Raincounter}");
+						cumulus.LogDebugMessage($"TempestDoRain: Total Precip for Day: {Raincounter}");
 
-						DoOutdoorHumidity((int)wp.Observation.Humidity,ts);
+						DoHumidity((int)wp.Observation.Humidity,ts);
 
-						OutdoorDewpoint =
-							ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(OutdoorTemperature),
-								OutdoorHumidity));
+						DoDewpoint(null, ts);
+						DoWindChill(null, ts);
 
-						CheckForDewpointHighLow(ts);
-
-						DoApparentTemp(ts);
-						DoFeelsLike(ts);
-						DoWindChill(userTemp,ts);
-						DoHumidex(ts);
+						if (Temperature.HasValue && Humidity.HasValue)
+						{
+							DoApparentTemp(ts);
+							DoFeelsLike(ts);
+							DoHumidex(ts);
+						}
 						UpdateStatusPanel(ts);
 						UpdateMQTT();
 						DoForecast(string.Empty, false);
@@ -457,6 +452,7 @@ namespace CumulusMX.Tempest
 			{
 				var s = Encoding.ASCII.GetString(e.Packet);
 				Debug.WriteLine(s);
+				WeatherStation.LogRawStationData(s, false);
 				WeatherPacket wp = null;
 				try
 				{

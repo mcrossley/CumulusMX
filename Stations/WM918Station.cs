@@ -28,7 +28,10 @@ namespace CumulusMX
 			calculaterainrate = false;
 
 			Cumulus.LogMessage("Station type = WM918");
+		}
 
+		public override void DoStartup()
+		{
 			startReadingHistoryData();
 		}
 
@@ -321,13 +324,12 @@ namespace CumulusMX
 			// Sea-Level pressure S1S2S3S4.SD
 			// Checksum C1C2
 
-			DoOutdoorDewpoint(ConvertTempCToUser(BCDchartoint(buff[18])),DateTime.Now);
+			DoDewpoint(ConvertTempCToUser(BCDchartoint(buff[18])),DateTime.Now);
 
 			double locPress = BCDchartoint(buff[1]) + (BCDchartoint(buff[2])*100);
 			StationPressure = ConvertPressMBToUser(locPress);
 
-			double pressure =  ConvertPressMBToUser((BCDchartoint(buff[3]) / 10) + (BCDchartoint(buff[4]) * 10) +
-				((BCDchartoint(buff[5]) % 10) * 1000));
+			double pressure =  ConvertPressMBToUser((BCDchartoint(buff[3]) / 10) + (BCDchartoint(buff[4]) * 10) + ((BCDchartoint(buff[5]) % 10) * 1000)).Value;
 
 			DoPressure(pressure,DateTime.Now);
 
@@ -366,7 +368,11 @@ namespace CumulusMX
 
 			if (temp10 > -500)
 			{
-				DoOutdoorTemp(ConvertTempCToUser(temp10 / 10), DateTime.Now);
+				DoTemperature(ConvertTempCToUser(temp10 / 10), DateTime.Now);
+			}
+			else
+			{
+				DoTemperature(null, DateTime.Now);
 			}
 
 			// Indoor temp
@@ -408,7 +414,7 @@ namespace CumulusMX
 
 			DoIndoorHumidity(BCDchartoint(buff[8]));
 
-			DoOutdoorHumidity(BCDchartoint(buff[20]),DateTime.Now);
+			DoHumidity(BCDchartoint(buff[20]),DateTime.Now);
 		}
 	}
 }

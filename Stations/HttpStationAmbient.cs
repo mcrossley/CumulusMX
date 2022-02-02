@@ -8,6 +8,7 @@ namespace CumulusMX
 	class HttpStationAmbient : WeatherStation
 	{
 		private readonly WeatherStation station;
+		private bool starting = true;
 		private bool stopping = false;
 		private readonly NumberFormatInfo invNum = CultureInfo.InvariantCulture.NumberFormat;
 
@@ -39,18 +40,22 @@ namespace CumulusMX
 
 			if (station == null || (station != null && cumulus.AmbientExtraUseAQI))
 			{
-				cumulus.AirQualityUnitText = "µg/m³";
+				cumulus.Units.AirQualityUnitText = "µg/m³";
 			}
 			if (station == null || (station != null && cumulus.AmbientExtraUseSoilMoist))
 			{
-				cumulus.SoilMoistureUnitText = "%";
+				cumulus.Units.SoilMoistureUnitText = "%";
 			}
+		}
 
+		public override void DoStartup()
+		{
 			// Only perform the Start-up if we are a proper station, not a Extra Sensor
 			if (station == null)
 			{
 				Start();
 			}
+			starting = false;
 		}
 
 		public override void Start()
@@ -95,7 +100,7 @@ namespace CumulusMX
 			var thisStation = main ? this : station;
 
 
-			if (stopping)
+			if (starting || stopping)
 			{
 				context.Response.StatusCode = 200;
 				return "success";
@@ -171,6 +176,7 @@ namespace CumulusMX
 
 						if (humIn == null)
 						{
+							DoIndoorHumidity(null);
 							Cumulus.LogMessage($"ProcessData: Error, missing indoor humidity");
 						}
 						else
@@ -181,12 +187,13 @@ namespace CumulusMX
 
 						if (humOut == null)
 						{
+							DoHumidity(null, recDate);
 							Cumulus.LogMessage($"ProcessData: Error, missing outdoor humidity");
 						}
 						else
 						{
 							var humVal = Convert.ToInt32(humOut, invNum);
-							DoOutdoorHumidity(humVal, recDate);
+							DoHumidity(humVal, recDate);
 						}
 					}
 					catch (Exception ex)
@@ -258,12 +265,13 @@ namespace CumulusMX
 
 						if (temp == null)
 						{
+							DoTemperature(null, recDate);
 							Cumulus.LogMessage($"ProcessData: Error, missing outdoor temp");
 						}
 						else
 						{
 							var tempVal = ConvertTempFToUser(Convert.ToDouble(temp, invNum));
-							DoOutdoorTemp(tempVal, recDate);
+							DoTemperature(tempVal, recDate);
 						}
 					}
 					catch (Exception ex)
@@ -313,20 +321,8 @@ namespace CumulusMX
 					{
 						// dewptf
 						var dewpnt = data["dewptf"];
-
-						if (cumulus.StationOptions.CalculatedDP)
-						{
-							DoOutdoorDewpoint(0, recDate);
-						}
-						else if (dewpnt == null)
-						{
-							Cumulus.LogMessage($"ProcessData: Error, missing dew point");
-						}
-						else
-						{
-							var val = ConvertTempFToUser(Convert.ToDouble(dewpnt, invNum));
-							DoOutdoorDewpoint(val, recDate);
-						}
+						var val = dewpnt == null ? null : ConvertTempFToUser(Convert.ToDouble(dewpnt, invNum));
+						DoDewpoint(val, recDate);
 
 					}
 					catch (Exception ex)
@@ -341,24 +337,9 @@ namespace CumulusMX
 					try
 					{
 						// windchillf
-
-						if (cumulus.StationOptions.CalculatedWC && data["tempf"] != null && data["windspeedmph"] != null)
-						{
-							DoWindChill(0, recDate);
-						}
-						else
-						{
-							var chill = data["windchillf"];
-							if (chill == null)
-							{
-								Cumulus.LogMessage($"ProcessData: Error, missing dew point");
-							}
-							else
-							{
-								var val = ConvertTempFToUser(Convert.ToDouble(chill, invNum));
-								DoWindChill(val, recDate);
-							}
-						}
+						var chill = data["windchillf"];
+						var val = chill == null ? null : ConvertTempFToUser(Convert.ToDouble(chill, invNum));
+						DoWindChill(val, recDate);
 					}
 					catch (Exception ex)
 					{
@@ -619,6 +600,10 @@ namespace CumulusMX
 				{
 					station.DoExtraTemp(ConvertTempFToUser(Convert.ToDouble(data["temp" + i + "f"], invNum)), i);
 				}
+				else
+				{
+					station.DoExtraTemp(null, i);
+				}
 			}
 		}
 
@@ -630,6 +615,10 @@ namespace CumulusMX
 				{
 					station.DoExtraHum(Convert.ToDouble(data["humidity" + i], invNum), i);
 				}
+				else
+				{
+					station.DoExtraHum(null, i);
+				}
 			}
 		}
 
@@ -639,6 +628,10 @@ namespace CumulusMX
 			{
 				station.DoSolarRad((int)Convert.ToDouble(data["solarradiation"], invNum), recDate);
 			}
+			else
+			{
+				station.DoSolarRad(null, recDate);
+			}
 		}
 
 		private void ProcessUv(NameValueCollection data, WeatherStation station, DateTime recDate)
@@ -646,6 +639,10 @@ namespace CumulusMX
 			if (data["uv"] != null)
 			{
 				station.DoUV(Convert.ToDouble(data["uv"], invNum), recDate);
+			}
+			else
+			{
+				station.DoUV(null, recDate);
 			}
 		}
 
@@ -657,6 +654,10 @@ namespace CumulusMX
 				{
 					station.DoSoilTemp(ConvertTempFToUser(Convert.ToDouble(data["soiltemp" + i], invNum)), i - 1);
 				}
+				else
+				{
+					station.DoSoilTemp(null, i - 1);
+				}
 			}
 		}
 
@@ -666,7 +667,11 @@ namespace CumulusMX
 			{
 				if (data["soilhum" + i] != null)
 				{
-					station.DoSoilMoisture(Convert.ToDouble(data["soilhum" + i], invNum), i);
+					station.DoSoilMoisture((int)Convert.ToDouble(data["soilhum" + i], invNum), i);
+				}
+				else
+				{
+					station.DoSoilMoisture(null, i);
 				}
 			}
 		}

@@ -29,6 +29,8 @@ namespace CumulusMX
 		internal static DataEditors logfileEditor { get; set; }
 		internal static ApiTagProcessor tagProcessor { get; set; }
 
+		internal static RecordsData RecordsJson { get; set; }
+
 		private static string EscapeUnicode(string input)
 		{
 			StringBuilder sb = new StringBuilder(input.Length);
@@ -75,37 +77,37 @@ namespace CumulusMX
 							await writer.WriteAsync(dataEditor.GetAllTimeRecData());
 							break;
 						case "alltimerecordsdayfile.json":
-							await writer.WriteAsync(await dataEditor.GetRecordsDayFile("alltime"));
+							await writer.WriteAsync(dataEditor.GetRecordsDayFile("alltime"));
 							break;
 						case "alltimerecordslogfile.json":
-							await writer.WriteAsync(await dataEditor.GetRecordsLogFile("alltime"));
+							await writer.WriteAsync(dataEditor.GetRecordsLogFile("alltime"));
 							break;
 						case "monthlyrecords.json":
 							await writer.WriteAsync(dataEditor.GetMonthlyRecData());
 							break;
 						case "monthlyrecordsdayfile.json":
-							await writer.WriteAsync(await dataEditor.GetMonthlyRecDayFile());
+							await writer.WriteAsync(dataEditor.GetMonthlyRecDayFile());
 							break;
 						case "monthlyrecordslogfile.json":
-							await writer.WriteAsync(await dataEditor.GetMonthlyRecLogFile());
+							await writer.WriteAsync(dataEditor.GetMonthlyRecLogFile());
 							break;
 						case "thismonthrecords.json":
 							await writer.WriteAsync(dataEditor.GetThisMonthRecData());
 							break;
 						case "thismonthrecordsdayfile.json":
-							await writer.WriteAsync(await dataEditor.GetRecordsDayFile("thismonth"));
+							await writer.WriteAsync(dataEditor.GetRecordsDayFile("thismonth"));
 							break;
 						case "thismonthrecordslogfile.json":
-							await writer.WriteAsync(await dataEditor.GetRecordsLogFile("thismonth"));
+							await writer.WriteAsync(dataEditor.GetRecordsLogFile("thismonth"));
 							break;
 						case "thisyearrecords.json":
 							await writer.WriteAsync(dataEditor.GetThisYearRecData());
 							break;
 						case "thisyearrecordsdayfile.json":
-							await writer.WriteAsync(await dataEditor .GetRecordsDayFile("thisyear"));
+							await writer.WriteAsync(dataEditor .GetRecordsDayFile("thisyear"));
 							break;
 						case "thisyearrecordslogfile.json":
-							await writer.WriteAsync(await dataEditor .GetRecordsLogFile("thisyear"));
+							await writer.WriteAsync(dataEditor .GetRecordsLogFile("thisyear"));
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
@@ -166,10 +168,10 @@ namespace CumulusMX
 							await writer.WriteAsync(dataEditor.EditThisYearRecs(HttpContext));
 							break;
 						case "dayfile":
-							await writer.WriteAsync(await logfileEditor.EditDailyData(HttpContext));
+							await writer.WriteAsync(logfileEditor.EditDailyData(HttpContext));
 							break;
 						case "datalogs":
-							await writer.WriteAsync(await logfileEditor.EditIntervalData(HttpContext));
+							await writer.WriteAsync(logfileEditor.EditIntervalData(HttpContext));
 							break;
 						case "extratemp":
 							await writer.WriteAsync(logfileEditor.EditExtraTemp(HttpContext));
@@ -250,43 +252,43 @@ namespace CumulusMX
 					switch (lastSegment)
 					{
 						case "dayfile":
-							await writer.WriteAsync(await logfileEditor.GetDailyData(draw, start, length));
+							await writer.WriteAsync(logfileEditor.GetDailyData(draw, start, length, search));
 							break;
 						case "logfile":
-							await writer.WriteAsync(await logfileEditor.GetIntervalData(from, to, draw, start, length, search));
+							await writer.WriteAsync(logfileEditor.GetIntervalData(from, to, draw, start, length, search));
 							break;
 						//case "extralogfile":
-						//	await writer.WriteAsync(await logfileEditor.GetIntervalData(from, to, draw, start, length, search, true));
+						//	await writer.WriteAsync(logfileEditor.GetIntervalData(from, to, draw, start, length, search, true));
 						//	break;
 						case "extratemp":
-							await writer.WriteAsync(await logfileEditor.GetExtraTempData(from, to, draw, start, length, search));
+							await writer.WriteAsync(logfileEditor.GetExtraTempData(from, to, draw, start, length, search));
 							break;
 						case "extrahum":
-							await writer.WriteAsync(await logfileEditor.GetExtraHumData(from, to, draw, start, length, search));
+							await writer.WriteAsync(logfileEditor.GetExtraHumData(from, to, draw, start, length, search));
 							break;
 						case "extradew":
-							await writer.WriteAsync(await logfileEditor.GetExtraDewData(from, to, draw, start, length, search));
+							await writer.WriteAsync(logfileEditor.GetExtraDewData(from, to, draw, start, length, search));
 							break;
 						case "usertemp":
-							await writer.WriteAsync(await logfileEditor.GetUserTempData(from, to, draw, start, length, search));
+							await writer.WriteAsync(logfileEditor.GetUserTempData(from, to, draw, start, length, search));
 							break;
 						case "soiltemp":
-							await writer.WriteAsync(await logfileEditor.GetSoilTempData(from, to, draw, start, length, search));
+							await writer.WriteAsync(logfileEditor.GetSoilTempData(from, to, draw, start, length, search));
 							break;
 						case "soilmoist":
-							await writer.WriteAsync(await logfileEditor.GetSoilMoistData(from, to, draw, start, length, search));
+							await writer.WriteAsync(logfileEditor.GetSoilMoistData(from, to, draw, start, length, search));
 							break;
 						case "leaftemp":
-							await writer.WriteAsync(await logfileEditor.GetLeafTempData(from, to, draw, start, length, search));
+							await writer.WriteAsync(logfileEditor.GetLeafTempData(from, to, draw, start, length, search));
 							break;
 						case "leafwet":
-							await writer.WriteAsync(await logfileEditor.GetLeafWetData(from, to, draw, start, length, search));
+							await writer.WriteAsync(logfileEditor.GetLeafWetData(from, to, draw, start, length, search));
 							break;
 						case "airqual":
-							await writer.WriteAsync(await logfileEditor.GetAirQualData(from, to, draw, start, length, search));
+							await writer.WriteAsync(logfileEditor.GetAirQualData(from, to, draw, start, length, search));
 							break;
 						case "co2":
-							await writer.WriteAsync(await logfileEditor.GetCo2Data(from, to, draw, start, length, search));
+							await writer.WriteAsync(logfileEditor.GetCo2Data(from, to, draw, start, length, search));
 							break;
 						case "currentdata":
 							await writer.WriteAsync(Station.GetCurrentData());
@@ -406,49 +408,49 @@ namespace CumulusMX
 					switch (req)
 					{
 						case "tempdata.json":
-							await writer.WriteAsync(await Station.GetTempGraphData());
+							await writer.WriteAsync(Station.Graphs.GetTempGraphData());
 							break;
 						case "winddata.json":
-							await writer.WriteAsync(await Station.GetWindGraphData());
+							await writer.WriteAsync(Station.Graphs.GetWindGraphData());
 							break;
 						case "raindata.json":
-							await writer.WriteAsync(await Station.GetRainGraphData());
+							await writer.WriteAsync(Station.Graphs.GetRainGraphData());
 							break;
 						case "pressdata.json":
-							await writer.WriteAsync(await Station.GetPressGraphData());
+							await writer.WriteAsync(Station.Graphs.GetPressGraphData());
 							break;
 						case "wdirdata.json":
-							await writer.WriteAsync(await Station.GetWindDirGraphData());
+							await writer.WriteAsync(Station.Graphs.GetWindDirGraphData());
 							break;
 						case "humdata.json":
-							await writer.WriteAsync(await Station.GetHumGraphData());
+							await writer.WriteAsync(Station.Graphs.GetHumGraphData());
 							break;
 						case "solardata.json":
-							await writer.WriteAsync(await Station.GetSolarGraphData());
+							await writer.WriteAsync(Station.Graphs.GetSolarGraphData());
 							break;
 						case "dailyrain.json":
-							await writer.WriteAsync(await Station.GetDailyRainGraphData());
+							await writer.WriteAsync(Station.Graphs.GetDailyRainGraphData());
 							break;
 						case "sunhours.json":
-							await writer.WriteAsync(await Station.GetSunHoursGraphData());
+							await writer.WriteAsync(Station.Graphs.GetSunHoursGraphData());
 							break;
 						case "dailytemp.json":
-							await writer.WriteAsync(await Station.GetDailyTempGraphData());
+							await writer.WriteAsync(Station.Graphs.GetDailyTempGraphData());
 							break;
 						case "units.json":
 							await writer.WriteAsync(Station.GetUnits());
 							break;
 						case "graphconfig.json":
-							await writer.WriteAsync(Station.GetGraphConfig());
+							await writer.WriteAsync(Station.Graphs.GetGraphConfig());
 							break;
 						case "airqualitydata.json":
-							await writer.WriteAsync(await Station.GetAqGraphData());
+							await writer.WriteAsync(Station.Graphs.GetAqGraphData());
 							break;
 						case "availabledata.json":
-							await writer.WriteAsync(Station.GetAvailGraphData());
+							await writer.WriteAsync(Station.Graphs.GetAvailGraphData());
 							break;
 						case "selectachart.json":
-							await writer.WriteAsync(Station.GetSelectaChartOptions());
+							await writer.WriteAsync(Station.Graphs.GetSelectaChartOptions());
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
@@ -508,37 +510,37 @@ namespace CumulusMX
 					switch (req)
 					{
 						case "tempdata.json":
-							await writer.WriteAsync(await Station.GetAllDailyTempGraphData());
+							await writer.WriteAsync(Station.Graphs.GetAllDailyTempGraphData());
 							break;
 						case "winddata.json":
-							await writer.WriteAsync(await Station.GetAllDailyWindGraphData());
+							await writer.WriteAsync(Station.Graphs.GetAllDailyWindGraphData());
 							break;
 						case "raindata.json":
-							await writer.WriteAsync(await Station.GetAllDailyRainGraphData());
+							await writer.WriteAsync(Station.Graphs.GetAllDailyRainGraphData());
 							break;
 						case "pressdata.json":
-							await writer.WriteAsync(await Station.GetAllDailyPressGraphData());
+							await writer.WriteAsync(Station.Graphs.GetAllDailyPressGraphData());
 							break;
 						//case "wdirdata.json":
-						//	await writer.WriteAsync(await Station.GetAllDailyWindDirGraphData());
+						//	await writer.WriteAsync(Station.GetAllDailyWindDirGraphData());
 						// break;
 						case "humdata.json":
-							await writer.WriteAsync(await Station.GetAllDailyHumGraphData());
+							await writer.WriteAsync(Station.Graphs.GetAllDailyHumGraphData());
 							break;
 						case "solardata.json":
-							await writer.WriteAsync(await Station.GetAllDailySolarGraphData());
+							await writer.WriteAsync(Station.Graphs.GetAllDailySolarGraphData());
 							break;
 						case "degdaydata.json":
-							await writer.WriteAsync(await Station.GetAllDegreeDaysGraphData());
+							await writer.WriteAsync(Station.Graphs.GetAllDegreeDaysGraphData());
 							break;
 						case "tempsumdata.json":
-							await writer.WriteAsync(await Station.GetAllTempSumGraphData());
+							await writer.WriteAsync(Station.Graphs.GetAllTempSumGraphData());
 							break;
 						case "units.json":
 							await writer.WriteAsync(Station.GetUnits());
 							break;
 						case "graphconfig.json":
-							await writer.WriteAsync(Station.GetGraphConfig());
+							await writer.WriteAsync(Station.Graphs.GetGraphConfig());
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
@@ -575,19 +577,19 @@ namespace CumulusMX
 					switch (req)
 					{
 						case "temperature.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetTempRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetTempRecords()));
 							break;
 						case "humidity.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetHumRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetHumRecords()));
 							break;
 						case "pressure.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetPressRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetPressRecords()));
 							break;
 						case "wind.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetWindRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetWindRecords()));
 							break;
 						case "rain.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetRainRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetRainRecords()));
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
@@ -629,19 +631,19 @@ namespace CumulusMX
 					switch (req)
 					{
 						case "temperature.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetMonthlyTempRecords(month)));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyTempRecords(month)));
 							break;
 						case "humidity.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetMonthlyHumRecords(month)));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyHumRecords(month)));
 							break;
 						case "pressure.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetMonthlyPressRecords(month)));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyPressRecords(month)));
 							break;
 						case "wind.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetMonthlyWindRecords(month)));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyWindRecords(month)));
 							break;
 						case "rain.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetMonthlyRainRecords(month)));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyRainRecords(month)));
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
@@ -675,19 +677,19 @@ namespace CumulusMX
 					switch (req)
 					{
 						case "temperature.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetThisMonthTempRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetThisMonthTempRecords()));
 							break;
 						case "humidity.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetThisMonthHumRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetThisMonthHumRecords()));
 							break;
 						case "pressure.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetThisMonthPressRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetThisMonthPressRecords()));
 							break;
 						case "wind.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetThisMonthWindRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetThisMonthWindRecords()));
 							break;
 						case "rain.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetThisMonthRainRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetThisMonthRainRecords()));
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
@@ -720,19 +722,19 @@ namespace CumulusMX
 					switch (req)
 					{
 						case "temperature.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetThisYearTempRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetThisYearTempRecords()));
 							break;
 						case "humidity.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetThisYearHumRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetThisYearHumRecords()));
 							break;
 						case "pressure.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetThisYearPressRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetThisYearPressRecords()));
 							break;
 						case "wind.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetThisYearWindRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetThisYearWindRecords()));
 							break;
 						case "rain.json":
-							await writer.WriteAsync(EscapeUnicode(Station.GetThisYearRainRecords()));
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetThisYearRainRecords()));
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
@@ -1140,7 +1142,7 @@ namespace CumulusMX
 									Response.StatusCode = 406;
 									return;
 								}
-								await writer.WriteAsync(Json.Serialize(await noaarpts.GenerateNoaaMonthReport(year, month)));
+								await writer.WriteAsync(Json.Serialize(noaarpts.GenerateNoaaMonthReport(year, month)));
 								break;
 							default:
 								throw new KeyNotFoundException("Key Not Found: " + req);

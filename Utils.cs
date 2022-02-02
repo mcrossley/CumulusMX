@@ -1,11 +1,13 @@
 ﻿using Swan;
 using System;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 // A rag tag of useful functions
 
@@ -174,6 +176,20 @@ namespace CumulusMX
 				.Where(n => n.IPv4Mask.ToString() != "0.0.0.0")
 				.Select(g => g.Address)
 				.First();
+		}
+
+		public static async Task CopyFileAsync(string sourceFile, string destinationFile)
+		{
+			using var sourceStream = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan);
+			using var destinationStream = new FileStream(destinationFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan);
+			await sourceStream.CopyToAsync(destinationStream);
+		}
+
+		public static void CopyFileSync(string sourceFile, string destinationFile)
+		{
+			using var sourceStream = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
+			using var destinationStream = new FileStream(destinationFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan);
+			sourceStream.CopyTo(destinationStream);
 		}
 	}
 }

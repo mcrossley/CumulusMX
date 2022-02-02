@@ -21,7 +21,7 @@ namespace CumulusMX
 		public double? Pressure { get; set; }           // 10  Current sea level pressure
 		public double? RainCounter { get; set; }        // 11  Total rainfall counter as held by the station
 		public double? InsideTemp { get; set; }         // 12  Inside temperature
-		public double? InsideHumidity { get; set; }     // 13  Inside humidity
+		public int? InsideHumidity { get; set; }        // 13  Inside humidity
 		public double? WindLatest { get; set; }         // 14  Current gust (i.e. 'Latest')
 		public double? WindChill { get; set; }			// 15  Wind chill
 		public double? HeatIndex { get; set; }			// 16  Heat Index

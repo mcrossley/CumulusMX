@@ -4,6 +4,7 @@ using MimeKit;
 using System.Text.RegularExpressions;
 using MailKit;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace CumulusMX
 {
@@ -20,7 +21,7 @@ namespace CumulusMX
 		}
 
 
-		public async void SendEmail(string[] to, string from, string subject, string message, bool isHTML)
+		public async Task SendEmail(string[] to, string from, string subject, string message, bool isHTML)
 		{
 			try
 			{

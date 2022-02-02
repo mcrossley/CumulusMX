@@ -301,7 +301,7 @@ namespace CumulusMX
 
 				double num = (sign*((packetBuffer[4] & 0xF)*256 + packetBuffer[3]))/10.0;
 
-				WMR200ExtraTempValues[sensor] = ConvertTempCToUser(num);
+				WMR200ExtraTempValues[sensor] = ConvertTempCToUser(num).Value;
 				DoExtraTemp(WMR200ExtraTempValues[sensor], sensor);
 
 				// outdoor dewpoint - n/a
@@ -319,9 +319,11 @@ namespace CumulusMX
 			UVBattStatus = packetBuffer[0] & 0x4;
 
 			if (num < 0)
+			{
+				DoUV(null, DateTime.Now);
 				num = 0;
-
-			if (num > 16)
+			}
+			else if (num > 16)
 				num = 16;
 
 			DoUV(num, DateTime.Now);
@@ -380,16 +382,12 @@ namespace CumulusMX
 
 			if ((packetBuffer[8] & 0x20) == 0x20)
 			{
-				// no wind chill, use current temp if (available
+				// no wind chill, use current temp if available
 				// note that even if (Cumulus is set to calculate wind chill
 				// it can't/won't do it if (temp isn't available, so don't
 				// bother calling anyway
 
-				if (TempReadyToPlot)
-				{
-					wc = OutdoorTemperature;
-					DoWindChill(wc, now);
-				}
+				DoWindChill(Temperature, now);
 			}
 			else
 			{
@@ -431,7 +429,7 @@ namespace CumulusMX
 			{
 				//MainForm.SystemLog.WriteLogString('Main Outdoor sensor');
 				// outdoor hum
-				DoOutdoorHumidity(packetBuffer[5], DateTime.Now);
+				DoHumidity(packetBuffer[5], DateTime.Now);
 
 				// outdoor temp
 				if ((packetBuffer[4] & 0x80) == 0x80)
@@ -440,7 +438,7 @@ namespace CumulusMX
 					sign = 1;
 
 				num = (sign*((packetBuffer[4] & 0xF)*256 + packetBuffer[3]))/10.0;
-				DoOutdoorTemp(ConvertTempCToUser(num), Now);
+				DoTemperature(ConvertTempCToUser(num), Now);
 
 				// outdoor dewpoint
 				if ((packetBuffer[7] & 0x80) == 0x80)
@@ -449,7 +447,7 @@ namespace CumulusMX
 					sign = 1;
 
 				num = (sign*((packetBuffer[7] & 0xF)*256 + packetBuffer[6]))/10.0;
-				DoOutdoorDewpoint(ConvertTempCToUser(num), Now);
+				DoDewpoint(ConvertTempCToUser(num), Now);
 
 				DoApparentTemp(Now);
 				DoFeelsLike(Now);
@@ -493,7 +491,7 @@ namespace CumulusMX
 
 				num = (sign*((packetBuffer[4] & 0xF)*256 + packetBuffer[3]))/10.0;
 
-				WMR200ExtraTempValues[sensor] = ConvertTempCToUser(num);
+				WMR200ExtraTempValues[sensor] = ConvertTempCToUser(num).Value;
 				DoExtraTemp(WMR200ExtraTempValues[sensor], sensor);
 
 				// outdoor dewpoint
@@ -503,7 +501,7 @@ namespace CumulusMX
 					sign = 1;
 
 				num = (sign*((packetBuffer[7] & 0xF)*256 + packetBuffer[6]))/10.0;
-				WMR200ExtraDPValues[sensor] = ConvertTempCToUser(num);
+				WMR200ExtraDPValues[sensor] = ConvertTempCToUser(num).Value;
 				DoExtraDP(WMR200ExtraDPValues[sensor], sensor);
 				ExtraSensorsDetected = true;
 			}
@@ -514,7 +512,7 @@ namespace CumulusMX
 			cumulus.LogDebugMessage("Barometer packet");
 			double num = ((packetBuffer[5] & 0xF)*256) + packetBuffer[4];
 
-			double slp = ConvertPressMBToUser(num);
+			double slp = ConvertPressMBToUser(num).Value;
 
 			num = ((packetBuffer[3] & 0xF)*256) + packetBuffer[2];
 

@@ -337,9 +337,26 @@ namespace CumulusMX
 
 		internal int GetValue(string SectionName, string Key, int DefaultValue)
 		{
-			string StringValue=GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
+			string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
 			int Value;
 			if (int.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value)) return Value;
+			return DefaultValue;
+		}
+
+		internal int? GetValue(string SectionName, string Key, int? DefaultValue)
+		{
+			string defVal = DefaultValue.HasValue ? DefaultValue.Value.ToString(CultureInfo.InvariantCulture) : "null";
+			string StringValue = GetValue(SectionName, Key, defVal);
+			int Value;
+			if (StringValue == "null")
+				return null;
+			else if (int.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value))
+			{
+				if (Value == Cumulus.DefaultHiVal || Value == Cumulus.DefaultLoVal)
+					return null;
+				else
+					return Value;
+			}
 			return DefaultValue;
 		}
 
@@ -348,6 +365,23 @@ namespace CumulusMX
 			string StringValue=GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
 			double Value;
 			if (double.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value)) return Value;
+			return DefaultValue;
+		}
+
+		internal double? GetValue(string SectionName, string Key, double? DefaultValue)
+		{
+			string defVal = DefaultValue.HasValue ? DefaultValue.Value.ToString(CultureInfo.InvariantCulture) : "null";
+			string StringValue = GetValue(SectionName, Key, defVal);
+			double Value;
+			if (StringValue == "null")
+				return null;
+			else if (double.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value))
+			{
+				if (Value == Cumulus.DefaultHiVal || Value == Cumulus.DefaultLoVal)
+					return null;
+				else
+					return Value;
+			}
 			return DefaultValue;
 		}
 
@@ -383,9 +417,21 @@ namespace CumulusMX
 			SetValue(SectionName, Key, Value.ToString(CultureInfo.InvariantCulture));
 		}
 
+		internal void SetValue(string SectionName, string Key, int? Value)
+		{
+			string val = Value.HasValue ? Value.Value.ToString(CultureInfo.InvariantCulture) : "null";
+			SetValue(SectionName, Key, val);
+		}
+
 		internal void SetValue(string SectionName, string Key, double Value)
 		{
 			SetValue(SectionName, Key, Value.ToString("G17", CultureInfo.InvariantCulture));
+		}
+
+		internal void SetValue(string SectionName, string Key, double? Value)
+		{
+			string val = Value.HasValue ? Value.Value.ToString("G17", CultureInfo.InvariantCulture) : "null";
+			SetValue(SectionName, Key, val);
 		}
 
 		internal void SetValue(string SectionName, string Key, byte[] Value)

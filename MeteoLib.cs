@@ -15,18 +15,21 @@ namespace CumulusMX
 		/// <param name="windSpeedKph">Average wind speed in km/h</param>
 		/// <param name="tempCutoff">Use the 10C cut-off</param>
 		/// <returns>Wind Chill in Celsius</returns>
-		public static double WindChill(double tempC, double windSpeedKph, bool tempCutoff = true)
+		public static double? WindChill(double? tempC, double? windSpeedKph, bool tempCutoff = true)
 		{
 			// see American Meteorological Society Journal
 			// see http://www.msc.ec.gc.ca/education/windchill/science_equations_e.cfm
 			// see http://www.weather.gov/os/windchill/index.shtml
 
+			if (tempC == null || windSpeedKph == null)
+				return null;
+
 			if ((tempC >= 10.0 && tempCutoff) || (windSpeedKph <= 4.8))
 				return tempC;
 
-			double windPow = Math.Pow(windSpeedKph, 0.16);
+			double windPow = Math.Pow(windSpeedKph.Value, 0.16);
 
-			double wc = 13.12 + (0.6215 * tempC) - (11.37 * windPow) + (0.3965 * tempC * windPow);
+			double wc = 13.12 + (0.6215 * tempC.Value) - (11.37 * windPow) + (0.3965 * tempC.Value * windPow);
 
 			if (wc > tempC) return tempC;
 
@@ -60,15 +63,21 @@ namespace CumulusMX
 		/// <param name="windSpeedKph">Wind speed in kph</param>
 		/// <param name="humidity">Relative humidity</param>
 		/// <returns>Feels Like temperature in Celsius</returns>
-		public static double FeelsLike(double tempC, double windSpeedKph, int humidity)
+		public static double? FeelsLike(double? tempC, double? windSpeedKph, int? humidity)
 		{
+			if (tempC == null || humidity == null)
+				return null;
+
+			if (tempC <= 10 && windSpeedKph == null)
+				return null;
+
 			// Cannot use the WindChill function as we need the chill above 10 C
 			//double chill = windSpeedKph < 4.828 ? tempC : 13.12 + 0.6215 * tempC - 11.37 * Math.Pow(windSpeedKph, 0.16) + 0.3965 * tempC * Math.Pow(windSpeedKph, 0.16);
-			double chill = WindChill(tempC, windSpeedKph, false);
-			double svp = SaturationVapourPressure1980(tempC);   // Saturation Vapour Pressure in hPa
+			double chill = WindChill(tempC, windSpeedKph, false).Value;
+			double svp = SaturationVapourPressure1980(tempC.Value);   // Saturation Vapour Pressure in hPa
 			double avp = (float)humidity / 100.0 * svp / 10.0;             // Actual Vapour Pressure in kPa
 			if (windSpeedKph > 72) windSpeedKph = 72;           // Windspeed limited to 20 m/s = 72 km/h
-			double apptemp = (1.04 * tempC) + (2 * avp) - (windSpeedKph * 0.1805553) - 2.7;
+			double apptemp = (1.04 * tempC.Value) + (2 * avp) - (windSpeedKph.Value * 0.1805553) - 2.7;
 			double feels;
 			if (tempC < 10.0)
 			{
@@ -81,7 +90,7 @@ namespace CumulusMX
 			else
 			{
 				// 10-20 C = linear interpolation between chill and apparent
-				double A = (tempC - 10) / 10;
+				double A = (tempC.Value - 10) / 10;
 				double B = 1 - A;
 				feels = (apptemp * A) + (chill * B);
 			}
@@ -100,9 +109,13 @@ namespace CumulusMX
 		/// <param name="tempC">Temp in C</param>
 		/// <param name="humidity">Relative humidity</param>
 		/// <returns>Heat Index in Celsius</returns>
-		public static double HeatIndex(double tempC, int humidity)
+		public static double? HeatIndex(double? tempC, int? humidity)
 		{
-			double tempF = CToF(tempC);
+			if (tempC == null || humidity == null)
+				return null;
+
+			double tempF = CToF(tempC.Value);
+			int hum = humidity.Value;
 
 			if (tempF < 80)
 			{
@@ -112,19 +125,19 @@ namespace CumulusMX
 			{
 				double tempSqrd = tempF * tempF;
 
-				double humSqrd = humidity * humidity;
+				double humSqrd = hum * hum;
 
-				var result = FtoC(0 - 42.379 + (2.04901523 * tempF) + (10.14333127 * humidity) - (0.22475541 * tempF * humidity) - (0.00683783 * tempSqrd) - (0.05481717 * humSqrd) +
-					(0.00122874 * tempSqrd * humidity) + (0.00085282 * tempF * humSqrd) - (0.00000199 * tempSqrd * humSqrd));
+				var result = FtoC(0 - 42.379 + (2.04901523 * tempF) + (10.14333127 * hum) - (0.22475541 * tempF * hum) - (0.00683783 * tempSqrd) - (0.05481717 * humSqrd) +
+					(0.00122874 * tempSqrd * hum) + (0.00085282 * tempF * humSqrd) - (0.00000199 * tempSqrd * humSqrd));
 
 				// Rothfusz adjustments
-				if ((humidity < 13) && (tempF >= 80) && (tempF <= 112))
+				if ((hum < 13) && (tempF >= 80) && (tempF <= 112))
 				{
-					result -= ((13 - humidity) / 4.0) * Math.Sqrt((17 - Math.Abs(tempF - 95)) / 17.0);
+					result -= ((13 - hum) / 4.0) * Math.Sqrt((17 - Math.Abs(tempF - 95)) / 17.0);
 				}
-				else if ((humidity > 85) && (tempF >= 80) && (tempF <= 87))
+				else if ((hum > 85) && (tempF >= 80) && (tempF <= 87))
 				{
-					result += ((humidity - 85) / 10.0) * ((87 - tempF) / 5.0);
+					result += ((hum - 85) / 10.0) * ((87 - tempF) / 5.0);
 				}
 
 				return result;
@@ -219,13 +232,16 @@ namespace CumulusMX
 		/// <param name="tempC">Temp in C</param>
 		/// <param name="humidity">Relative humidity</param>
 		/// <returns>Dew Point temperature in Celsius</returns>
-		public static double DewPoint(double tempC, double humidity)
+		public static double? DewPoint(double? tempC, double? humidity)
 		{
+			if (tempC == null || humidity == null)
+				return null;
+
 			if (humidity == 0 || humidity == 100)
 				return tempC;
 
 			// Davis algorithm
-			double lnVapor = Math.Log(ActualVapourPressure2008(tempC, (int)humidity));
+			double lnVapor = Math.Log(ActualVapourPressure2008(tempC.Value, (int)humidity));
 			return ((243.12 * lnVapor) - 440.1) / (19.43 - lnVapor);
 		}
 
@@ -272,12 +288,15 @@ namespace CumulusMX
 		/// <param name="tempC">Temp in C</param>
 		/// <param name="humidity">Relative humidity</param>
 		/// <returns>Humidex - dimensionless</returns>
-		public static double Humidex(double tempC, int humidity)
+		public static double? Humidex(double? tempC, int? humidity)
 		{
+			if (tempC == null || humidity == null)
+				return null;
+
 			if (tempC < 10)
 				return tempC;
 			else
-				return tempC + ((5.0 / 9.0) * (ActualVapourPressure2008(tempC, humidity) - 10.0));
+				return tempC + ((5.0 / 9.0) * (ActualVapourPressure2008(tempC.Value, humidity.Value) - 10.0));
 		}
 
 		public static double CToF(double tempC)
@@ -321,8 +340,11 @@ namespace CumulusMX
 		/// <param name="windKph">The current average wind speed (KPH)</param>
 		/// <returns>THWIndex (Celsius)</returns>
 
-		public static double THWIndex(double tempC, int hum, double windKph)
+		public static double? THWIndex(double? tempC, int? hum, double? windKph)
 		{
+			if (tempC == null || hum == null || windKph == null)
+				return null;
+
 			var hindex = HeatIndex(tempC, hum);
 
 			// above 144F/62.22C wind factor is zero

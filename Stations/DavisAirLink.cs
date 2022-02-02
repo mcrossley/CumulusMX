@@ -319,6 +319,8 @@ namespace CumulusMX
 				do
 				{
 					cumulus.LogDebugMessage($"GetAlCurrent: {locationStr} - Sending GET current conditions request {retry} to AL: {urlCurrent} ...");
+					WeatherStation.LogRawExtraData(urlCurrent, true);
+
 					// Call asynchronous network methods in a try/catch block to handle exceptions
 					try
 					{
@@ -329,6 +331,7 @@ namespace CumulusMX
 							response.EnsureSuccessStatusCode();
 							responseBody = await response.Content.ReadAsStringAsync();
 							cumulus.LogDataMessage($"GetAlCurrent: Response - {responseBody}");
+							WeatherStation.LogRawExtraData(responseBody, false);
 						}
 
 						try
@@ -349,7 +352,10 @@ namespace CumulusMX
 					catch (Exception ex)
 					{
 						retry++;
-						cumulus.LogExceptionMessage(ex, $"GetAlCurrent: {locationStr}");
+						if (ex.InnerException != null && ex.InnerException.Message.Contains("response ended prematurely"))
+							cumulus.LogDebugMessage("GetAlCurrent: Error - The AirLink rejected our request");
+						else
+							cumulus.LogExceptionMessage(ex, $"GetAlCurrent: {locationStr}");
 						await Task.Delay(1000);
 					}
 				} while (retry < 3);
@@ -401,11 +407,11 @@ namespace CumulusMX
 
 							if (indoor)
 							{
-								cumulus.airLinkDataIn.temperature = station.ConvertTempFToUser(rec.temp);
+								cumulus.airLinkDataIn.temperature = station.ConvertTempFToUser(rec.temp).Value;
 							}
 							else
 							{
-								cumulus.airLinkDataOut.temperature = station.ConvertTempFToUser(rec.temp);
+								cumulus.airLinkDataOut.temperature = station.ConvertTempFToUser(rec.temp).Value;
 							}
 						}
 						catch (Exception ex)
@@ -679,6 +685,7 @@ namespace CumulusMX
 
 			string logUrl = historicUrl.ToString().Replace(apiKey, "<<API_KEY>>");
 			cumulus.LogDebugMessage($"GetWlHistoricData: WeatherLink URL = {logUrl}");
+			WeatherStation.LogRawExtraData(logUrl, true);
 			station.lastDataReadTime = airLinkLastUpdateTime;
 
 			WlHistory histObj;
@@ -698,6 +705,7 @@ namespace CumulusMX
 					responseCode = (int)response.StatusCode;
 					cumulus.LogDebugMessage($"GetWlHistoricData: WeatherLink API Historic Response code: {responseCode}");
 					cumulus.LogDataMessage($"GetWlHistoricData: WeatherLink API Historic Response: {responseBody}");
+					WeatherStation.LogRawExtraData(responseBody, false);
 				}
 
 				if (responseCode != 200)
@@ -833,7 +841,7 @@ namespace CumulusMX
 						}
 					}
 
-					cumulus.DoAirLinkLogFile(timestamp);
+					_ = cumulus.DoAirLinkLogFile(timestamp); // let this run in background
 
 					if (!Program.service)
 						Console.Write("\r - processed " + (((double)dataIndex + 1) / noOfRecs).ToString("P0"));
@@ -905,11 +913,11 @@ namespace CumulusMX
 							{
 								if (indoor)
 								{
-									cumulus.airLinkDataIn.temperature = station.ConvertTempFToUser(data17.temp_avg);
+									cumulus.airLinkDataIn.temperature = station.ConvertTempFToUser(data17.temp_avg).Value;
 								}
 								else
 								{
-									cumulus.airLinkDataOut.temperature = station.ConvertTempFToUser(data17.temp_avg);
+									cumulus.airLinkDataOut.temperature = station.ConvertTempFToUser(data17.temp_avg).Value;
 								}
 							}
 						}
@@ -1118,6 +1126,7 @@ namespace CumulusMX
 
 			var logUrl = historicUrl.ToString().Replace(apiKey, "<<API_KEY>>");
 			cumulus.LogDebugMessage($"AirLinkHealth: WeatherLink URL = {logUrl}");
+			WeatherStation.LogRawExtraData(logUrl, true);
 
 			try
 			{
@@ -1130,6 +1139,7 @@ namespace CumulusMX
 					responseBody = response.Content.ReadAsStringAsync().Result;
 					responseCode = (int)response.StatusCode;
 					cumulus.LogDataMessage($"AirLinkHealth: WeatherLink API Response: {responseCode}: {responseBody}");
+					WeatherStation.LogRawExtraData(responseBody, false);
 				}
 
 				if (responseCode != 200)
@@ -1383,6 +1393,7 @@ namespace CumulusMX
 
 			var logUrl = stationsUrl.ToString().Replace(cumulus.AirLinkApiKey, "<<API_KEY>>");
 			cumulus.LogDebugMessage($"WeatherLink Stations URL = {logUrl}");
+			WeatherStation.LogRawExtraData(logUrl, true);
 
 			try
 			{
@@ -1394,6 +1405,7 @@ namespace CumulusMX
 					responseBody = response.Content.ReadAsStringAsync().Result;
 					responseCode = (int)response.StatusCode;
 					cumulus.LogDebugMessage($"WeatherLink API Response: {responseCode}: {responseBody}");
+					WeatherStation.LogRawExtraData(responseBody, false);
 				}
 
 				if (responseCode != 200)
@@ -1501,6 +1513,7 @@ namespace CumulusMX
 
 			var logUrl = sensorsUrl.ToString().Replace(apiKey, "<<API_KEY>>");
 			cumulus.LogDebugMessage($"GetAvailableSensors: URL = {logUrl}");
+			WeatherStation.LogRawExtraData(logUrl, true);
 
 			try
 			{
@@ -1512,6 +1525,7 @@ namespace CumulusMX
 					responseBody = response.Content.ReadAsStringAsync().Result;
 					responseCode = (int)response.StatusCode;
 					cumulus.LogDebugMessage($"GetAvailableSensors: WeatherLink API Response: {responseCode}: {responseBody}");
+					WeatherStation.LogRawExtraData(responseBody, false);
 				}
 
 				if (responseCode != 200)

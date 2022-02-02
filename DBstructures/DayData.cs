@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using SQLite;
@@ -240,6 +241,172 @@ namespace CumulusMX
 			HighHumidexTime = Utils.TryParseNullTimeSpan(Timestamp, data2[51], timForm);
 			ChillHours = Utils.TryParseNullDouble(data2[52]);
 
+			return true;
+		}
+
+		public bool ParseDayFileRecv4(string data)
+		{
+			var st = new List<string>(data.Split(','));
+			var invNum = CultureInfo.InvariantCulture.NumberFormat;
+			double varDbl;
+			int varInt;
+			int idx = 0;
+			var timeFormat = "hh\\:mm";
+
+			try
+			{
+				Timestamp = Utils.ddmmyyStrToDate(st[idx++]);
+				HighGust = Convert.ToDouble(st[idx++], invNum);
+				HighGustBearing = Convert.ToInt32(st[idx++]);
+				HighGustTime = Utils.AddTimeToDate(Timestamp, st[idx++]);
+				LowTemp = Convert.ToDouble(st[idx++], invNum);
+				LowTempTime = Utils.AddTimeToDate(Timestamp, st[idx++]);
+				HighTemp = Convert.ToDouble(st[idx++], invNum);
+				HighTempTime = Utils.AddTimeToDate(Timestamp, st[idx++]);
+				LowPress = Convert.ToDouble(st[idx++], invNum);
+				LowPressTime = Utils.AddTimeToDate(Timestamp, st[idx++]);
+				HighPress = Convert.ToDouble(st[idx++], invNum);
+				HighPressTime = Utils.AddTimeToDate(Timestamp, st[idx++]);
+				HighRainRate = Convert.ToDouble(st[idx++], invNum);
+				HighRainRateTime = Utils.AddTimeToDate(Timestamp, st[idx++]);
+				TotalRain = Convert.ToDouble(st[idx++], invNum);
+				AvgTemp = Convert.ToDouble(st[idx++], invNum);
+
+				if (st.Count > idx++)
+					WindRun = Utils.TryParseNullDouble(st[16]);
+
+				if (st.Count > idx++)
+					HighAvgWind = Utils.TryParseNullDouble(st[17]);
+
+				if (st.Count > idx++)
+					HighAvgWindTime = Utils.TryParseNullTimeSpan(Timestamp, st[18], timeFormat);
+
+				if (st.Count > idx++)
+					LowHumidity = Utils.TryParseNullInt(st[19]);
+
+				if (st.Count > idx++)
+					LowHumidityTime = Utils.TryParseNullTimeSpan(Timestamp, st[20], timeFormat);
+
+				if (st.Count > idx++)
+					HighHumidity = Utils.TryParseNullInt(st[21]);
+
+				if (st.Count > idx++ && st[22].Length == 5)
+					HighHumidityTime = Utils.AddTimeToDate(Timestamp, st[22]);
+
+				if (st.Count > idx++)
+					ET = Utils.TryParseNullDouble(st[23]);
+
+				if (st.Count > idx++ && double.TryParse(st[24], NumberStyles.Float, invNum, out varDbl))
+					SunShineHours = varDbl;
+
+				if (st.Count > idx++ && double.TryParse(st[25], NumberStyles.Float, invNum, out varDbl))
+					HighHeatIndex = varDbl;
+				else
+					HighHeatIndex = Cumulus.DefaultHiVal;
+
+				if (st.Count > idx++ && st[26].Length == 5)
+					HighHeatIndexTime = Utils.AddTimeToDate(Timestamp, st[26]);
+
+				if (st.Count > idx++ && double.TryParse(st[27], NumberStyles.Float, invNum, out varDbl))
+					HighAppTemp = varDbl;
+				else
+					HighAppTemp = Cumulus.DefaultHiVal;
+
+				if (st.Count > idx++ && st[28].Length == 5)
+					HighAppTempTime = Utils.AddTimeToDate(Timestamp, st[28]);
+
+				if (st.Count > idx++ && double.TryParse(st[29], NumberStyles.Float, invNum, out varDbl))
+					LowAppTemp = varDbl;
+				else
+					LowAppTemp = Cumulus.DefaultLoVal;
+
+				if (st.Count > idx++ && st[30].Length == 5)
+					LowAppTempTime = Utils.AddTimeToDate(Timestamp, st[30]);
+
+				if (st.Count > idx++ && double.TryParse(st[31], NumberStyles.Float, invNum, out varDbl))
+					HighHourlyRain = varDbl;
+
+				if (st.Count > idx++ && st[32].Length == 5)
+					HighHourlyRainTime = Utils.AddTimeToDate(Timestamp, st[32]);
+
+				if (st.Count > idx++ && double.TryParse(st[33], NumberStyles.Float, invNum, out varDbl))
+					LowWindChill = varDbl;
+				else
+					LowWindChill = Cumulus.DefaultLoVal;
+
+				if (st.Count > idx++ && st[34].Length == 5)
+					LowWindChillTime = Utils.AddTimeToDate(Timestamp, st[34]);
+
+				if (st.Count > idx++ && double.TryParse(st[35], NumberStyles.Float, invNum, out varDbl))
+					HighDewPoint = varDbl;
+				else
+					HighDewPoint = Cumulus.DefaultHiVal;
+
+				if (st.Count > idx++ && st[36].Length == 5)
+					HighDewPointTime = Utils.AddTimeToDate(Timestamp, st[36]);
+
+				if (st.Count > idx++ && double.TryParse(st[37], NumberStyles.Float, invNum, out varDbl))
+					LowDewPoint = varDbl;
+				else
+					LowDewPoint = Cumulus.DefaultLoVal;
+
+				if (st.Count > idx++ && st[38].Length == 5)
+					LowDewPointTime = Utils.AddTimeToDate(Timestamp, st[38]);
+
+				if (st.Count > idx++ && int.TryParse(st[39], out varInt))
+					DominantWindBearing = varInt;
+
+				if (st.Count > idx++ && double.TryParse(st[40], NumberStyles.Float, invNum, out varDbl))
+					HeatingDegreeDays = varDbl;
+
+				if (st.Count > idx++ && double.TryParse(st[41], NumberStyles.Float, invNum, out varDbl))
+					CoolingDegreeDays = varDbl;
+
+				if (st.Count > idx++ && int.TryParse(st[42], out varInt))
+					HighSolar = varInt;
+
+				if (st.Count > idx++ && st[43].Length == 5)
+					HighSolarTime = Utils.AddTimeToDate(Timestamp, st[43]);
+
+				if (st.Count > idx++ && double.TryParse(st[44], NumberStyles.Float, invNum, out varDbl))
+					HighUv = varDbl;
+
+				if (st.Count > idx++ && st[45].Length == 5)
+					HighUvTime = Utils.AddTimeToDate(Timestamp, st[45]);
+
+				if (st.Count > idx++ && double.TryParse(st[46], NumberStyles.Float, invNum, out varDbl))
+					HighFeelsLike = varDbl;
+				else
+					HighFeelsLike = Cumulus.DefaultHiVal;
+
+				if (st.Count > idx++ && st[47].Length == 5)
+					HighFeelsLikeTime = Utils.AddTimeToDate(Timestamp, st[47]);
+
+				if (st.Count > idx++ && double.TryParse(st[48], NumberStyles.Float, invNum, out varDbl))
+					LowFeelsLike = varDbl;
+				else
+					LowFeelsLike = Cumulus.DefaultLoVal;
+
+				if (st.Count > idx++ && st[49].Length == 5)
+					LowFeelsLikeTime = Utils.AddTimeToDate(Timestamp, st[49]);
+
+				if (st.Count > idx++ && double.TryParse(st[50], NumberStyles.Float, invNum, out varDbl))
+					HighHumidex = varDbl;
+				else
+					HighHumidex = Cumulus.DefaultHiVal;
+
+				if (st.Count > idx++ && st[51].Length == 5)
+					HighHumidexTime = Utils.AddTimeToDate(Timestamp, st[51]);
+
+				if (st.Count > idx++ && double.TryParse(st[52], NumberStyles.Float, invNum, out varDbl))
+					ChillHours = varDbl;
+			}
+			catch (Exception ex)
+			{
+				Program.cumulus.LogExceptionMessage(ex, $"ParseDayFileRec: Error at record {idx}");
+				var e = new Exception($"Error at record {idx} = \"{st[idx - 1]}\" - {ex.Message}");
+				throw e;
+			}
 			return true;
 		}
 	}

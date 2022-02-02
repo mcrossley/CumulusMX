@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO.Ports;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace CumulusMX
@@ -28,6 +27,9 @@ namespace CumulusMX
 			Cumulus.LogMessage("Instromet: Attempting to open " + cumulus.ComportName);
 
 			calculaterainrate = true;
+
+			// No wind chill, so we calculate it
+			cumulus.StationOptions.CalculatedWC = true;
 
 			// Change the default dps for rain and sunshine from 1 to 2 for IMet stations
 			cumulus.RainDPlaces = cumulus.SunshineDPlaces = 2;
@@ -55,7 +57,13 @@ namespace CumulusMX
 				{
 					SetStationClock();
 				}
+			}
+		}
 
+		public override void DoStartup()
+		{
+			if (comport.IsOpen)
+			{
 				// Read the data from the logger
 				cumulus.CurrentActivity = "Reading archive data";
 				startReadingHistoryData();
@@ -232,6 +240,8 @@ namespace CumulusMX
 
 			// Send the command
 			cumulus.LogDebugMessage("Sending: " + command);
+			LogRawStationData(command, true);
+
 			comport.Write(command + sLineBreak);
 
 			// Flush the first response - should be the echo of the command
@@ -273,6 +283,7 @@ namespace CumulusMX
 					byte[] ba = Encoding.Default.GetBytes(response);
 
 					cumulus.LogDataMessage($"Response from station: '{response}'");
+					LogRawStationData(response, false);
 					//cumulus.LogDebugMessage("Hex: '" + BitConverter.ToString(ba) + "'");
 				} while (!(response.Contains(expected)) && attempts < 6);
 
@@ -655,7 +666,11 @@ namespace CumulusMX
 
 							if (sl[RELHUMAVGPOS].Length > 0)
 							{
-								DoOutdoorHumidity((int) (Convert.ToDouble(sl[RELHUMAVGPOS], provider)), timestamp);
+								DoHumidity((int) (Convert.ToDouble(sl[RELHUMAVGPOS], provider)), timestamp);
+							}
+							else
+							{
+								Humidity = null;
 							}
 
 							if ((sl[WINDAVGPOS].Length > 0) && (sl[WINDMAXPOS].Length > 0) && (sl[DIRPOS].Length > 0))
@@ -667,7 +682,7 @@ namespace CumulusMX
 								DoWind(windgust, windbearing, windspeed, timestamp);
 
 								// add in "archivePeriod" minutes worth of wind speed to windrun
-								WindRunToday += ((WindAverage*WindRunHourMult[cumulus.Units.Wind]*interval)/60.0);
+								WindRunToday += ((WindAverage.Value * WindRunHourMult[cumulus.Units.Wind]*interval)/60.0);
 
 								DateTime windruncheckTS;
 								if ((hour == rollHour) && (minute == 0))
@@ -689,14 +704,14 @@ namespace CumulusMX
 
 							if (sl[TEMP1AVGPOS].Length > 0)
 							{
-								DoOutdoorTemp(ConvertTempCToUser(Convert.ToDouble(sl[TEMP1AVGPOS], provider)), timestamp);
+								DoTemperature(ConvertTempCToUser(Convert.ToDouble(sl[TEMP1AVGPOS], provider)), timestamp);
 
 								// add in "archivePeriod" minutes worth of temperature to the temp samples
 								tempsamplestoday += interval;
-								TempTotalToday += (OutdoorTemperature*interval);
+								TempTotalToday += (Temperature.Value * interval);
 
 								// update chill hours
-								if (OutdoorTemperature < cumulus.ChillHourThreshold)
+								if (Temperature < cumulus.ChillHourThreshold)
 								{
 									// add 1 minute to chill hours
 									ChillHours += interval / 60.0;
@@ -704,6 +719,10 @@ namespace CumulusMX
 
 								// update heating/cooling degree days
 								UpdateDegreeDays(interval);
+							}
+							else
+							{
+								DoTemperature(null, timestamp);
 							}
 
 							if (sl[TEMP2AVGPOS].Length > 0)
@@ -743,9 +762,9 @@ namespace CumulusMX
 							if ((sl[WINDAVGPOS].Length > 0) && (sl[TEMP1AVGPOS].Length > 0))
 							{
 								// wind chill
-								double tempinC = ConvertUserTempToC(OutdoorTemperature);
-								double windinKPH = ConvertUserWindToKPH(WindAverage);
-								double value = MeteoLib.WindChill(tempinC, windinKPH);
+								var tempinC = ConvertUserTempToC(Temperature);
+								var windinKPH = ConvertUserWindToKPH(WindAverage);
+								var value = MeteoLib.WindChill(tempinC, windinKPH);
 								// value is now in Celsius, convert to units in use
 								value = ConvertTempCToUser(value);
 								DoWindChill(value, timestamp);
@@ -757,7 +776,7 @@ namespace CumulusMX
 							}
 
 							// Cause wind chill calc
-							DoWindChill(0, timestamp);
+							DoWindChill(null, timestamp);
 
 							DoApparentTemp(timestamp);
 							DoFeelsLike(timestamp);
@@ -769,11 +788,11 @@ namespace CumulusMX
 								DoSunHours(Convert.ToDouble(sl[SUNPOS], provider));
 							}
 
-							cumulus.DoLogFile(timestamp, false);
-							cumulus.MySqlRealtimeFile(999, false, timestamp);
+							_ = cumulus.DoLogFile(timestamp, false);
+							cumulus.MySqlStuff.DoRealtimeData(999, false, timestamp);
 
-							AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, OutdoorTemperature, WindChill, OutdoorDewpoint, HeatIndex,
-								OutdoorHumidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemperature, IndoorTemperature, IndoorHumidity, CurrentSolarMax, RainRate, -1, -1);
+							AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex,
+								Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate, -1, -1);
 							DoTrendValues(timestamp);
 
 							if (cumulus.StationOptions.CalculatedET && timestamp.Minute == 0)
@@ -919,15 +938,12 @@ namespace CumulusMX
 				if (!string.IsNullOrEmpty(sl[TEMP1POS]) && double.TryParse(sl[TEMP1POS], NumberStyles.Float, provider, out varDbl))
 				{
 					temp1 = varDbl;
-					DoOutdoorTemp(ConvertTempCToUser(temp1), now);
-					if (windspeed > -99)
-					{
-						double windchill = MeteoLib.WindChill(temp1, windspeed * 3.6);
-						DoWindChill(windchill, now);
-					}
+					DoTemperature(ConvertTempCToUser(temp1), now);
+					DoWindChill(null, now);
 				}
 				else
 				{
+					DoTemperature(null, now);
 					Cumulus.LogMessage($"RDLV: Unexpected temperature 1 format, found: {sl[TEMP1POS]}");
 				}
 
@@ -949,16 +965,26 @@ namespace CumulusMX
 					else
 					{
 						Cumulus.LogMessage($"RDLV: Unexpected temperature 2 format, found: {sl[TEMP2POS]}");
+						if (cumulus.ExtraDataLogging.Temperature)
+						{
+							DoExtraTemp(null, 1);
+						}
+						else
+						{
+							// use second temp as wet bulb
+							DoWetBulb(null, now);
+						}
 					}
 				}
 
 				if (!string.IsNullOrEmpty(sl[RELHUMPOS]) && double.TryParse(sl[RELHUMPOS], NumberStyles.Float, provider, out varDbl))
 				{
 					humidity = Convert.ToInt32(varDbl);
-					DoOutdoorHumidity(humidity, now);
+					DoHumidity(humidity, now);
 				}
 				else
 				{
+					Humidity = null;
 					Cumulus.LogMessage($"RDLV: Unexpected humidity format, found: {sl[RELHUMPOS]}");
 				}
 

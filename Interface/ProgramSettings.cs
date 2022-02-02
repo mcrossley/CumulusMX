@@ -34,7 +34,9 @@ namespace CumulusMX
 				datalogging = cumulus.ProgramOptions.DataLogging,
 				ftplogging = cumulus.FtpOptions.Logging,
 				emaillogging = cumulus.SmtpOptions.Logging,
-				spikelogging = cumulus.ErrorLogSpikeRemoval
+				spikelogging = cumulus.ErrorLogSpikeRemoval,
+				rawextralogging = cumulus.ProgramOptions.LogRawExtraData,
+				rawstationlogging = cumulus.ProgramOptions.LogRawStationData
 			};
 
 			var options = new GeneralOptionsJson()
@@ -135,6 +137,23 @@ namespace CumulusMX
 					cumulus.FtpOptions.Logging = settings.logging.ftplogging;
 					cumulus.SetFtpLogging(cumulus.FtpOptions.Logging);
 				}
+
+				cumulus.ProgramOptions.LogRawExtraData = settings.logging.rawextralogging;
+				cumulus.ProgramOptions.LogRawStationData = settings.logging.rawstationlogging;
+
+				if (settings.logging.rawextralogging || settings.logging.rawstationlogging)
+				{
+					cumulus.RollOverDataLogs();
+				}
+				if (!settings.logging.rawextralogging && cumulus.RawDataExtraLog != null)
+				{
+					cumulus.RawDataExtraLog.Dispose();
+				}
+				if (!settings.logging.rawstationlogging && cumulus.RawDataStation != null)
+				{
+					cumulus.RawDataStation.Dispose();
+				}
+
 			}
 			catch (Exception ex)
 			{
@@ -174,6 +193,8 @@ namespace CumulusMX
 			public bool ftplogging { get; set; }
 			public bool emaillogging { get; set; }
 			public bool spikelogging { get; set; }
+			public bool rawstationlogging { get; set; }
+			public bool rawextralogging { get; set; }
 		}
 
 		private class GeneralOptionsJson
