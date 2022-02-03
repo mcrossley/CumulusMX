@@ -777,7 +777,7 @@ namespace CumulusMX
 
 							// Cause wind chill calc
 							DoWindChill(null, timestamp);
-
+							DoDewpoint(null, timestamp);
 							DoApparentTemp(timestamp);
 							DoFeelsLike(timestamp);
 							DoHumidex(timestamp);
@@ -944,6 +944,7 @@ namespace CumulusMX
 				else
 				{
 					DoTemperature(null, now);
+					DoWindChill(null, now);
 					Cumulus.LogMessage($"RDLV: Unexpected temperature 1 format, found: {sl[TEMP1POS]}");
 				}
 
@@ -1026,6 +1027,7 @@ namespace CumulusMX
 						DoFeelsLike(now);
 					}
 				}
+				DoDewpoint(null, now);
 
 				DoForecast("", false);
 

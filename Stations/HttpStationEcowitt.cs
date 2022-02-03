@@ -461,7 +461,6 @@ namespace CumulusMX
 					try
 					{
 						// dewptf
-
 						var dewpnt = data["dewptf"];
 						var val = dewpnt == null ? null :ConvertTempFToUser(Convert.ToDouble(dewpnt, invNum));
 						DoDewpoint(val, recDate);

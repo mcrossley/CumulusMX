@@ -2291,30 +2291,6 @@ namespace CumulusMX
 			// Calculate temperature range
 			HiLoToday.TempRange = HiLoToday.HighTemp - HiLoToday.LowTemp;
 
-			if (cumulus.StationOptions.CalculatedDP && (Humidity ?? -1) != -1 && !cumulus.FineOffsetStation)
-			{
-				// Calculate DewPoint.
-				// dewpoint = TempinC + ((0.13 * TempinC) + 13.6) * Ln(humidity / 100);
-				Dewpoint = ConvertTempCToUser(MeteoLib.DewPoint(tempinC, Humidity.Value));
-				dataValuesUpdated.DewPoint = true;
-
-				CheckForDewpointHighLow(timestamp);
-			}
-
-			// Calculate cloud base
-			if (cumulus.CloudBaseInFeet)
-			{
-				CloudBase = (int)Math.Floor(((tempinF - ConvertUserTempToF(Dewpoint)).Value / 4.4) * 1000);
-				if (CloudBase < 0)
-					CloudBase = 0;
-			}
-			else
-			{
-				CloudBase = (int)Math.Floor((((tempinF - ConvertUserTempToF(Dewpoint)).Value / 4.4) * 1000) / 3.2808399);
-				if (CloudBase < 0)
-					CloudBase = 0;
-			}
-
 			if (Humidity.HasValue)
 			{
 				HeatIndex = ConvertTempCToUser(MeteoLib.HeatIndex(tempinC, Humidity.Value));
@@ -3056,7 +3032,7 @@ namespace CumulusMX
 		public void DoDewpoint(double? dp, DateTime timestamp)
 		{
 			double? newdp;
-			if (cumulus.StationOptions.CalculatedDP)
+			if (cumulus.StationOptions.CalculatedDP && !cumulus.FineOffsetStation)
 			{
 				newdp = MeteoLib.DewPoint(ConvertUserTempToC(Temperature), Humidity);
 			}
@@ -3065,7 +3041,7 @@ namespace CumulusMX
 				newdp = dp;
 			}
 
-			if (newdp == null)
+			if (!newdp.HasValue)
 			{
 				Dewpoint = newdp;
 				return;
@@ -3084,7 +3060,18 @@ namespace CumulusMX
 				cumulus.SpikeAlarm.LastError = msg;
 				cumulus.SpikeAlarm.Triggered = true;
 				cumulus.LogSpikeRemoval(msg);
+				return;
 			}
+
+
+			// Calculate cloud base
+			if (Temperature.HasValue)
+			{
+				CloudBase = (int)Math.Floor((Temperature - ConvertUserTempToF(Dewpoint)).Value / 4.4 * 1000 / (cumulus.CloudBaseInFeet ? 1 : 3.2808399));
+				if (CloudBase < 0)
+					CloudBase = 0;
+			}
+
 		}
 
 		public string LastRainTip { get; set; }
@@ -5008,56 +4995,58 @@ namespace CumulusMX
 				strb.Append(sep2);
 			strb.Append(ChillHours.ToString(cumulus.TempFormat, invNum));
 
-			Cumulus.LogMessage("Dayfile.txt entry:");
+			Cumulus.LogMessage("DailyData entry:");
 			Cumulus.LogMessage(strb.ToString());
 
-			var success = false;
-			var retries = Cumulus.LogFileRetries;
-			do
+			if (cumulus.StationOptions.LogMainStation)
 			{
-				try
+				var success = false;
+				var retries = Cumulus.LogFileRetries;
+				do
 				{
-					Cumulus.LogMessage("Dayfile.txt opened for writing");
-
-					if ((HiLoToday.HighTemp < -400) || (HiLoToday.LowTemp > 900))
+					try
 					{
-						Cumulus.LogMessage("***Error: Daily values are still at default at end of day");
-						Cumulus.LogMessage("Data not logged to dayfile.txt");
-						return;
+						Cumulus.LogMessage("Dayfile.txt opened for writing");
+
+						if ((HiLoToday.HighTemp < -400) || (HiLoToday.LowTemp > 900))
+						{
+							Cumulus.LogMessage("***Error: Daily values are still at default at end of day");
+							Cumulus.LogMessage("Data not logged to dayfile.txt");
+							return;
+						}
+						else
+						{
+							Cumulus.LogMessage("Writing entry to dayfile.txt");
+
+							using FileStream fs = new FileStream(cumulus.DayFileName, FileMode.Append, FileAccess.Write, FileShare.Read);
+							using StreamWriter file = new StreamWriter(fs);
+
+							await file.WriteLineAsync(strb.ToString());
+							file.Close();
+							fs.Close();
+
+							success = true;
+
+							Cumulus.LogMessage($"Dayfile log entry for {datestring} written");
+						}
 					}
-					else
+					catch (IOException ex)
 					{
-						Cumulus.LogMessage("Writing entry to dayfile.txt");
-
-						using FileStream fs = new FileStream(cumulus.DayFileName, FileMode.Append, FileAccess.Write, FileShare.Read);
-						using StreamWriter file = new StreamWriter(fs);
-
-						await file.WriteLineAsync(strb.ToString());
-						file.Close();
-						fs.Close();
-
-						success = true;
-
-						Cumulus.LogMessage($"Dayfile log entry for {datestring} written");
+						if ((uint)ex.HResult == 0x80070020) // -2147024864
+						{
+							cumulus.LogExceptionMessage(ex, "Error dayfile.txt is in use");
+							retries--;
+							Thread.Sleep(250);
+						}
+						else
+							cumulus.LogExceptionMessage(ex, "Error writing to dayfile.txt");
 					}
-				}
-				catch (IOException ex)
-				{
-					if ((uint)ex.HResult == 0x80070020) // -2147024864
+					catch (Exception ex)
 					{
-						cumulus.LogExceptionMessage(ex, "Error dayfile.txt is in use");
-						retries--;
-						Thread.Sleep(250);
-					}
-					else
 						cumulus.LogExceptionMessage(ex, "Error writing to dayfile.txt");
-				}
-				catch (Exception ex)
-				{
-					cumulus.LogExceptionMessage(ex, "Error writing to dayfile.txt");
-				}
-			} while (!success && retries >= 0);
-
+					}
+				} while (!success && retries >= 0);
+			}
 
 
 			if (cumulus.MySqlStuff.Settings.Dayfile.Enabled)
@@ -6562,6 +6551,7 @@ namespace CumulusMX
 			}
 		}
 
+		
 		public void DoLeafTemp(double? value, int index)
 		{
 			if (index < LeafTemp.Length)

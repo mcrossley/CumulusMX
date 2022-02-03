@@ -1,3 +1,9 @@
+4.0.0 - b4008
+——————————————
+- Adds new Data Logging Settings page to control logging of extra sensors to the database, and the creation of the legacy v3 log files.
+- Fixes nullable value Exception when processing temperature values (it was the dewpoint causing the problem)
+
+
 4.0.0 - b4007
 ——————————————
 - All the v3.15.0 updates applied (Ecowitt API code refactored)
@@ -5,8 +11,8 @@
 - The Cumulus.ini file parser now understands "null" as a value, so you will see xxx=null in the today/yesterday.ini etc files where values have not yet been determined
 - HTTP (Ecowitt) - now has the option to configure the Custom Server settings for you.
 	- It also has the ability to change the update time down to as low as 5 seconds
-	- Note this is incompatible with the WS View apps - if you alter another server setting they will complain and you will have to reset back 16 seconds, but CMX will reconfigure it back to 5 seconds on the next restart
-- A new logging option - Raw Data Log. This logs just the transmit/receive data to/from the station into a separate log file (not all stations supported, I have not implemented on WMR stations for instance)
+	- Note Times below 16 secs are incompatible with the WS View apps - if you alter another server setting in the Apps they will complain that the custom server value is invalid and you will have to reset it back 16 seconds. But CMX will reconfigure it back to 5 seconds on the next restart
+- Two new logging options - Raw Data Log for both main station and extra sensors. This logs just the transmit/receive data to/from the station into separate log files (not all stations supported, I have not implemented on WMR stations for instance)
 
 
 4.0.0 - b4006

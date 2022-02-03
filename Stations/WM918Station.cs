@@ -382,6 +382,7 @@ namespace CumulusMX
 
 			DoIndoorTemp(ConvertTempCToUser(temp10 / 10));
 
+			DoDewpoint(null, DateTime.Now);
 			DoApparentTemp(DateTime.Now);
 			DoFeelsLike(DateTime.Now);
 			DoHumidex(DateTime.Now);

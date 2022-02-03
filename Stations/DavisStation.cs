@@ -1643,7 +1643,7 @@ namespace CumulusMX
 				{
 					// calculate wind chill from calibrated C temp and calibrated win in KPH
 					DoWindChill(null, now);
-
+					DoDewpoint(null, now);
 					DoApparentTemp(now);
 					DoFeelsLike(now);
 					DoHumidex(now);
@@ -2415,6 +2415,7 @@ namespace CumulusMX
 								CalculateDominantWindBearing((int)(bearing * 22.5), WindAverage, interval);
 							}
 
+							DoDewpoint(null, timestamp);
 							DoApparentTemp(timestamp);
 							DoFeelsLike(timestamp);
 							DoHumidex(timestamp);

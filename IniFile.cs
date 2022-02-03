@@ -3,6 +3,7 @@
 // **************************
 // *** (C)2009 S.T.A. snc ***
 // **************************
+// Modified Jan/Feb 2022 by M Crossley to accept nullable values for double/int/bool
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -329,9 +330,21 @@ namespace CumulusMX
 		// *** Getters for various types ***
 		internal bool GetValue(string SectionName, string Key, bool DefaultValue)
 		{
-			string StringValue=GetValue(SectionName, Key, DefaultValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
+			string StringValue=GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
 			int Value;
 			if (int.TryParse(StringValue, out Value)) return (Value != 0);
+			return DefaultValue;
+		}
+
+		internal bool? GetValue(string SectionName, string Key, bool? DefaultValue)
+		{
+			string defVal = DefaultValue.HasValue ? DefaultValue.Value.ToString(CultureInfo.InvariantCulture) : "null";
+			string StringValue = GetValue(SectionName, Key, defVal);
+			int Value;
+			if (StringValue == "null")
+				return null;
+			else if (int.TryParse(StringValue, out Value))
+				return (Value != 0);
 			return DefaultValue;
 		}
 

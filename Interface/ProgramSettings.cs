@@ -59,7 +59,6 @@ namespace CumulusMX
 				culture = culture
 			};
 
-			//return JsonConvert.SerializeObject(data);
 			return JsonSerializer.SerializeToString(settings);
 		}
 

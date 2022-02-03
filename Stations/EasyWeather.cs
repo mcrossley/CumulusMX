@@ -147,8 +147,6 @@ namespace CumulusMX
 
 					DoHumidity(Convert.ToInt32(st[EW_OUTDOOR_HUM]), now);
 
-					DoDewpoint(ConvertTempCToUser(GetConvertedValue(st[EW_DEW_POINT])), now);
-
 					DoPressure(ConvertPressMBToUser(GetConvertedValue(st[EW_REL_PRESSURE])), now);
 					UpdatePressureTrendString();
 
@@ -159,6 +157,8 @@ namespace CumulusMX
 					DoRain(ConvertRainMMToUser(GetConvertedValue(st[EW_RAIN_LAST_YEAR])), // use year as total
 							ConvertRainMMToUser(GetConvertedValue(st[EW_RAIN_LAST_HOUR])), // use last hour as current rate
 							now);
+
+					DoDewpoint(ConvertTempCToUser(GetConvertedValue(st[EW_DEW_POINT])), now);
 
 					DoApparentTemp(now);
 					DoFeelsLike(now);

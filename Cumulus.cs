@@ -1350,6 +1350,7 @@ namespace CumulusMX
 			Api.programSettings = new ProgramSettings(this);
 			Api.stationSettings = new StationSettings(this);
 			Api.internetSettings = new InternetSettings(this);
+			Api.dataLoggingSettings = new DataLoggingSettings(this);
 			Api.thirdpartySettings = new ThirdPartySettings(this);
 			Api.extraSensorSettings = new ExtraSensorSettings(this);
 			Api.calibrationSettings = new CalibrationSettings(this);
@@ -3322,6 +3323,7 @@ namespace CumulusMX
 			StationOptions.WS2300IgnoreStationClock = ini.GetValue("Station", "WS2300IgnoreStationClock", false);
 			//WS2300Sync = ini.GetValue("Station", "WS2300Sync", false);
 			StationOptions.LogExtraSensors = ini.GetValue("Station", "LogExtraSensors", false);
+			StationOptions.LogMainStation = ini.GetValue("Station", "LogMainSttaion", true);
 			ReportDataStoppedErrors = ini.GetValue("Station", "ReportDataStoppedErrors", true);
 			ReportLostSensorContact = ini.GetValue("Station", "ReportLostSensorContact", true);
 			//NoFlashWetDryDayRecords = ini.GetValue("Station", "NoFlashWetDryDayRecords", false);
@@ -4470,17 +4472,17 @@ namespace CumulusMX
 			TempSumBase1 = ini.GetValue("TempSum", "BaseTemperature1", GrowingBase1);
 			TempSumBase2 = ini.GetValue("TempSum", "BaseTemperature2", GrowingBase2);
 
-			// Additional sensor logging
-			ExtraDataLogging.Temperature = ini.GetValue("ExtraDataLogging", "Temperature", false);
-			ExtraDataLogging.Humidity = ini.GetValue("ExtraDataLogging", "Humidity", false);
-			ExtraDataLogging.Dewpoint = ini.GetValue("ExtraDataLogging", "Dewpoint", false);
-			ExtraDataLogging.UserTemp = ini.GetValue("ExtraDataLogging", "UserTemp", false);
-			ExtraDataLogging.SoilTemp = ini.GetValue("ExtraDataLogging", "SoilTemp", false);
-			ExtraDataLogging.SoilMoisture = ini.GetValue("ExtraDataLogging", "SoilMoisture", false);
-			ExtraDataLogging.LeafTemp = ini.GetValue("ExtraDataLogging", "LeafTemp", false);
-			ExtraDataLogging.LeafWetness = ini.GetValue("ExtraDataLogging", "LeafWetness", false);
-			ExtraDataLogging.AirQual = ini.GetValue("ExtraDataLogging", "AirQual", false);
-			ExtraDataLogging.CO2 = ini.GetValue("ExtraDataLogging", "CO2", false);
+			// Additional sensor logging - default to the orginal LogExtraSensors setting
+			ExtraDataLogging.Temperature = ini.GetValue("ExtraDataLogging", "Temperature", StationOptions.LogExtraSensors);
+			ExtraDataLogging.Humidity = ini.GetValue("ExtraDataLogging", "Humidity", StationOptions.LogExtraSensors);
+			ExtraDataLogging.Dewpoint = ini.GetValue("ExtraDataLogging", "Dewpoint", StationOptions.LogExtraSensors);
+			ExtraDataLogging.UserTemp = ini.GetValue("ExtraDataLogging", "UserTemp", StationOptions.LogExtraSensors);
+			ExtraDataLogging.SoilTemp = ini.GetValue("ExtraDataLogging", "SoilTemp", StationOptions.LogExtraSensors);
+			ExtraDataLogging.SoilMoisture = ini.GetValue("ExtraDataLogging", "SoilMoisture", StationOptions.LogExtraSensors);
+			ExtraDataLogging.LeafTemp = ini.GetValue("ExtraDataLogging", "LeafTemp", StationOptions.LogExtraSensors);
+			ExtraDataLogging.LeafWetness = ini.GetValue("ExtraDataLogging", "LeafWetness", StationOptions.LogExtraSensors);
+			ExtraDataLogging.AirQual = ini.GetValue("ExtraDataLogging", "AirQual", StationOptions.LogExtraSensors);
+			ExtraDataLogging.CO2 = ini.GetValue("ExtraDataLogging", "CO2", StationOptions.LogExtraSensors);
 
 			// do we need to decrypt creds?
 			if (ProgramOptions.EncryptedCreds)
@@ -6218,117 +6220,118 @@ namespace CumulusMX
 			LogDebugMessage("DoLogFile: max gust: " + (station.RecentMaxGust.HasValue ? station.RecentMaxGust.Value.ToString(WindFormat) : "null"));
 			station.CurrentSolarMax = AstroLib.SolarMax(timestamp, Longitude, Latitude, station.AltitudeM(Altitude), out station.SolarElevation, SolarOptions);
 
-
-			var newRec = new IntervalData()
+			if (StationOptions.LogMainStation)
 			{
-				Timestamp = timestamp,
-				Temp = station.Temperature,
-				Humidity = station.Humidity,
-				DewPoint = station.Dewpoint,
-				WindAvg = station.WindAverage,
-				WindGust10m = station.RecentMaxGust,
-				WindAvgDir = station.AvgBearing,
-				RainRate = station.RainRate,
-				RainToday = station.RainToday,
-				Pressure = station.Pressure,
-				RainCounter = station.Raincounter,
-				InsideTemp = station.IndoorTemp,
-				InsideHumidity = station.IndoorHum,
-				WindLatest = station.WindLatest,
-				WindChill = station.WindChill,
-				HeatIndex = station.HeatIndex,
-				UV = station.UV,
-				SolarRad = station.SolarRad,
-				ET = station.ET,
-				AnnualET = station.AnnualETTotal,
-				Apparent = station.ApparentTemp,
-				SolarMax = station.CurrentSolarMax,
-				Sunshine = station.SunshineHours,
-				WindDir = station.Bearing,
-				RG11Rain = station.RG11RainToday,
-				RainMidnight = station.RainSinceMidnight,
-				FeelsLike = station.FeelsLike,
-				Humidex = station.Humidex
-			};
-
-			_ = station.Database.InsertOrReplace(newRec);
-
-
-
-			var filename = GetLogFileName(timestamp);
-			var sep = ",";
-
-			var sb = new StringBuilder(256);
-			sb.Append(timestamp.ToString("dd/MM/yy HH:mm", invDate) + sep);
-			sb.Append(Utils.ToUnixTime(timestamp) + sep);
-			sb.Append((station.Temperature.HasValue ? station.Temperature.Value.ToString(TempFormat, invNum) : "") + sep);
-			sb.Append((station.Humidity.HasValue ? station.Humidity.Value : "") + sep);
-			sb.Append((station.Dewpoint.HasValue ? station.Dewpoint.Value.ToString(TempFormat, invNum) : "") + sep);
-			sb.Append((station.WindAverage.HasValue ? station.WindAverage.Value.ToString(WindAvgFormat, invNum) : "") + sep);
-			sb.Append((station.RecentMaxGust.HasValue ? station.RecentMaxGust.Value.ToString(WindFormat, invNum) : "") + sep);
-			sb.Append(station.AvgBearing + sep);
-			sb.Append((station.RainRate.HasValue ? station.RainRate.Value.ToString(RainFormat, invNum) : "") + sep);
-			sb.Append((station.RainToday.HasValue ? station.RainToday.Value.ToString(RainFormat, invNum) : "") + sep);
-			sb.Append((station.Pressure.HasValue ? station.Pressure.Value.ToString(PressFormat, invNum) : "") + sep);
-			sb.Append(station.Raincounter.ToString(RainFormat, invNum) + sep);
-			sb.Append((station.IndoorTemp.HasValue ? station.IndoorTemp.Value.ToString(TempFormat, invNum) : "") + sep);
-			sb.Append((station.IndoorHum.HasValue ? station.IndoorHum.Value : "") + sep);
-			sb.Append((station.WindLatest.HasValue ? station.WindLatest.Value.ToString(WindFormat, invNum) : "") + sep);
-			sb.Append((station.WindChill.HasValue ? station.WindChill.Value.ToString(TempFormat, invNum) : "") + sep);
-			sb.Append((station.HeatIndex.HasValue ? station.HeatIndex.Value.ToString(TempFormat, invNum) : "") + sep);
-			sb.Append((station.UV.HasValue ? station.UV.Value.ToString(UVFormat, invNum) : "") + sep);
-			sb.Append((station.SolarRad.HasValue ? station.SolarRad.Value : "") + sep);
-			sb.Append(station.ET.ToString(ETFormat, invNum) + sep);
-			sb.Append(station.AnnualETTotal.ToString(ETFormat, invNum) + sep);
-			sb.Append((station.ApparentTemp.HasValue ? station.ApparentTemp.Value.ToString(TempFormat, invNum) : "") + sep);
-			sb.Append((station.CurrentSolarMax.HasValue ? station.CurrentSolarMax.Value : "") + sep);
-			sb.Append(station.SunshineHours.ToString(SunFormat, invNum) + sep);
-			sb.Append(station.Bearing + sep);
-			sb.Append(station.RG11RainToday.ToString(RainFormat, invNum) + sep);
-			sb.Append(station.RainSinceMidnight.ToString(RainFormat, invNum) + sep);
-			sb.Append((station.FeelsLike.HasValue ? station.FeelsLike.Value.ToString(TempFormat, invNum) : "") + sep);
-			sb.Append((station.Humidex.HasValue ? station.Humidex.Value.ToString(TempFormat, invNum) : ""));
-
-			var success = false;
-			var retries = LogFileRetries;
-			do
-			{
-				try
+				var newRec = new IntervalData()
 				{
-					using (FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read))
-					using (StreamWriter file = new StreamWriter(fs))
-					{
-						await file.WriteLineAsync(sb.ToString());
-						file.Close();
-						fs.Close();
-					}
+					Timestamp = timestamp,
+					Temp = station.Temperature,
+					Humidity = station.Humidity,
+					DewPoint = station.Dewpoint,
+					WindAvg = station.WindAverage,
+					WindGust10m = station.RecentMaxGust,
+					WindAvgDir = station.AvgBearing,
+					RainRate = station.RainRate,
+					RainToday = station.RainToday,
+					Pressure = station.Pressure,
+					RainCounter = station.Raincounter,
+					InsideTemp = station.IndoorTemp,
+					InsideHumidity = station.IndoorHum,
+					WindLatest = station.WindLatest,
+					WindChill = station.WindChill,
+					HeatIndex = station.HeatIndex,
+					UV = station.UV,
+					SolarRad = station.SolarRad,
+					ET = station.ET,
+					AnnualET = station.AnnualETTotal,
+					Apparent = station.ApparentTemp,
+					SolarMax = station.CurrentSolarMax,
+					Sunshine = station.SunshineHours,
+					WindDir = station.Bearing,
+					RG11Rain = station.RG11RainToday,
+					RainMidnight = station.RainSinceMidnight,
+					FeelsLike = station.FeelsLike,
+					Humidex = station.Humidex
+				};
 
-					success = true;
+				_ = station.Database.InsertOrReplace(newRec);
 
-					LastUpdateTime = timestamp;
-					LogMessage($"DoLogFile: log entry for {timestamp} written");
-				}
-				catch (IOException ex)
+
+
+				var filename = GetLogFileName(timestamp);
+				var sep = ",";
+
+				var sb = new StringBuilder(256);
+				sb.Append(timestamp.ToString("dd/MM/yy HH:mm", invDate) + sep);
+				sb.Append(Utils.ToUnixTime(timestamp) + sep);
+				sb.Append((station.Temperature.HasValue ? station.Temperature.Value.ToString(TempFormat, invNum) : "") + sep);
+				sb.Append((station.Humidity.HasValue ? station.Humidity.Value : "") + sep);
+				sb.Append((station.Dewpoint.HasValue ? station.Dewpoint.Value.ToString(TempFormat, invNum) : "") + sep);
+				sb.Append((station.WindAverage.HasValue ? station.WindAverage.Value.ToString(WindAvgFormat, invNum) : "") + sep);
+				sb.Append((station.RecentMaxGust.HasValue ? station.RecentMaxGust.Value.ToString(WindFormat, invNum) : "") + sep);
+				sb.Append(station.AvgBearing + sep);
+				sb.Append((station.RainRate.HasValue ? station.RainRate.Value.ToString(RainFormat, invNum) : "") + sep);
+				sb.Append((station.RainToday.HasValue ? station.RainToday.Value.ToString(RainFormat, invNum) : "") + sep);
+				sb.Append((station.Pressure.HasValue ? station.Pressure.Value.ToString(PressFormat, invNum) : "") + sep);
+				sb.Append(station.Raincounter.ToString(RainFormat, invNum) + sep);
+				sb.Append((station.IndoorTemp.HasValue ? station.IndoorTemp.Value.ToString(TempFormat, invNum) : "") + sep);
+				sb.Append((station.IndoorHum.HasValue ? station.IndoorHum.Value : "") + sep);
+				sb.Append((station.WindLatest.HasValue ? station.WindLatest.Value.ToString(WindFormat, invNum) : "") + sep);
+				sb.Append((station.WindChill.HasValue ? station.WindChill.Value.ToString(TempFormat, invNum) : "") + sep);
+				sb.Append((station.HeatIndex.HasValue ? station.HeatIndex.Value.ToString(TempFormat, invNum) : "") + sep);
+				sb.Append((station.UV.HasValue ? station.UV.Value.ToString(UVFormat, invNum) : "") + sep);
+				sb.Append((station.SolarRad.HasValue ? station.SolarRad.Value : "") + sep);
+				sb.Append(station.ET.ToString(ETFormat, invNum) + sep);
+				sb.Append(station.AnnualETTotal.ToString(ETFormat, invNum) + sep);
+				sb.Append((station.ApparentTemp.HasValue ? station.ApparentTemp.Value.ToString(TempFormat, invNum) : "") + sep);
+				sb.Append((station.CurrentSolarMax.HasValue ? station.CurrentSolarMax.Value : "") + sep);
+				sb.Append(station.SunshineHours.ToString(SunFormat, invNum) + sep);
+				sb.Append(station.Bearing + sep);
+				sb.Append(station.RG11RainToday.ToString(RainFormat, invNum) + sep);
+				sb.Append(station.RainSinceMidnight.ToString(RainFormat, invNum) + sep);
+				sb.Append((station.FeelsLike.HasValue ? station.FeelsLike.Value.ToString(TempFormat, invNum) : "") + sep);
+				sb.Append((station.Humidex.HasValue ? station.Humidex.Value.ToString(TempFormat, invNum) : ""));
+
+				var success = false;
+				var retries = LogFileRetries;
+				do
 				{
-					if ((uint)ex.HResult == 0x80070020) // -2147024864
+					try
 					{
-						LogMessage("DoLogFile: Error log file is in use: " + ex.Message);
-						retries--;
-						Thread.Sleep(250);
+						using (FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read))
+						using (StreamWriter file = new StreamWriter(fs))
+						{
+							await file.WriteLineAsync(sb.ToString());
+							file.Close();
+							fs.Close();
+						}
+
+						success = true;
+
+						LastUpdateTime = timestamp;
+						LogMessage($"DoLogFile: log entry for {timestamp} written");
 					}
-					else
+					catch (IOException ex)
 					{
-						LogExceptionMessage(ex, $"DoLogFile: Error writing log entry for {timestamp}");
+						if ((uint)ex.HResult == 0x80070020) // -2147024864
+						{
+							LogMessage("DoLogFile: Error log file is in use: " + ex.Message);
+							retries--;
+							Thread.Sleep(250);
+						}
+						else
+						{
+							LogExceptionMessage(ex, $"DoLogFile: Error writing log entry for {timestamp}");
+							retries = 0;
+						}
+					}
+					catch (Exception ex)
+					{
+						LogExceptionMessage(ex, $"DoLogFile: Error writing entry for {timestamp}");
 						retries = 0;
 					}
-				}
-				catch (Exception ex)
-				{
-					LogExceptionMessage(ex, $"DoLogFile: Error writing entry for {timestamp}");
-					retries = 0;
-				}
-			} while (!success && retries >= 0);
-
+				} while (!success && retries >= 0);
+			}
 
 			station.WriteTodayFile(timestamp, true);
 
@@ -9419,6 +9422,7 @@ namespace CumulusMX
 		public bool SyncTime { get; set; }
 		public int ClockSettingHour { get; set; }
 		public bool UseCumulusPresstrendstr { get; set; }
+		public bool LogMainStation { get; set; }
 		public bool LogExtraSensors { get; set; }
 		public bool WS2300IgnoreStationClock { get; set; }
 		public bool RoundWindSpeed { get; set; }

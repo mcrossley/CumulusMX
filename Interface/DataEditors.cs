@@ -254,7 +254,7 @@ namespace CumulusMX
 
 
 				// Update the dayfile
-				if (Program.cumulus.ProgramOptions.UpdateDayfile)
+				if (Program.cumulus.ProgramOptions.UpdateDayfile && Program.cumulus.StationOptions.LogMainStation)
 				{
 					// read dayfile into a List
 					var lines = File.ReadAllLines(cumulus.DayFileName).ToList();
@@ -469,7 +469,7 @@ namespace CumulusMX
 				}
 
 				// Update the log file
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogMainStation)
 				{
 					var logfile = cumulus.GetLogFileName(logDate);
 
@@ -620,7 +620,7 @@ namespace CumulusMX
 
 
 				// Update the log file
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogMainStation)
 				{
 					var lastMonth = -1;
 					string logfile = "";
@@ -697,7 +697,6 @@ namespace CumulusMX
 		}
 
 		#endregion Interval Data
-
 
 		#region ExtraTemps
 
@@ -832,7 +831,7 @@ namespace CumulusMX
 
 
 				// Update the extralogfile
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var logfile = cumulus.GetExtraLogFileName(logDate);
 
@@ -917,7 +916,7 @@ namespace CumulusMX
 
 
 				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var lastMonth = -1;
 					string logfile = "";
@@ -1124,7 +1123,7 @@ namespace CumulusMX
 				}
 
 				// Update the extralogfile
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
 
@@ -1207,7 +1206,7 @@ namespace CumulusMX
 				}
 
 				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var lastMonth = -1;
 					string logfile = "";
@@ -1415,7 +1414,7 @@ namespace CumulusMX
 				}
 
 				// Update the extralogfile
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
 
@@ -1496,7 +1495,7 @@ namespace CumulusMX
 				}
 
 				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var lastMonth = -1;
 					string logfile = "";
@@ -1703,7 +1702,7 @@ namespace CumulusMX
 					return "{\"errors\": { \"SQLite\":[<br>Failed to update database. Error: " + ex.Message + "\"] }, \"data\":" + thisrec.ToJson() + "}";
 				}
 
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					// Update the extralogfile
 					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
@@ -1785,7 +1784,7 @@ namespace CumulusMX
 				}
 
 				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var lastMonth = -1;
 					string logfile = "";
@@ -1994,7 +1993,7 @@ namespace CumulusMX
 				}
 
 				// Update the extralogfile
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
 
@@ -2075,7 +2074,7 @@ namespace CumulusMX
 				}
 
 				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var lastMonth = -1;
 					string logfile = "";
@@ -2284,7 +2283,7 @@ namespace CumulusMX
 				}
 
 				// Update the extralogfile
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
 
@@ -2365,7 +2364,7 @@ namespace CumulusMX
 				}
 
 				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 
 					var lastMonth = -1;
@@ -2574,7 +2573,7 @@ namespace CumulusMX
 				}
 
 				// Update the extralogfile
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
 
@@ -2655,7 +2654,7 @@ namespace CumulusMX
 				}
 
 				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var lastMonth = -1;
 					string logfile = "";
@@ -2864,7 +2863,7 @@ namespace CumulusMX
 				}
 
 				// Update the extralogfile
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
 
@@ -2945,7 +2944,7 @@ namespace CumulusMX
 				}
 
 				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var lastMonth = -1;
 					string logfile = "";
@@ -3154,7 +3153,7 @@ namespace CumulusMX
 				}
 
 				// Update the extralogfile
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
 
@@ -3242,7 +3241,7 @@ namespace CumulusMX
 				}
 
 				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var lastMonth = -1;
 					string logfile = "";
@@ -3452,7 +3451,7 @@ namespace CumulusMX
 				}
 
 				// Update the extralogfile
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
 
@@ -3533,7 +3532,7 @@ namespace CumulusMX
 				}
 
 				// Update the log file - we do not delete the line as it contains other data, but just blank the extra temp fields
-				if (Program.cumulus.ProgramOptions.UpdateLogfile)
+				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					var lastMonth = -1;
 					string logfile = "";

@@ -317,6 +317,7 @@ namespace CumulusMX
 
 				DoTemperature(WMR928ExtraTempValues[channel], DateTime.Now);
 
+				DoDewpoint(null, DateTime.Now);
 				DoApparentTemp(DateTime.Now);
 				DoFeelsLike(DateTime.Now);
 				DoHumidex(DateTime.Now);

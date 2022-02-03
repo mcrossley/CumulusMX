@@ -1827,7 +1827,6 @@ namespace CumulusMX
 								cumulus.LogExceptionMessage(ex, $"WL.com historic: Error processing Primary humidity value on TxId {data11.tx_id}");
 							}
 
-							// do temperature after humidity as DoOutdoorTemp contains dewpoint calculation (if user selected)
 							try
 							{
 								if (data11.temp_last == -99)

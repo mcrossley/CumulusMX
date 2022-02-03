@@ -149,18 +149,12 @@ namespace CumulusMX
 				Cumulus.LogMessage(
 					$"TempestDoRainHist: Total Precip for Day: {Raincounter}");
 
-				if (Temperature.HasValue && Humidity.HasValue)
-				{
-					Dewpoint = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(Temperature.Value), Humidity.Value));
-
-					CheckForDewpointHighLow(timestamp);
-
-					// calculate wind chill
-					DoWindChill(null, timestamp);
-					DoApparentTemp(timestamp);
-					DoFeelsLike(timestamp);
-					DoHumidex(timestamp);
-				}
+				DoDewpoint(null, timestamp);
+				// calculate wind chill
+				DoWindChill(null, timestamp);
+				DoApparentTemp(timestamp);
+				DoFeelsLike(timestamp);
+				DoHumidex(timestamp);
 
 				DoUV((double) historydata.UV, timestamp);
 
@@ -298,12 +292,10 @@ namespace CumulusMX
 						DoDewpoint(null, ts);
 						DoWindChill(null, ts);
 
-						if (Temperature.HasValue && Humidity.HasValue)
-						{
-							DoApparentTemp(ts);
-							DoFeelsLike(ts);
-							DoHumidex(ts);
-						}
+						DoApparentTemp(ts);
+						DoFeelsLike(ts);
+						DoHumidex(ts);
+
 						UpdateStatusPanel(ts);
 						UpdateMQTT();
 						DoForecast(string.Empty, false);

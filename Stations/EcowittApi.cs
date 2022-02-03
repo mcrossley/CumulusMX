@@ -1109,15 +1109,8 @@ namespace CumulusMX
 			// === Dewpoint ===
 			try
 			{
-				if (cumulus.StationOptions.CalculatedDP)
-				{
-					station.DoDewpoint(0, rec.Key);
-				}
-				else
-				{
-					var val = station.ConvertTempFToUser(rec.Value.DewPoint);
-					station.DoDewpoint(val, rec.Key);
-				}
+				var val = station.ConvertTempFToUser(rec.Value.DewPoint);
+				station.DoDewpoint(val, rec.Key);
 			}
 			catch (Exception ex)
 			{

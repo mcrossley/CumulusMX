@@ -208,7 +208,6 @@ namespace CumulusMX
 					LeafTemp[i] = false;
 				else
 					station.LeafTemp[i] = null;
-
 				if (AirQuality[i])
 					AirQuality[i] = false;
 				else

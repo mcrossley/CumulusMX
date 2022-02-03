@@ -18,6 +18,7 @@ namespace CumulusMX
 		internal static ProgramSettings programSettings { private get; set; }
 		internal static StationSettings stationSettings { get; set; }
 		internal static InternetSettings internetSettings { private get; set; }
+		internal static DataLoggingSettings dataLoggingSettings { private get; set; }
 		internal static ThirdPartySettings  thirdpartySettings { private get; set; }
 		internal static ExtraSensorSettings extraSensorSettings { private get; set; }
 		internal static CalibrationSettings calibrationSettings { private get; set; }
@@ -970,6 +971,9 @@ namespace CumulusMX
 						case "wizard.json":
 							await writer.WriteAsync(wizard.GetAlpacaFormData());
 							break;
+						case "datalogging.json":
+							await writer.WriteAsync(dataLoggingSettings.GetAlpacaFormData());
+							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
 					}
@@ -1040,6 +1044,9 @@ namespace CumulusMX
 							break;
 						case "wizard.json":
 							await writer.WriteAsync(wizard.UpdateConfig(HttpContext));
+							break;
+						case "updatedatalogging.json":
+							await writer.WriteAsync(dataLoggingSettings.UpdateConfig(HttpContext));
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);

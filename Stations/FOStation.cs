@@ -1074,14 +1074,6 @@ namespace CumulusMX
 						{
 							DoTemperature(ConvertTempCToUser(outtemp), now);
 
-							// Use current humidity for dewpoint
-							if ((Humidity ?? -1) > 0)
-							{
-								Dewpoint = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(Temperature), Humidity));
-
-								CheckForDewpointHighLow(now);
-							}
-
 							// calculate wind chill
 							// The 'global average speed will have been determined by the call of DoWind
 							// so use that in the wind chill calculation
@@ -1093,6 +1085,7 @@ namespace CumulusMX
 
 							DoWindChill(ConvertTempCToUser(val), now);
 
+							DoDewpoint(null, now);
 							DoApparentTemp(now);
 							DoFeelsLike(now);
 							DoHumidex(now);
