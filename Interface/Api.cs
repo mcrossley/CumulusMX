@@ -336,7 +336,7 @@ namespace CumulusMX
 					{
 						case "process.txt":
 							Response.ContentType = "text/plain";
-							await writer.WriteAsync(tagProcessor.ProcessText(HttpContext));
+							await writer.WriteAsync(tagProcessor.ProcessText(HttpContext.Request));
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
@@ -370,7 +370,7 @@ namespace CumulusMX
 					switch (req)
 					{
 						case "process.json":
-							await writer.WriteAsync(tagProcessor.ProcessJson(Request.Url.Query));
+							await writer.WriteAsync(tagProcessor.ProcessJson(HttpContext.Request));
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);

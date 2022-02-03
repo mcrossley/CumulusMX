@@ -123,6 +123,7 @@ namespace CumulusMX
 					"[Unit]",
 					"Description=CumulusMX service",
 					"Documentation=https://cumuluswiki.org/a/Main_Page https://cumulus.hosiene.co.uk/",
+					"Wants=network-online.target",
 					"After=network-online.target",
 					"",
 					"[Service]",

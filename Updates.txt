@@ -2,6 +2,8 @@
 ——————————————
 - Adds new Data Logging Settings page to control logging of extra sensors to the database, and the creation of the legacy v3 log files.
 - Fixes nullable value Exception when processing temperature values (it was the dewpoint causing the problem)
+- Change Linux service installer to add the line "Wants=network-online.target" to the service file
+- Fix crash on start-up getting the local IP address if the network is not ready
 
 
 4.0.0 - b4007

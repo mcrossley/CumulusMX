@@ -166,7 +166,11 @@ namespace CumulusMX
 
 		public static IPAddress GetIpWithDefaultGateway()
 		{
-			return NetworkInterface
+			IPAddress ip = null;
+
+			try
+			{
+				ip = NetworkInterface
 				.GetAllNetworkInterfaces()
 				.Where(n => n.OperationalStatus == OperationalStatus.Up)
 				.Where(n => n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
@@ -176,6 +180,10 @@ namespace CumulusMX
 				.Where(n => n.IPv4Mask.ToString() != "0.0.0.0")
 				.Select(g => g.Address)
 				.First();
+			}
+			catch { }
+		
+			return ip;
 		}
 
 		public static async Task CopyFileAsync(string sourceFile, string destinationFile)
