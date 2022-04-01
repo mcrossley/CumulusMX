@@ -48,26 +48,26 @@ namespace CumulusMX
 				// does not provide pressure trend strings
 				cumulus.StationOptions.UseCumulusPresstrendstr = true;
 
-				if (cumulus.EcowittSetCustomServer)
+				if (cumulus.EcowittSettings.SetCustomServer)
 				{
 					Cumulus.LogMessage("Checking Ecowitt Gateway Custom Server configuration...");
 					var api = new Stations.GW1000Api(cumulus);
-					api.OpenTcpPort(cumulus.EcowittGwAddr, 45000);
+					api.OpenTcpPort(cumulus.EcowittSettings.GatewayAddr, 45000);
 					SetCustomServer(api);
 					api.CloseTcpPort();
 					Cumulus.LogMessage("Ecowitt Gateway Custom Server configuration complete");
 				}
 			}
 
-			if (station == null || (station != null && cumulus.EcowittExtraUseAQI))
+			if (station == null || (station != null && cumulus.EcowittSettings.ExtraUseAQI))
 			{
 				cumulus.Units.AirQualityUnitText = "µg/m³";
 			}
-			if (station == null || (station != null && cumulus.EcowittExtraUseSoilMoist))
+			if (station == null || (station != null && cumulus.EcowittSettings.ExtraUseSoilMoist))
 			{
 				cumulus.Units.SoilMoistureUnitText = "%";
 			}
-			if (station == null || (station != null && cumulus.EcowittExtraUseSoilMoist))
+			if (station == null || (station != null && cumulus.EcowittSettings.ExtraUseLeafWet))
 			{
 				cumulus.Units.LeafWetnessUnitText = "%";
 			}
@@ -128,7 +128,7 @@ namespace CumulusMX
 			Cumulus.syncInit.Wait();
 			cumulus.LogDebugMessage("Lock: Station has the lock");
 
-			if (string.IsNullOrEmpty(cumulus.EcowittAppKey) || string.IsNullOrEmpty(cumulus.EcowittUserApiKey) || string.IsNullOrEmpty(cumulus.EcowittMacAddress))
+			if (string.IsNullOrEmpty(cumulus.EcowittSettings.AppKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.UserApiKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.MacAddress))
 			{
 				Cumulus.LogMessage("API.GetHistoricData: Missing Ecowitt API data in the configuration, aborting!");
 				cumulus.LastUpdateTime = DateTime.Now;
@@ -214,6 +214,7 @@ namespace CumulusMX
 				cumulus.LogDebugMessage($"{procName}: Processing posted data");
 
 				var text = new StreamReader(context.Request.InputStream).ReadToEnd();
+				text = System.Text.RegularExpressions.Regex.Replace(text, "PASSKEY=[^&]+", "PASSKEY=<PassKey>");
 
 				cumulus.LogDataMessage($"{procName}: Payload = {text}");
 				if (main)
@@ -233,9 +234,15 @@ namespace CumulusMX
 					reportStationType = false;
 				}
 
+				string thisTemp = null;
+				string thisHum = null;
+
 				// Only do the primary sensors if running as the main station
 				if (main)
 				{
+					thisTemp = cumulus.Gw1000PrimaryTHSensor == 0 ? data["tempf"] : data["temp" + cumulus.Gw1000PrimaryTHSensor + "f"];
+					thisHum = cumulus.Gw1000PrimaryTHSensor == 0 ? data["humidity"] : data["humidity" + cumulus.Gw1000PrimaryTHSensor];
+
 					// === Wind ==
 					try
 					{
@@ -296,8 +303,6 @@ namespace CumulusMX
 						// humidityin
 
 						var humIn = data["humidityin"];
-						var humOut = data["humidity"];
-
 
 						if (humIn == null)
 						{
@@ -310,15 +315,18 @@ namespace CumulusMX
 							DoIndoorHumidity(humVal);
 						}
 
-						if (humOut == null)
+						if (cumulus.Gw1000PrimaryTHSensor == 0)
 						{
-							DoHumidity(null, recDate);
-							Cumulus.LogMessage("ProcessData: Error, missing outdoor humidity");
-						}
-						else
-						{
-							var humVal = Convert.ToInt32(humOut, invNum);
-							DoHumidity(humVal, recDate);
+							if (thisHum == null)
+							{
+								DoHumidity(null, recDate);
+								Cumulus.LogMessage("ProcessData: Error, missing outdoor humidity");
+							}
+							else
+							{
+								var humVal = Convert.ToInt32(thisHum, invNum);
+								DoHumidity(humVal, recDate);
+							}
 						}
 					}
 					catch (Exception ex)
@@ -387,18 +395,18 @@ namespace CumulusMX
 					try
 					{
 						// tempf
-
-						var temp = data["tempf"];
-
-						if (temp == null)
+						if (cumulus.Gw1000PrimaryTHSensor == 0)
 						{
-							DoTemperature(null, recDate);
-							Cumulus.LogMessage($"ProcessData: Error, missing outdoor temp");
-						}
-						else
-						{
-							var tempVal = ConvertTempFToUser(Convert.ToDouble(temp, invNum));
-							DoTemperature(tempVal, recDate);
+							if (thisTemp == null)
+							{
+								DoTemperature(null, recDate);
+								Cumulus.LogMessage($"ProcessData: Error, missing outdoor temp");
+							}
+							else
+							{
+								var tempVal = ConvertTempFToUser(Convert.ToDouble(thisTemp, invNum));
+								DoTemperature(tempVal, recDate);
+							}
 						}
 					}
 					catch (Exception ex)
@@ -417,13 +425,14 @@ namespace CumulusMX
 						// dailyrainin
 						// weeklyrainin
 						// monthlyrainin
-						// yearlyrainin
+						// yearlyrainin - also turns out that not all stations send this :(
 						// totalrainin - not reliable, depends on console and firmware version as to whether this is available or not.
 						// rainratein
 						// 24hourrainin Ambient only?
 						// eventrainin
 
-						var rain = data["yearlyrainin"];
+						// if no yearly counter, try the total counter
+						var rain = data["yearlyrainin"] ?? data["totalrainin"];
 						var rRate = data["rainratein"];
 
 						if (rRate == null)
@@ -441,6 +450,8 @@ namespace CumulusMX
 						if (rain == null)
 						{
 							Cumulus.LogMessage($"ProcessData: Error, missing rainfall");
+							var rateVal = ConvertRainINToUser(Convert.ToDouble(rRate, invNum));
+							DoRain(null, rateVal, recDate);
 						}
 						else
 						{
@@ -455,69 +466,15 @@ namespace CumulusMX
 						context.Response.StatusCode = 500;
 						return "Failed: Error in rainfall data - " + ex.Message;
 					}
-
-
-					// === Dewpoint ===
-					try
-					{
-						// dewptf
-						var dewpnt = data["dewptf"];
-						var val = dewpnt == null ? null :ConvertTempFToUser(Convert.ToDouble(dewpnt, invNum));
-						DoDewpoint(val, recDate);
-					}
-					catch (Exception ex)
-					{
-						cumulus.LogExceptionMessage(ex, "ProcessData: Error in Dew point data");
-						context.Response.StatusCode = 500;
-						return "Failed: Error in dew point data - " + ex.Message;
-					}
-
-
-					// === Wind Chill ===
-					try
-					{
-						// windchillf
-						var chill = data["windchillf"];
-						var val = chill == null ? null : ConvertTempFToUser(Convert.ToDouble(chill, invNum));
-						DoWindChill(val, recDate);
-					}
-					catch (Exception ex)
-					{
-						cumulus.LogExceptionMessage(ex, "ProcessData: Error in Dew point data");
-						context.Response.StatusCode = 500;
-						return "Failed: Error in dew point data - " + ex.Message;
-					}
-
-
-					// === Humidex ===
-					if (data["tempf"] != null && data["humidity"] != null)
-					{
-						DoHumidex(recDate);
-
-						// === Apparent === - requires temp, hum, and windspeed
-						if (data["windspeedmph"] != null)
-						{
-							DoApparentTemp(recDate);
-							DoFeelsLike(recDate);
-						}
-						else
-						{
-							Cumulus.LogMessage("ProcessData: Insufficient data to calculate Apparent/Feels Like temps");
-						}
-					}
-					else
-					{
-						Cumulus.LogMessage("ProcessData: Insufficient data to calculate Humidex and Apparent/Feels Like temps");
-					}
 				}
 
 				// === Extra Temperature ===
-				if (main || cumulus.EcowittExtraUseTempHum)
+				if (main || cumulus.EcowittSettings.ExtraUseTempHum)
 				{
 					try
 					{
 						// temp[1-10]f
-						ProcessExtraTemps(data, thisStation);
+						ProcessExtraTemps(data, thisStation, recDate);
 					}
 					catch (Exception ex)
 					{
@@ -526,12 +483,12 @@ namespace CumulusMX
 				}
 
 				// === Extra Humidity ===
-				if (main || cumulus.EcowittExtraUseTempHum)
+				if (main || cumulus.EcowittSettings.ExtraUseTempHum)
 				{
 					try
 					{
 						// humidity[1-10]
-						ProcessExtraHumidity(data, thisStation);
+						ProcessExtraHumidity(data, thisStation, recDate);
 					}
 					catch (Exception ex)
 					{
@@ -541,7 +498,7 @@ namespace CumulusMX
 
 
 				// === Solar ===
-				if (main || cumulus.EcowittExtraUseSolar)
+				if (main || cumulus.EcowittSettings.ExtraUseSolar)
 				{
 					try
 					{
@@ -556,7 +513,7 @@ namespace CumulusMX
 
 
 				// === UV ===
-				if (main || cumulus.EcowittExtraUseUv)
+				if (main || cumulus.EcowittSettings.ExtraUseUv)
 				{
 					try
 					{
@@ -571,7 +528,7 @@ namespace CumulusMX
 
 
 				// === Soil Temp ===
-				if (main || cumulus.EcowittExtraUseSoilTemp)
+				if (main || cumulus.EcowittSettings.ExtraUseSoilTemp)
 				{
 					try
 					{
@@ -587,7 +544,7 @@ namespace CumulusMX
 
 
 				// === Soil Moisture ===
-				if (main || cumulus.EcowittExtraUseSoilMoist)
+				if (main || cumulus.EcowittSettings.ExtraUseSoilMoist)
 				{
 					try
 					{
@@ -602,7 +559,7 @@ namespace CumulusMX
 
 
 				// === Leaf Wetness ===
-				if (main || cumulus.EcowittExtraUseLeafWet)
+				if (main || cumulus.EcowittSettings.ExtraUseLeafWet)
 				{
 					try
 					{
@@ -618,7 +575,7 @@ namespace CumulusMX
 
 
 				// === User Temp (Soil or Water) ===
-				if (main || cumulus.EcowittExtraUseUserTemp)
+				if (main || cumulus.EcowittSettings.ExtraUseUserTemp)
 				{
 					try
 					{
@@ -633,7 +590,7 @@ namespace CumulusMX
 
 
 				// === Air Quality ===
-				if (main || cumulus.EcowittExtraUseAQI)
+				if (main || cumulus.EcowittSettings.ExtraUseAQI)
 				{
 					try
 					{
@@ -649,7 +606,7 @@ namespace CumulusMX
 
 
 				// === CO₂ ===
-				if (main || cumulus.EcowittExtraUseCo2)
+				if (main || cumulus.EcowittSettings.ExtraUseCo2)
 				{
 					try
 					{
@@ -671,7 +628,7 @@ namespace CumulusMX
 
 
 				// === Lightning ===
-				if (main || cumulus.EcowittExtraUseLightning)
+				if (main || cumulus.EcowittSettings.ExtraUseLightning)
 				{
 					try
 					{
@@ -688,7 +645,7 @@ namespace CumulusMX
 
 
 				// === Leak ===
-				if (main || cumulus.EcowittExtraUseLeak)
+				if (main || cumulus.EcowittSettings.ExtraUseLeak)
 				{
 					try
 					{
@@ -730,7 +687,7 @@ namespace CumulusMX
 
 
 				// === Extra Dew point ===
-				if (main || cumulus.EcowittExtraUseTempHum)
+				if (main || cumulus.EcowittSettings.ExtraUseTempHum)
 				{
 					try
 					{
@@ -758,6 +715,70 @@ namespace CumulusMX
 					cumulus.LogExceptionMessage(ex, $"{procName}: Error extracting firmware version");
 				}
 
+				// Do derived values after the primary values
+
+				if (main)
+				{
+					// === Dewpoint ===
+					try
+					{
+						// dewptf
+						var dewpnt = data["dewptf"];
+						var val = dewpnt == null ? null : ConvertTempFToUser(Convert.ToDouble(dewpnt, invNum));
+						DoDewpoint(val, recDate);
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "ProcessData: Error in Dew point data");
+						context.Response.StatusCode = 500;
+						return "Failed: Error in dew point data - " + ex.Message;
+					}
+
+
+					// === Wind Chill ===
+					try
+					{
+						// windchillf
+						if (cumulus.StationOptions.CalculatedWC)
+						{
+							DoWindChill(0, recDate);
+						}
+						else
+						{
+							var chill = data["windchillf"];
+							var val = chill == null ? null : ConvertTempFToUser(Convert.ToDouble(chill, invNum));
+							DoWindChill(val, recDate);
+						}
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "ProcessData: Error in Dew point data");
+						context.Response.StatusCode = 500;
+						return "Failed: Error in dew point data - " + ex.Message;
+					}
+
+
+					// === Humidex ===
+					if (data["tempf"] != null && data["humidity"] != null)
+					{
+						DoHumidex(recDate);
+
+						// === Apparent === - requires temp, hum, and windspeed
+						if (data["windspeedmph"] != null)
+						{
+							DoApparentTemp(recDate);
+							DoFeelsLike(recDate);
+						}
+						else
+						{
+							Cumulus.LogMessage("ProcessData: Insufficient data to calculate Apparent/Feels Like temps");
+						}
+					}
+					else
+					{
+						Cumulus.LogMessage("ProcessData: Insufficient data to calculate Humidex and Apparent/Feels Like temps");
+					}
+				}
 
 				DoForecast(string.Empty, false);
 
@@ -777,27 +798,28 @@ namespace CumulusMX
 			return "success";
 		}
 
-		private void ProcessExtraTemps(NameValueCollection data, WeatherStation station)
+		private static void ProcessExtraTemps(NameValueCollection data, WeatherStation station, DateTime ts)
 		{
 			for (var i = 1; i <= 10; i++)
 			{
-				if (data["temp" + i + "f"] != null)
+				if (i == cumulus.Gw1000PrimaryTHSensor)
 				{
-					station.DoExtraTemp(ConvertTempFToUser(Convert.ToDouble(data["temp" + i + "f"], invNum)), i);
+					station.DoTemperature(ConvertTempFToUser(Utils.TryParseNullDouble(data["temp" + i + "f"])), ts);
 				}
-				else
-				{
-					station.DoExtraTemp(null, i);
-				}
+				station.DoExtraTemp(ConvertTempFToUser(Utils.TryParseNullDouble(data["temp" + i + "f"])), i);
 			}
 		}
 
-		private void ProcessExtraHumidity(NameValueCollection data, WeatherStation station)
+		private void ProcessExtraHumidity(NameValueCollection data, WeatherStation station, DateTime ts)
 		{
 			for (var i = 1; i <= 10; i++)
 			{
 				if (data["humidity" + i] != null)
 				{
+					if (i == cumulus.Gw1000PrimaryTHSensor)
+					{
+						station.DoHumidity(Convert.ToInt32(data["humidity" + i], invNum), ts);
+					}
 					station.DoExtraHum(Convert.ToDouble(data["humidity" + i], invNum), i);
 				}
 				else
@@ -1049,22 +1071,16 @@ namespace CumulusMX
 			cumulus.BatteryLowAlarm.Triggered = lowBatt;
 		}
 
-		private void ProcessExtraDewPoint(WeatherStation station)
+		private static void ProcessExtraDewPoint(WeatherStation station)
 		{
 			for (var i = 1; i <= 10; i++)
 			{
-				if (station.ExtraTemp[i].HasValue && station.ExtraHum[i].HasValue)
-				{
-					var dp = MeteoLib.DewPoint(ConvertUserTempToC(station.ExtraTemp[i].Value), station.ExtraHum[i].Value);
-					station.ExtraDewPoint[i] = ConvertTempCToUser(dp);
-				}
-				else
-					station.ExtraDewPoint[i] = null;
+				var dp = MeteoLib.DewPoint(ConvertUserTempToC(station.ExtraTemp[i]), station.ExtraHum[i]);
+				station.DoExtraDP(dp, i);
 			}
 		}
 
-
-		private void SetCustomServer(Stations.GW1000Api api)
+		private static void SetCustomServer(Stations.GW1000Api api)
 		{
 			Cumulus.LogMessage("Reading Ecowitt Gateway Custom Server config");
 
@@ -1086,109 +1102,122 @@ namespace CumulusMX
 			// g     - 0x?? - Active (0-disabled, 1-active)
 			// h  - 0x?? - checksum
 
-			//  ID field
-			var id = Encoding.ASCII.GetString(data, 5, data[4]);
-			// Password field
-			var idx = 5 + data[4];
-			var pass = Encoding.ASCII.GetString(data, idx + 1, data[idx]);
-			// get server string
-			idx += data[idx] + 1;
-			var server = Encoding.ASCII.GetString(data, idx + 1, data[idx]);
-			// get port id
-			idx += data[idx] + 1;
-			var port = Stations.GW1000Api.ConvertBigEndianUInt16(data, idx);
-			// interval
-			idx += 2;
-			var intv = Stations.GW1000Api.ConvertBigEndianUInt16(data, idx);
-			// type
-			idx += 2;
-			var type = data[idx] == 0 ? "Ecowitt" : "WUnderground";
-			idx += 1;
-			var active = data[idx];
-
-			var data2 = api.DoCommand(Stations.GW1000Api.Commands.CMD_READ_USER_PATH);
-			var ecPath = Encoding.ASCII.GetString(data2, 5, data2[4]);
-			idx = 5 + data2[4];
-			var wuPath = Encoding.ASCII.GetString(data2, idx + 1, data2[idx]);
-
-
-			Cumulus.LogMessage($"Ecowitt Gateway Custom Server config: Server={server}, Port={port}, Path={ecPath}, Interval={intv}, Protocol={type}, Enabled={active}");
-
-			if (server != cumulus.EcowittLocalAddr || port != cumulus.wsPort || intv != cumulus.EcowittCustomInterval || type != "Ecowitt" || active != 1)
+			if (data != null)
 			{
-				Cumulus.LogMessage("Ecowitt Gateway Custom Server config does not match the required config, reconfiguring it...");
-
-				// Payload
-				// 1    - ID length
-				// n+   - ID
-				// 1    - Password length
-				// n+   - Password
-				// 0	- Server length
-				// 1+   - Server Name
-				// a-b  - Port
-				// c-d  - Interval
-				// e    - Type (EC=0, WU=1)
-				// f    - Active
-
-				var length = 1 + id.Length + 1 + pass.Length; // id.len + id + pass.len + pass
-				length += cumulus.EcowittLocalAddr.Length + 1; // Server name + length byte
-				length += 2 + 2 + 1 + 1; // + port + interval + type + active
-				var send = new byte[length];
-				// set ID
-				send[0] = (byte)id.Length;
-				Encoding.ASCII.GetBytes(id).CopyTo(send, 1);
-
-				// set password
-				idx = 1 + id.Length;
-				send[idx] = (byte)pass.Length;
-				Encoding.ASCII.GetBytes(id).CopyTo(send, idx + 1);
-
-				// set server string length
-				idx += 1 + pass.Length;
-				send[idx] = (byte)cumulus.EcowittLocalAddr.Length;
-				// set server string
-				Encoding.ASCII.GetBytes(cumulus.EcowittLocalAddr).CopyTo(send, idx + 1);
-				idx +=  1 + server.Length;
-				// set the port id
-				Stations.GW1000Api.ConvertUInt16ToLittleEndianByteArray((ushort)cumulus.wsPort).CopyTo(send, idx);
-				// set the interval
-				idx += 2;
-				Stations.GW1000Api.ConvertUInt16ToLittleEndianByteArray((ushort)cumulus.EcowittCustomInterval).CopyTo(send, idx);
-				// set type
-				idx += 2;
-				send[idx] = 0;
-				// set enabled
-				idx += 1;
-				send[idx] = 1;
-
-				// do the config
-				var retData = api.DoCommand(Stations.GW1000Api.Commands.CMD_WRITE_CUSTOMIZED, send);
-
-				if (retData == null || retData[4] != 0)
+				try
 				{
-					Cumulus.LogMessage("Error - failed to set the Ecowitt Gateway config");
-				}
+					//  ID field
+					var id = Encoding.ASCII.GetString(data, 5, data[4]);
+					// Password field
+					var idx = 5 + data[4];
+					var pass = Encoding.ASCII.GetString(data, idx + 1, data[idx]);
+					// get server string
+					idx += data[idx] + 1;
+					var server = Encoding.ASCII.GetString(data, idx + 1, data[idx]);
+					// get port id
+					idx += data[idx] + 1;
+					var port = Stations.GW1000Api.ConvertBigEndianUInt16(data, idx);
+					// interval
+					idx += 2;
+					var intv = Stations.GW1000Api.ConvertBigEndianUInt16(data, idx);
+					// type
+					idx += 2;
+					var type = data[idx] == 0 ? "Ecowitt" : "WUnderground";
+					idx += 1;
+					var active = data[idx];
 
-				// does the path need setting as well?
-				if (ecPath != "/station/ecowitt")
-				{
-					ecPath = "/station/ecowitt";
-					var path = new byte[ecPath.Length + wuPath.Length + 2];
-					path[0] = (byte)ecPath.Length;
-					Encoding.ASCII.GetBytes(ecPath).CopyTo(path, 1);
-					idx = 1 + ecPath.Length;
-					path[idx] = (byte)wuPath.Length;
-					Encoding.ASCII.GetBytes(wuPath).CopyTo(path, idx + 1);
+					var data2 = api.DoCommand(Stations.GW1000Api.Commands.CMD_READ_USER_PATH);
+					var ecPath = Encoding.ASCII.GetString(data2, 5, data2[4]);
+					idx = 5 + data2[4];
+					var wuPath = Encoding.ASCII.GetString(data2, idx + 1, data2[idx]);
 
-					retData = api.DoCommand(Stations.GW1000Api.Commands.CMD_WRITE_USER_PATH, path);
 
-					if (retData == null || retData[4] != 0)
+					Cumulus.LogMessage($"Ecowitt Gateway Custom Server config: Server={server}, Port={port}, Path={ecPath}, Interval={intv}, Protocol={type}, Enabled={active}");
+
+					if (server != cumulus.EcowittSettings.LocalAddr || port != cumulus.wsPort || intv != cumulus.EcowittSettings.CustomInterval || type != "Ecowitt" || active != 1)
 					{
-						Cumulus.LogMessage("Error - failed to set the Ecowitt Gateway Path");
+						Cumulus.LogMessage("Ecowitt Gateway Custom Server config does not match the required config, reconfiguring it...");
+
+						// Payload
+						// 1    - ID length
+						// n+   - ID
+						// 1    - Password length
+						// n+   - Password
+						// 0	- Server length
+						// 1+   - Server Name
+						// a-b  - Port
+						// c-d  - Interval
+						// e    - Type (EC=0, WU=1)
+						// f    - Active
+
+						var length = 1 + id.Length + 1 + pass.Length; // id.len + id + pass.len + pass
+						length += cumulus.EcowittSettings.LocalAddr.Length + 1; // Server name + length byte
+						length += 2 + 2 + 1 + 1; // + port + interval + type + active
+						var send = new byte[length];
+						// set ID
+						send[0] = (byte)id.Length;
+						Encoding.ASCII.GetBytes(id).CopyTo(send, 1);
+
+						// set password
+						idx = 1 + id.Length;
+						send[idx] = (byte)pass.Length;
+						Encoding.ASCII.GetBytes(id).CopyTo(send, idx + 1);
+
+						// set server string length
+						idx += 1 + pass.Length;
+						send[idx] = (byte)cumulus.EcowittSettings.LocalAddr.Length;
+						// set server string
+						Encoding.ASCII.GetBytes(cumulus.EcowittSettings.LocalAddr).CopyTo(send, idx + 1);
+						idx += 1 + server.Length;
+						// set the port id
+						Stations.GW1000Api.ConvertUInt16ToLittleEndianByteArray((ushort)cumulus.wsPort).CopyTo(send, idx);
+						// set the interval
+						idx += 2;
+						Stations.GW1000Api.ConvertUInt16ToLittleEndianByteArray((ushort)cumulus.EcowittSettings.CustomInterval).CopyTo(send, idx);
+						// set type
+						idx += 2;
+						send[idx] = 0;
+						// set enabled
+						idx += 1;
+						send[idx] = 1;
+
+						// do the config
+						var retData = api.DoCommand(Stations.GW1000Api.Commands.CMD_WRITE_CUSTOMIZED, send);
+
+						if (retData == null || retData[4] != 0)
+						{
+							Cumulus.LogMessage("Error - failed to set the Ecowitt Gateway config");
+						}
+
+						// does the path need setting as well?
+						if (ecPath != "/station/ecowitt")
+						{
+							ecPath = "/station/ecowitt";
+							var path = new byte[ecPath.Length + wuPath.Length + 2];
+							path[0] = (byte)ecPath.Length;
+							Encoding.ASCII.GetBytes(ecPath).CopyTo(path, 1);
+							idx = 1 + ecPath.Length;
+							path[idx] = (byte)wuPath.Length;
+							Encoding.ASCII.GetBytes(wuPath).CopyTo(path, idx + 1);
+
+							retData = api.DoCommand(Stations.GW1000Api.Commands.CMD_WRITE_USER_PATH, path);
+
+							if (retData == null || retData[4] != 0)
+							{
+								Cumulus.LogMessage("Error - failed to set the Ecowitt Gateway Path");
+							}
+						}
 					}
 				}
+				catch (Exception ex)
+				{
+					cumulus.LogExceptionMessage(ex, "Error setting Ecowitt Gateway Custom Server config");
+				}
+			}
+			else
+			{
+				Cumulus.LogMessage("Error reading Ecowitt Gateway Custom Server config, cannot configure it");
 			}
 		}
-
 	}
 }

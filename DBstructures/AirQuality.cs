@@ -18,30 +18,33 @@ namespace CumulusMX
 		public double? Aq4 { get; set; }
 		public double? AqAvg4 { get; set; }
 
-		public string ToCSV()
+		public string ToCSV(bool ToFile=false)
 		{
 			var invNum = CultureInfo.InvariantCulture.NumberFormat;
 			var invDate = CultureInfo.InvariantCulture.NumberFormat;
 
+			var dateformat = ToFile ? "dd/MM/yy HH:mm" : "'\"'dd/MM/yy HH:mm'\"'";
+			var blank = ToFile ? "" : "\"\"";
+			var sep = ',';
+
 			var sb = new StringBuilder(350);
-			sb.Append(Timestamp.ToString("'\"'dd/MM/yy HH:mm'\"'", invDate)).Append(',');
-			sb.Append(Utils.ToUnixTime(Timestamp)).Append(",\"");
-			if (Aq1.HasValue) sb.Append(Aq1.Value.ToString("F1", invNum));
-			sb.Append("\",\"");
-			if (AqAvg1.HasValue) sb.Append(AqAvg1.Value.ToString("F1", invNum));
-			sb.Append("\",\"");
-			if (Aq2.HasValue) sb.Append(Aq2.Value.ToString("F1", invNum));
-			sb.Append("\",\"");
-			if (AqAvg2.HasValue) sb.Append(AqAvg2.Value.ToString("F1", invNum));
-			sb.Append("\",\"");
-			if (Aq3.HasValue) sb.Append(Aq3.Value.ToString("F1", invNum));
-			sb.Append("\",\"");
-			if (AqAvg3.HasValue) sb.Append(AqAvg3.Value.ToString("F1", invNum));
-			sb.Append("\",\"");
-			if (Aq4.HasValue) sb.Append(Aq4.Value.ToString("F1", invNum));
-			sb.Append("\",\"");
-			if (AqAvg4.HasValue) sb.Append(AqAvg4.Value.ToString("F1", invNum));
-			sb.Append('"');
+			sb.Append(Timestamp.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Utils.ToUnixTime(Timestamp)).Append(sep);
+			sb.Append(Aq1.HasValue ? Aq1.Value.ToString("F1", invNum) : blank);
+			sb.Append(sep);
+			sb.Append(AqAvg1.HasValue ? AqAvg1.Value.ToString("F1", invNum) : blank);
+			sb.Append(sep);
+			sb.Append(Aq2.HasValue ? Aq2.Value.ToString("F1", invNum) : blank);
+			sb.Append(sep);
+			sb.Append(AqAvg2.HasValue ? AqAvg2.Value.ToString("F1", invNum) : blank);
+			sb.Append(sep);
+			sb.Append(Aq3.HasValue ? Aq3.Value.ToString("F1", invNum) : blank);
+			sb.Append(sep);
+			sb.Append(AqAvg3.HasValue ? AqAvg3.Value.ToString("F1", invNum) : blank);
+			sb.Append(sep);
+			sb.Append(Aq4.HasValue ? Aq4.Value.ToString("F1", invNum) : blank);
+			sb.Append(sep);
+			sb.Append(AqAvg4.HasValue ? AqAvg4.Value.ToString("F1", invNum) : blank);
 			return sb.ToString();
 		}
 

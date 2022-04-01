@@ -14,6 +14,10 @@ namespace CumulusMX.Stations
 		private Cumulus cumulus;
 		private NetworkStream stream;
 		private TcpClient socket;
+		private string ipAddress = null;
+		private int tcpPort =	0;
+		private bool connected = false;
+		private bool connecting = false;
 
 		internal GW1000Api(Cumulus cuml)
 		{
@@ -23,7 +27,11 @@ namespace CumulusMX.Stations
 
 		internal bool OpenTcpPort(string ipaddr, int port)
 		{
-			socket = null;
+			ipAddress = ipaddr;
+			tcpPort = port;
+			connecting = true;
+
+			CloseTcpPort();
 			int attempt = 0;
 
 			// Creating the new TCP socket effectively opens it - specify IP address or domain name and port
@@ -46,12 +54,12 @@ namespace CumulusMX.Stations
 						socket = null;
 					}
 
-					Thread.Sleep(1000);
 				}
-				catch
+				catch (Exception ex)
 				{
-					//MessageBox.Show(ex.Message);
+					cumulus.LogExceptionMessage(ex, "Error opening TCP port");
 				}
+				Thread.Sleep(5000);
 			}
 
 			// Set the timeout of the underlying stream
@@ -60,10 +68,14 @@ namespace CumulusMX.Stations
 				stream = socket.GetStream();
 				stream.ReadTimeout = 2500;
 				cumulus.LogDebugMessage("Ecowitt Gateway reconnected");
+				connecting = false;
+
+				connected = true;
 			}
 			else
 			{
 				cumulus.LogDebugMessage("Ecowitt Gateway connect failed");
+				connecting = false;
 				return false;
 			}
 
@@ -72,15 +84,41 @@ namespace CumulusMX.Stations
 
 		internal void CloseTcpPort()
 		{
-			if (socket != null)
+			try
 			{
-				socket.GetStream().WriteByte(10);
-				socket.Close();
+				if (socket != null)
+				{
+					socket.GetStream().WriteByte(10);
+					socket.Close();
+				}
 			}
+			catch (Exception ex)
+			{
+				cumulus.LogExceptionMessage(ex, "Error closing TCP port");
+				socket = null;
+			}
+			connected = false;
+		}
+
+		internal bool ReOpenTcpPort()
+		{
+			return OpenTcpPort(ipAddress, tcpPort);
 		}
 
 		internal byte[] DoCommand(Commands command, byte[] data = null)
 		{
+			if (!connected)
+			{
+				// Are we already reconnecting?
+				if (connecting)
+					// yep - so wait reconnect to complete
+					return null;
+				// no, try a reconnect
+				else if (!ReOpenTcpPort())
+					// that didn;t work, give up and return nothing
+					return null;
+			}
+
 			var buffer = new byte[2028];
 			var bytesRead = 0;
 			var cmdName = command.ToString();
@@ -153,6 +191,9 @@ namespace CumulusMX.Stations
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, $"DoCommand({cmdName}): Error");
+				Cumulus.LogMessage("Attempting to reopen the TCP port");
+				ReOpenTcpPort();
+				return null;
 			}
 			// Return the data we want out of the buffer
 			if (totBytes > 0)

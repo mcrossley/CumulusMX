@@ -1365,7 +1365,7 @@ namespace CumulusMX
 					if (cumulus.GraphOptions.GrowingDegreeDaysVisible1 && data[i].LowTemp.HasValue && data[i].HighTemp.HasValue)
 					{
 						// growing degree days
-						var gdd = MeteoLib.GrowingDegreeDays(station.ConvertUserTempToC(data[i].HighTemp).Value, station.ConvertUserTempToC(data[i].LowTemp).Value, station.ConvertUserTempToC(cumulus.GrowingBase1).Value, cumulus.GrowingCap30C);
+						var gdd = MeteoLib.GrowingDegreeDays(WeatherStation.ConvertUserTempToC(data[i].HighTemp).Value, WeatherStation.ConvertUserTempToC(data[i].LowTemp).Value, WeatherStation.ConvertUserTempToC(cumulus.GrowingBase1).Value, cumulus.GrowingCap30C);
 
 						// annual accumulation
 						annualGrowingDegDays1 += gdd;
@@ -1376,7 +1376,7 @@ namespace CumulusMX
 					if (cumulus.GraphOptions.GrowingDegreeDaysVisible2 && data[i].LowTemp.HasValue && data[i].HighTemp.HasValue)
 					{
 						// growing degree days
-						var gdd = MeteoLib.GrowingDegreeDays(station.ConvertUserTempToC(data[i].HighTemp).Value, station.ConvertUserTempToC(data[i].LowTemp).Value, station.ConvertUserTempToC(cumulus.GrowingBase2).Value, cumulus.GrowingCap30C);
+						var gdd = MeteoLib.GrowingDegreeDays(WeatherStation.ConvertUserTempToC(data[i].HighTemp).Value, WeatherStation.ConvertUserTempToC(data[i].LowTemp).Value, WeatherStation.ConvertUserTempToC(cumulus.GrowingBase2).Value, cumulus.GrowingCap30C);
 
 						// annual accumulation
 						annualGrowingDegDays2 += gdd;

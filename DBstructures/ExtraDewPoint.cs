@@ -20,34 +20,37 @@ namespace CumulusMX
 		public double? DewPoint9 { get; set; }
 		public double? DewPoint10 { get; set; }
 
-		public string ToCSV()
+		public string ToCSV(bool ToFile=false)
 		{
 			var invNum = CultureInfo.InvariantCulture.NumberFormat;
 			var invDate = CultureInfo.InvariantCulture.NumberFormat;
 
+			var dateformat = ToFile ? "dd/MM/yy HH:mm" : "'\"'dd/MM/yy HH:mm'\"'";
+			var blank = ToFile ? "" : "\"\"";
+			var sep = ',';
+
 			var sb = new StringBuilder(350);
-			sb.Append(Timestamp.ToString("'\"'dd/MM/yy HH:mm'\"'", invDate)).Append(',');
-			sb.Append(Utils.ToUnixTime(Timestamp)).Append(",\"");
-			if (DewPoint1.HasValue) sb.Append(DewPoint1.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append("\",\"");
-			if (DewPoint2.HasValue) sb.Append(DewPoint2.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append("\",\"");
-			if (DewPoint3.HasValue) sb.Append(DewPoint3.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append("\",\"");
-			if (DewPoint4.HasValue) sb.Append(DewPoint4.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append("\",\"");
-			if (DewPoint5.HasValue) sb.Append(DewPoint5.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append("\",\"");
-			if (DewPoint6.HasValue) sb.Append(DewPoint6.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append("\",\"");
-			if (DewPoint7.HasValue) sb.Append(DewPoint7.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append("\",\"");
-			if (DewPoint8.HasValue) sb.Append(DewPoint8.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append("\",\"");
-			if (DewPoint9.HasValue) sb.Append(DewPoint9.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append("\",\"");
-			if (DewPoint10.HasValue) sb.Append(DewPoint10.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append('"');
+			sb.Append(Timestamp.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Utils.ToUnixTime(Timestamp)).Append(sep);
+			sb.Append(DewPoint1.HasValue ? DewPoint1.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
+			sb.Append(sep);
+			sb.Append(DewPoint2.HasValue ? DewPoint2.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
+			sb.Append(sep);
+			sb.Append(DewPoint3.HasValue ? DewPoint3.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
+			sb.Append(sep);
+			sb.Append(DewPoint4.HasValue ? DewPoint4.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
+			sb.Append(sep);
+			sb.Append(DewPoint5.HasValue ? DewPoint5.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
+			sb.Append(sep);
+			sb.Append(DewPoint6.HasValue ? DewPoint6.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
+			sb.Append(sep);
+			sb.Append(DewPoint7.HasValue ? DewPoint7.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
+			sb.Append(sep);
+			sb.Append(DewPoint8.HasValue ? DewPoint8.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
+			sb.Append(sep);
+			sb.Append(DewPoint9.HasValue ? DewPoint9.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
+			sb.Append(sep);
+			sb.Append(DewPoint10.HasValue ? DewPoint10.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
 			return sb.ToString();
 		}
 

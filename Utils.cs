@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -166,7 +167,7 @@ namespace CumulusMX
 
 		public static IPAddress GetIpWithDefaultGateway()
 		{
-			IPAddress ip = null;
+			IPAddress ip = IPAddress.Any;
 
 			try
 			{
@@ -188,16 +189,47 @@ namespace CumulusMX
 
 		public static async Task CopyFileAsync(string sourceFile, string destinationFile)
 		{
-			using var sourceStream = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan);
+			using var sourceStream = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan);
 			using var destinationStream = new FileStream(destinationFile, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan);
 			await sourceStream.CopyToAsync(destinationStream);
 		}
 
 		public static void CopyFileSync(string sourceFile, string destinationFile)
 		{
-			using var sourceStream = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
+			using var sourceStream = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.SequentialScan);
 			using var destinationStream = new FileStream(destinationFile, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan);
 			sourceStream.CopyTo(destinationStream);
 		}
+
+		public static string ExceptionToString(Exception ex)
+		{
+			var sb = new StringBuilder();
+
+			sb.AppendLine("");
+			sb.AppendLine("Exception Type: " + ex.GetType().FullName);
+			sb.AppendLine("Message: " + ex.Message);
+			sb.AppendLine("Source: " + ex.Source);
+			foreach (var key in ex.Data.Keys)
+			{
+				sb.AppendLine(key.ToString() + ": " + ex.Data[key].ToString());
+			}
+
+			if (String.IsNullOrEmpty(ex.StackTrace))
+			{
+				sb.AppendLine("Environment Stack Trace: " + ex.StackTrace);
+			}
+			else
+			{
+				sb.AppendLine("Stack Trace: " + ex.StackTrace);
+			}
+			if (ex.InnerException != null)
+			{
+				sb.AppendLine("Inner Exception... ");
+				sb.AppendLine(ExceptionToString(ex.InnerException));
+			}
+
+			return sb.ToString();
+		}
+
 	}
 }

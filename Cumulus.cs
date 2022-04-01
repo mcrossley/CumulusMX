@@ -469,7 +469,7 @@ namespace CumulusMX
 		public string Alltimelogfile;
 		public string MonthlyAlltimeIniFile;
 		public string MonthlyAlltimeLogFile;
-		private string logFilePath;
+		//private string logFilePath;
 		public string DayFileName;
 		public string YesterdayFile;
 		public string TodayIniFile;
@@ -802,13 +802,16 @@ namespace CumulusMX
 			Alltimelogfile = Datapath + "alltimelog.txt";
 			MonthlyAlltimeIniFile = Datapath + "monthlyalltime.ini";
 			MonthlyAlltimeLogFile = Datapath + "monthlyalltimelog.txt";
-			logFilePath = Datapath;
+			//logFilePath = Datapath;
 			DayFileName = Datapath + "dayfile-v4.txt";
 			YesterdayFile = Datapath + "yesterday.ini";
 			TodayIniFile = Datapath + "today.ini";
 			MonthIniFile = Datapath + "month.ini";
 			YearIniFile = Datapath + "year.ini";
 			//stringsFile = "strings.ini";
+
+			// Take a backup of all the data before we start proper
+			BackupData(false, DateTime.Now);
 
 			// initialise the third party uploads
 			Wund = new ThirdParty.WebUploadWund(this, "WUnderground");
@@ -1121,48 +1124,86 @@ namespace CumulusMX
 			// Do we wait for a ping response from a remote host before starting?
 			if (!string.IsNullOrWhiteSpace(ProgramOptions.StartupPingHost))
 			{
+				var msg0 = $"Sending PING to {ProgramOptions.StartupPingHost}";
 				var msg1 = $"Waiting for PING reply from {ProgramOptions.StartupPingHost}";
 				var msg2 = $"Received PING response from {ProgramOptions.StartupPingHost}, continuing...";
 				var msg3 = $"No PING response received in {ProgramOptions.StartupPingEscapeTime} minutes, continuing anyway";
-				LogConsoleMessage(msg1);
-				LogMessage(msg1);
-				using var ping = new Ping();
-				var endTime = DateTime.Now.AddMinutes(ProgramOptions.StartupPingEscapeTime);
-
-				ping.PingCompleted += new PingCompletedEventHandler(PingCompletedCallback);
+				var escapeTime = DateTime.Now.AddMinutes(ProgramOptions.StartupPingEscapeTime);
+				var attempt = 1;
+				var pingSuccess = false;
+				// This is the timeout for "hung" attempts, we will double this at every failure so we do not create too many hung resources
+				var pingTimeoutSecs = 10;
 
 				do
 				{
-					pingReply = null;
+					var pingTimeoutDT = DateTime.Now.AddSeconds(pingTimeoutSecs);
+					var pingTokenSource = new CancellationTokenSource();
+					var pingCancelToken = pingTokenSource.Token;
 
-					try
+					LogDebugMessage($"Starting PING #{attempt} task with time-out of {pingTimeoutSecs} seconds");
+
+					var pingTask = Task.Run(() =>
 					{
-						var pingTimeout = DateTime.Now.AddSeconds(2.5);
-
-						ping.SendAsync(ProgramOptions.StartupPingHost, 2000);
-
-						do
+						var cnt = attempt;
+						using (var ping = new Ping())
 						{
-							Thread.Sleep(50);
-						} while (pingReply != null && DateTime.Now < pingTimeout);
+							try
+							{
+								LogMessage($"Sending PING #{cnt} to {ProgramOptions.StartupPingHost}");
 
-						if (DateTime.Now >= pingTimeout)
-						{
-							LogMessage("Ping Error: The PING failed to return after the timeout, cancelling it...");
-							ping.SendAsyncCancel();
+								// set the actual ping timeout 5 secs less than the task timeout
+								var reply = ping.Send(ProgramOptions.StartupPingHost, (pingTimeoutSecs - 5) * 1000);
+
+								// were we hung on the network and now cancelled? if so just exit silently
+								if (pingCancelToken.IsCancellationRequested)
+								{
+									LogDebugMessage($"Cancelled PING #{cnt} task exiting");
+								}
+								else
+								{
+									var msg = $"Received PING #{cnt} response from {ProgramOptions.StartupPingHost}, status: {reply.Status}";
+
+									LogMessage(msg);
+									LogConsoleMessage(msg);
+
+									if (reply.Status == IPStatus.Success)
+									{
+										pingSuccess = true;
+									}
+								}
+							}
+							catch (Exception e)
+							{
+								LogMessage($"PING #{cnt} to {ProgramOptions.StartupPingHost} failed with error: {e.InnerException.Message}");
+							}
+
 						}
+					}, pingCancelToken);
 
-					}
-					catch (Exception e)
+					// wait for the ping to return
+					do
 					{
-						LogErrorMessage($"PING to {ProgramOptions.StartupPingHost} failed with error: {e.InnerException.Message}");
-						LogExceptionMessage(e, "PING");
+						Thread.Sleep(100);
+					} while (pingTask.Status == TaskStatus.Running && DateTime.Now < pingTimeoutDT);
+
+					LogDebugMessage($"PING #{attempt} task status: {pingTask.Status}");
+
+					// did we timeout waiting for the task to end?
+					if (DateTime.Now >= pingTimeoutDT)
+					{
+						// yep, so attempt to cancel the task
+						LogMessage($"Nothing returned from PING #{attempt}, attempting the cancel the task");
+						pingTokenSource.Cancel();
+						// and double the timeout for next attempt
+						pingTimeoutSecs *= 2;
 					}
 
-					if (pingReply == null || pingReply.Status != IPStatus.Success)
+					if (!pingSuccess)
 					{
 						// no response wait 10 seconds before trying again
+						LogDebugMessage("Waiting 10 seconds before retry...");
 						Thread.Sleep(10000);
+						attempt++;
 						// Force a DNS refresh if not an IPv4 address
 						if (!Utils.ValidateIPv4(ProgramOptions.StartupPingHost))
 						{
@@ -1173,13 +1214,13 @@ namespace CumulusMX
 							}
 							catch (Exception ex)
 							{
-								LogExceptionMessage(ex, "PING: Error with DNS refresh");
+								LogMessage($"PING #{attempt}: Error with DNS refresh - {ex.Message}");
 							}
 						}
 					}
-				} while ((pingReply == null || pingReply.Status != IPStatus.Success) && DateTime.Now < endTime);
+				} while (!pingSuccess && DateTime.Now < escapeTime);
 
-				if (DateTime.Now >= endTime)
+				if (DateTime.Now >= escapeTime)
 				{
 					LogConsoleMessage(msg3, ConsoleColor.Yellow);
 					LogMessage(msg3);
@@ -1203,15 +1244,11 @@ namespace CumulusMX
 
 			// Open database (create file if it doesn't exist)
 			SQLiteOpenFlags flags = SQLiteOpenFlags.Create | SQLiteOpenFlags.ReadWrite;
-			//LogDB = new SQLiteConnection(dbfile, flags)
-			//LogDB.CreateTable<StandardData>();
 
 			// Open diary database (create file if it doesn't exist)
 			//DiaryDB = new SQLiteConnection(diaryfile, flags, true);  // We should be using this - storing datetime as ticks, but historically string storage has been used, so we are stuck with it?
 			DiaryDB = new SQLiteConnection(diaryfile, flags, false);
 			DiaryDB.CreateTable<DiaryDataEditor.DiaryData>();
-
-			BackupData(false, DateTime.Now);
 
 			LogMessage("Debug logging :" + (ProgramOptions.DebugLogging ? "enabled" : "disabled"));
 			LogMessage("Data logging  :" + (ProgramOptions.DataLogging ? "enabled" : "disabled"));
@@ -1504,7 +1541,7 @@ namespace CumulusMX
 					airLinkDataOut = new AirLinkData();
 					airLinkOut = new DavisAirLink(this, false, station);
 				}
-				if (EcowittExtraEnabled)
+				if (EcowittSettings.ExtraEnabled)
 				{
 					ecowittExtra = new HttpStationEcowitt(this, station);
 					HttpStations.stationEcowittExtra = ecowittExtra;
@@ -3552,30 +3589,31 @@ namespace CumulusMX
 			Gw1000IpAddress = ini.GetValue("GW1000", "IPAddress", "0.0.0.0");
 			Gw1000MacAddress = ini.GetValue("GW1000", "MACAddress", "");
 			Gw1000AutoUpdateIpAddress = ini.GetValue("GW1000", "AutoUpdateIpAddress", true);
-			EcowittExtraEnabled = ini.GetValue("GW1000", "ExtraSensorDataEnabled", false);
-			EcowittExtraUseSolar = ini.GetValue("GW1000", "ExtraSensorUseSolar", true);
-			EcowittExtraUseUv = ini.GetValue("GW1000", "ExtraSensorUseUv", true);
-			EcowittExtraUseTempHum = ini.GetValue("GW1000", "ExtraSensorUseTempHum", true);
-			EcowittExtraUseSoilTemp = ini.GetValue("GW1000", "ExtraSensorUseSoilTemp", true);
-			EcowittExtraUseSoilMoist = ini.GetValue("GW1000", "ExtraSensorUseSoilMoist", true);
-			EcowittExtraUseLeafWet = ini.GetValue("GW1000", "ExtraSensorUseLeafWet", true);
-			EcowittExtraUseUserTemp = ini.GetValue("GW1000", "ExtraSensorUseUserTemp", true);
-			EcowittExtraUseAQI = ini.GetValue("GW1000", "ExtraSensorUseAQI", true);
-			EcowittExtraUseCo2= ini.GetValue("GW1000", "ExtraSensorUseCo2", true);
-			EcowittExtraUseLightning = ini.GetValue("GW1000", "ExtraSensorUseLightning", true);
-			EcowittExtraUseLeak = ini.GetValue("GW1000", "ExtraSensorUseLeak", true);
-			EcowittSetCustomServer = ini.GetValue("GW1000", "SetCustomServer", false);
-			EcowittGwAddr = ini.GetValue("GW1000", "EcowittGwAddr", "0.0.0.0");
+			Gw1000PrimaryTHSensor = ini.GetValue("GW1000", "PrimaryTHSensor", 0);  // 0=default, 1-8=extra t/h sensor number
+			EcowittSettings.ExtraEnabled = ini.GetValue("GW1000", "ExtraSensorDataEnabled", false);
+			EcowittSettings.ExtraUseSolar = ini.GetValue("GW1000", "ExtraSensorUseSolar", true);
+			EcowittSettings.ExtraUseUv = ini.GetValue("GW1000", "ExtraSensorUseUv", true);
+			EcowittSettings.ExtraUseTempHum = ini.GetValue("GW1000", "ExtraSensorUseTempHum", true);
+			EcowittSettings.ExtraUseSoilTemp = ini.GetValue("GW1000", "ExtraSensorUseSoilTemp", true);
+			EcowittSettings.ExtraUseSoilMoist = ini.GetValue("GW1000", "ExtraSensorUseSoilMoist", true);
+			EcowittSettings.ExtraUseLeafWet = ini.GetValue("GW1000", "ExtraSensorUseLeafWet", true);
+			EcowittSettings.ExtraUseUserTemp = ini.GetValue("GW1000", "ExtraSensorUseUserTemp", true);
+			EcowittSettings.ExtraUseAQI = ini.GetValue("GW1000", "ExtraSensorUseAQI", true);
+			EcowittSettings.ExtraUseCo2= ini.GetValue("GW1000", "ExtraSensorUseCo2", true);
+			EcowittSettings.ExtraUseLightning = ini.GetValue("GW1000", "ExtraSensorUseLightning", true);
+			EcowittSettings.ExtraUseLeak = ini.GetValue("GW1000", "ExtraSensorUseLeak", true);
+			EcowittSettings.SetCustomServer = ini.GetValue("GW1000", "SetCustomServer", false);
+			EcowittSettings.GatewayAddr = ini.GetValue("GW1000", "EcowittGwAddr", "0.0.0.0");
 			var localIp = Utils.GetIpWithDefaultGateway();
-			EcowittLocalAddr = ini.GetValue("GW1000", "EcowittLocalAddr", localIp.ToString());
-			EcowittCustomInterval = ini.GetValue("GW1000", "EcowittCustomInterval", 16);
+			EcowittSettings.LocalAddr = ini.GetValue("GW1000", "EcowittLocalAddr", localIp.ToString());
+			EcowittSettings.CustomInterval = ini.GetValue("GW1000", "EcowittCustomInterval", 16);
 			// api
-			EcowittAppKey = ini.GetValue("GW1000", "EcowittAppKey", "");
-			EcowittUserApiKey = ini.GetValue("GW1000", "EcowittUserKey", "");
-			EcowittMacAddress = ini.GetValue("GW1000", "EcowittMacAddress", "");
-			if (string.IsNullOrEmpty(EcowittMacAddress) && !string.IsNullOrEmpty(Gw1000MacAddress))
+			EcowittSettings.AppKey = ini.GetValue("GW1000", "EcowittAppKey", "");
+			EcowittSettings.UserApiKey = ini.GetValue("GW1000", "EcowittUserKey", "");
+			EcowittSettings.MacAddress = ini.GetValue("GW1000", "EcowittMacAddress", "");
+			if (string.IsNullOrEmpty(EcowittSettings.MacAddress) && !string.IsNullOrEmpty(Gw1000MacAddress))
 			{
-				EcowittMacAddress = Gw1000MacAddress;
+				EcowittSettings.MacAddress = Gw1000MacAddress;
 			}
 
 
@@ -4512,8 +4550,8 @@ namespace CumulusMX
 				SmtpOptions.Password = Crypto.DecryptString(SmtpOptions.Password, Program.InstanceId);
 				HTTPProxyUser = Crypto.DecryptString(HTTPProxyUser, Program.InstanceId);
 				HTTPProxyPassword = Crypto.DecryptString(HTTPProxyPassword, Program.InstanceId);
-				EcowittAppKey = Crypto.DecryptString(EcowittAppKey, Program.InstanceId);
-				EcowittUserApiKey = Crypto.DecryptString(EcowittUserApiKey, Program.InstanceId);
+				EcowittSettings.AppKey = Crypto.DecryptString(EcowittSettings.AppKey, Program.InstanceId);
+				EcowittSettings.UserApiKey = Crypto.DecryptString(EcowittSettings.UserApiKey, Program.InstanceId);
 			}
 			else
 			{
@@ -4745,26 +4783,27 @@ namespace CumulusMX
 			ini.SetValue("GW1000", "IPAddress", Gw1000IpAddress);
 			ini.SetValue("GW1000", "MACAddress", Gw1000MacAddress);
 			ini.SetValue("GW1000", "AutoUpdateIpAddress", Gw1000AutoUpdateIpAddress);
-			ini.SetValue("GW1000", "ExtraSensorDataEnabled", EcowittExtraEnabled);
-			ini.SetValue("GW1000", "ExtraSensorUseSolar", EcowittExtraUseSolar);
-			ini.SetValue("GW1000", "ExtraSensorUseUv", EcowittExtraUseUv);
-			ini.SetValue("GW1000", "ExtraSensorUseTempHum", EcowittExtraUseTempHum);
-			ini.SetValue("GW1000", "ExtraSensorUseSoilTemp", EcowittExtraUseSoilTemp);
-			ini.SetValue("GW1000", "ExtraSensorUseSoilMoist", EcowittExtraUseSoilMoist);
-			ini.SetValue("GW1000", "ExtraSensorUseLeafWet", EcowittExtraUseLeafWet);
-			ini.SetValue("GW1000", "ExtraSensorUseUserTemp", EcowittExtraUseUserTemp);
-			ini.SetValue("GW1000", "ExtraSensorUseAQI", EcowittExtraUseAQI);
-			ini.SetValue("GW1000", "ExtraSensorUseCo2", EcowittExtraUseCo2);
-			ini.SetValue("GW1000", "ExtraSensorUseLightning", EcowittExtraUseLightning);
-			ini.SetValue("GW1000", "ExtraSensorUseLeak", EcowittExtraUseLeak);
-			ini.SetValue("GW1000", "SetCustomServer", EcowittSetCustomServer);
-			ini.SetValue("GW1000", "EcowittGwAddr", EcowittGwAddr);
-			ini.SetValue("GW1000", "EcowittLocalAddr", EcowittLocalAddr);
-			ini.SetValue("GW1000", "EcowittCustomInterval", EcowittCustomInterval);
+			ini.SetValue("GW1000", "PrimaryTHSensor", Gw1000PrimaryTHSensor);
+			ini.SetValue("GW1000", "ExtraSensorDataEnabled", EcowittSettings.ExtraEnabled);
+			ini.SetValue("GW1000", "ExtraSensorUseSolar", EcowittSettings.ExtraUseSolar);
+			ini.SetValue("GW1000", "ExtraSensorUseUv", EcowittSettings.ExtraUseUv);
+			ini.SetValue("GW1000", "ExtraSensorUseTempHum", EcowittSettings.ExtraUseTempHum);
+			ini.SetValue("GW1000", "ExtraSensorUseSoilTemp", EcowittSettings.ExtraUseSoilTemp);
+			ini.SetValue("GW1000", "ExtraSensorUseSoilMoist", EcowittSettings.ExtraUseSoilMoist);
+			ini.SetValue("GW1000", "ExtraSensorUseLeafWet", EcowittSettings.ExtraUseLeafWet);
+			ini.SetValue("GW1000", "ExtraSensorUseUserTemp", EcowittSettings.ExtraUseUserTemp);
+			ini.SetValue("GW1000", "ExtraSensorUseAQI", EcowittSettings.ExtraUseAQI);
+			ini.SetValue("GW1000", "ExtraSensorUseCo2", EcowittSettings.ExtraUseCo2);
+			ini.SetValue("GW1000", "ExtraSensorUseLightning", EcowittSettings.ExtraUseLightning);
+			ini.SetValue("GW1000", "ExtraSensorUseLeak", EcowittSettings.ExtraUseLeak);
+			ini.SetValue("GW1000", "SetCustomServer", EcowittSettings.SetCustomServer);
+			ini.SetValue("GW1000", "EcowittGwAddr", EcowittSettings.GatewayAddr);
+			ini.SetValue("GW1000", "EcowittLocalAddr", EcowittSettings.LocalAddr);
+			ini.SetValue("GW1000", "EcowittCustomInterval", EcowittSettings.CustomInterval);
 			// api
-			ini.SetValue("GW1000", "EcowittAppKey", Crypto.EncryptString(EcowittAppKey, Program.InstanceId));
-			ini.SetValue("GW1000", "EcowittUserKey", Crypto.EncryptString(EcowittUserApiKey, Program.InstanceId));
-			ini.SetValue("GW1000", "EcowittMacAddress", EcowittMacAddress);
+			ini.SetValue("GW1000", "EcowittAppKey", Crypto.EncryptString(EcowittSettings.AppKey, Program.InstanceId));
+			ini.SetValue("GW1000", "EcowittUserKey", Crypto.EncryptString(EcowittSettings.UserApiKey, Program.InstanceId));
+			ini.SetValue("GW1000", "EcowittMacAddress", EcowittSettings.MacAddress);
 
 			// Ambient settings
 			ini.SetValue("Ambient", "ExtraSensorDataEnabled", AmbientExtraEnabled);
@@ -5723,25 +5762,7 @@ namespace CumulusMX
 		public bool AirLinkInEnabled { get; set; }
 		public bool AirLinkOutEnabled { get; set; }
 
-		public bool EcowittSetCustomServer { get; set; }
-		public string EcowittGwAddr { get; set; }
-		public string EcowittLocalAddr { get; set; }
-		public int EcowittCustomInterval { get; set; }
-		public bool EcowittExtraEnabled { get; set; }
-		public bool EcowittExtraUseSolar { get; set; }
-		public bool EcowittExtraUseUv { get; set; }
-		public bool EcowittExtraUseTempHum { get; set; }
-		public bool EcowittExtraUseSoilTemp { get; set; }
-		public bool EcowittExtraUseSoilMoist { get; set; }
-		public bool EcowittExtraUseLeafWet { get; set; }
-		public bool EcowittExtraUseUserTemp { get; set; }
-		public bool EcowittExtraUseAQI { get; set; }
-		public bool EcowittExtraUseCo2 { get; set; }
-		public bool EcowittExtraUseLightning { get; set; }
-		public bool EcowittExtraUseLeak { get; set; }
-		public string EcowittAppKey { get; set; }
-		public string EcowittUserApiKey { get; set; }
-		public string EcowittMacAddress { get; set; }
+		public Stations.EcowittSettings EcowittSettings = new Stations.EcowittSettings();
 
 		public bool AmbientExtraEnabled { get; set; }
 		public bool AmbientExtraUseSolar { get; set; }
@@ -5954,6 +5975,7 @@ namespace CumulusMX
 		public string Gw1000IpAddress;
 		public string Gw1000MacAddress;
 		public bool Gw1000AutoUpdateIpAddress = true;
+		public int Gw1000PrimaryTHSensor;
 
 		public Timer WebTimer = new Timer();
 		public Timer MQTTTimer = new Timer();
@@ -6218,7 +6240,7 @@ namespace CumulusMX
 			// make sure solar max is calculated for those stations without a solar sensor
 			LogMessage("DoLogFile: Writing log entry for " + timestamp);
 			LogDebugMessage("DoLogFile: max gust: " + (station.RecentMaxGust.HasValue ? station.RecentMaxGust.Value.ToString(WindFormat) : "null"));
-			station.CurrentSolarMax = AstroLib.SolarMax(timestamp, Longitude, Latitude, station.AltitudeM(Altitude), out station.SolarElevation, SolarOptions);
+			station.CurrentSolarMax = AstroLib.SolarMax(timestamp, Longitude, Latitude, WeatherStation.AltitudeM(Altitude), out station.SolarElevation, SolarOptions);
 
 			if (StationOptions.LogMainStation)
 			{
@@ -6257,41 +6279,10 @@ namespace CumulusMX
 				_ = station.Database.InsertOrReplace(newRec);
 
 
-
 				var filename = GetLogFileName(timestamp);
-				var sep = ",";
-
-				var sb = new StringBuilder(256);
-				sb.Append(timestamp.ToString("dd/MM/yy HH:mm", invDate) + sep);
-				sb.Append(Utils.ToUnixTime(timestamp) + sep);
-				sb.Append((station.Temperature.HasValue ? station.Temperature.Value.ToString(TempFormat, invNum) : "") + sep);
-				sb.Append((station.Humidity.HasValue ? station.Humidity.Value : "") + sep);
-				sb.Append((station.Dewpoint.HasValue ? station.Dewpoint.Value.ToString(TempFormat, invNum) : "") + sep);
-				sb.Append((station.WindAverage.HasValue ? station.WindAverage.Value.ToString(WindAvgFormat, invNum) : "") + sep);
-				sb.Append((station.RecentMaxGust.HasValue ? station.RecentMaxGust.Value.ToString(WindFormat, invNum) : "") + sep);
-				sb.Append(station.AvgBearing + sep);
-				sb.Append((station.RainRate.HasValue ? station.RainRate.Value.ToString(RainFormat, invNum) : "") + sep);
-				sb.Append((station.RainToday.HasValue ? station.RainToday.Value.ToString(RainFormat, invNum) : "") + sep);
-				sb.Append((station.Pressure.HasValue ? station.Pressure.Value.ToString(PressFormat, invNum) : "") + sep);
-				sb.Append(station.Raincounter.ToString(RainFormat, invNum) + sep);
-				sb.Append((station.IndoorTemp.HasValue ? station.IndoorTemp.Value.ToString(TempFormat, invNum) : "") + sep);
-				sb.Append((station.IndoorHum.HasValue ? station.IndoorHum.Value : "") + sep);
-				sb.Append((station.WindLatest.HasValue ? station.WindLatest.Value.ToString(WindFormat, invNum) : "") + sep);
-				sb.Append((station.WindChill.HasValue ? station.WindChill.Value.ToString(TempFormat, invNum) : "") + sep);
-				sb.Append((station.HeatIndex.HasValue ? station.HeatIndex.Value.ToString(TempFormat, invNum) : "") + sep);
-				sb.Append((station.UV.HasValue ? station.UV.Value.ToString(UVFormat, invNum) : "") + sep);
-				sb.Append((station.SolarRad.HasValue ? station.SolarRad.Value : "") + sep);
-				sb.Append(station.ET.ToString(ETFormat, invNum) + sep);
-				sb.Append(station.AnnualETTotal.ToString(ETFormat, invNum) + sep);
-				sb.Append((station.ApparentTemp.HasValue ? station.ApparentTemp.Value.ToString(TempFormat, invNum) : "") + sep);
-				sb.Append((station.CurrentSolarMax.HasValue ? station.CurrentSolarMax.Value : "") + sep);
-				sb.Append(station.SunshineHours.ToString(SunFormat, invNum) + sep);
-				sb.Append(station.Bearing + sep);
-				sb.Append(station.RG11RainToday.ToString(RainFormat, invNum) + sep);
-				sb.Append(station.RainSinceMidnight.ToString(RainFormat, invNum) + sep);
-				sb.Append((station.FeelsLike.HasValue ? station.FeelsLike.Value.ToString(TempFormat, invNum) : "") + sep);
-				sb.Append((station.Humidex.HasValue ? station.Humidex.Value.ToString(TempFormat, invNum) : ""));
-
+				
+				var csv = newRec.ToCSV(true);	
+				
 				var success = false;
 				var retries = LogFileRetries;
 				do
@@ -6301,7 +6292,7 @@ namespace CumulusMX
 						using (FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read))
 						using (StreamWriter file = new StreamWriter(fs))
 						{
-							await file.WriteLineAsync(sb.ToString());
+							await file.WriteLineAsync(csv);
 							file.Close();
 							fs.Close();
 						}
@@ -6899,6 +6890,7 @@ namespace CumulusMX
 
 		public void BackupData(bool daily, DateTime timestamp)
 		{
+			LogMessage($"Starting {(daily ? "daily" : "start-up")} backup");
 			string dirpath = daily ? backupPath + "daily" + DirectorySeparator : backupPath;
 
 			if (!Directory.Exists(dirpath))
@@ -6983,17 +6975,17 @@ namespace CumulusMX
 						LogExceptionMessage(ex, "Backup: Error creating folders");
 					}
 
-					CopyBackupFile(AlltimeIniFile, alltimebackup);
-					CopyBackupFile(MonthlyAlltimeIniFile, monthlyAlltimebackup);
-					CopyBackupFile(DayFileName, daybackup);
-					CopyBackupFile(TodayIniFile, todaybackup);
-					CopyBackupFile(YesterdayFile, yesterdaybackup);
-					CopyBackupFile(LogFile, logbackup);
-					CopyBackupFile(MonthIniFile, monthbackup);
-					CopyBackupFile(YearIniFile, yearbackup);
-					CopyBackupFile(diaryfile, diarybackup);
-					CopyBackupFile("Cumulus.ini", configbackup);
-					CopyBackupFile("UniqueId.txt", uniquebackup);
+					_ = CopyBackupFile(AlltimeIniFile, alltimebackup);
+					_ = CopyBackupFile(MonthlyAlltimeIniFile, monthlyAlltimebackup);
+					_ = CopyBackupFile(DayFileName, daybackup);
+					_ = CopyBackupFile(TodayIniFile, todaybackup);
+					_ = CopyBackupFile(YesterdayFile, yesterdaybackup);
+					_ = CopyBackupFile(LogFile, logbackup);
+					_ = CopyBackupFile(MonthIniFile, monthbackup);
+					_ = CopyBackupFile(YearIniFile, yearbackup);
+					_ = CopyBackupFile(diaryfile, diarybackup);
+					_ = CopyBackupFile("Cumulus.ini", configbackup);
+					_ = CopyBackupFile("UniqueId.txt", uniquebackup);
 
 					if (daily)
 					{
@@ -7004,11 +6996,6 @@ namespace CumulusMX
 							LogDebugMessage("Making backup copy of the database");
 							station.Database.Backup(dbBackup);
 							LogDebugMessage("Completed backup copy of the database");
-
-							// now vacuum the database
-							LogDebugMessage("Compressing the database");
-							station.Database.Execute("VACUUM");
-							LogDebugMessage("Completed compressing the database");
 						}
 						catch (Exception ex)
 						{
@@ -7018,13 +7005,13 @@ namespace CumulusMX
 					else
 					{
 						// start-up backup - the db is not yet in use, do a file copy including any recovery files
-						CopyBackupFile(dbfile, dbBackup);
-						CopyBackupFile(dbfile + "-journal", dbBackup + "-journal");
+						_ = CopyBackupFile(dbfile, dbBackup);
+						_ = CopyBackupFile(dbfile + "-journal", dbBackup + "-journal");
 						//CopyBackupFile(dbfile + "-shm", dbBackup + "-shm");
 						//CopyBackupFile(dbfile + "-wal", dbBackup + "-wal");
 					}
-					CopyBackupFile(extraFile, extraBackup);
-					CopyBackupFile(AirLinkFile, AirLinkBackup);
+					_ = CopyBackupFile(extraFile, extraBackup);
+					_ = CopyBackupFile(AirLinkFile, AirLinkBackup);
 					// Do not do this extra backup between 00:00 & Roll-over hour on the first of the month
 					// as the month has not yet rolled over - only applies for start-up backups
 					if (timestamp.Day == 1 && timestamp.Hour >= RolloverHour)
@@ -7039,9 +7026,9 @@ namespace CumulusMX
 						var AirLinkFile2 = GetAirLinkLogFileName(timestamp.AddDays(-1));
 						var AirLinkBackup2 = datafolder + Path.GetFileName(AirLinkFile2);
 
-						CopyBackupFile(LogFile2, logbackup2);
-						CopyBackupFile(extraFile2, extraBackup2);
-						CopyBackupFile(AirLinkFile2, AirLinkBackup2);
+						_ = CopyBackupFile(LogFile2, logbackup2);
+						_ = CopyBackupFile(extraFile2, extraBackup2);
+						_ = CopyBackupFile(AirLinkFile2, AirLinkBackup2);
 					}
 
 					LogMessage("Created backup folder " + foldername);
@@ -7053,19 +7040,19 @@ namespace CumulusMX
 			}
 		}
 
-		private static void CopyBackupFile(string src, string dest)
+		private async Task CopyBackupFile(string src, string dest)
 		{
 			try
 			{
 				if (File.Exists(src))
 				{
 					// don't wait for this to complete
-					_ = Utils.CopyFileAsync(src, dest);
+					await Utils.CopyFileAsync(src, dest);
 				}
 			}
-			catch (Exception e)
+			catch (Exception ex)
 			{
-				LogMessage($"BackupData: Error copying {src} to {dest} - {e}");
+				LogExceptionMessage(ex, $"BackupData: Error copying {src} to {dest}");
 			}
 		}
 
@@ -7763,49 +7750,80 @@ namespace CumulusMX
 
 			if (FtpOptions.FtpMode == FtpProtocols.SFTP)
 			{
-				// BUILD 3092 - added alternate SFTP authentication options
 				ConnectionInfo connectionInfo;
-				if (FtpOptions.SshAuthen == "password")
-				{
-					connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PasswordAuthenticationMethod(FtpOptions.Username, FtpOptions.Password));
-					LogFtpDebugMessage("SFTP[Int]: Connecting using password authentication");
-				}
-				else if (FtpOptions.SshAuthen == "psk")
-				{
-					if (File.Exists(FtpOptions.SshPskFile))
+				try
+				{	
+					if (string.IsNullOrEmpty(FtpOptions.Username))
 					{
-						PrivateKeyFile pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
-						connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
-						LogFtpDebugMessage("SFTP[Int]: Connecting using PSK authentication");
+						LogMessage("SFTP[Int]: Error, your username is blank!");
+						return;
+					}
+
+					if (FtpOptions.SshAuthen == "password")
+					{
+						if (string.IsNullOrEmpty(FtpOptions.Password))
+						{
+							LogMessage("SFTP[Int]: Error, your password is blank!");
+							return;
+						}
+
+						connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PasswordAuthenticationMethod(FtpOptions.Username, FtpOptions.Password));
+						LogFtpDebugMessage("SFTP[Int]: Connecting using password authentication");
+					}
+					else if (FtpOptions.SshAuthen == "psk")
+					{
+						if (File.Exists(FtpOptions.SshPskFile))
+						{
+							PrivateKeyFile pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
+							connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
+							LogFtpDebugMessage("SFTP[Int]: Connecting using PSK authentication");
+						}
+						else
+						{
+							LogMessage($"SFTP[Int]: Error: Could not find your PSK key file: {FtpOptions.SshPskFile}");
+							return;
+						}
+					}
+					else if (FtpOptions.SshAuthen == "password_psk")
+					{
+						if (string.IsNullOrEmpty(FtpOptions.Password))
+						{
+							LogMessage("SFTP[Int]: Error, your password is blank!");
+							return;
+						}
+
+						if (File.Exists(FtpOptions.SshPskFile))
+						{
+							PrivateKeyFile pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
+							connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PasswordAuthenticationMethod(FtpOptions.Username, FtpOptions.Password), new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
+							LogFtpDebugMessage("SFTP[Int]: Connecting using password or PSK authentication");
+						}
+						else
+						{
+							LogMessage($"SFTP[Int]: Error: Could not find your PSK key file: {FtpOptions.SshPskFile}");
+							return;
+						}
 					}
 					else
 					{
-						LogMessage($"SFTP[Int]: Error: Could not find your PSK key file: {FtpOptions.SshPskFile}");
+						LogFtpMessage($"SFTP[Int]: Invalid SshftpAuthentication specified [{FtpOptions.SshAuthen}]");
 						return;
 					}
 				}
-				else if (FtpOptions.SshAuthen == "password_psk")
+				catch (Exception ex)
 				{
-					if (File.Exists(FtpOptions.SshPskFile))
-					{
-						PrivateKeyFile pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
-						connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PasswordAuthenticationMethod(FtpOptions.Username, FtpOptions.Password), new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
-						LogFtpDebugMessage("SFTP[Int]: Connecting using password or PSK authentication");
-					}
-					else
-					{
-						LogMessage($"SFTP[Int]: Error: Could not find your PSK key file: {FtpOptions.SshPskFile}");
-						return;
-					}
-				}
-				else
-				{
-					LogFtpMessage($"SFTP[Int]: Invalid SshftpAuthentication specified [{FtpOptions.SshAuthen}]");
+					LogExceptionMessage(ex, "SFTP[Int]: Error creating SFTP connection object", true);
 					return;
 				}
 
 				try
 				{
+					if (string.IsNullOrEmpty(FtpOptions.Hostname))
+					{
+						LogMessage("SFTP[Int]: Error, your server name is blank!");
+						return;
+					}
+
 					using SftpClient conn = new SftpClient(connectionInfo);
 					try
 					{
@@ -7954,7 +7972,7 @@ namespace CumulusMX
 						}
 						LogFtpDebugMessage("SFTP[Int]: Done uploading graph data files");
 
-						LogFtpMessage("SFTP[Int]: Uploading daily graph data files");
+						LogFtpDebugMessage("SFTP[Int]: Uploading daily graph data files");
 						for (int i = 0; i < GraphDataEodFiles.Length; i++)
 						{
 							if (GraphDataEodFiles[i].FTP && GraphDataEodFiles[i].FtpRequired)
@@ -7974,7 +7992,7 @@ namespace CumulusMX
 								}
 							}
 						}
-						LogFtpMessage("SFTP[Int]: Done uploading daily graph data files");
+						LogFtpDebugMessage("SFTP[Int]: Done uploading daily graph data files");
 
 						if (MoonImage.Ftp && MoonImage.ReadyToFtp)
 						{
@@ -8003,7 +8021,7 @@ namespace CumulusMX
 				{
 					LogFtpMessage($"SFTP[Int]: Error using SFTP connection - {ex.Message}");
 				}
-				LogFtpDebugMessage("SFTP[Int]: Connection process complete");
+				LogFtpDebugMessage("SFTP[Int]: Process complete");
 			}
 			else
 			{
@@ -8251,34 +8269,14 @@ namespace CumulusMX
 
 				LogFtpDebugMessage($"FTP[{cycleStr}]: Uploading {localfile} to {remotefilename}");
 
-				using (Stream ostream = conn.OpenWrite(remotefilename))
-				using (Stream istream = new FileStream(localfile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-				{
-					try
-					{
-						var buffer = new byte[4096];
-						int read;
-						while ((read = istream.Read(buffer, 0, buffer.Length)) > 0)
-						{
-							ostream.Write(buffer, 0, read);
-						}
+				var status = conn.UploadFile(localfile, remotefilename);
 
-						LogFtpDebugMessage($"FTP[{cycleStr}]: Uploaded {localfile}");
-					}
-					catch (Exception ex)
-					{
-						LogExceptionMessage(ex, $"FTP[{cycleStr}]: Error uploading {localfile} to {remotefilename}", true);
-						return conn.IsConnected;
-					}
-					finally
-					{
-						ostream.Close();
-						istream.Close();
-						conn.GetReply(); // required FluentFTP 19.2
-					}
+				if (status.IsFailure())
+				{
+					LogMessage($"FTP[{cycleStr}]: Upload of {localfile} to {remotefile} failed");
 				}
 
-				if (FTPRename)
+				if (status.IsSuccess() && FTPRename)
 				{
 					// rename the file
 					LogFtpDebugMessage($"FTP[{cycleStr}]: Renaming {remotefilename} to {remotefile}");
@@ -8455,6 +8453,7 @@ namespace CumulusMX
 
 		public void LogExceptionMessage(Exception ex, string preamble, bool ftpLog=false)
 		{
+			/*
 			LogMessage($"{preamble} - {ex.Message}");
 			if (ftpLog && FtpOptions.Logging)
 				FtpTrace.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + $"{preamble} - {ex.Message}");
@@ -8463,7 +8462,7 @@ namespace CumulusMX
 
 			var baseEx = ex.GetBaseException();
 
-			if (baseEx != null)
+			if (baseEx != null && baseEx.Message != ex.Message)
 			{
 				LogMessage("Base Exception - " + baseEx.Message);
 				if (ftpLog && FtpOptions.Logging)
@@ -8471,6 +8470,14 @@ namespace CumulusMX
 
 				LogDebugMessage("Base Exception = " + baseEx);
 			}
+			*/
+
+			LogMessage(preamble);
+
+			if (ftpLog && FtpOptions.Logging)
+				FtpTrace.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + $"{preamble} - {ex.Message}");
+
+			LogMessage(Utils.ExceptionToString(ex));
 		}
 
 
@@ -8614,7 +8621,7 @@ namespace CumulusMX
 				sb.Append((station.RainRate ?? 0).ToString(RainFormat, invNum) + ' ');          // 9
 				sb.Append((station.RainToday ?? 0).ToString(RainFormat, invNum) + ' ');         // 10
 				sb.Append((station.Pressure ?? 0).ToString(PressFormat, invNum) + ' ');         // 11
-				sb.Append(station.CompassPoint(station.Bearing) + ' ');                         // 12
+				sb.Append(WeatherStation.CompassPoint(station.Bearing) + ' ');                         // 12
 				sb.Append(Beaufort(station.WindAverage ?? 0) + ' ');                            // 13
 				sb.Append(Units.WindText + ' ');                                                // 14
 				sb.Append(Units.TempText[1].ToString() + ' ');                                  // 15
@@ -8657,7 +8664,7 @@ namespace CumulusMX
 				sb.Append(station.Forecastnumber.ToString() + ' ');                             // 49
 				sb.Append(IsDaylight() ? "1 " : "0 ");                                          // 50
 				sb.Append(station.SensorContactLost ? "1 " : "0 ");                             // 51
-				sb.Append(station.CompassPoint(station.AvgBearing) + ' ');                      // 52
+				sb.Append(WeatherStation.CompassPoint(station.AvgBearing) + ' ');                      // 52
 				sb.Append((station.CloudBase ?? 0).ToString() + ' ');                           // 53
 				sb.Append(CloudBaseInFeet ? "ft " : "m ");                                      // 54
 				sb.Append((station.ApparentTemp ?? 0).ToString(TempFormat, invNum) + ' ');      // 55
@@ -9243,20 +9250,14 @@ namespace CumulusMX
 
 		private void PingCompletedCallback(object sender, PingCompletedEventArgs e)
 		{
-			// If the operation was cancelled, display a message to the user.
-			if (e.Cancelled)
-			{
-				LogMessage("Ping cancelled.");
-			}
-
 			// If an error occurred, display the exception to the user.
-			else if (e.Error != null)
+			if (e.Error != null)
 			{
-				LogMessage("Ping failed: " + e.Error.Message + " > " + e.Error.InnerException.Message);
+				LogExceptionMessage(e.Error, "Ping errored");
 			}
 			else
 			{
-				LogMessage("Ping reply: " + e.Reply);
+				LogMessage("Ping reply: " + e.Reply.Status);
 			}
 
 			pingReply = e.Reply;

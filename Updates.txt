@@ -1,9 +1,25 @@
+4.0.0 - b4010
+——————————————
+- More nullification
+- Fix: CPU temp check on Linux?
+- Fix: Start-up PING is now run in a separate thread so if it hangs CMX can continue
+
+
+4.0.0 - b4009
+——————————————
+- Fix Ecowitt historic catch-up crash processing Soil Moisture sensor data
+- Now catches the crash in loading the Moon image
+- Attempt at fixing the cause of the crash loading Moon image - set a defined max memory pool size
+
+
 4.0.0 - b4008
 ——————————————
 - Adds new Data Logging Settings page to control logging of extra sensors to the database, and the creation of the legacy v3 log files.
 - Fixes nullable value Exception when processing temperature values (it was the dewpoint causing the problem)
 - Change Linux service installer to add the line "Wants=network-online.target" to the service file
 - Fix crash on start-up getting the local IP address if the network is not ready
+- Fix Ecowitt API settings not being loaded into Station Settings page
+- Fix GW1000 station not attempting to reconnect on connection failure
 
 
 4.0.0 - b4007

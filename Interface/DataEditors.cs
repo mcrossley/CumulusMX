@@ -30,7 +30,7 @@ namespace CumulusMX
 		#region Dayfile
 
 		/// <summary>
-		/// Return lines from dayfile.txt in json format
+		/// Return entries from DayData in json format
 		/// </summary>
 		/// <param name="draw"></param>
 		/// <param name="start"></param>
@@ -218,8 +218,8 @@ namespace CumulusMX
 						if (newRec.HighSolarTime.HasValue) updt.Append($"THighSolarRad={newRec.HighSolarTime.Value:\\'HH:mm\\'},");
 						if (newRec.HighUv.HasValue) updt.Append($"HighUV={newRec.HighUv.Value.ToString(cumulus.UVFormat, invNum)},");
 						if (newRec.HighUvTime.HasValue) updt.Append($"THighUV={newRec.HighUvTime.Value:\\'HH:mm\\'},");
-						if (newRec.HighGustBearing.HasValue) updt.Append($"HWindGBearSym='{station.CompassPoint(newRec.HighGustBearing.Value)}',");
-						if (newRec.DominantWindBearing.HasValue) updt.Append($"DomWindDirSym='{station.CompassPoint(newRec.DominantWindBearing.Value)}',");
+						if (newRec.HighGustBearing.HasValue) updt.Append($"HWindGBearSym='{WeatherStation.CompassPoint(newRec.HighGustBearing.Value)}',");
+						if (newRec.DominantWindBearing.HasValue) updt.Append($"DomWindDirSym='{WeatherStation.CompassPoint(newRec.DominantWindBearing.Value)}',");
 						if (newRec.HighFeelsLike.HasValue) updt.Append($"MaxFeelsLike={newRec.HighFeelsLike.Value.ToString(cumulus.TempFormat, invNum)},");
 						if (newRec.HighFeelsLikeTime.HasValue) updt.Append($"TMaxFeelsLike={newRec.HighFeelsLikeTime.Value:\\'HH:mm\\'},");
 						if (newRec.LowFeelsLike.HasValue) updt.Append($"MinFeelsLike={newRec.LowFeelsLike.Value.ToString(cumulus.TempFormat, invNum)},");
@@ -563,8 +563,8 @@ namespace CumulusMX
 						updt.Append($"CurrWindBearing={(newRec.WindDir.HasValue ? newRec.WindDir.Value : "null")},");
 						updt.Append($"RG11rain={(newRec.RG11Rain.HasValue ? newRec.RG11Rain.Value.ToString(cumulus.RainFormat, invNum) : "null")},");
 						updt.Append($"RainSinceMidnight={(newRec.RainMidnight.HasValue ? newRec.RainMidnight.Value.ToString(cumulus.RainFormat, invNum) : "null")},");
-						updt.Append($"WindbearingSym='{(newRec.WindAvgDir.HasValue ? station.CompassPoint(newRec.WindAvgDir.Value) : "null")}',");
-						updt.Append($"CurrWindBearingSym='{(newRec.WindDir.HasValue ? station.CompassPoint(newRec.WindDir.Value) : "null")}',");
+						updt.Append($"WindbearingSym='{(newRec.WindAvgDir.HasValue ? WeatherStation.CompassPoint(newRec.WindAvgDir.Value) : "null")}',");
+						updt.Append($"CurrWindBearingSym='{(newRec.WindDir.HasValue ? WeatherStation.CompassPoint(newRec.WindDir.Value) : "null")}',");
 						updt.Append($"FeelsLike={(newRec.FeelsLike.HasValue ? newRec.FeelsLike.Value.ToString(cumulus.TempFormat, invNum) : "null")},");
 						updt.Append($"Humidex={(newRec.Humidex.HasValue ? newRec.Humidex.Value.ToString(cumulus.TempFormat, invNum) : "null")} ");
 

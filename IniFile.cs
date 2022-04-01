@@ -116,7 +116,16 @@ namespace CumulusMX
 						{
 							// *** Check for key+value pair ***
 							int i;
-							if ((i=s.IndexOf('=')) > 0)
+							if (s.StartsWith("#"))
+							{
+								// It's a comment
+								// *** Only first occurrence of a key is loaded ***
+								if (!CurrentSection.ContainsKey(s))
+								{
+									CurrentSection.Add(s, "");
+								}
+							}
+							else if ((i = s.IndexOf('=')) > 0)
 							{
 								int j = s.Length - i - 1;
 								string Key = s[..i].Trim();
@@ -160,6 +169,8 @@ namespace CumulusMX
 					{
 						// *** Open the file ***
 						using StreamWriter sw = new StreamWriter(m_FileName);
+						sw.WriteLine($"#Last updated: {DateTime.Now:G}");
+
 						// *** Cycle on all sections ***
 						bool First = false;
 						foreach (KeyValuePair<string, Dictionary<string, string>> SectionPair in m_Sections)
@@ -178,8 +189,12 @@ namespace CumulusMX
 							{
 								// *** Write the key+value pair ***
 								sw.Write(ValuePair.Key);
-								sw.Write('=');
-								sw.WriteLine(ValuePair.Value);
+								if (!ValuePair.Key.StartsWith("#"))
+								{
+									sw.Write('=');
+									sw.Write(ValuePair.Value);
+								}
+								sw.WriteLine();
 							}
 						}
 

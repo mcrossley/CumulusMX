@@ -2591,10 +2591,7 @@ namespace CumulusMX
 							Cumulus.LogMessage("GetArchiveData: Log file entry written");
 							cumulus.MySqlStuff.DoRealtimeData(999, false, timestamp);
 
-							if (cumulus.StationOptions.LogExtraSensors)
-							{
-								_ = cumulus.DoExtraLogFile(timestamp);
-							}
+							_ = cumulus.DoExtraLogFile(timestamp);
 
 							AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex,
 								Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate, -1, -1);

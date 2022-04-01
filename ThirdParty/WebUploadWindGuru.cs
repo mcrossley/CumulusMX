@@ -108,16 +108,16 @@ namespace CumulusMX.ThirdParty
 			URL.Append("&salt=" + salt);
 			URL.Append("&hash=" + hash);
 			URL.Append("&interval=" + cumulus.WindGuru.Interval * 60);
-			URL.Append("&wind_avg=" + station.ConvertUserWindToKnots(avgwind).ToString("F1", InvC));
-			URL.Append("&wind_max=" + station.ConvertUserWindToKnots(maxwind).ToString("F1", InvC));
-			URL.Append("&wind_min=" + station.ConvertUserWindToKnots(minwind).ToString("F1", InvC));
+			URL.Append("&wind_avg=" + WeatherStation.ConvertUserWindToKnots(avgwind).ToString("F1", InvC));
+			URL.Append("&wind_max=" + WeatherStation.ConvertUserWindToKnots(maxwind).ToString("F1", InvC));
+			URL.Append("&wind_min=" + WeatherStation.ConvertUserWindToKnots(minwind).ToString("F1", InvC));
 			URL.Append("&wind_direction=" + station.AvgBearing);
 			if (station.Temperature.HasValue)
-				URL.Append("&temperature=" + station.ConvertUserTempToC(station.Temperature).Value.ToString("F1", InvC));
+				URL.Append("&temperature=" + WeatherStation.ConvertUserTempToC(station.Temperature).Value.ToString("F1", InvC));
 			if (station.Humidity.HasValue)
 				URL.Append("&rh=" + station.Humidity.Value);
 			if (station.Pressure.HasValue)
-				URL.Append("&mslp=" + station.ConvertUserPressureToHPa(station.Pressure).Value.ToString("F1", InvC));
+				URL.Append("&mslp=" + WeatherStation.ConvertUserPressureToHPa(station.Pressure).Value.ToString("F1", InvC));
 			if (cumulus.WindGuru.SendRain)
 			{
 				URL.Append("&precip=" + station.ConvertUserRainToMM(station.RainLastHour).Value.ToString("F1", InvC));

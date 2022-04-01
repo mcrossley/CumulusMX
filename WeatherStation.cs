@@ -91,9 +91,6 @@ namespace CumulusMX
 
 		public DateTime AlltimeRecordTimestamp { get; set; }
 
-		//private ProgressWindow progressWindow;
-
-		//public historyProgressWindow histprog;
 		public BackgroundWorker bw;
 
 		//public bool importingData = false;
@@ -296,6 +293,14 @@ namespace CumulusMX
 			Database.CreateTable<AirQuality>();
 			Database.CreateTable<CO2Data>();
 
+			// now vacuum the database
+			Cumulus.LogMessage("Compressing the database");
+			var dbOrigSize = new FileInfo(cumulus.dbfile).Length / 1048576.0;
+			Database.Execute("VACUUM");
+			var dbNewSize = new FileInfo(cumulus.dbfile).Length / 1048576.0;
+			Cumulus.LogMessage($"Completed compressing the database, was {dbOrigSize:F2} MB,  now {dbNewSize:F2} MB");
+
+
 			Graphs = new GraphData(cumulus, this);
 
 			ReadTodayFile();
@@ -337,6 +342,7 @@ namespace CumulusMX
 					Cumulus.LogMessage($"Midnight rain found in the following entry: {rec[0].Timestamp}, RainCounter = {rec[0].RainCounter}");
 					raincount = rec[0].RainCounter.Value;
 					logdate = rec[0].Timestamp;
+					RainToday = Raincounter - raindaystart >= 0 ? (Raincounter - raindaystart) * cumulus.Calib.Rain.Mult : 0;
 				}
 			}
 			catch (Exception ex)
@@ -511,17 +517,17 @@ namespace CumulusMX
 			HiLoToday.LowTempTime = ini.GetValue("Temp", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
 			HiLoToday.HighTemp = ini.GetValue("Temp", "High", nullDbl);
 			HiLoToday.HighTempTime = ini.GetValue("Temp", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
-			
+
 			if (HiLoToday.HighTemp.HasValue && HiLoToday.LowTemp.HasValue)
 				HiLoToday.TempRange = HiLoToday.HighTemp.Value - HiLoToday.LowTemp.Value;
 			else
 				HiLoToday.TempRange = null;
 			TempTotalToday = ini.GetValue("Temp", "Total", 0.0);
 			tempsamplestoday = ini.GetValue("Temp", "Samples", 1);
-			
+
 			HeatingDegreeDays = ini.GetValue("Temp", "HeatingDegreeDays", 0.0);
 			CoolingDegreeDays = ini.GetValue("Temp", "CoolingDegreeDays", 0.0);
-			
+
 			GrowingDegreeDaysThisYear1 = ini.GetValue("Temp", "GrowingDegreeDaysThisYear1", 0.0);
 			GrowingDegreeDaysThisYear2 = ini.GetValue("Temp", "GrowingDegreeDaysThisYear2", 0.0);
 			// PressureHighDewpoint
@@ -535,13 +541,14 @@ namespace CumulusMX
 			HiLoToday.HighHourlyRain = ini.GetValue("Rain", "HourlyHigh", 0.0);
 			HiLoToday.HighHourlyRainTime = ini.GetValue("Rain", "HHourlyTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
 			raindaystart = ini.GetValue("Rain", "Start", -1.0);
-			Cumulus.LogMessage($"ReadTodayfile: Rain day start = {raindaystart}");
-			RainYesterday = ini.GetValue("Rain", "Yesterday", nullDbl);
+			Raincounter = ini.GetValue("Rain", "Last", -1.0);
+			Cumulus.LogMessage($"ReadTodayfile: Rain day start = {raindaystart}, last = {Raincounter}");
 			if (raindaystart >= 0)
 			{
 				Cumulus.LogMessage("ReadTodayfile: set initialiseRainCounterOnFirstData false");
 				initialiseRainCounterOnFirstData = false;
 			}
+			RainYesterday = ini.GetValue("Rain", "Yesterday", nullDbl);
 			// humidity
 			HiLoToday.LowHumidity = ini.GetValue("Humidity", "Low", nullInt);
 			HiLoToday.HighHumidity = ini.GetValue("Humidity", "High", nullInt);
@@ -633,6 +640,8 @@ namespace CumulusMX
 				ini.SetValue("Rain", "HourlyHigh", HiLoToday.HighHourlyRain);
 				ini.SetValue("Rain", "HHourlyTime", HiLoToday.HighHourlyRainTime.ToString("HH:mm"));
 				ini.SetValue("Rain", "Start", raindaystart);
+				ini.SetValue("Rain", "Last", Raincounter);
+
 				ini.SetValue("Rain", "Yesterday", RainYesterday);
 				ini.SetValue("Rain", "LastTip", LastRainTip);
 				ini.SetValue("Rain", "ConsecutiveRainDays", ConsecutiveRainDays);
@@ -1364,7 +1373,7 @@ namespace CumulusMX
 			_ = Database.Execute("delete from RecentData where Timestamp < ?", deleteTime);
 		}
 
-		private void ClearAlarms()
+		private static void ClearAlarms()
 		{
 			cumulus.DataStoppedAlarm.Clear();
 			cumulus.BatteryLowAlarm.Clear();
@@ -1390,261 +1399,261 @@ namespace CumulusMX
 			//TODO: Do we need to alter this?
 			CheckForDataStopped();
 
-			dataValuesUpdated.CheckDataValuesForUpdate();
+			// Reset the values to null if no data received for 5 minutes - at 1 minute before the 5 minutes on the clock
+			if ((now.Minute + 1) % 5 == 0)
+				dataValuesUpdated.CheckDataValuesForUpdate();
 
 			if (!DataStopped)
 			{
 				CurrentSolarMax = AstroLib.SolarMax(now, cumulus.Longitude, cumulus.Latitude, AltitudeM(cumulus.Altitude), out SolarElevation, cumulus.SolarOptions);
 				//if (cumulus.StationOptions.NoSensorCheck)
-				if (true)
+
+				// increment wind run by one minute's worth of average speed
+				if (WindAverage.HasValue)
 				{
-						// increment wind run by one minute's worth of average speed
-					if (WindAverage.HasValue)
+					WindRunToday += WindAverage.Value * WindRunHourMult[cumulus.Units.Wind] / 60.0;
+
+					CheckForWindrunHighLow(now);
+
+					CalculateDominantWindBearing(AvgBearing, WindAverage, 1);
+				}
+
+				if (Temperature.HasValue && Temperature.Value < cumulus.ChillHourThreshold)
+				{
+					// add 1 minute to chill hours
+					ChillHours += 1.0 / 60.0;
+				}
+
+				// update sunshine hours
+				if (cumulus.SolarOptions.UseBlakeLarsen)
+				{
+					ReadBlakeLarsenData();
+				}
+				else if ((SolarRad > (CurrentSolarMax * cumulus.SolarOptions.SunThreshold / 100.0)) && (SolarRad >= cumulus.SolarOptions.SolarMinimum))
+				{
+					SunshineHours += 1.0 / 60.0;
+				}
+
+				// update heating/cooling degree days
+				UpdateDegreeDays(1);
+
+				/*
+				weatherDataCollection.Add(new WeatherData
+				{
+					//station = this,
+					DT = DateTime.Now,
+					WindSpeed = WindLatest,
+					WindAverage = WindAverage,
+					OutdoorTemp = OutdoorTemperature,
+					Pressure = Pressure,
+					Raintotal = RainToday
+				});
+
+				while (weatherDataCollection[0].DT < now.AddHours(-1))
+				{
+					weatherDataCollection.RemoveAt(0);
+				}
+				*/
+
+				if (!first_temp && Temperature.HasValue)
+				{
+					// update temperature average items
+					tempsamplestoday++;
+					TempTotalToday += Temperature.Value;
+				}
+
+				AddRecentDataWithAq(now, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex, Humidity,
+					Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate);
+				DoTrendValues(now);
+				DoPressTrend("Pressure trend");
+
+				// calculate ET just before the hour so it is included in the correct day at roll over - only affects 9am met days really
+				if (cumulus.StationOptions.CalculatedET && now.Minute == 59)
+				{
+					CalculateEvaoptranspiration(now);
+				}
+
+
+				if (now.Minute % cumulus.logints[cumulus.DataLogInterval] == 0)
+				{
+					_ = cumulus.DoLogFile(now, true);  // let this run in background
+
+					_ = cumulus.DoExtraLogFile(now);  // let this run in background
+
+					if (cumulus.AirLinkInEnabled || cumulus.AirLinkOutEnabled)
 					{
-						WindRunToday += WindAverage.Value * WindRunHourMult[cumulus.Units.Wind] / 60.0;
-
-						CheckForWindrunHighLow(now);
-
-						CalculateDominantWindBearing(AvgBearing, WindAverage, 1);
+						_ = cumulus.DoAirLinkLogFile(now);  // let this run in background
 					}
+				}
 
-					if (Temperature.HasValue && Temperature.Value < cumulus.ChillHourThreshold)
+				// Custom MySQL update - minutes interval
+				if (cumulus.MySqlStuff.Settings.CustomMins.Enabled && now.Minute % cumulus.MySqlStuff.Settings.CustomMins.Interval == 0)
+				{
+					_ = cumulus.MySqlStuff.CustomMinutesTimerTick();  // let this run in background
+				}
+
+				// Custom HTTP update - minutes interval
+				if (cumulus.CustomHttpMinutesEnabled && now.Minute % cumulus.CustomHttpMinutesInterval == 0)
+				{
+					_ = cumulus.CustomHttpMinutesUpdate();  // let this run in background
+				}
+
+				if (cumulus.WebIntervalEnabled && cumulus.SynchronisedWebUpdate && (now.Minute % cumulus.UpdateInterval == 0))
+				{
+					if (cumulus.WebUpdating == 1)
 					{
-						// add 1 minute to chill hours
-						ChillHours += 1.0 / 60.0;
+						// Skip this update interval
+						Cumulus.LogMessage("Warning, previous web update is still in progress, first chance, skipping this interval");
+						cumulus.WebUpdating++;
 					}
-
-					// update sunshine hours
-					if (cumulus.SolarOptions.UseBlakeLarsen)
+					else if (cumulus.WebUpdating >= 2)
 					{
-						ReadBlakeLarsenData();
-					}
-					else if ((SolarRad > (CurrentSolarMax * cumulus.SolarOptions.SunThreshold / 100.0)) && (SolarRad >= cumulus.SolarOptions.SolarMinimum))
-					{
-						SunshineHours += 1.0 / 60.0;
-					}
-
-					// update heating/cooling degree days
-					UpdateDegreeDays(1);
-
-					/*
-					weatherDataCollection.Add(new WeatherData
-					{
-						//station = this,
-						DT = DateTime.Now,
-						WindSpeed = WindLatest,
-						WindAverage = WindAverage,
-						OutdoorTemp = OutdoorTemperature,
-						Pressure = Pressure,
-						Raintotal = RainToday
-					});
-
-					while (weatherDataCollection[0].DT < now.AddHours(-1))
-					{
-						weatherDataCollection.RemoveAt(0);
-					}
-					*/
-
-					if (!first_temp && Temperature.HasValue)
-					{
-						// update temperature average items
-						tempsamplestoday++;
-						TempTotalToday += Temperature.Value;
-					}
-
-					AddRecentDataWithAq(now, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex, Humidity,
-						Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate);
-					DoTrendValues(now);
-					DoPressTrend("Pressure trend");
-
-					// calculate ET just before the hour so it is included in the correct day at roll over - only affects 9am met days really
-					if (cumulus.StationOptions.CalculatedET && now.Minute == 59)
-					{
-						CalculateEvaoptranspiration(now);
-					}
-
-
-					if (now.Minute % cumulus.logints[cumulus.DataLogInterval] == 0)
-					{
-						_ = cumulus.DoLogFile(now, true);  // let this run in background
-
-						_ = cumulus.DoExtraLogFile(now);  // let this run in background
-
-						if (cumulus.AirLinkInEnabled || cumulus.AirLinkOutEnabled)
-						{
-							_ = cumulus.DoAirLinkLogFile(now);  // let this run in background
-						}
-					}
-
-					// Custom MySQL update - minutes interval
-					if (cumulus.MySqlStuff.Settings.CustomMins.Enabled && now.Minute % cumulus.MySqlStuff.Settings.CustomMins.Interval == 0)
-					{
-						_ = cumulus.MySqlStuff.CustomMinutesTimerTick();  // let this run in background
-					}
-
-					// Custom HTTP update - minutes interval
-					if (cumulus.CustomHttpMinutesEnabled && now.Minute % cumulus.CustomHttpMinutesInterval == 0)
-					{
-						_ = cumulus.CustomHttpMinutesUpdate();  // let this run in background
-					}
-
-					if (cumulus.WebIntervalEnabled && cumulus.SynchronisedWebUpdate && (now.Minute % cumulus.UpdateInterval == 0))
-					{
-						if (cumulus.WebUpdating == 1)
-						{
-							// Skip this update interval
-							Cumulus.LogMessage("Warning, previous web update is still in progress, first chance, skipping this interval");
-							cumulus.WebUpdating++;
-						}
-						else if (cumulus.WebUpdating >= 2)
-						{
-							Cumulus.LogMessage("Warning, previous web update is still in progress,second chance, aborting connection");
-							if (cumulus.ftpThread.ThreadState == System.Threading.ThreadState.Running)
-								cumulus.ftpThread.Interrupt();
-							Cumulus.LogMessage("Trying new web update");
-							cumulus.WebUpdating = 1;
-							cumulus.ftpThread = new Thread(cumulus.DoHTMLFiles)
-							{
-								IsBackground = true
-							};
-							cumulus.ftpThread.Start();
-						}
-						else
-						{
-							cumulus.WebUpdating = 1;
-							cumulus.ftpThread = new Thread(cumulus.DoHTMLFiles)
-							{
-								IsBackground = true
-							};
-							cumulus.ftpThread.Start();
-						}
-					}
-					// We also want to kick off DoHTMLFiles if local copy is enabled
-					else if (cumulus.FtpOptions.LocalCopyEnabled && cumulus.SynchronisedWebUpdate && (now.Minute % cumulus.UpdateInterval == 0))
-					{
+						Cumulus.LogMessage("Warning, previous web update is still in progress,second chance, aborting connection");
+						if (cumulus.ftpThread.ThreadState == System.Threading.ThreadState.Running)
+							cumulus.ftpThread.Interrupt();
+						Cumulus.LogMessage("Trying new web update");
+						cumulus.WebUpdating = 1;
 						cumulus.ftpThread = new Thread(cumulus.DoHTMLFiles)
 						{
 							IsBackground = true
 						};
 						cumulus.ftpThread.Start();
 					}
-
-					if (cumulus.Wund.Enabled && (now.Minute % cumulus.Wund.Interval == 0) && cumulus.Wund.SynchronisedUpdate && !String.IsNullOrWhiteSpace(cumulus.Wund.ID))
+					else
 					{
-						_ = cumulus.Wund.DoUpdate(now);
-					}
-
-					if (cumulus.Windy.Enabled && (now.Minute % cumulus.Windy.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.Windy.ApiKey))
-					{
-						_ = cumulus.Windy.DoUpdate(now);
-					}
-
-					if (cumulus.WindGuru.Enabled && (now.Minute % cumulus.WindGuru.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.WindGuru.ID))
-					{
-						_  = cumulus.WindGuru.DoUpdate(now);
-					}
-
-					if (cumulus.AWEKAS.Enabled && (now.Minute % ((double)cumulus.AWEKAS.Interval / 60) == 0) && cumulus.AWEKAS.SynchronisedUpdate && !String.IsNullOrWhiteSpace(cumulus.AWEKAS.ID))
-					{
-						_ = cumulus.AWEKAS.DoUpdate(now);
-					}
-
-					if (cumulus.WCloud.Enabled && (now.Minute % cumulus.WCloud.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.WCloud.ID))
-					{
-						_ = cumulus.WCloud.DoUpdate(now);
-					}
-
-					if (cumulus.OpenWeatherMap.Enabled && (now.Minute % cumulus.OpenWeatherMap.Interval == 0) && !string.IsNullOrWhiteSpace(cumulus.OpenWeatherMap.ID))
-					{
-						_ = cumulus.OpenWeatherMap.DoUpdate(now);
-					}
-
-					if (cumulus.PWS.Enabled && (now.Minute % cumulus.PWS.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.PWS.ID) && !String.IsNullOrWhiteSpace(cumulus.PWS.PW))
-					{
-						_ = cumulus.PWS.DoUpdate(now);
-					}
-
-					if (cumulus.WOW.Enabled && (now.Minute % cumulus.WOW.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.WOW.ID) && !String.IsNullOrWhiteSpace(cumulus.WOW.PW))
-					{
-						_ = cumulus.WOW.DoUpdate(now);
-					}
-
-					if (cumulus.APRS.Enabled && (now.Minute % cumulus.APRS.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.APRS.ID))
-					{
-						_ = cumulus.APRS.DoUpdate(now);
-					}
-
-					/*
-					if (cumulus.Twitter.Enabled && (now.Minute % cumulus.Twitter.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.Twitter.ID) && !String.IsNullOrWhiteSpace(cumulus.Twitter.PW))
-					{
-						cumulus.UpdateTwitter();
-					}
-					*/
-
-					if (cumulus.xapEnabled)
-					{
-						using Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-						IPEndPoint iep1 = new IPEndPoint(IPAddress.Broadcast, cumulus.xapPort);
-
-						byte[] data = Encoding.ASCII.GetBytes(cumulus.xapHeartbeat);
-
-						sock.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
-
-						sock.SendTo(data, iep1);
-
-						var timeUTC = now.ToUniversalTime().ToString("HH:mm");
-						var dateISO = now.ToUniversalTime().ToString("yyyyMMdd");
-
-						var xapReport = new StringBuilder("", 1024);
-						xapReport.Append("xap-header\n{\nv=12\nhop=1\n");
-						xapReport.Append($"uid=FF{cumulus.xapUID}00\n");
-						xapReport.Append("class=weather.report\n");
-						xapReport.Append($"source={cumulus.xapsource}\n");
-						xapReport.Append("}\n");
-						xapReport.Append("weather.report\n{\n");
-						xapReport.Append($"UTC={timeUTC}\nDATE={dateISO}\n");
-						if (WindAverage.HasValue)
+						cumulus.WebUpdating = 1;
+						cumulus.ftpThread = new Thread(cumulus.DoHTMLFiles)
 						{
-							xapReport.Append($"WindM={ConvertUserWindToMPH(WindAverage):F1}\n");
-							xapReport.Append($"WindK={ConvertUserWindToKPH(WindAverage):F1}\n");
-						}
-						if (RecentMaxGust.HasValue)
-						{
-							xapReport.Append($"WindGustsM={ConvertUserWindToMPH(RecentMaxGust):F1}\n");
-							xapReport.Append($"WindGustsK={ConvertUserWindToKPH(RecentMaxGust):F1}\n");
-						}
-						xapReport.Append($"WindDirD={Bearing}\n");
-						xapReport.Append($"WindDirC={AvgBearing}\n");
-						if (Temperature.HasValue)
-						{
-							xapReport.Append($"TempC={ConvertUserTempToC(Temperature):F1}\n");
-							xapReport.Append($"TempF={ConvertUserTempToF(Temperature):F1}\n");
-						}
-						xapReport.Append($"DewC={ConvertUserTempToC(Dewpoint):F1}\n");
-						xapReport.Append($"DewF={ConvertUserTempToF(Dewpoint):F1}\n");
-						if (Pressure.HasValue)
-							xapReport.Append($"AirPressure={ConvertUserPressToMB(Pressure):F1}\n");
-						if (RainToday.HasValue)
-							xapReport.Append($"Rain={ConvertUserRainToMM(RainToday.Value):F1}\n");
-						xapReport.Append('}');
-
-						data = Encoding.ASCII.GetBytes(xapReport.ToString());
-
-						sock.SendTo(data, iep1);
-
-						sock.Close();
-					}
-
-					var wxfile = cumulus.StdWebFiles.SingleOrDefault(item => item.LocalFileName == "wxnow.txt");
-					if (wxfile.Create)
-					{
-						CreateWxnowFile();
+							IsBackground = true
+						};
+						cumulus.ftpThread.Start();
 					}
 				}
-				else
+				// We also want to kick off DoHTMLFiles if local copy is enabled
+				else if (cumulus.FtpOptions.LocalCopyEnabled && cumulus.SynchronisedWebUpdate && (now.Minute % cumulus.UpdateInterval == 0))
 				{
-					Cumulus.LogMessage("Minimum data set of pressure, temperature, and wind is not available and NoSensorCheck is not enabled. Skip processing");
+					cumulus.ftpThread = new Thread(cumulus.DoHTMLFiles)
+					{
+						IsBackground = true
+					};
+					cumulus.ftpThread.Start();
 				}
+
+				if (cumulus.Wund.Enabled && (now.Minute % cumulus.Wund.Interval == 0) && cumulus.Wund.SynchronisedUpdate && !String.IsNullOrWhiteSpace(cumulus.Wund.ID))
+				{
+					_ = cumulus.Wund.DoUpdate(now);
+				}
+
+				if (cumulus.Windy.Enabled && (now.Minute % cumulus.Windy.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.Windy.ApiKey))
+				{
+					_ = cumulus.Windy.DoUpdate(now);
+				}
+
+				if (cumulus.WindGuru.Enabled && (now.Minute % cumulus.WindGuru.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.WindGuru.ID))
+				{
+					_  = cumulus.WindGuru.DoUpdate(now);
+				}
+
+				if (cumulus.AWEKAS.Enabled && (now.Minute % ((double)cumulus.AWEKAS.Interval / 60) == 0) && cumulus.AWEKAS.SynchronisedUpdate && !String.IsNullOrWhiteSpace(cumulus.AWEKAS.ID))
+				{
+					_ = cumulus.AWEKAS.DoUpdate(now);
+				}
+
+				if (cumulus.WCloud.Enabled && (now.Minute % cumulus.WCloud.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.WCloud.ID))
+				{
+					_ = cumulus.WCloud.DoUpdate(now);
+				}
+
+				if (cumulus.OpenWeatherMap.Enabled && (now.Minute % cumulus.OpenWeatherMap.Interval == 0) && !string.IsNullOrWhiteSpace(cumulus.OpenWeatherMap.ID))
+				{
+					_ = cumulus.OpenWeatherMap.DoUpdate(now);
+				}
+
+				if (cumulus.PWS.Enabled && (now.Minute % cumulus.PWS.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.PWS.ID) && !String.IsNullOrWhiteSpace(cumulus.PWS.PW))
+				{
+					_ = cumulus.PWS.DoUpdate(now);
+				}
+
+				if (cumulus.WOW.Enabled && (now.Minute % cumulus.WOW.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.WOW.ID) && !String.IsNullOrWhiteSpace(cumulus.WOW.PW))
+				{
+					_ = cumulus.WOW.DoUpdate(now);
+				}
+
+				if (cumulus.APRS.Enabled && (now.Minute % cumulus.APRS.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.APRS.ID))
+				{
+					_ = cumulus.APRS.DoUpdate(now);
+				}
+
+				/*
+				if (cumulus.Twitter.Enabled && (now.Minute % cumulus.Twitter.Interval == 0) && !String.IsNullOrWhiteSpace(cumulus.Twitter.ID) && !String.IsNullOrWhiteSpace(cumulus.Twitter.PW))
+				{
+					cumulus.UpdateTwitter();
+				}
+				*/
+
+				if (cumulus.xapEnabled)
+				{
+					using Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+					IPEndPoint iep1 = new IPEndPoint(IPAddress.Broadcast, cumulus.xapPort);
+
+					byte[] data = Encoding.ASCII.GetBytes(cumulus.xapHeartbeat);
+
+					sock.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
+
+					sock.SendTo(data, iep1);
+
+					var timeUTC = now.ToUniversalTime().ToString("HH:mm");
+					var dateISO = now.ToUniversalTime().ToString("yyyyMMdd");
+
+					var xapReport = new StringBuilder("", 1024);
+					xapReport.Append("xap-header\n{\nv=12\nhop=1\n");
+					xapReport.Append($"uid=FF{cumulus.xapUID}00\n");
+					xapReport.Append("class=weather.report\n");
+					xapReport.Append($"source={cumulus.xapsource}\n");
+					xapReport.Append("}\n");
+					xapReport.Append("weather.report\n{\n");
+					xapReport.Append($"UTC={timeUTC}\nDATE={dateISO}\n");
+					if (WindAverage.HasValue)
+					{
+						xapReport.Append($"WindM={ConvertUserWindToMPH(WindAverage):F1}\n");
+						xapReport.Append($"WindK={ConvertUserWindToKPH(WindAverage):F1}\n");
+					}
+					if (RecentMaxGust.HasValue)
+					{
+						xapReport.Append($"WindGustsM={ConvertUserWindToMPH(RecentMaxGust):F1}\n");
+						xapReport.Append($"WindGustsK={ConvertUserWindToKPH(RecentMaxGust):F1}\n");
+					}
+					xapReport.Append($"WindDirD={Bearing}\n");
+					xapReport.Append($"WindDirC={AvgBearing}\n");
+					if (Temperature.HasValue)
+					{
+						xapReport.Append($"TempC={ConvertUserTempToC(Temperature):F1}\n");
+						xapReport.Append($"TempF={ConvertUserTempToF(Temperature):F1}\n");
+					}
+					xapReport.Append($"DewC={ConvertUserTempToC(Dewpoint):F1}\n");
+					xapReport.Append($"DewF={ConvertUserTempToF(Dewpoint):F1}\n");
+					if (Pressure.HasValue)
+						xapReport.Append($"AirPressure={ConvertUserPressToMB(Pressure):F1}\n");
+					if (RainToday.HasValue)
+						xapReport.Append($"Rain={ConvertUserRainToMM(RainToday.Value):F1}\n");
+					xapReport.Append('}');
+
+					data = Encoding.ASCII.GetBytes(xapReport.ToString());
+
+					sock.SendTo(data, iep1);
+
+					sock.Close();
+				}
+
+				var wxfile = cumulus.StdWebFiles.SingleOrDefault(item => item.LocalFileName == "wxnow.txt");
+				if (wxfile.Create)
+				{
+					CreateWxnowFile();
+				}
+			}
+			else
+			{
+				Cumulus.LogMessage("Minimum data set of pressure, temperature, and wind is not available and NoSensorCheck is not enabled. Skip processing");
 			}
 
 			// Check for a new version of Cumulus once a day
@@ -1655,9 +1664,9 @@ namespace CumulusMX
 			}
 
 			// If not on windows, check for CPU temp
-			if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && File.Exists("/sys/class/thermal/thermal_zone0/temp"))
+			try
 			{
-				try
+				if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && File.Exists("/sys/class/thermal/thermal_zone0/temp"))
 				{
 					var raw = File.ReadAllText(@"/sys/class/thermal/thermal_zone0/temp");
 					if (double.TryParse(raw, out var val))
@@ -1670,15 +1679,15 @@ namespace CumulusMX
 						cumulus.LogDebugMessage($"Current CPU temp file '/sys/class/thermal/thermal_zone0/temp' does not contain a number = [{raw}]");
 					}
 				}
-				catch (Exception ex)
-				{
-					cumulus.LogExceptionMessage(ex, "Error reading CPU temperature");
-				}
+			}
+			catch (Exception ex)
+			{
+				cumulus.LogExceptionMessage(ex, "Error reading CPU temperature");
 			}
 		}
 
 		//private void TenMinuteChanged(DateTime now)
-		private void TenMinuteChanged()
+		private static void TenMinuteChanged()
 		{
 			cumulus.DoMoonPhase();
 			cumulus.MoonAge = MoonriseMoonset.MoonAge();
@@ -1842,37 +1851,40 @@ namespace CumulusMX
 		{
 			cumulus.LogDebugMessage("Calculating ET from data");
 
-			var dateFrom = date.AddHours(-1);
-
-			// get the min and max temps, humidity, pressure, and mean solar rad and wind speed for the last hour
-			var result = Database.Query<EtData>("select max(OutsideTemp) maxTemp, min(OutsideTemp) minTemp, max(Humidity) maxHum, min(Humidity) minHum, max(Pressure) maxPress, min(Pressure) minPress, avg(SolarRad) avgSol, avg(WindSpeed) avgWind from RecentData where Timestamp >= ?", dateFrom);
-
-			if (result.Count == 0)
+			try
 			{
-				cumulus.LogDebugMessage($"No recent data found to calculate ET");
-				return;
+				var dateFrom = date.AddHours(-1);
+
+				// get the min and max temps, humidity, pressure, and mean solar rad and wind speed for the last hour
+				var result = Database.Query<EtData>("select avg(OutsideTemp) avgTemp, avg(Humidity) avgHum, avg(Pressure) avgPress, avg(SolarRad) avgSol, avg(SolarMax) avgSolMax, avg(WindSpeed) avgWind from RecentData where Timestamp >= ?", dateFrom);
+
+				if (result.Count == 0 || !result[0].avgTemp.HasValue || !result[0].avgHum.HasValue || !result[0].avgPress.HasValue || !result[0].avgSol.HasValue || !result[0].avgSolMax.HasValue || !result[0].avgWind.HasValue)
+				{
+					cumulus.LogDebugMessage($"No recent data found to calculate ET");
+					return;
+				}
+				// finally calculate the ETo
+				var newET = MeteoLib.Evapotranspiration(
+					ConvertUserTempToC(result[0].avgTemp).Value,
+					result[0].avgHum.Value,
+					result[0].avgSol.Value,
+					result[0].avgSolMax.Value,
+					ConvertUserWindToMS(result[0].avgWind).Value,
+					cumulus.StationOptions.AnemometerHeightM,
+					ConvertUserPressureToHPa(result[0].avgPress).Value / 10
+				);
+
+				// convert to user units
+				newET = ConvertRainMMToUser(newET);
+
+				// DoET expects the running annual total to be sent
+				DoET(AnnualETTotal + newET, date);
+				cumulus.LogDebugMessage($"Calculated ET for the last hour={newET:0.000}, new values: today={ET:0.000}, annual={AnnualETTotal:0.000}");
 			}
-			// finally calculate the ETo
-			var newET = MeteoLib.Evapotranspiration(
-				ConvertUserTempToC(result[0].minTemp).Value,
-				ConvertUserTempToC(result[0].maxTemp).Value,
-				result[0].minHum,
-				result[0].maxHum,
-				result[0].avgSol,
-				ConvertUserWindToMS(result[0].avgWind).Value,
-				cumulus.Latitude,
-				cumulus.Longitude,
-				AltitudeM(cumulus.Altitude),
-				cumulus.StationOptions.AnemometerHeightM,
-				date
-			);
-
-			// convert to user units
-			newET = ConvertRainMMToUser(newET);
-			cumulus.LogDebugMessage($"Calculated ET for the last hour = {newET:F3}");
-
-			// DoET expects the running annual total to be sent
-			DoET(AnnualETTotal + newET, date);
+			catch (Exception ex)
+			{
+				cumulus.LogExceptionMessage(ex, "Error calculating hourly ET");
+			}
 		}
 
 
@@ -1980,12 +1992,12 @@ namespace CumulusMX
 			file.Close();
 		}
 
-		private double ConvertUserRainToIn(double value)
+		private static double ConvertUserRainToIn(double value)
 		{
 			return cumulus.Units.Rain == 1 ? value : value / 25.4;
 		}
 
-		public double? ConvertUserWindToMPH(double? value)
+		public static double? ConvertUserWindToMPH(double? value)
 		{
 			if (value == null)
 				return null;
@@ -2000,7 +2012,7 @@ namespace CumulusMX
 			};
 		}
 
-		public double ConvertUserWindToKnots(double value)
+		public static double ConvertUserWindToKnots(double value)
 		{
 			return cumulus.Units.Wind switch
 			{
@@ -2177,7 +2189,7 @@ namespace CumulusMX
 			}
 
 			CheckMonthlyAlltime("HighHumidity", Humidity.Value, true, timestamp);
-			
+
 			if (Humidity.Value < AllTime.LowHumidity.Val)
 			{
 				SetAlltime(AllTime.LowHumidity, Humidity.Value, timestamp);
@@ -2187,7 +2199,7 @@ namespace CumulusMX
 			HaveReadData = true;
 		}
 
-		public double CalibrateTemp(double temp)
+		public static double CalibrateTemp(double temp)
 		{
 			return (temp * temp * cumulus.Calib.Temp.Mult2) + (temp * cumulus.Calib.Temp.Mult) + cumulus.Calib.Temp.Offset;
 		}
@@ -2206,6 +2218,8 @@ namespace CumulusMX
 				}
 				return;
 			}
+
+			dataValuesUpdated.Temperature = true;
 
 			// Spike removal is in Celsius
 			var tempC = ConvertUserTempToC(temp).Value;
@@ -2227,7 +2241,7 @@ namespace CumulusMX
 
 			dataValuesUpdated.Temperature = true;
 
-			double tempinF = ConvertUserTempToF(Temperature).Value;
+			//double tempinF = ConvertUserTempToF(Temperature).Value;
 			double tempinC = ConvertUserTempToC(Temperature).Value;
 
 			first_temp = false;
@@ -2363,7 +2377,6 @@ namespace CumulusMX
 			//ConvertTempCToUser(ConvertUserTempToC(OutdoorTemperature) + (0.33 * MeteoLib.ActualVapourPressure(ConvertUserTempToC(OutdoorTemperature), Humidity)) -
 			//				   (0.7 * ConvertUserWindToMS(WindAverage)) - 4);
 			ApparentTemp = ConvertTempCToUser(MeteoLib.ApparentTemperature(ConvertUserTempToC(Temperature).Value, ConvertUserWindToMS(WindAverage).Value, Humidity.Value));
-
 
 			// we will tag on the THW Index here
 			THWIndex = ConvertTempCToUser(MeteoLib.THWIndex(ConvertUserTempToC(Temperature), Humidity, ConvertUserWindToKPH(WindAverage)));
@@ -2778,19 +2791,24 @@ namespace CumulusMX
 
 		public void DoRain(double? total, double? rate, DateTime timestamp)
 		{
-			if (total == null)
-			{
-				return;
-			}
-
 			if (rate == null)
 			{
 				RainRate = null;
 			}
 
+			if (total == null)
+			{
+				return;
+			}
+
+
 			DateTime readingTS = timestamp.AddHours(cumulus.GetHourInc());
 
-			//cumulus.LogDebugMessage($"DoRain: counter={total}, rate={rate}; RainToday={RainToday}, StartOfDay={raindaystart}");
+			dataValuesUpdated.Rain = true;
+
+#if DEBUG
+			cumulus.LogDebugMessage($"DoRain: counter={total:f3}, rate={rate:f3}; RainToday={RainToday:f3}, StartOfDay={raindaystart:f3}");
+#endif
 
 			// Spike removal is in mm
 			var rainRateMM = ConvertUserRainToMM(rate);
@@ -3190,7 +3208,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		public double AltitudeM(double altitude)
+		public static double AltitudeM(double altitude)
 		{
 			if (cumulus.AltitudeInFeet)
 			{
@@ -3207,7 +3225,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		public double? ConvertUserPressureToHPa(double? value)
+		public static double? ConvertUserPressureToHPa(double? value)
 		{
 			if (value == null)
 				return null;
@@ -3972,7 +3990,8 @@ namespace CumulusMX
 
 				// Calculate yesterday"s rain, allowing for the multiplier -
 				// raintotal && raindaystart are not calibrated
-				RainYesterday = (Raincounter - raindaystart) * cumulus.Calib.Rain.Mult;
+				//RainYesterday = (Raincounter - raindaystart) * cumulus.Calib.Rain.Mult;
+				RainYesterday = RainToday;
 				Cumulus.LogMessage("Rainyesterday (calibrated) set to " + RainYesterday);
 
 				//AddRecentDailyData(timestamp.AddDays(-1), RainYesterday, (cumulus.RolloverHour == 0 ? SunshineHours : SunshineToMidnight), HiLoToday.LowTemp, HiLoToday.HighTemp, YestAvgTemp);
@@ -4413,7 +4432,7 @@ namespace CumulusMX
 				raindaystart = Raincounter;
 				Cumulus.LogMessage("Raindaystart set to " + raindaystart);
 
-				RainToday = null;
+				RainToday = dataValuesUpdated.Rain ? 0 : null;
 
 				TempTotalToday = Temperature ?? 0;
 				tempsamplestoday = Temperature.HasValue ? 1 : 0;
@@ -4669,7 +4688,7 @@ namespace CumulusMX
 			}
 		}
 
-		private async Task CopyMonthIniFile(DateTime ts)
+		private static async Task CopyMonthIniFile(DateTime ts)
 		{
 			string year = ts.Year.ToString();
 			string month = ts.Month.ToString("D2");
@@ -4685,7 +4704,7 @@ namespace CumulusMX
 			}
 		}
 
-		private async Task CopyYearIniFile(DateTime ts)
+		private static async Task CopyYearIniFile(DateTime ts)
 		{
 			string year = ts.Year.ToString();
 			string savedFile = cumulus.Datapath + "year" + year + ".ini";
@@ -4765,8 +4784,8 @@ namespace CumulusMX
 			// save the value for yesterday
 			YestAvgTemp = AvgTemp;
 
-			var sep = ",";
-			var sep2 = ",,";
+			//var sep = ",";
+			//var sep2 = ",,";
 
 
 			// Add a new record to the database
@@ -4776,227 +4795,66 @@ namespace CumulusMX
 				Timestamp = tim.Date,
 				HighGust = HiLoToday.HighGust,
 				HighGustBearing = HiLoToday.HighGustBearing,
-				HighGustTime = HiLoToday.HighGustTime,
+				HighGustTime = HiLoToday.HighGust.HasValue ? HiLoToday.HighGustTime : null,
 				LowTemp = HiLoToday.LowTemp,
-				LowTempTime = HiLoToday.LowTempTime,
+				LowTempTime = HiLoToday.LowTemp.HasValue ? HiLoToday.LowTempTime : null,
 				HighTemp = HiLoToday.HighTemp,
-				HighTempTime = HiLoToday.HighTempTime,
+				HighTempTime = HiLoToday.HighTemp.HasValue ? HiLoToday.HighTempTime : null,
 				LowPress = HiLoToday.LowPress,
-				LowPressTime = HiLoToday.LowPressTime,
+				LowPressTime = HiLoToday.LowPress.HasValue ? HiLoToday.LowPressTime : null,
 				HighPress = HiLoToday.HighPress,
-				HighPressTime = HiLoToday.HighPressTime,
+				HighPressTime = HiLoToday.HighPress.HasValue ? HiLoToday.HighPressTime : null,
 				HighRainRate = HiLoToday.HighRainRate,
-				HighRainRateTime = HiLoToday.HighRainRateTime,
+				HighRainRateTime = HiLoToday.HighRainRate.HasValue ? HiLoToday.HighRainRateTime : null,
 				TotalRain = RainToday,
-				AvgTemp = AvgTemp,
-				WindRun = WindRunToday,
+				AvgTemp = HiLoToday.LowTemp.HasValue ? AvgTemp : null,
+				WindRun = HiLoToday.HighWind.HasValue ? WindRunToday : null,
 				HighAvgWind = HiLoToday.HighWind,
-				HighAvgWindTime = HiLoToday.HighWindTime,
+				HighAvgWindTime = HiLoToday.HighWind.HasValue ? HiLoToday.HighWindTime : null,
 				LowHumidity = HiLoToday.LowHumidity,
-				LowHumidityTime = HiLoToday.LowHumidityTime,
+				LowHumidityTime = HiLoToday.LowHumidity.HasValue ? HiLoToday.LowHumidityTime : null,
 				HighHumidity = HiLoToday.HighHumidity,
-				HighHumidityTime = HiLoToday.HighHumidityTime,
-				ET = ET,
-				SunShineHours = cumulus.RolloverHour == 0 ? SunshineHours : SunshineToMidnight,
+				HighHumidityTime = HiLoToday.HighHumidity.HasValue ? HiLoToday.HighHumidityTime : null,
+				ET = HiLoToday.HighSolar.HasValue ? ET : null,
+				SunShineHours = HiLoToday.HighSolar.HasValue ? (cumulus.RolloverHour == 0 ? SunshineHours : SunshineToMidnight) : null,
 				HighHeatIndex = HiLoToday.HighHeatIndex,
-				HighHeatIndexTime = HiLoToday.HighHeatIndexTime,
+				HighHeatIndexTime = HiLoToday.HighHeatIndex.HasValue ? HiLoToday.HighHeatIndexTime : null,
 				HighAppTemp = HiLoToday.HighAppTemp,
-				HighAppTempTime = HiLoToday.HighAppTempTime,
+				HighAppTempTime = HiLoToday.HighAppTemp.HasValue ? HiLoToday.HighAppTempTime : null,
 				LowAppTemp = HiLoToday.LowAppTemp,
-				LowAppTempTime = HiLoToday.LowAppTempTime,
+				LowAppTempTime = HiLoToday.LowAppTemp.HasValue ? HiLoToday.LowAppTempTime : null,
 				HighHourlyRain = HiLoToday.HighHourlyRain,
 				HighHourlyRainTime = HiLoToday.HighHourlyRainTime,
 				LowWindChill = HiLoToday.LowWindChill,
-				LowWindChillTime = HiLoToday.LowWindChillTime,
+				LowWindChillTime = HiLoToday.LowWindChill.HasValue ? HiLoToday.LowWindChillTime : null,
 				HighDewPoint = HiLoToday.HighDewPoint,
-				HighDewPointTime = HiLoToday.HighDewPointTime,
+				HighDewPointTime = HiLoToday.HighDewPoint.HasValue ? HiLoToday.HighDewPointTime : null,
 				LowDewPoint = HiLoToday.LowDewPoint,
-				LowDewPointTime = HiLoToday.LowDewPointTime,
-				DominantWindBearing = DominantWindBearing,
-				HeatingDegreeDays = HeatingDegreeDays,
-				CoolingDegreeDays = CoolingDegreeDays,
+				LowDewPointTime = HiLoToday.LowDewPoint.HasValue ? HiLoToday.LowDewPointTime : null,
+				DominantWindBearing = HiLoToday.HighWind.HasValue ? DominantWindBearing : null,
+				HeatingDegreeDays = HiLoToday.LowTemp.HasValue ? HeatingDegreeDays : null,
+				CoolingDegreeDays = HiLoToday.LowTemp.HasValue ? CoolingDegreeDays : null,
 				HighSolar = HiLoToday.HighSolar,
-				HighSolarTime = HiLoToday.HighSolarTime,
+				HighSolarTime = HiLoToday.HighSolar.HasValue ? HiLoToday.HighSolarTime : null,
 				HighUv = HiLoToday.HighUv,
-				HighUvTime = HiLoToday.HighUvTime,
+				HighUvTime = HiLoToday.HighUv.HasValue ? HiLoToday.HighUvTime : null,
 				HighFeelsLike = HiLoToday.HighFeelsLike,
-				HighFeelsLikeTime = HiLoToday.HighFeelsLikeTime,
+				HighFeelsLikeTime = HiLoToday.HighFeelsLike.HasValue ? HiLoToday.HighFeelsLikeTime : null,
 				LowFeelsLike = HiLoToday.LowFeelsLike,
-				LowFeelsLikeTime = HiLoToday.LowFeelsLikeTime,
+				LowFeelsLikeTime = HiLoToday.LowFeelsLike.HasValue ? HiLoToday.LowFeelsLikeTime : null,
 				HighHumidex = HiLoToday.HighHumidex,
-				HighHumidexTime = HiLoToday.HighHumidexTime,
-				ChillHours = ChillHours
+				HighHumidexTime = HiLoToday.HighHumidex.HasValue ? HiLoToday.HighHumidexTime : null,
+				ChillHours = HiLoToday.LowTemp.HasValue ? ChillHours : null
 			};
 
 			_ = Database.InsertOrReplace(newRec);
 
-			string datestring = timestamp.AddDays(-1).ToString("dd/MM/yy", invDate);
-			// NB this string is just for logging, the dayfile update code is further down
-			var strb = new StringBuilder(300);
-			strb.Append(datestring + sep);
-			if (HiLoToday.HighGust is double gust) strb.Append(gust.ToString(cumulus.WindFormat, invNum));
-			strb.Append(sep);
-			if (HiLoToday.HighGustBearing is int gustD) strb.Append(gustD);
-			strb.Append(sep);
-			if (HiLoToday.HighGust.HasValue)
-				strb.Append(HiLoToday.HighGustTime.ToString("HH:mm", invDate));
-			strb.Append(sep);
-			if (HiLoToday.LowTemp.HasValue)
-			{
-				strb.Append(HiLoToday.LowTemp.Value.ToString(cumulus.TempFormat, invNum) + sep);
-				strb.Append(HiLoToday.LowTempTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoToday.HighTemp.HasValue)
-			{
-				strb.Append(HiLoToday.HighTemp.Value.ToString(cumulus.TempFormat, invNum) + sep);
-				strb.Append(HiLoToday.HighTempTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoToday.LowPress.HasValue)
-			{
-				strb.Append(HiLoToday.LowPress.Value.ToString(cumulus.PressFormat, invNum) + sep);
-				strb.Append(HiLoToday.LowPressTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoToday.HighPress.HasValue)
-			{
-				strb.Append(HiLoToday.HighPress.Value.ToString(cumulus.PressFormat, invNum) + sep);
-				strb.Append(HiLoToday.HighPressTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoYest.HighRainRate.HasValue)
-			{
-				strb.Append(HiLoToday.HighRainRate.Value.ToString(cumulus.RainFormat, invNum) + sep);
-				strb.Append(HiLoToday.HighRainRateTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			strb.Append((RainToday.HasValue ? RainToday.Value.ToString(cumulus.RainFormat, invNum) : "") + sep);
-			strb.Append(AvgTemp.ToString(cumulus.TempFormat, invNum) + sep);
-			strb.Append(WindRunToday.ToString("F1", invNum) + sep);
-			if (HiLoToday.HighWind.HasValue)
-			{
-				strb.Append(HiLoToday.HighWind.Value.ToString(cumulus.WindAvgFormat, invNum) + sep);
-				strb.Append(HiLoToday.HighWindTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoToday.LowHumidity.HasValue)
-			{
-				strb.Append(HiLoToday.LowHumidity + sep);
-				strb.Append(HiLoToday.LowHumidityTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoToday.HighHumidity.HasValue)
-			{
-				strb.Append(HiLoToday.HighHumidity + sep);
-				strb.Append(HiLoToday.HighHumidityTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			strb.Append(ET.ToString(cumulus.ETFormat, invNum) + sep);
-			if (cumulus.RolloverHour == 0)
-			{
-				// use existing current sunshine hour count
-				strb.Append(SunshineHours.ToString(cumulus.SunFormat, invNum) + sep);
-			}
-			else
-			{
-				// for non-midnight roll-over, use new item
-				strb.Append(SunshineToMidnight.ToString(cumulus.SunFormat, invNum) + sep);
-			}
-			if (HiLoToday.HighHeatIndex.HasValue)
-			{
-				strb.Append(HiLoToday.HighHeatIndex.Value.ToString(cumulus.TempFormat, invNum) + sep);
-				strb.Append(HiLoToday.HighHeatIndexTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoToday.HighAppTemp.HasValue)
-			{
-				strb.Append(HiLoToday.HighAppTemp.Value.ToString(cumulus.TempFormat, invNum) + sep);
-				strb.Append(HiLoToday.HighAppTempTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoToday.LowAppTemp.HasValue)
-			{
-				strb.Append(HiLoToday.LowAppTemp.Value.ToString(cumulus.TempFormat, invNum) + sep);
-				strb.Append(HiLoToday.LowAppTempTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			strb.Append(HiLoToday.HighHourlyRain.ToString(cumulus.RainFormat, invNum) + sep);
-			strb.Append(HiLoToday.HighHourlyRainTime.ToString("HH:mm", invDate) + sep);
-			if (HiLoToday.LowWindChill.HasValue)
-			{
-				strb.Append(HiLoToday.LowWindChill.Value.ToString(cumulus.TempFormat, invNum) + sep);
-				strb.Append(HiLoToday.LowWindChillTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoToday.HighDewPoint.HasValue)
-			{
-				strb.Append(HiLoToday.HighDewPoint.Value.ToString(cumulus.TempFormat, invNum) + sep);
-				strb.Append(HiLoToday.HighDewPointTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoToday.LowDewPoint.HasValue)
-			{
-				strb.Append(HiLoToday.LowDewPoint.Value.ToString(cumulus.TempFormat, invNum) + sep);
-				strb.Append(HiLoToday.LowDewPointTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			strb.Append(DominantWindBearing + sep);
-			strb.Append(HeatingDegreeDays.ToString("F1", invNum) + sep);
-			strb.Append(CoolingDegreeDays.ToString("F1", invNum) + sep);
-			if (HiLoToday.HighSolar.HasValue)
-			{
-				strb.Append(HiLoToday.HighSolar + sep);
-				strb.Append(HiLoToday.HighSolarTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoToday.HighUv.HasValue)
-			{
-				strb.Append(HiLoToday.HighUv.Value.ToString(cumulus.UVFormat, invNum) + sep);
-				strb.Append(HiLoToday.HighUvTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoToday.HighFeelsLike.HasValue)
-			{
-				strb.Append(HiLoToday.HighFeelsLike.Value.ToString(cumulus.TempFormat, invNum) + sep);
-				strb.Append(HiLoToday.HighFeelsLikeTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoToday.LowFeelsLike.HasValue)
-			{
-				strb.Append(HiLoToday.LowFeelsLike.Value.ToString(cumulus.TempFormat, invNum) + sep);
-				strb.Append(HiLoToday.LowFeelsLikeTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			if (HiLoToday.HighHumidex.HasValue)
-			{
-				strb.Append(HiLoToday.HighHumidex.Value.ToString(cumulus.TempFormat, invNum) + sep);
-				strb.Append(HiLoToday.HighHumidexTime.ToString("HH:mm", invDate) + sep);
-			}
-			else
-				strb.Append(sep2);
-			strb.Append(ChillHours.ToString(cumulus.TempFormat, invNum));
+
+
+			var csv = newRec.ToCSV(true);
 
 			Cumulus.LogMessage("DailyData entry:");
-			Cumulus.LogMessage(strb.ToString());
+			Cumulus.LogMessage(csv);
 
 			if (cumulus.StationOptions.LogMainStation)
 			{
@@ -5006,44 +4864,44 @@ namespace CumulusMX
 				{
 					try
 					{
-						Cumulus.LogMessage("Dayfile.txt opened for writing");
+						Cumulus.LogMessage("dayfile-v4.txt opened for writing");
 
 						if ((HiLoToday.HighTemp < -400) || (HiLoToday.LowTemp > 900))
 						{
 							Cumulus.LogMessage("***Error: Daily values are still at default at end of day");
-							Cumulus.LogMessage("Data not logged to dayfile.txt");
+							Cumulus.LogMessage("Data not logged to dayfile-v4.txt");
 							return;
 						}
 						else
 						{
-							Cumulus.LogMessage("Writing entry to dayfile.txt");
+							Cumulus.LogMessage("Writing entry to dayfile-v4.txt");
 
 							using FileStream fs = new FileStream(cumulus.DayFileName, FileMode.Append, FileAccess.Write, FileShare.Read);
 							using StreamWriter file = new StreamWriter(fs);
 
-							await file.WriteLineAsync(strb.ToString());
+							await file.WriteLineAsync(csv);
 							file.Close();
 							fs.Close();
 
 							success = true;
 
-							Cumulus.LogMessage($"Dayfile log entry for {datestring} written");
+							Cumulus.LogMessage($"Dayfile log entry for {newRec.Timestamp.ToString("dd/MM/yy", invDate)} written");
 						}
 					}
 					catch (IOException ex)
 					{
 						if ((uint)ex.HResult == 0x80070020) // -2147024864
 						{
-							cumulus.LogExceptionMessage(ex, "Error dayfile.txt is in use");
+							cumulus.LogExceptionMessage(ex, "Error dayfile-v4.txt is in use");
 							retries--;
 							Thread.Sleep(250);
 						}
 						else
-							cumulus.LogExceptionMessage(ex, "Error writing to dayfile.txt");
+							cumulus.LogExceptionMessage(ex, "Error writing to dayfile-v4.txt");
 					}
 					catch (Exception ex)
 					{
-						cumulus.LogExceptionMessage(ex, "Error writing to dayfile.txt");
+						cumulus.LogExceptionMessage(ex, "Error writing to dayfile-v4.txt");
 					}
 				} while (!success && retries >= 0);
 			}
@@ -5082,7 +4940,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">Temp in C</param>
 		/// <returns>Temp in configured units</returns>
-		public double? ConvertTempCToUser(double? value)
+		public static double? ConvertTempCToUser(double? value)
 		{
 			if (!value.HasValue)
 				return value;
@@ -5103,7 +4961,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">Temp in F</param>
 		/// <returns>Temp in configured units</returns>
-		public double? ConvertTempFToUser(double? value)
+		public static double? ConvertTempFToUser(double? value)
 		{
 			if (!value.HasValue)
 				return value;
@@ -5124,7 +4982,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">Temp in configured units</param>
 		/// <returns>Temp in C</returns>
-		public double? ConvertUserTempToC(double? value)
+		public static double? ConvertUserTempToC(double? value)
 		{
 			if (!value.HasValue)
 				return value;
@@ -5145,7 +5003,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">Temp in configured units</param>
 		/// <returns>Temp in F</returns>
-		public double? ConvertUserTempToF(double? value)
+		public static double? ConvertUserTempToF(double? value)
 		{
 			if (!value.HasValue)
 				return value;
@@ -5166,7 +5024,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">Wind in m/s</param>
 		/// <returns>Wind in configured units</returns>
-		public double ConvertWindMSToUser(double value)
+		public static double ConvertWindMSToUser(double value)
 		{
 			return cumulus.Units.Wind switch
 			{
@@ -5183,7 +5041,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">Wind in mph</param>
 		/// <returns>Wind in configured units</returns>
-		public double? ConvertWindMPHToUser(double? value)
+		public static double? ConvertWindMPHToUser(double? value)
 		{
 			if (value == null)
 				return null;
@@ -5222,7 +5080,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="val"></param>
 		/// <returns>Wind in configured units</returns>
-		public double ConvertKmtoUserUnits(double val)
+		public static double ConvertKmtoUserUnits(double val)
 		{
 			return cumulus.Units.Wind switch
 			{
@@ -5255,7 +5113,7 @@ namespace CumulusMX
 			};
 		}
 
-		public double? ConvertUserWindToKPH(double? wind) // input is in Units.Wind units, convert to km/h
+		public static double? ConvertUserWindToKPH(double? wind) // input is in Units.Wind units, convert to km/h
 		{
 			if (wind == null)
 				return null;
@@ -5312,7 +5170,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">pressure in mb</param>
 		/// <returns>pressure in configured units</returns>
-		public double? ConvertPressMBToUser(double? value)
+		public static double? ConvertPressMBToUser(double? value)
 		{
 			if (value == null)
 				return null;
@@ -5325,7 +5183,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">pressure in mb</param>
 		/// <returns>pressure in configured units</returns>
-		public double? ConvertPressINHGToUser(double? value)
+		public static double? ConvertPressINHGToUser(double? value)
 		{
 			if (value == null)
 				return null;
@@ -5338,7 +5196,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">pressure in configured units</param>
 		/// <returns>pressure in mb</returns>
-		public double? ConvertUserPressToMB(double? value)
+		public static double? ConvertUserPressToMB(double? value)
 		{
 			if (value == null)
 				return null;
@@ -5351,7 +5209,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">pressure in configured units</param>
 		/// <returns>pressure in mb</returns>
-		public double? ConvertUserPressToIN(double? value)
+		public static double? ConvertUserPressToIN(double? value)
 		{
 			if (value == null)
 				return null;
@@ -5359,7 +5217,7 @@ namespace CumulusMX
 			return cumulus.Units.Press == 2 ? value : value * 0.0295333727;
 		}
 
-		public string CompassPoint(int? bearing)
+		public static string CompassPoint(int? bearing)
 		{
 			return (bearing ?? 0) == 0 ? "-" : cumulus.compassp[(((bearing.Value * 100) + 1125) % 36000) / 2250];
 		}
@@ -6432,7 +6290,7 @@ namespace CumulusMX
 		}
 
 
-		protected void UpdateMQTT()
+		protected static void UpdateMQTT()
 		{
 			if (cumulus.MQTT.EnableDataUpdate)
 			{
@@ -6491,7 +6349,7 @@ namespace CumulusMX
 			if (index < SoilMoisture.Length)
 			{
 				SoilMoisture[index] = value;
-				dataValuesUpdated.SoilMoisture[index] = true;
+				dataValuesUpdated.SoilMoisture[index] = value.HasValue;
 			}
 		}
 
@@ -6500,7 +6358,7 @@ namespace CumulusMX
 			if (index < SoilTemp.Length)
 			{
 				SoilTemp[index] = value;
-				dataValuesUpdated.SoilTemp[index] = true;
+				dataValuesUpdated.SoilTemp[index] = value.HasValue;
 			}
 		}
 
@@ -6547,17 +6405,17 @@ namespace CumulusMX
 			if (index < LeafWetness.Length)
 			{
 				LeafWetness[index] = value;
-				dataValuesUpdated.LeafWetness[index] = true;
+				dataValuesUpdated.LeafWetness[index] = value.HasValue;
 			}
 		}
 
-		
+
 		public void DoLeafTemp(double? value, int index)
 		{
 			if (index < LeafTemp.Length)
 			{
 				LeafTemp[index] = value;
-				dataValuesUpdated.LeafTemp[index] = true;
+				dataValuesUpdated.LeafTemp[index] = value.HasValue;
 			}
 		}
 
@@ -7691,7 +7549,7 @@ namespace CumulusMX
 			return ConvertUserTempToC(temp).Value.ToString("F1", invNum);
 		}
 
-		public double ConvertUserRainToIN(double rain)
+		public static double ConvertUserRainToIN(double rain)
 		{
 			if (cumulus.Units.Rain == 0)
 			{
@@ -7930,7 +7788,7 @@ namespace CumulusMX
 		}
 
 
-		public string GetAirLinkCountsOut()
+		public static string GetAirLinkCountsOut()
 		{
 			var json = new StringBuilder("{\"data\":[", 256);
 			if (cumulus.airLinkOut != null)
@@ -7949,7 +7807,7 @@ namespace CumulusMX
 			return json.ToString();
 		}
 
-		public string GetAirLinkAqiOut()
+		public static string GetAirLinkAqiOut()
 		{
 			var json = new StringBuilder("{\"data\":[", 256);
 			if (cumulus.airLinkOut != null)
@@ -7966,7 +7824,7 @@ namespace CumulusMX
 			return json.ToString();
 		}
 
-		public string GetAirLinkPctOut()
+		public static string GetAirLinkPctOut()
 		{
 			var json = new StringBuilder("{\"data\":[", 256);
 			if (cumulus.airLinkOut != null)
@@ -7981,7 +7839,7 @@ namespace CumulusMX
 			return json.ToString();
 		}
 
-		public string GetAirLinkCountsIn()
+		public static string GetAirLinkCountsIn()
 		{
 			var json = new StringBuilder("{\"data\":[", 256);
 			if (cumulus.airLinkIn != null)
@@ -8000,7 +7858,7 @@ namespace CumulusMX
 			return json.ToString();
 		}
 
-		public string GetAirLinkAqiIn()
+		public static string GetAirLinkAqiIn()
 		{
 			var json = new StringBuilder("{\"data\":[", 256);
 			if (cumulus.airLinkIn != null)
@@ -8017,7 +7875,7 @@ namespace CumulusMX
 			return json.ToString();
 		}
 
-		public string GetAirLinkPctIn()
+		public static string GetAirLinkPctIn()
 		{
 			var json = new StringBuilder("{\"data\":[", 256);
 			if (cumulus.airLinkIn != null)
@@ -8045,7 +7903,7 @@ namespace CumulusMX
 		public string GetTodayYestTemp()
 		{
 			var nullVal = "-";
-			var nullTime = "--:--"; 
+			var nullTime = "--:--";
 			var json = new StringBuilder("{\"data\":[", 2048);
 			var sepStr = "\",\"";
 			var closeStr = "\"],";
@@ -8388,7 +8246,7 @@ namespace CumulusMX
 		}
 
 
-		public string GetUnits()
+		public static string GetUnits()
 		{
 			var json = new StringBuilder("{", 200);
 
@@ -8513,7 +8371,7 @@ namespace CumulusMX
 
 		internal static void LogRawStationData(string msg, bool xmt)
 		{
-			if (cumulus.ProgramOptions.LogRawStationData && cumulus.RawDataStation != null) 
+			if (cumulus.ProgramOptions.LogRawStationData && cumulus.RawDataStation != null)
 			{
 				cumulus.RawDataStation.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + (xmt ? "> " : "< ") + msg);
 			}
@@ -8625,14 +8483,12 @@ namespace CumulusMX
 
 	class EtData
 	{
-		public double maxTemp { get; set; }
-		public double minTemp { get; set; }
-		public int maxHum { get; set; }
-		public int minHum { get; set; }
-		public double avgSol { get; set; }
-		public double avgWind { get; set; }
-		public double maxPress { get; set; }
-		public double minPress { get; set; }
+		public double? avgTemp { get; set; }
+		public int? avgHum { get; set; }
+		public double? avgSol { get; set; }
+		public double? avgSolMax { get; set; }
+		public double? avgWind { get; set; }
+		public double? avgPress { get; set; }
 	}
 
 

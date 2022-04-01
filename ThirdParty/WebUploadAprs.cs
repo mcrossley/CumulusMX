@@ -76,7 +76,7 @@ namespace CumulusMX.ThirdParty
 						// 0900 day, use midnight calculation
 						message.Append(APRSrain(station.RainSinceMidnight));
 					}
-					if ((!cumulus.APRS.HumidityCutoff) || (station.ConvertUserTempToC(station.Temperature ?? 0) >= -10) && station.Humidity.HasValue)
+					if ((!cumulus.APRS.HumidityCutoff) || (WeatherStation.ConvertUserTempToC(station.Temperature ?? 0) >= -10) && station.Humidity.HasValue)
 					{
 						// humidity Hnn
 						message.Append($"h{APRShum(station.Humidity.Value)}");
@@ -192,7 +192,7 @@ namespace CumulusMX.ThirdParty
 		/// <returns></returns>
 		private string APRSwind(double wind)
 		{
-			var windMPH = Convert.ToInt32(station.ConvertUserWindToMPH(wind));
+			var windMPH = Convert.ToInt32(WeatherStation.ConvertUserWindToMPH(wind));
 			return windMPH.ToString("D3");
 		}
 
@@ -204,7 +204,7 @@ namespace CumulusMX.ThirdParty
 		/// <returns></returns>
 		private string APRSpress(double press)
 		{
-			var press10mb = Convert.ToInt32(station.ConvertUserPressToMB(press) * 10);
+			var press10mb = Convert.ToInt32(WeatherStation.ConvertUserPressToMB(press) * 10);
 			return press10mb.ToString("D5");
 		}
 
@@ -238,7 +238,7 @@ namespace CumulusMX.ThirdParty
 		/// <returns></returns>
 		private string APRSrain(double rain)
 		{
-			var rain100IN = Convert.ToInt32(station.ConvertUserRainToIN(rain) * 100);
+			var rain100IN = Convert.ToInt32(WeatherStation.ConvertUserRainToIN(rain) * 100);
 			return rain100IN.ToString("D3");
 		}
 

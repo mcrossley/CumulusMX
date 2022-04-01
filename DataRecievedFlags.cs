@@ -16,6 +16,7 @@ namespace CumulusMX
 		internal bool Humidity;
 		internal bool Wind { get; set; }
 		internal bool Pressure;
+		internal bool Rain;
 		internal bool DewPoint;
 		// extra data
 		internal bool Solar;
@@ -56,7 +57,7 @@ namespace CumulusMX
 		{
 			// Check to see if we have had data for the values in the last minute.
 			// If we have, clear the flag so it will be set again if the value is received
-			// If not then set the station variable (and any derived variables to null
+			// If not then set the station variable (and any derived variables) to null
 			if (Temperature)
 			{
 				Temperature = false;
@@ -111,6 +112,13 @@ namespace CumulusMX
 				station.Pressure = null;
 			}
 
+			if (Rain)
+			{
+				Rain = false;
+			}
+			// do not set rainfall to null as it is cumulative, only reset to null on day rollover (if this flag is not set)
+
+
 			if (DewPoint)
 			{
 				DewPoint = false;
@@ -147,8 +155,6 @@ namespace CumulusMX
 				else
 				{
 					station.ExtraTemp[i] = null;
-					if (cumulus.StationOptions.CalculatedDP)
-						station.ExtraDewPoint[i] = null;
 				}
 
 				if (ExtraHum[i])
@@ -158,8 +164,6 @@ namespace CumulusMX
 				else
 				{
 					station.ExtraHum[i] = null;
-					if (cumulus.StationOptions.CalculatedDP)
-						station.ExtraDewPoint[i] = null;
 				}
 
 				if (ExtraDewPoint[i])
@@ -219,6 +223,5 @@ namespace CumulusMX
 					station.AirQualityAvg[i] = null;
 			}
 		}
-
 	}
 }

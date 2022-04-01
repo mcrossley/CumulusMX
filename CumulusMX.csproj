@@ -6,8 +6,8 @@
     <StartupObject>CumulusMX.Program</StartupObject>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <NoWin32Manifest>true</NoWin32Manifest>
-    <AssemblyVersion>4.0.0.4008</AssemblyVersion>
-    <FileVersion>4.0.0.4008</FileVersion>
+    <AssemblyVersion>4.0.0.4010</AssemblyVersion>
+    <FileVersion>4.0.0.4010</FileVersion>
     <PackageIcon>icon.ico</PackageIcon>
     <PackageIconUrl />
     <UserSecretsId>06d97cbf-708b-41a7-b6fa-82bb67d5da0c</UserSecretsId>
@@ -42,15 +42,15 @@
   <ItemGroup>
     <PackageReference Include="Core.System.Configuration.Install" Version="1.1.0" />
     <PackageReference Include="EmbedIO" Version="3.4.3" />
-    <PackageReference Include="FluentFTP" Version="35.2.2" />
+    <PackageReference Include="FluentFTP" Version="37.0.2" />
     <PackageReference Include="HidSharp" Version="2.1.0" />
-    <PackageReference Include="MailKit" Version="3.0.0" />
+    <PackageReference Include="MailKit" Version="3.1.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="6.0.0" />
-    <PackageReference Include="MQTTnet" Version="3.1.1" />
-    <PackageReference Include="MySql.Data" Version="8.0.27" />
+    <PackageReference Include="MQTTnet" Version="3.1.2" />
+    <PackageReference Include="MySql.Data" Version="8.0.28" />
     <PackageReference Include="Renci.SshNet.Async" Version="1.4.0" />
-    <PackageReference Include="ServiceStack.Text" Version="5.13.2" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.4" />
+    <PackageReference Include="ServiceStack.Text" Version="6.0.2" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="2.0.1-alpha.0.32" />
     <PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.0.7" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="6.0.0" />
     <PackageReference Include="System.IO.Ports" Version="6.0.0" />

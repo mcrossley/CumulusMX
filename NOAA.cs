@@ -304,7 +304,7 @@ namespace CumulusMX
 						// heating degree day
 						if (row.HeatingDegreeDays.HasValue)
 						{
-							// read HDD from dayfile.txt
+							// read HDD from DayData
 							dayList[daynumber].heatingdegdays = row.HeatingDegreeDays.HasValue ? row.HeatingDegreeDays.Value : 0;
 							totalheating += dayList[daynumber].heatingdegdays;
 						}
@@ -670,7 +670,6 @@ namespace CumulusMX
 			NumberFormatInfo numFormat = cumulus.NOAAconf.UseDotDecimal ? invNum : CultureInfo.CurrentCulture.NumberFormat;
 
 			StringBuilder repLine = new StringBuilder(200);
-			int linenum = 0;
 
 			Tmonthsummary[] MonthList = new Tmonthsummary[13];
 
@@ -738,13 +737,15 @@ namespace CumulusMX
 				MonthList[m].avgwindspeed = 0;
 				MonthList[m].maxrain = 0;
 			}
+			
+			string rowDateTime = "";
 			try
 			{
 				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ?", thedate, thedate.AddYears(1));
 
 				foreach (var row in rows)
 				{
-
+					rowDateTime = row.Timestamp.ToString("yyyy/MM/dd HH:mm");
 					var day = row.Timestamp.Day;
 					month = row.Timestamp.Month;
 					double meantemp = -999.0;
@@ -792,7 +793,7 @@ namespace CumulusMX
 					// heating degree days
 					if (row.HeatingDegreeDays.HasValue)
 					{
-						// read HDD from dayfile.txt
+						// read HDD from DayData
 						MonthList[month].heatingdegdays += row.HeatingDegreeDays.Value;
 						totalheating += row.HeatingDegreeDays.Value;
 					}
@@ -804,7 +805,7 @@ namespace CumulusMX
 					// cooling degree days
 					if (row.CoolingDegreeDays.HasValue)
 					{
-						// read HDD from dayfile.txt
+						// read HDD from DayData
 						MonthList[month].coolingdegdays += row.CoolingDegreeDays.Value;
 						totalcooling += (row.CoolingDegreeDays.Value);
 					}
@@ -845,8 +846,8 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				cumulus.LogExceptionMessage(ex, $"Error at line {linenum} of dayfile.txt");
-				Cumulus.LogMessage("Please edit the file to correct the error");
+				cumulus.LogExceptionMessage(ex, $"Error in DayData row at {rowDateTime}");
+				Cumulus.LogMessage("Please edit the Database to correct the error");
 			}
 
 			// Now output everything

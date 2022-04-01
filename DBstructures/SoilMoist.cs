@@ -26,46 +26,48 @@ namespace CumulusMX
 		public int? Moist15 { get; set; }
 		public int? Moist16 { get; set; }
 
-		public string ToCSV()
+		public string ToCSV(bool ToFile=false)
 		{
-			var invNum = CultureInfo.InvariantCulture.NumberFormat;
 			var invDate = CultureInfo.InvariantCulture.NumberFormat;
 
+			var dateformat = ToFile ? "dd/MM/yy HH:mm" : "'\"'dd/MM/yy HH:mm'\"'";
+			var blank = ToFile ? "" : "\"\"";
+			var sep = ',';
+
 			var sb = new StringBuilder(350);
-			sb.Append(Timestamp.ToString("'\"'dd/MM/yy HH:mm'\"'", invDate)).Append(',');
-			sb.Append(Utils.ToUnixTime(Timestamp)).Append(",\"");
-			if (Moist1.HasValue) sb.Append(Moist1.Value);
-			sb.Append("\",\"");
-			if (Moist2.HasValue) sb.Append(Moist2.Value);
-			sb.Append("\",\"");
-			if (Moist3.HasValue) sb.Append(Moist3.Value);
-			sb.Append("\",\"");
-			if (Moist4.HasValue) sb.Append(Moist4.Value);
-			sb.Append("\",\"");
-			if (Moist5.HasValue) sb.Append(Moist5.Value);
-			sb.Append("\",\"");
-			if (Moist6.HasValue) sb.Append(Moist6.Value);
-			sb.Append("\",\"");
-			if (Moist7.HasValue) sb.Append(Moist7.Value);
-			sb.Append("\",\"");
-			if (Moist8.HasValue) sb.Append(Moist8.Value);
-			sb.Append("\",\"");
-			if (Moist9.HasValue) sb.Append(Moist9.Value);
-			sb.Append("\",\"");
-			if (Moist10.HasValue) sb.Append(Moist10.Value);
-			sb.Append("\",\"");
-			if (Moist11.HasValue) sb.Append(Moist11.Value);
-			sb.Append("\",\"");
-			if (Moist12.HasValue) sb.Append(Moist12.Value);
-			sb.Append("\",\"");
-			if (Moist13.HasValue) sb.Append(Moist13.Value);
-			sb.Append("\",\"");
-			if (Moist14.HasValue) sb.Append(Moist14.Value);
-			sb.Append("\",\"");
-			if (Moist15.HasValue) sb.Append(Moist15.Value);
-			sb.Append("\",\"");
-			if (Moist16.HasValue) sb.Append(Moist16.Value);
-			sb.Append('"');
+			sb.Append(Timestamp.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Utils.ToUnixTime(Timestamp)).Append(sep);
+			sb.Append(Moist1.HasValue ? Moist1 : blank);
+			sb.Append(sep);
+			sb.Append(Moist2.HasValue ? Moist2 : blank);
+			sb.Append(sep);
+			sb.Append(Moist3.HasValue ? Moist3 : blank);
+			sb.Append(sep);
+			sb.Append(Moist4.HasValue ? Moist4 : blank);
+			sb.Append(sep);
+			sb.Append(Moist5.HasValue ? Moist5 : blank);
+			sb.Append(sep);
+			sb.Append(Moist6.HasValue ? Moist6 : blank);
+			sb.Append(sep);
+			sb.Append(Moist7.HasValue ? Moist7 : blank);
+			sb.Append(sep);
+			sb.Append(Moist8.HasValue ? Moist8 : blank);
+			sb.Append(sep);
+			sb.Append(Moist9.HasValue ? Moist9 : blank);
+			sb.Append(sep);
+			sb.Append(Moist10.HasValue ? Moist10 : blank);
+			sb.Append(sep);
+			sb.Append(Moist11.HasValue ? Moist11 : blank);
+			sb.Append(sep);
+			sb.Append(Moist12.HasValue ? Moist12 : blank);
+			sb.Append(sep);
+			sb.Append(Moist13.HasValue ? Moist13 : blank);
+			sb.Append(sep);
+			sb.Append(Moist14.HasValue ? Moist14 : blank);
+			sb.Append(sep);
+			sb.Append(Moist15.HasValue ? Moist15 : blank);
+			sb.Append(sep);
+			sb.Append(Moist16.HasValue ? Moist16 : blank);
 			return sb.ToString();
 		}
 

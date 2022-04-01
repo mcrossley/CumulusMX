@@ -439,7 +439,7 @@ namespace CumulusMX
 							await writer.WriteAsync(Station.Graphs.GetDailyTempGraphData());
 							break;
 						case "units.json":
-							await writer.WriteAsync(Station.GetUnits());
+							await writer.WriteAsync(WeatherStation.GetUnits());
 							break;
 						case "graphconfig.json":
 							await writer.WriteAsync(Station.Graphs.GetGraphConfig());
@@ -538,7 +538,7 @@ namespace CumulusMX
 							await writer.WriteAsync(Station.Graphs.GetAllTempSumGraphData());
 							break;
 						case "units.json":
-							await writer.WriteAsync(Station.GetUnits());
+							await writer.WriteAsync(WeatherStation.GetUnits());
 							break;
 						case "graphconfig.json":
 							await writer.WriteAsync(Station.Graphs.GetGraphConfig());
@@ -859,22 +859,22 @@ namespace CumulusMX
 							await writer.WriteAsync(Station.GetUserTemp());
 							break;
 						case "airLinkCountsOut.json":
-							await writer.WriteAsync(Station.GetAirLinkCountsOut());
+							await writer.WriteAsync(WeatherStation.GetAirLinkCountsOut());
 							break;
 						case "airLinkAqiOut.json":
-							await writer.WriteAsync(Station.GetAirLinkAqiOut());
+							await writer.WriteAsync(WeatherStation.GetAirLinkAqiOut());
 							break;
 						case "airLinkPctOut.json":
-							await writer.WriteAsync(Station.GetAirLinkPctOut());
+							await writer.WriteAsync(WeatherStation.GetAirLinkPctOut());
 							break;
 						case "airLinkCountsIn.json":
-							await writer.WriteAsync(Station.GetAirLinkCountsIn());
+							await writer.WriteAsync(WeatherStation.GetAirLinkCountsIn());
 							break;
 						case "airLinkAqiIn.json":
-							await writer.WriteAsync(Station.GetAirLinkAqiIn());
+							await writer.WriteAsync(WeatherStation.GetAirLinkAqiIn());
 							break;
 						case "airLinkPctIn.json":
-							await writer.WriteAsync(Station.GetAirLinkPctIn());
+							await writer.WriteAsync(WeatherStation.GetAirLinkPctIn());
 							break;
 						case "co2sensor.json":
 							await writer.WriteAsync(Station.GetCO2sensor());

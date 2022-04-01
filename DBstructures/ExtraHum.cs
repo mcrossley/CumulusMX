@@ -20,34 +20,37 @@ namespace CumulusMX
 		public double? Hum9 { get; set; }
 		public double? Hum10 { get; set; }
 
-		public string ToCSV()
+		public string ToCSV(bool ToFile=false)
 		{
 			//var invNum = CultureInfo.InvariantCulture.NumberFormat;
 			var invDate = CultureInfo.InvariantCulture.NumberFormat;
 
+			var dateformat = ToFile ? "dd/MM/yy HH:mm" : "'\"'dd/MM/yy HH:mm'\"'";
+			var blank = ToFile ? "" : "\"\"";
+			var sep = ',';
+
 			var sb = new StringBuilder(350);
-			sb.Append(Timestamp.ToString("'\"'dd/MM/yy HH:mm'\"'", invDate)).Append(',');
-			sb.Append(Utils.ToUnixTime(Timestamp)).Append(",\"");
-			if (Hum1.HasValue) sb.Append(Hum1.Value);
-			sb.Append("\",\"");
-			if (Hum2.HasValue) sb.Append(Hum2.Value);
-			sb.Append("\",\"");
-			if (Hum3.HasValue) sb.Append(Hum3.Value);
-			sb.Append("\",\"");
-			if (Hum4.HasValue) sb.Append(Hum4.Value);
-			sb.Append("\",\"");
-			if (Hum5.HasValue) sb.Append(Hum5.Value);
-			sb.Append("\",\"");
-			if (Hum6.HasValue) sb.Append(Hum6.Value);
-			sb.Append("\",\"");
-			if (Hum7.HasValue) sb.Append(Hum7.Value);
-			sb.Append("\",\"");
-			if (Hum8.HasValue) sb.Append(Hum8.Value);
-			sb.Append("\",\"");
-			if (Hum9.HasValue) sb.Append(Hum9.Value);
-			sb.Append("\",\"");
-			if (Hum10.HasValue) sb.Append(Hum10.Value);
-			sb.Append('"');
+			sb.Append(Timestamp.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Utils.ToUnixTime(Timestamp)).Append(sep);
+			sb.Append(Hum1.HasValue ? Hum1 : blank);
+			sb.Append(sep);
+			sb.Append(Hum2.HasValue ? Hum2 : blank);
+			sb.Append(sep);
+			sb.Append(Hum3.HasValue ? Hum3 : blank);
+			sb.Append(sep);
+			sb.Append(Hum4.HasValue ? Hum4 : blank);
+			sb.Append(sep);
+			sb.Append(Hum5.HasValue ? Hum5 : blank);
+			sb.Append(sep);
+			sb.Append(Hum6.HasValue ? Hum6 : blank);
+			sb.Append(sep);
+			sb.Append(Hum7.HasValue ? Hum7 : blank);
+			sb.Append(sep);
+			sb.Append(Hum8.HasValue ? Hum8 : blank);
+			sb.Append(sep);
+			sb.Append(Hum9.HasValue ? Hum9 : blank);
+			sb.Append(sep);
+			sb.Append(Hum10.HasValue ? Hum10 : blank);
 			return sb.ToString();
 		}
 

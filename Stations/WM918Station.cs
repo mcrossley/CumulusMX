@@ -295,7 +295,7 @@ namespace CumulusMX
 			// Wind Chill W1W2 (WS bit 1 gives sign)
 			// Checksum C1C2
 
-			double current =  ConvertWindMSToUser((double)(BCDchartoint(buff[1]) + ((BCDchartoint(buff[2]) % 10) * 100)) / 10);
+			double current = ConvertWindMSToUser((double)(BCDchartoint(buff[1]) + ((BCDchartoint(buff[2]) % 10) * 100)) / 10);
 			double average = ConvertWindMSToUser((double)(BCDchartoint(buff[4]) + ((BCDchartoint(buff[5]) % 10) * 100)) / 10);
 			int bearing = BCDchartoint(buff[2]) / 10 + (BCDchartoint(buff[3]) * 10);
 
@@ -329,7 +329,7 @@ namespace CumulusMX
 			double locPress = BCDchartoint(buff[1]) + (BCDchartoint(buff[2])*100);
 			StationPressure = ConvertPressMBToUser(locPress);
 
-			double pressure =  ConvertPressMBToUser((BCDchartoint(buff[3]) / 10) + (BCDchartoint(buff[4]) * 10) + ((BCDchartoint(buff[5]) % 10) * 1000)).Value;
+			double pressure = ConvertPressMBToUser((BCDchartoint(buff[3]) / 10) + (BCDchartoint(buff[4]) * 10) + ((BCDchartoint(buff[5]) % 10) * 1000)).Value;
 
 			DoPressure(pressure,DateTime.Now);
 

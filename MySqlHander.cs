@@ -297,7 +297,7 @@ namespace CumulusMX
 			values.Append((station.RainRate.HasValue ? station.RainRate.Value.ToString(cumulus.RainFormat, invNum) : "null") + ',');
 			values.Append((station.RainToday.HasValue ? station.RainToday.Value.ToString(cumulus.RainFormat, invNum) : "null") + ',');
 			values.Append((station.Pressure.HasValue ? station.Pressure.Value.ToString(cumulus.PressFormat, invNum) : "null") + ",'");
-			values.Append(station.CompassPoint(station.Bearing) + "','");
+			values.Append(WeatherStation.CompassPoint(station.Bearing) + "','");
 			values.Append((station.WindAverage.HasValue ? cumulus.Beaufort(station.WindAverage.Value) : "null") + "','");
 			values.Append(cumulus.Units.WindText + "','");
 			values.Append(cumulus.Units.TempText[1].ToString() + "','");
@@ -337,7 +337,7 @@ namespace CumulusMX
 			values.Append(station.Forecastnumber.ToString() + ",'");
 			values.Append((cumulus.IsDaylight() ? "1" : "0") + "','");
 			values.Append((station.SensorContactLost ? "1" : "0") + "','");
-			values.Append(station.CompassPoint(station.AvgBearing) + "',");
+			values.Append(WeatherStation.CompassPoint(station.AvgBearing) + "',");
 			values.Append((station.CloudBase.HasValue ? station.CloudBase.Value.ToString() : "null") + ",'");
 			values.Append((cumulus.CloudBaseInFeet ? "ft" : "m") + "',");
 			values.Append((station.ApparentTemp.HasValue ? station.ApparentTemp.Value.ToString(cumulus.TempFormat, invNum) : "null") + ',');
@@ -420,8 +420,8 @@ namespace CumulusMX
 			values.Append(station.Bearing + ",");
 			values.Append(station.RG11RainToday.ToString(cumulus.RainFormat, invNum) + ",");
 			values.Append(station.RainSinceMidnight.ToString(cumulus.RainFormat, invNum) + ",'");
-			values.Append(station.CompassPoint(station.AvgBearing) + "','");
-			values.Append(station.CompassPoint(station.Bearing) + "',");
+			values.Append(WeatherStation.CompassPoint(station.AvgBearing) + "','");
+			values.Append(WeatherStation.CompassPoint(station.Bearing) + "',");
 			values.Append((station.FeelsLike.HasValue ? station.FeelsLike.Value.ToString(cumulus.TempFormat, invNum) : "null") + ",");
 			values.Append((station.Humidex.HasValue ? station.Humidex.Value.ToString(cumulus.TempFormat, invNum) : "null"));
 			values.Append(')');
@@ -570,8 +570,8 @@ namespace CumulusMX
 			}
 			else
 				queryString.Append("null,null,");
-			queryString.Append(station.CompassPoint(station.HiLoToday.HighGustBearing) + "','");
-			queryString.Append(station.CompassPoint(station.DominantWindBearing) + "',");
+			queryString.Append(WeatherStation.CompassPoint(station.HiLoToday.HighGustBearing) + "','");
+			queryString.Append(WeatherStation.CompassPoint(station.DominantWindBearing) + "',");
 			if (station.HiLoToday.HighFeelsLike.HasValue)
 			{
 				queryString.Append(station.HiLoToday.HighFeelsLike.Value.ToString(cumulus.TempFormat, invNum) + ",");

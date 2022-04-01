@@ -14,22 +14,25 @@ namespace CumulusMX
 		public double? Temp3 { get; set; }
 		public double? Temp4 { get; set; }
 
-		public string ToCSV()
+		public string ToCSV(bool ToFile=false)
 		{
 			var invNum = CultureInfo.InvariantCulture.NumberFormat;
 			var invDate = CultureInfo.InvariantCulture.NumberFormat;
 
+			var dateformat = ToFile ? "dd/MM/yy HH:mm" : "'\"'dd/MM/yy HH:mm'\"'";
+			var blank = ToFile ? "" : "\"\"";
+			var sep = ',';
+
 			var sb = new StringBuilder(350);
-			sb.Append(Timestamp.ToString("'\"'dd/MM/yy HH:mm'\"'", invDate)).Append(',');
-			sb.Append(Utils.ToUnixTime(Timestamp)).Append(",\"");
-			if (Temp1.HasValue) sb.Append(Temp1.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append("\",\"");
-			if (Temp2.HasValue) sb.Append(Temp2.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append("\",\"");
-			if (Temp3.HasValue) sb.Append(Temp3.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append("\",\"");
-			if (Temp4.HasValue) sb.Append(Temp4.Value.ToString(Program.cumulus.TempFormat, invNum));
-			sb.Append('"');
+			sb.Append(Timestamp.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Utils.ToUnixTime(Timestamp)).Append(sep);
+			sb.Append(Temp1.HasValue ? Temp1.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
+			sb.Append(sep);
+			sb.Append(Temp2.HasValue ? Temp2.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
+			sb.Append(sep);
+			sb.Append(Temp3.HasValue ? Temp3.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
+			sb.Append(sep);
+			sb.Append(Temp4.HasValue ? Temp4.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
 			return sb.ToString();
 		}
 

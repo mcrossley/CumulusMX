@@ -1435,7 +1435,7 @@ namespace CumulusMX
 			// average
 			double average = ((packetBuffer[24]*16) + (packetBuffer[23]/16))/10.0;
 
-			DoWind(ConvertWindMSToUser(gust),bearing,ConvertWindMSToUser(average),timestamp);
+			DoWind(ConvertWindMSToUser(gust),bearing, ConvertWindMSToUser(average),timestamp);
 
 			// add in 'interval' minutes worth of wind speed to windrun
 			WindRunToday += (WindAverage.Value * WindRunHourMult[cumulus.Units.Wind]*interval*60)/1000.0;

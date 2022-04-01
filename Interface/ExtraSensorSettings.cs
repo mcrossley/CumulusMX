@@ -45,17 +45,17 @@ namespace CumulusMX
 
 			var ecowitt = new EcowittAmbientJson()
 			{
-				useSolar = cumulus.EcowittExtraUseSolar,
-				useUv = cumulus.EcowittExtraUseUv,
-				useTempHum = cumulus.EcowittExtraUseTempHum,
+				useSolar = cumulus.EcowittSettings.ExtraUseSolar,
+				useUv = cumulus.EcowittSettings.ExtraUseUv,
+				useTempHum = cumulus.EcowittSettings.ExtraUseTempHum,
 				//useSoilTemp = cumulus.EcowittExtraUseSoilTemp,
-				useSoilMoist = cumulus.EcowittExtraUseSoilMoist,
-				useLeafWet = cumulus.EcowittExtraUseLeafWet,
-				useUserTemp = cumulus.EcowittExtraUseUserTemp,
-				useAQI = cumulus.EcowittExtraUseAQI,
-				useCo2 = cumulus.EcowittExtraUseCo2,
-				useLightning = cumulus.EcowittExtraUseLightning,
-				useLeak = cumulus.EcowittExtraUseLeak
+				useSoilMoist = cumulus.EcowittSettings.ExtraUseSoilMoist,
+				useLeafWet = cumulus.EcowittSettings.ExtraUseLeafWet,
+				useUserTemp = cumulus.EcowittSettings.ExtraUseUserTemp,
+				useAQI = cumulus.EcowittSettings.ExtraUseAQI,
+				useCo2 = cumulus.EcowittSettings.ExtraUseCo2,
+				useLightning = cumulus.EcowittSettings.ExtraUseLightning,
+				useLeak = cumulus.EcowittSettings.ExtraUseLeak
 			};
 
 			var ambient = new EcowittAmbientJson()
@@ -78,7 +78,7 @@ namespace CumulusMX
 				ambient = ambient
 			};
 
-			if (cumulus.EcowittExtraEnabled)
+			if (cumulus.EcowittSettings.ExtraEnabled)
 				httpStation.extraStation = 0;
 			else if (cumulus.AmbientExtraEnabled)
 				httpStation.extraStation = 1;
@@ -223,57 +223,56 @@ namespace CumulusMX
 				{
 					if (settings.httpSensors.extraStation == 0)
 					{
-						cumulus.EcowittExtraEnabled = true;
-						cumulus.EcowittExtraUseSolar = settings.httpSensors.ecowitt.useSolar;
-						cumulus.EcowittExtraUseUv = settings.httpSensors.ecowitt.useUv;
-						cumulus.EcowittExtraUseTempHum = settings.httpSensors.ecowitt.useTempHum;
-						//cumulus.EcowittExtraUseSoilTemp = settings.httpSensors.ecowitt.useSoilTemp;
-						cumulus.EcowittExtraUseSoilMoist = settings.httpSensors.ecowitt.useSoilMoist;
-						cumulus.EcowittExtraUseLeafWet = settings.httpSensors.ecowitt.useLeafWet;
-						cumulus.EcowittExtraUseUserTemp = settings.httpSensors.ecowitt.useUserTemp;
-						cumulus.EcowittExtraUseAQI = settings.httpSensors.ecowitt.useAQI;
-						cumulus.EcowittExtraUseCo2 = settings.httpSensors.ecowitt.useCo2;
-						cumulus.EcowittExtraUseLightning = settings.httpSensors.ecowitt.useLightning;
-						cumulus.EcowittExtraUseLeak = settings.httpSensors.ecowitt.useLeak;
+						cumulus.EcowittSettings.ExtraEnabled = true;
+						cumulus.EcowittSettings.ExtraUseSolar = settings.httpSensors.ecowitt.useSolar;
+						cumulus.EcowittSettings.ExtraUseUv = settings.httpSensors.ecowitt.useUv;
+						cumulus.EcowittSettings.ExtraUseTempHum = settings.httpSensors.ecowitt.useTempHum;
+						cumulus.EcowittSettings.ExtraUseSoilMoist = settings.httpSensors.ecowitt.useSoilMoist;
+						cumulus.EcowittSettings.ExtraUseLeafWet = settings.httpSensors.ecowitt.useLeafWet;
+						cumulus.EcowittSettings.ExtraUseUserTemp = settings.httpSensors.ecowitt.useUserTemp;
+						cumulus.EcowittSettings.ExtraUseAQI = settings.httpSensors.ecowitt.useAQI;
+						cumulus.EcowittSettings.ExtraUseCo2 = settings.httpSensors.ecowitt.useCo2;
+						cumulus.EcowittSettings.ExtraUseLightning = settings.httpSensors.ecowitt.useLightning;
+						cumulus.EcowittSettings.ExtraUseLeak = settings.httpSensors.ecowitt.useLeak;
 
 						// Also enable extra logging if applicable
-						if (cumulus.EcowittExtraUseTempHum || cumulus.EcowittExtraUseSoilTemp || cumulus.EcowittExtraUseSoilMoist || cumulus.EcowittExtraUseLeafWet || cumulus.EcowittExtraUseUserTemp || cumulus.EcowittExtraUseAQI || cumulus.EcowittExtraUseCo2)
+						if (cumulus.EcowittSettings.ExtraUseTempHum || cumulus.EcowittSettings.ExtraUseSoilTemp || cumulus.EcowittSettings.ExtraUseSoilMoist || cumulus.EcowittSettings.ExtraUseLeafWet || cumulus.EcowittSettings.ExtraUseUserTemp || cumulus.EcowittSettings.ExtraUseAQI || cumulus.EcowittSettings.ExtraUseCo2)
 						{
 							cumulus.StationOptions.LogExtraSensors = true;
 						}
-						if (cumulus.EcowittExtraUseTempHum)
+						if (cumulus.EcowittSettings.ExtraUseTempHum)
 						{
 							cumulus.ExtraDataLogging.Temperature = true;
 							cumulus.ExtraDataLogging.Humidity = true;
 							cumulus.ExtraDataLogging.Dewpoint = true;
 						}
-						if (cumulus.EcowittExtraUseSoilTemp)
+						if (cumulus.EcowittSettings.ExtraUseSoilTemp)
 						{
 							cumulus.ExtraDataLogging.SoilTemp = true;
 						}
-						if (cumulus.EcowittExtraUseSoilMoist)
+						if (cumulus.EcowittSettings.ExtraUseSoilMoist)
 						{
 							cumulus.ExtraDataLogging.SoilMoisture = true;
 						}
-						if (cumulus.EcowittExtraUseLeafWet)
+						if (cumulus.EcowittSettings.ExtraUseLeafWet)
 						{
 							cumulus.ExtraDataLogging.LeafWetness = true;
 						}
-						if (cumulus.EcowittExtraUseUserTemp)
+						if (cumulus.EcowittSettings.ExtraUseUserTemp)
 						{
 							cumulus.ExtraDataLogging.UserTemp = true;
 						}
-						if (cumulus.EcowittExtraUseAQI)
+						if (cumulus.EcowittSettings.ExtraUseAQI)
 						{
 							cumulus.ExtraDataLogging.AirQual = true;
 						}
-						if (cumulus.EcowittExtraUseCo2)
+						if (cumulus.EcowittSettings.ExtraUseCo2)
 						{
 							cumulus.ExtraDataLogging.CO2 = true;
 						}
 					}
 					else
-						cumulus.EcowittExtraEnabled = false;
+						cumulus.EcowittSettings.ExtraEnabled = false;
 				}
 				catch (Exception ex)
 				{

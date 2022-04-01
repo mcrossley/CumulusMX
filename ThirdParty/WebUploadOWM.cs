@@ -119,13 +119,13 @@ namespace CumulusMX.ThirdParty
 
 			sb.Append($"\"dt\":{Utils.ToUnixTime(timestamp)},");
 			if (station.Temperature.HasValue)
-				sb.Append($"\"temperature\":{Math.Round(station.ConvertUserTempToC(station.Temperature).Value, 1).ToString(invC)},");
+				sb.Append($"\"temperature\":{Math.Round(WeatherStation.ConvertUserTempToC(station.Temperature).Value, 1).ToString(invC)},");
 			sb.Append($"\"wind_deg\":{station.AvgBearing},");
 			sb.Append($"\"wind_speed\":{Math.Round(station.ConvertUserWindToMS(station.WindAverage).Value, 1).ToString(invC)},");
 			if (station.RecentMaxGust.HasValue)
 				sb.Append($"\"wind_gust\":{Math.Round(station.ConvertUserWindToMS(station.RecentMaxGust).Value, 1).ToString(invC)},");
 			if (station.Pressure.HasValue)
-				sb.Append($"\"pressure\":{Math.Round(station.ConvertUserPressureToHPa(station.Pressure).Value, 1).ToString(invC)},");
+				sb.Append($"\"pressure\":{Math.Round(WeatherStation.ConvertUserPressureToHPa(station.Pressure).Value, 1).ToString(invC)},");
 			if (station.Humidity.HasValue)
 				sb.Append($"\"humidity\":{station.Humidity.Value},");
 			sb.Append($"\"rain_1h\":{Math.Round(station.ConvertUserRainToMM(station.RainLastHour).Value, 1).ToString(invC)},");
@@ -175,7 +175,7 @@ namespace CumulusMX.ThirdParty
 				sb.Append($"\"name\":\"{cumulus.LocationName}\",");
 				sb.Append($"\"latitude\":{cumulus.Latitude.ToString(invC)},");
 				sb.Append($"\"longitude\":{cumulus.Longitude.ToString(invC)},");
-				sb.Append($"\"altitude\":{(int)station.AltitudeM(cumulus.Altitude)}}}");
+				sb.Append($"\"altitude\":{(int)WeatherStation.AltitudeM(cumulus.Altitude)}}}");
 
 				Cumulus.LogMessage($"OpenWeatherMap: Creating new station");
 				Cumulus.LogMessage($"OpenWeatherMap: - {sb}");

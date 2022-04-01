@@ -18,30 +18,33 @@ namespace CumulusMX
 		public double? Temp { get; set; }
 		public double? Hum { get; set; }
 
-		public string ToCSV()
+		public string ToCSV(bool ToFile=false)
 		{
 			var invNum = CultureInfo.InvariantCulture.NumberFormat;
 			var invDate = CultureInfo.InvariantCulture.NumberFormat;
 
+			var dateformat = ToFile ? "dd/MM/yy HH:mm" : "'\"'dd/MM/yy HH:mm'\"'";
+			var blank = ToFile ? "" : "\"\"";
+			var sep = ',';
+
 			var sb = new StringBuilder(350);
-			sb.Append(Timestamp.ToString("'\"'dd/MM/yy HH:mm'\"'", invDate)).Append(',');
-			sb.Append(Utils.ToUnixTime(Timestamp)).Append(",\"");
-			if (CO2now.HasValue) sb.Append(CO2now.Value);
-			sb.Append("\",\"");
-			if (CO2avg.HasValue) sb.Append(CO2avg.Value);
-			sb.Append("\",\"");
-			if (Pm2p5.HasValue) sb.Append(Pm2p5.Value.ToString("F1", invNum));
-			sb.Append("\",\"");
-			if (Pm2p5avg.HasValue) sb.Append(Pm2p5avg.Value.ToString("F1", invNum));
-			sb.Append("\",\"");
-			if (Pm10.HasValue) sb.Append(Pm10.Value.ToString("F1", invNum));
-			sb.Append("\",\"");
-			if (Pm10avg.HasValue) sb.Append(Pm10avg.Value.ToString("F1", invNum));
-			sb.Append("\",\"");
-			if (Temp.HasValue) sb.Append(Temp.Value.ToString("F1", invNum));
-			sb.Append("\",\"");
-			if (Hum.HasValue) sb.Append(Hum.Value.ToString("F0", invNum));
-			sb.Append('"');
+			sb.Append(Timestamp.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Utils.ToUnixTime(Timestamp)).Append(sep);
+			sb.Append(CO2now.HasValue ? CO2now : blank);
+			sb.Append(sep);
+			sb.Append(CO2avg.HasValue ? CO2avg.Value : blank);
+			sb.Append(sep);
+			sb.Append(Pm2p5.HasValue ? Pm2p5.Value.ToString("F1", invNum) : blank);
+			sb.Append(sep);
+			sb.Append(Pm2p5avg.HasValue ? Pm2p5avg.Value.ToString("F1", invNum) : blank);
+			sb.Append(sep);
+			sb.Append(Pm10.HasValue ? Pm10.Value.ToString("F1", invNum) : blank);
+			sb.Append(sep);
+			sb.Append(Pm10avg.HasValue ? Pm10avg.Value.ToString("F1", invNum) : blank);
+			sb.Append(sep);
+			sb.Append(Temp.HasValue ? Temp.Value.ToString("F1", invNum) : blank);
+			sb.Append(sep);
+			sb.Append(Hum.HasValue ? Hum.Value.ToString("F0", invNum) : blank);
 			return sb.ToString();
 		}
 

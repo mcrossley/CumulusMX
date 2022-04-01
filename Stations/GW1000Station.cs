@@ -22,9 +22,8 @@ namespace CumulusMX
 		private EcowittApi api;
 		private int maxArchiveRuns = 1;
 
-		private Stations.GW1000Api Api;
+		private readonly Stations.GW1000Api Api;
 		private bool dataReceived = false;
-		private bool connected = false;
 
 		private readonly System.Timers.Timer tmrDataWatchdog;
 		private bool stop = false;
@@ -58,6 +57,11 @@ namespace CumulusMX
 			// GW1000 does not provide pressure trend strings
 			cumulus.StationOptions.UseCumulusPresstrendstr = true;
 
+			if (cumulus.Gw1000PrimaryTHSensor != 0)
+			{
+				// We are not using the primary T/H sensor so MX must calculate the wind chill as well
+				cumulus.StationOptions.CalculatedWC = true;
+			}
 
 			ipaddr = cumulus.Gw1000IpAddress;
 			macaddr = cumulus.Gw1000MacAddress;
@@ -70,44 +74,48 @@ namespace CumulusMX
 			Cumulus.LogMessage("Using IP address = " + ipaddr + " Port = " + AtPort);
 
 			Api = new Stations.GW1000Api(cumulus);
-			var connected = Api.OpenTcpPort(ipaddr, AtPort);
 
-			if (connected)
+			bool connected;
+			do
 			{
-				Cumulus.LogMessage("Connected OK");
-				Cumulus.LogConsoleMessage("Connected to station");
-			}
-			else
-			{
-				Cumulus.LogMessage("Not Connected");
-				Cumulus.LogConsoleMessage("Unable to connect to station", ConsoleColor.Red);
-			}
+				connected = Api.OpenTcpPort(ipaddr, AtPort);
 
-			if (connected)
-			{
-				// Get the firmware version as check we are communicating
-				GW1000FirmwareVersion = GetFirmwareVersion();
-				Cumulus.LogMessage($"GW1000 firmware version: {GW1000FirmwareVersion}");
-				if (GW1000FirmwareVersion != "???")
+				if (connected)
 				{
-					var fwString = GW1000FirmwareVersion.Split("_V", StringSplitOptions.None);
-					if (fwString.Length > 1)
-					{
-						fwVersion = new Version(fwString[1]);
-					}
-					else
-					{
-						// failed to get the version, lets assume it's fairly new
-						fwVersion = new Version("1.6.5");
-					}
+					Cumulus.LogMessage("Connected OK");
+					Cumulus.LogConsoleMessage("Connected to station");
+				}
+				else
+				{
+					Cumulus.LogMessage("Not Connected");
+					Cumulus.LogConsoleMessage("Unable to connect to station", ConsoleColor.Red);
 				}
 
-				GetSystemInfo();
+				Thread.Sleep(5000);
 
-				GetSensorIdsNew();
+			} while (!connected);
+
+			// Get the firmware version as check we are communicating
+			GW1000FirmwareVersion = GetFirmwareVersion();
+			Cumulus.LogMessage($"GW1000 firmware version: {GW1000FirmwareVersion}");
+			if (GW1000FirmwareVersion != "???")
+			{
+				var fwString = GW1000FirmwareVersion.Split("_V", StringSplitOptions.None);
+				if (fwString.Length > 1)
+				{
+					fwVersion = new Version(fwString[1]);
+				}
+				else
+				{
+					// failed to get the version, lets assume it's fairly new
+					fwVersion = new Version("1.6.5");
+				}
 			}
 
-			LoadLastHoursFromDataLogs(cumulus.LastUpdateTime);
+			GetSystemInfo();
+
+			GetSensorIdsNew();
+
 		}
 
 		public override void DoStartup()
@@ -139,32 +147,18 @@ namespace CumulusMX
 				{
 					while (!stop)
 					{
-						if (connected)
-						{
-							GetLiveData();
+						GetLiveData();
 
-							// at the start of every 10 minutes to trigger battery status check
-							var minute = DateTime.Now.Minute;
-							if (minute != lastMinute)
-							{
-								lastMinute = minute;
-								if ((minute % 10) == 0)
-								{
-									GetSensorIdsNew();
-								}
-							}
-						}
-						else
+						// at the start of every 10 minutes to trigger battery status check
+						var minute = DateTime.Now.Minute;
+						if (minute != lastMinute)
 						{
-							Cumulus.LogMessage("Attempting to reconnect to GW1000...");
-							connected = Api.OpenTcpPort(ipaddr, AtPort);
-							if (connected)
+							lastMinute = minute;
+							if ((minute % 10) == 0)
 							{
-								Cumulus.LogMessage("Reconnected to GW1000");
-								GetLiveData();
+								GetSensorIdsNew();
 							}
 						}
-						Thread.Sleep(updateRate);
 					}
 				}
 				// Catch the ThreadAbortException
@@ -204,7 +198,7 @@ namespace CumulusMX
 			Cumulus.syncInit.Wait();
 			cumulus.LogDebugMessage("Lock: Station has the lock");
 
-			if (string.IsNullOrEmpty(cumulus.EcowittAppKey) || string.IsNullOrEmpty(cumulus.EcowittUserApiKey) || string.IsNullOrEmpty(cumulus.EcowittMacAddress))
+			if (string.IsNullOrEmpty(cumulus.EcowittSettings.AppKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.UserApiKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.MacAddress))
 			{
 				Cumulus.LogMessage("API.GetHistoricData: Missing Ecowitt API data in the configuration, aborting!");
 				cumulus.LastUpdateTime = DateTime.Now;
@@ -256,7 +250,7 @@ namespace CumulusMX
 		}
 
 
-		private Discovery DiscoverGW1000()
+		private static Discovery DiscoverGW1000()
 		{
 			// We only want unique IP addresses
 			var discovered = new Discovery();
@@ -569,13 +563,13 @@ namespace CumulusMX
 					case string wh35 when wh35.StartsWith("WH35"):  // ch 1-8
 					case "WH90":
 						// if a WS90 is connected, it has a 4.75 second update rate, so reduce the MX update rate from the default 10 seconds
-						if (updateRate > 4000)
+						if (updateRate > 4000 && updateRate != 4000)
 						{
 							Cumulus.LogMessage($"PrintSensorInfoNew: WS90 sensor detected, changing the update rate from {updateRate / 1000} seconds to 4 seconds");
 							updateRate = 4000;
 						}
-						battV = data[battPos] * 0.02;
-						batt = $"{battV:f1}V ({TestBattery10(data[battPos])})";  // volts/10, low = 1.2V
+						battV = data[battPos] / 10.0;
+						batt = $"{battV:f1}V ({(battV > 2.4 ? "OK": "Low")})";  // volts/10, low = 1.2V
 						break;
 
 					case string wh31 when wh31.StartsWith("WH31"):  // ch 1-8
@@ -584,7 +578,7 @@ namespace CumulusMX
 
 					case "WH68":
 					case string wh51 when wh51.StartsWith("WH51"):  // ch 1-8
-						battV = data[battPos] * 0.02;
+						battV = data[battPos] / 10.0;
 						batt = $"{battV:f1}V ({TestBattery10(data[battPos])})"; // volts/10, low = 1.2V or 1.0V??
 						break;
 
@@ -599,12 +593,13 @@ namespace CumulusMX
 					case "WH80":
 					case "WS80":
 						// if a WS80 is connected, it has a 4.75 second update rate, so reduce the MX update rate from the default 10 seconds
-						if (updateRate > 4000)
+						if (updateRate > 4000 && updateRate != 4000)
 						{
 							Cumulus.LogMessage($"PrintSensorInfoNew: WS80 sensor detected, changing the update rate from {updateRate/1000} seconds to 4 seconds");
 							updateRate = 4000;
 						}
-						batt = $"{data[battPos]} ({TestBatteryPct(data[battPos])})"; // Percent low = 20
+						battV = data[battPos] * 0.02;
+						batt = $"{battV:f1}V ({(battV > 2.4 ? "OK": "Low")})";
 						break;
 
 					default:
@@ -636,7 +631,6 @@ namespace CumulusMX
 			var minute = DateTime.Now.Minute;
 			if (minute != lastMinute)
 			{
-				lastMinute = minute;
 				tenMinuteChanged = (minute % 10) == 0;
 			}
 
@@ -707,9 +701,12 @@ namespace CumulusMX
 								idx += 2;
 								break;
 							case 0x02: //Outdoor Temperature (℃)
-								tempInt16 = Stations.GW1000Api.ConvertBigEndianInt16(data, idx);
-								// do not process temperature here as if "MX calculates DP" is enabled, we have not yet read the humidity value. Have to do it at the end.
-								outdoortemp = tempInt16 / 10.0;
+								if (cumulus.Gw1000PrimaryTHSensor == 0)
+								{
+									tempInt16 = Stations.GW1000Api.ConvertBigEndianInt16(data, idx);
+									// do not process temperature here as if "MX calculates DP" is enabled, we have not yet read the humidity value. Have to do it at the end.
+									outdoortemp = tempInt16 / 10.0;
+								}
 								idx += 2;
 								break;
 							case 0x03: //Dew point (℃)
@@ -718,8 +715,11 @@ namespace CumulusMX
 								idx += 2;
 								break;
 							case 0x04: //Wind chill (℃)
-								tempInt16 = Stations.GW1000Api.ConvertBigEndianInt16(data, idx);
-								newWindChill = ConvertTempCToUser(tempInt16 / 10.0);
+								if (cumulus.Gw1000PrimaryTHSensor == 0)
+								{
+									tempInt16 = Stations.GW1000Api.ConvertBigEndianInt16(data, idx);
+									newWindChill = ConvertTempCToUser(tempInt16 / 10.0);
+								}
 								idx += 2;
 								break;
 							case 0x05: //Heat index (℃)
@@ -731,10 +731,13 @@ namespace CumulusMX
 								idx += 1;
 								break;
 							case 0x07: //Outdoor Humidity (%)
-								if (data[idx] <= 100)
-									DoHumidity(data[idx], dateTime);
-								else
-									Humidity = null;
+								if (cumulus.Gw1000PrimaryTHSensor == 0)
+								{
+									if (data[idx] <= 100)
+										DoHumidity(data[idx], dateTime);
+									else
+										Humidity = null;
+								}
 								idx += 1;
 								break;
 							case 0x08: //Absolute Barometric (hPa)
@@ -814,6 +817,10 @@ namespace CumulusMX
 							case 0x21: //Temperature 8(℃)
 								chan = data[idx - 1] - 0x1A + 1;
 								tempInt16 = Stations.GW1000Api.ConvertBigEndianInt16(data, idx);
+								if (cumulus.Gw1000PrimaryTHSensor == chan)
+								{
+									outdoortemp = tempInt16 / 10.0;
+								}
 								DoExtraTemp(ConvertTempCToUser(tempInt16 / 10.0), chan);
 								idx += 2;
 								break;
@@ -826,6 +833,10 @@ namespace CumulusMX
 							case 0x28: //Humidity 7, 0-100%
 							case 0x29: //Humidity 8, 0-100%
 								chan = data[idx - 1] - 0x22 + 1;
+								if (cumulus.Gw1000PrimaryTHSensor == chan)
+								{
+									DoHumidity(data[idx], dateTime);
+								}
 								DoExtraHum(data[idx], chan);
 								idx += 1;
 								break;
@@ -1207,7 +1218,7 @@ namespace CumulusMX
 			return batteryLow;
 		}
 
-		private bool DoBatteryStatus(byte[] data, int index)
+		private static bool DoBatteryStatus(byte[] data, int index)
 		{
 			bool batteryLow = false;
 			var status = (Stations.GW1000Api.BatteryStatus)RawDeserialize(data, index, typeof(Stations.GW1000Api.BatteryStatus));
@@ -1257,14 +1268,14 @@ namespace CumulusMX
 				cumulus.LogDebugMessage(str);
 
 			str = "wh51>" +
-				" ch1=" + TestBattery1(status.wh51, (byte)Stations.GW1000Api.Wh51Ch.Ch1) +
-				" ch2=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh51Ch.Ch2) +
-				" ch3=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh51Ch.Ch3) +
-				" ch4=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh51Ch.Ch4) +
-				" ch5=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh51Ch.Ch5) +
-				" ch6=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh51Ch.Ch6) +
-				" ch7=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh51Ch.Ch7) +
-				" ch8=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh51Ch.Ch8);
+				" ch1=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch1) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch1) + 
+				" ch2=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch2) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch2) +
+				" ch3=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch3) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch3) +
+				" ch4=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch4) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch4) +
+				" ch5=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch5) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch5) +
+				" ch6=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch6) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch6) +
+				" ch7=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch7) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch7) +
+				" ch8=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch8) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch8);
 			if (str.Contains("Low"))
 			{
 				batteryLow = true;
@@ -1325,7 +1336,7 @@ namespace CumulusMX
 			return batteryLow;
 		}
 
-		private bool DoWH34BatteryStatus(byte[] data, int index)
+		private static bool DoWH34BatteryStatus(byte[] data, int index)
 		{
 			// No longer used in firmware 1.6.0+
 			cumulus.LogDebugMessage("WH34 battery status...");
@@ -1349,10 +1360,12 @@ namespace CumulusMX
 			return (value & mask) == 0 ? "OK" : "Low";
 		}
 
+		/*
 		private static string TestBattery1(UInt16 value, UInt16 mask)
 		{
 			return (value & mask) == 0 ? "OK" : "Low";
 		}
+		*/
 
 		private static string TestBattery2(UInt16 value, UInt16 mask)
 		{
@@ -1376,11 +1389,12 @@ namespace CumulusMX
 			return value / 10.0;
 		}
 
+		/*
 		private static string TestBatteryPct(byte value)
 		{
 			return value >= 20 ? "OK" : "Low";
 		}
-
+		*/
 
 		private static object RawDeserialize(byte[] rawData, int position, Type anyType)
 		{

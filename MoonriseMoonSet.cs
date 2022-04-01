@@ -1,5 +1,6 @@
 ﻿using System;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Memory;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
@@ -7,19 +8,35 @@ namespace CumulusMX
 {
 	internal class MoonriseMoonset
 	{
+		internal MoonriseMoonset()
+		{
+			// Reduce the memory allocation in ImageSharp - we only have a small image
+			try
+			{
+				Configuration.Default.MemoryAllocator = MemoryAllocator.Create(new MemoryAllocatorOptions()
+				{
+					MaximumPoolSizeMegabytes = 1
+				});
+			}
+			catch (Exception ex)
+			{
+				Program.cumulus.LogExceptionMessage(ex, "Error setting ImageSharp memory pool size");
+			}
+		}
+
 		// JavaScript by Peter Hayes http://www.aphayes.pwp.blueyonder.co.uk/
-// Copyright 2001-2010
-// Unless otherwise stated this code is based on the methods in
-// Astronomical Algorithms, first edition, by Jean Meeus
-// Published by Willmann-Bell, Inc.
-// This code is made freely available but please keep this notice.
-// The calculations are approximate but should be good enough for general use,
-// I accept no responsibility for errors in astronomy or coding.
+		// Copyright 2001-2010
+		// Unless otherwise stated this code is based on the methods in
+		// Astronomical Algorithms, first edition, by Jean Meeus
+		// Published by Willmann-Bell, Inc.
+		// This code is made freely available but please keep this notice.
+		// The calculations are approximate but should be good enough for general use,
+		// I accept no responsibility for errors in astronomy or coding.
 
-// WARNING moonrise code changed on 6 May 2003 to correct a systematic error
-// these are now local times NOT UTC as the original code did.
+		// WARNING moonrise code changed on 6 May 2003 to correct a systematic error
+		// these are now local times NOT UTC as the original code did.
 
-// Meeus first edition table 45.A Longitude and distance of the moon
+		// Meeus first edition table 45.A Longitude and distance of the moon
 
 		private static readonly int[] T45AD =
 		{
@@ -1519,104 +1536,101 @@ namespace CumulusMX
 
 		public static bool CreateMoonImage(double phaseAngle, double latitude, int size, bool transparent)
 		{
-			Image<Rgba32> bmp;
-
-			if (System.IO.File.Exists("./web/MoonBaseImage.png"))
-			{
-				bmp = Image.Load<Rgba32>("./web/MoonBaseImage.png");
-			}
-			else
+			if (!System.IO.File.Exists("./web/MoonBaseImage.png"))
 			{
 				Cumulus.LogMessage("CreateMoonImage: File not found - ./web/MoonBaseImage.png");
 				return false;
 			}
 
-			// we need to reverse a couple of settings beyond full moon
-			double corr = -1;
-
-			if (phaseAngle > 180)
-			{
-				corr = 1;
-				phaseAngle = -(phaseAngle - 360);
-			}
-
-			double phase = (1 - cosd(phaseAngle)) / 2;
-
-			int srcSize = bmp.Width;
-			int srcSize2 = srcSize / 2;
-			var dark = new Rgba32(20, 20, 20, 200);
+			var success = true;
 
 			try
 			{
-
-				for (int yPos = 0; yPos < srcSize2; yPos++)
+				using var bmp = Image.Load<Rgba32>("./web/MoonBaseImage.png");
+				bmp.ProcessPixelRows(accessor =>
 				{
+					// we need to reverse a couple of settings beyond full moon
+					double corr = -1;
 
-					// moons limb
-					var y = srcSize2 - yPos;
-					int xPos;
-					if (transparent)
-						xPos = corr == -1 ? 0 : srcSize - 1;
-					else
-						xPos = (int)(Math.Sqrt(srcSize2 * srcSize2 - y * y) * corr + srcSize2);
-
-					// Determine the edges of the illuminated part of the moon
-					double x = 1 - ((double)yPos / (double)srcSize2);
-					x = Math.Sqrt(1 - (x * x));
-					var xPos2 = (int)(srcSize2 + (phase - 0.5) * x * srcSize * (-corr));
-
-					Span<Rgba32> pixels1 = bmp.GetPixelRowSpan(yPos);
-					for (int x1 = xPos; x1 < xPos2; x1++)
+					if (phaseAngle > 180)
 					{
-						if (transparent)
-							pixels1[x1].A = 0;
-						else
-						{
-							pixels1[x1].R = (byte)(pixels1[x1].R * 0.2);
-							pixels1[x1].G = (byte)(pixels1[x1].G * 0.2);
-							pixels1[x1].B = (byte)(pixels1[x1].B * 0.2);
-						}
+						corr = 1;
+						phaseAngle = -(phaseAngle - 360);
 					}
 
-					// suppress double drawing of the last line
-					if (yPos != srcSize2)
+					double phase = (1 - cosd(phaseAngle)) / 2;
+
+					int srcSize = bmp.Width;
+					int srcSize2 = srcSize / 2;
+					var dark = new Rgba32(20, 20, 20, 200);
+
+					for (int yPos = 0; yPos < srcSize2; yPos++)
 					{
-						Span<Rgba32> pixels2 = bmp.GetPixelRowSpan(srcSize - 1 - yPos);
-						for (int x2 = xPos; x2 <= xPos2; x2++)
+						// moons limb
+						var y = srcSize2 - yPos;
+						int xPos;
+
+						if (transparent)
+							xPos = corr == -1 ? 0 : srcSize - 1;
+						else
+							xPos = (int)(Math.Sqrt(srcSize2 * srcSize2 - y * y) * corr + srcSize2);
+
+						// Determine the edges of the illuminated part of the moon
+						double x = 1 - ((double)yPos / (double)srcSize2);
+						x = Math.Sqrt(1 - (x * x));
+						var xPos2 = (int)(srcSize2 + (phase - 0.5) * x * srcSize * (-corr));
+
+						Span<Rgba32> pixels1 = accessor.GetRowSpan(yPos);
+						for (int x1 = xPos; x1 < xPos2; x1++)
 						{
 							if (transparent)
-								pixels2[x2].A = 0;
+								pixels1[x1] = Color.Transparent;
 							else
 							{
-								pixels2[x2].R = (byte)(pixels2[x2].R * 0.2);
-								pixels2[x2].G = (byte)(pixels2[x2].G * 0.2);
-								pixels2[x2].B = (byte)(pixels2[x2].B * 0.2);
+								pixels1[x1].R = (byte)(pixels1[x1].R * 0.2);
+								pixels1[x1].G = (byte)(pixels1[x1].G * 0.2);
+								pixels1[x1].B = (byte)(pixels1[x1].B * 0.2);
+							}
+						}
+
+						// suppress double drawing of the last line
+						if (yPos != srcSize2)
+						{
+							Span<Rgba32> pixels2 = accessor.GetRowSpan(srcSize - 1 - yPos);
+							for (int x2 = xPos; x2 <= xPos2; x2++)
+							{
+								if (transparent)
+									pixels2[x2] = Color.Transparent;
+								else
+								{
+									pixels2[x2].R = (byte)(pixels2[x2].R * 0.2);
+									pixels2[x2].G = (byte)(pixels2[x2].G * 0.2);
+									pixels2[x2].B = (byte)(pixels2[x2].B * 0.2);
+								}
 							}
 						}
 					}
-				}
 
-				// Rotate for southern hemisphere
-				if (latitude < 0)
-				{
-					//bmp.RotateFlip(RotateFlipType.Rotate180FlipNone);
-					bmp.Mutate(x => x.Rotate(RotateMode.Rotate180));
-				}
+					// Rotate for southern hemisphere
+					if (latitude < 0)
+					{
+						bmp.Mutate(x => x.Rotate(RotateMode.Rotate180));
+					}
 
-				// resize to desired output size
-				bmp.Mutate(x => x.Resize(size, size));
+					// resize to desired output size
+					bmp.Mutate(x => x.Resize(size, size));
 
-
-				// finally save the image and clean-up
-				bmp.SaveAsPng("./web/moon.png");
-				bmp.Dispose();
-				return true;
+					// finally save the image and clean-up
+					bmp.SaveAsPng("./web/moon.png");
+				});
 			}
 			catch (Exception ex)
 			{
 				Program.cumulus.LogExceptionMessage(ex, "Error creating the Moon image");
-				return false;
+				success = false;
 			}
+
+			return success;
 		}
 	}
 }

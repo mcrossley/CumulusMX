@@ -390,12 +390,12 @@ namespace CumulusMX
 
 		private string Tagcurrentwdir(Dictionary<string,string> tagParams)
 		{
-			return station.CompassPoint(station.Bearing);
+			return WeatherStation.CompassPoint(station.Bearing);
 		}
 
 		private string Tagwdir(Dictionary<string,string> tagParams)
 		{
-			return station.CompassPoint(station.AvgBearing);
+			return WeatherStation.CompassPoint(station.AvgBearing);
 		}
 
 		private string Tagwgust(Dictionary<string,string> tagParams)
@@ -846,7 +846,7 @@ namespace CumulusMX
 
 		private string Tagdomwinddir(Dictionary<string,string> tagParams)
 		{
-			return station.CompassPoint(station.DominantWindBearing);
+			return WeatherStation.CompassPoint(station.DominantWindBearing);
 		}
 
 		private string TagdomwindbearingY(Dictionary<string,string> tagParams)
@@ -856,7 +856,7 @@ namespace CumulusMX
 
 		private string TagdomwinddirY(Dictionary<string,string> tagParams)
 		{
-			return station.CompassPoint(station.YestDominantWindBearing);
+			return WeatherStation.CompassPoint(station.YestDominantWindBearing);
 		}
 
 		private string Tagbeaufort(Dictionary<string,string> tagParams)
@@ -1821,7 +1821,7 @@ namespace CumulusMX
 
 		private string TagdirectionTm(Dictionary<string, string> tagParams)
 		{
-			return station.CompassPoint(station.HiLoToday.HighGustBearing);
+			return WeatherStation.CompassPoint(station.HiLoToday.HighGustBearing);
 		}
 
 		private string TagrrateTm(Dictionary<string,string> tagParams)
@@ -2093,7 +2093,7 @@ namespace CumulusMX
 
 		private string TagdirectionYm(Dictionary<string, string> tagParams)
 		{
-			return  station.CompassPoint(station.HiLoYest.HighGustBearing);
+			return WeatherStation.CompassPoint(station.HiLoYest.HighGustBearing);
 		}
 
 		private string TagrrateYm(Dictionary<string,string> tagParams)
@@ -3376,7 +3376,7 @@ namespace CumulusMX
 		private string TagIsFreezing(Dictionary<string,string> tagParams)
 		{
 			if (station.Temperature.HasValue)
-				return station.ConvertUserTempToC(station.Temperature.Value) < 0.09 ? "1" : "0";
+				return WeatherStation.ConvertUserTempToC(station.Temperature.Value) < 0.09 ? "1" : "0";
 			else
 				return "-";
 		}

@@ -37,21 +37,6 @@ namespace CumulusMX
 				raindaythreshold = cumulus.RainDayThreshold
 			};
 
-			var optionsExtraLog = new OptionsExtraLog()
-			{
-				extrasensors = cumulus.StationOptions.LogExtraSensors,
-				extratemp = cumulus.ExtraDataLogging.Temperature,
-				extrahum = cumulus.ExtraDataLogging.Humidity,
-				extradew = cumulus.ExtraDataLogging.Dewpoint,
-				usertemp = cumulus.ExtraDataLogging.UserTemp,
-				soiltemp = cumulus.ExtraDataLogging.SoilTemp,
-				soilmoist = cumulus.ExtraDataLogging.SoilMoisture,
-				leaftemp = cumulus.ExtraDataLogging.LeafTemp,
-				leafwet = cumulus.ExtraDataLogging.LeafWetness,
-				airqual = cumulus.ExtraDataLogging.AirQual,
-				co2 = cumulus.ExtraDataLogging.CO2
-			};
-
 			var options = new OptionsJson()
 			{
 				usezerobearing = cumulus.StationOptions.UseZeroBearing,
@@ -65,7 +50,6 @@ namespace CumulusMX
 				ignorelacrosseclock = cumulus.StationOptions.WS2300IgnoreStationClock,
 				roundwindspeeds = cumulus.StationOptions.RoundWindSpeed,
 				nosensorcheck = cumulus.StationOptions.NoSensorCheck,
-				sensorlogging = optionsExtraLog,
 				advanced = optionsAdv
 			};
 
@@ -143,14 +127,15 @@ namespace CumulusMX
 			{
 				ipaddress = cumulus.Gw1000IpAddress,
 				autoDiscover = cumulus.Gw1000AutoUpdateIpAddress,
-				macaddress = cumulus.Gw1000MacAddress
+				macaddress = cumulus.Gw1000MacAddress,
+				primaryTHsensor = cumulus.Gw1000PrimaryTHSensor
 			};
 
 			var ecowittapi = new EcowittApi()
 			{
-				applicationkey = cumulus.EcowittAppKey,
-				userkey = cumulus.EcowittUserApiKey,
-				mac = cumulus.EcowittMacAddress
+				applicationkey = cumulus.EcowittSettings.AppKey,
+				userkey = cumulus.EcowittSettings.UserApiKey,
+				mac = cumulus.EcowittSettings.MacAddress
 			};
 
 			var logrollover = new LogRolloverJson()
@@ -208,10 +193,11 @@ namespace CumulusMX
 
 			var ecowitt = new EcowittSettingsJson()
 			{ 
-				setcustom = cumulus.EcowittSetCustomServer,
-				gwaddr = cumulus.EcowittGwAddr,
-				localaddr = cumulus.EcowittLocalAddr,
-				interval = cumulus.EcowittCustomInterval
+				setcustom = cumulus.EcowittSettings.SetCustomServer,
+				gwaddr = cumulus.EcowittSettings.GatewayAddr,
+				localaddr = cumulus.EcowittSettings.LocalAddr,
+				interval = cumulus.EcowittSettings.CustomInterval,
+				primaryTHsensor = cumulus.Gw1000PrimaryTHSensor
 			};
 
 			int deg, min, sec;
@@ -431,8 +417,7 @@ namespace CumulusMX
 
 			var generalAdvanced = new AdvancedJson()
 			{
-				recsbegandate = cumulus.RecordsBeganStr,
-				recstimeout = cumulus.RecordSetTimeoutHrs
+				recsbegandate = cumulus.RecordsBeganStr
 			};
 
 			var general = new GeneralJson()
@@ -455,6 +440,7 @@ namespace CumulusMX
 				daviswll = wll,
 				gw1000 = gw1000,
 				ecowitt = ecowitt,
+				ecowittapi = ecowittapi,
 				weatherflow = weatherflow,
 				fineoffset = fineoffset,
 				easyw = easyweather,
@@ -749,18 +735,6 @@ namespace CumulusMX
 					cumulus.StationOptions.RoundWindSpeed = settings.Options.roundwindspeeds;
 					cumulus.StationOptions.NoSensorCheck = settings.Options.nosensorcheck;
 
-					cumulus.StationOptions.LogExtraSensors = settings.Options.sensorlogging.extrasensors;
-					cumulus.ExtraDataLogging.Temperature = settings.Options.sensorlogging.extratemp;
-					cumulus.ExtraDataLogging.Humidity = settings.Options.sensorlogging.extrahum;
-					cumulus.ExtraDataLogging.Dewpoint = settings.Options.sensorlogging.extradew;
-					cumulus.ExtraDataLogging.UserTemp = settings.Options.sensorlogging.usertemp;
-					cumulus.ExtraDataLogging.SoilTemp = settings.Options.sensorlogging.soiltemp;
-					cumulus.ExtraDataLogging.SoilMoisture = settings.Options.sensorlogging.soilmoist;
-					cumulus.ExtraDataLogging.LeafTemp = settings.Options.sensorlogging.leaftemp;
-					cumulus.ExtraDataLogging.LeafWetness = settings.Options.sensorlogging.leafwet;
-					cumulus.ExtraDataLogging.AirQual = settings.Options.sensorlogging.airqual;
-					cumulus.ExtraDataLogging.CO2 = settings.Options.sensorlogging.co2;
-
 					cumulus.StationOptions.AvgBearingMinutes = settings.Options.advanced.avgbearingmins;
 					cumulus.StationOptions.AvgSpeedMinutes = settings.Options.advanced.avgspeedmins;
 					cumulus.StationOptions.PeakGustMinutes = settings.Options.advanced.peakgustmins;
@@ -987,6 +961,7 @@ namespace CumulusMX
 						cumulus.Gw1000IpAddress = settings.gw1000.ipaddress;
 						cumulus.Gw1000AutoUpdateIpAddress = settings.gw1000.autoDiscover;
 						cumulus.Gw1000MacAddress = settings.gw1000.macaddress;
+						cumulus.Gw1000PrimaryTHSensor = settings.gw1000.primaryTHsensor;
 					}
 				}
 				catch (Exception ex)
@@ -1002,10 +977,11 @@ namespace CumulusMX
 				{
 					if (settings.ecowitt != null)
 					{
-						cumulus.EcowittSetCustomServer = settings.ecowitt.setcustom;
-						cumulus.EcowittGwAddr = settings.ecowitt.gwaddr;
-						cumulus.EcowittLocalAddr = settings.ecowitt.localaddr;
-						cumulus.EcowittCustomInterval = settings.ecowitt.interval;
+						cumulus.EcowittSettings.SetCustomServer = settings.ecowitt.setcustom;
+						cumulus.EcowittSettings.GatewayAddr = settings.ecowitt.gwaddr;
+						cumulus.EcowittSettings.LocalAddr = settings.ecowitt.localaddr;
+						cumulus.EcowittSettings.CustomInterval = settings.ecowitt.interval;
+						cumulus.Gw1000PrimaryTHSensor = settings.ecowitt.primaryTHsensor;
 					}
 				}
 				catch (Exception ex)
@@ -1120,9 +1096,9 @@ namespace CumulusMX
 				{
 					if (settings.ecowittapi != null)
 					{
-						cumulus.EcowittAppKey = settings.ecowittapi.applicationkey;
-						cumulus.EcowittUserApiKey = settings.ecowittapi.userkey;
-						cumulus.EcowittMacAddress = settings.ecowittapi.mac;
+						cumulus.EcowittSettings.AppKey = settings.ecowittapi.applicationkey;
+						cumulus.EcowittSettings.UserApiKey = settings.ecowittapi.userkey;
+						cumulus.EcowittSettings.MacAddress = settings.ecowittapi.mac;
 					}
 				}
 				catch (Exception ex)
@@ -1214,7 +1190,6 @@ namespace CumulusMX
 				try
 				{
 					cumulus.RecordsBeganStr = settings.general.advanced.recsbegandate;
-					cumulus.RecordSetTimeoutHrs = settings.general.advanced.recstimeout;
 				}
 				catch (Exception ex)
 				{
@@ -1455,7 +1430,6 @@ namespace CumulusMX
 		private class AdvancedJson
 		{
 			public string recsbegandate { get; set; }
-			public int recstimeout { get; set; }
 		}
 
 		private class UnitsAdvancedJson
@@ -1506,27 +1480,9 @@ namespace CumulusMX
 			public bool cumuluspresstrendnames { get; set; }
 			public bool roundwindspeeds { get; set; }
 			public bool ignorelacrosseclock { get; set; }
-			public bool debuglogging { get; set; }
-			public bool datalogging { get; set; }
 			public bool stopsecondinstance { get; set; }
 			public bool nosensorcheck { get; set; }
-			public OptionsExtraLog sensorlogging { get; set; }
 			public OptionsAdvancedJson advanced { get; set; }
-		}
-
-		private class OptionsExtraLog
-		{
-			public bool extrasensors { get; set; }
-			public bool extratemp { get; set; }
-			public bool extrahum { get; set; }
-			public bool extradew { get; set; }
-			public bool usertemp { get; set; }
-			public bool soiltemp { get; set; }
-			public bool soilmoist { get; set; }
-			public bool leaftemp { get; set; }
-			public bool leafwet { get; set; }
-			public bool airqual { get; set; }
-			public bool co2 { get; set; }
 		}
 
 		public class TcpSettingsJson
@@ -1603,6 +1559,7 @@ namespace CumulusMX
 			public string ipaddress { get; set; }
 			public bool autoDiscover { get; set; }
 			public string macaddress { get; set; }
+			public int primaryTHsensor { get; set; }
 		}
 
 		internal class EcowittApi
@@ -1879,6 +1836,7 @@ namespace CumulusMX
 			public string gwaddr { get; set; }
 			public string localaddr { get; set; }
 			public int interval { get; set; }
+			public int primaryTHsensor { get; set; }
 		}
 	}
 }

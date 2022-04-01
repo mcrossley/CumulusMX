@@ -289,7 +289,7 @@ namespace CumulusMX
 						udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 						udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, port));
 						udpClient.Client.ReceiveTimeout = 4000;  // We should get a message every 2.5 seconds
-					  var from = new IPEndPoint(0, 0);
+						var from = new IPEndPoint(0, 0);
 
 						while (!stop)
 						{
@@ -2686,9 +2686,9 @@ namespace CumulusMX
 				try
 				{
 					string type;
-					if (sensor.sensor_type == 84 || sensor.sensor_type == 85)
+					if (sensor.sensor_type == 37 || sensor.sensor_type == 84 || sensor.sensor_type == 85)
 						type = "Vue";
-					else
+					else 
 						type = sensor.data_structure_type == 11 ? "ISS" : "Soil/Leaf";
 
 					var data = sensor.data.Last().FromJsv<WlHistoryHealthType11_13>();
@@ -2907,9 +2907,14 @@ namespace CumulusMX
 								break;
 							// WLL or ISS
 							case 504:
-							case int n when (n >= 43 && n < 90):
+							case int n when (n >= 23 && n < 100):
 								// Davis don't make this easy! Either a...
 								// 504 - WLL
+								//  23 - ISS VP2, Cabled (6322C)
+								//  24 - ISS VP2 Plus, Cabled (6327C)
+								//  27 - ISS VP2, Cabled, Metric (6322CM)
+								//  28 - ISS VP2 Plus, Cabled, Metric (6327CM)
+								//  37 - Vue, wireless (6357)
 								//  43 - ISS VP2, wireless (6152)
 								//  44 - ISS VP2, 24hr fan, wireless (6153)
 								//  45 - ISS VP2 Plus, wireless (6162)
@@ -2923,7 +2928,7 @@ namespace CumulusMX
 								//  76 - ISS VP2, 24hr fan, wireless, metric (6323M)
 								//  77 - ISS VP2, 24hr fan, wireless, OV (6323OV)
 								//  78 - ISS VP2, wireless, metric (6322M)
-								//  79 - ISS VP2, wirelss, OV (6322OV)
+								//  79 - ISS VP2, wireless, OV (6322OV)
 								//  80 - ISS VP2 Plus, 24hr fan, wireless, metric (6328M)
 								//  81 - ISS VP2 Plus, 24hr fan, wireless, OV (6328OV)
 								//  82 - ISS VP2 Plus, wireless metric (6327M)
@@ -3248,26 +3253,17 @@ namespace CumulusMX
 				}
 				else if (status != null)
 				{
-					var msg = $"Weatherlink.com overall System Status: '{status.result.status_overall.status}', Updated: {status.result.status_overall.updated}";
+					string msg;
 					if (status.result.status_overall.status_code != 100)
 					{
-						msg += "Error: ";
+						msg = status.ToString(true);
 						Cumulus.LogMessage(msg);
 						Console.WriteLine(msg);
 					}
 					else
 					{
+						msg = status.ToString(false);
 						cumulus.LogDebugMessage(msg);
-					}
-					// If we are not OK, then find what isn't working
-					if (status.result.status_overall.status_code != 100)
-					{
-						foreach (var subSys in status.result.status)
-						{
-							msg = $"   wl.com system: {subSys.name}, status: {subSys.status}, updated: {subSys.updated}";
-							Cumulus.LogMessage(msg);
-							Console.WriteLine(msg);
-						}
 					}
 				}
 				else

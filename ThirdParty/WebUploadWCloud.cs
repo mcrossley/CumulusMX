@@ -96,15 +96,15 @@ namespace CumulusMX.ThirdParty
 
 			//Temperature
 			if (station.IndoorTemp.HasValue)
-				sb.Append("&tempin=" + (int)Math.Round(station.ConvertUserTempToC(station.IndoorTemp).Value * 10));
+				sb.Append("&tempin=" + (int)Math.Round(WeatherStation.ConvertUserTempToC(station.IndoorTemp).Value * 10));
 			if (station.Temperature.HasValue)
-				sb.Append("&temp=" + (int)Math.Round(station.ConvertUserTempToC(station.Temperature).Value * 10));
+				sb.Append("&temp=" + (int)Math.Round(WeatherStation.ConvertUserTempToC(station.Temperature).Value * 10));
 			if (station.WindChill.HasValue)
-				sb.Append("&chill=" + (int)Math.Round(station.ConvertUserTempToC(station.WindChill).Value * 10));
+				sb.Append("&chill=" + (int)Math.Round(WeatherStation.ConvertUserTempToC(station.WindChill).Value * 10));
 			if (station.Dewpoint.HasValue)
-				sb.Append("&dew=" + (int)Math.Round(station.ConvertUserTempToC(station.Dewpoint).Value * 10));
+				sb.Append("&dew=" + (int)Math.Round(WeatherStation.ConvertUserTempToC(station.Dewpoint).Value * 10));
 			if (station.HeatIndex.HasValue)
-				sb.Append("&heat=" + (int)Math.Round(station.ConvertUserTempToC(station.HeatIndex).Value * 10));
+				sb.Append("&heat=" + (int)Math.Round(WeatherStation.ConvertUserTempToC(station.HeatIndex).Value * 10));
 
 			// Humidity
 			if (station.IndoorHum.HasValue)
@@ -125,7 +125,7 @@ namespace CumulusMX.ThirdParty
 
 			// Pressure
 			if (station.Pressure.HasValue)
-				sb.Append("&bar=" + (int)Math.Round(station.ConvertUserPressToMB(station.Pressure).Value * 10));
+				sb.Append("&bar=" + (int)Math.Round(WeatherStation.ConvertUserPressToMB(station.Pressure).Value * 10));
 
 			// rain
 			if (station.RainToday.HasValue)
