@@ -24,7 +24,9 @@ namespace CumulusMX
 		{
 			this.station = station;
 
-			if (station == null)
+			var mainStation = station == null;
+
+			if (mainStation)
 			{
 				Cumulus.LogMessage("Creating HTTP Station (Ecowitt)");
 			}
@@ -34,7 +36,7 @@ namespace CumulusMX
 			}
 
 			// Do not set these if we are only using extra sensors
-			if (station == null)
+			if (mainStation)
 			{
 				// does not provide average wind speeds
 				cumulus.StationOptions.CalcWind10MinAve = true;
@@ -48,26 +50,41 @@ namespace CumulusMX
 				// does not provide pressure trend strings
 				cumulus.StationOptions.UseCumulusPresstrendstr = true;
 
+				if (cumulus.Gw1000PrimaryTHSensor != 0)
+				{
+					// We are not using the primary T/H sensor
+					Cumulus.LogMessage("Overriding the default outdoor temp/hum data with Extra temp/hum sensor #" + cumulus.Gw1000PrimaryTHSensor);
+				}
+
 				if (cumulus.EcowittSettings.SetCustomServer)
 				{
 					Cumulus.LogMessage("Checking Ecowitt Gateway Custom Server configuration...");
 					var api = new Stations.GW1000Api(cumulus);
 					api.OpenTcpPort(cumulus.EcowittSettings.GatewayAddr, 45000);
-					SetCustomServer(api);
+					SetCustomServer(api, mainStation);
 					api.CloseTcpPort();
 					Cumulus.LogMessage("Ecowitt Gateway Custom Server configuration complete");
 				}
 			}
+			else if (cumulus.EcowittSettings.SetCustomServer)
+			{
+				Cumulus.LogMessage("Checking Ecowitt Extra Gateway Custom Server configuration...");
+				var api = new Stations.GW1000Api(cumulus);
+				api.OpenTcpPort(cumulus.EcowittSettings.GatewayAddr, 45000);
+				SetCustomServer(api, mainStation);
+				api.CloseTcpPort();
+				Cumulus.LogMessage("Ecowitt Extra Gateway Custom Server configuration complete");
+			}
 
-			if (station == null || (station != null && cumulus.EcowittSettings.ExtraUseAQI))
+			if (mainStation || (!mainStation && cumulus.EcowittSettings.ExtraUseAQI))
 			{
 				cumulus.Units.AirQualityUnitText = "µg/m³";
 			}
-			if (station == null || (station != null && cumulus.EcowittSettings.ExtraUseSoilMoist))
+			if (mainStation || (!mainStation && cumulus.EcowittSettings.ExtraUseSoilMoist))
 			{
 				cumulus.Units.SoilMoistureUnitText = "%";
 			}
-			if (station == null || (station != null && cumulus.EcowittSettings.ExtraUseLeafWet))
+			if (mainStation || (!mainStation && cumulus.EcowittSettings.ExtraUseLeafWet))
 			{
 				cumulus.Units.LeafWetnessUnitText = "%";
 			}
@@ -75,7 +92,7 @@ namespace CumulusMX
 
 
 			// Only perform the Start-up if we are a proper station, not a Extra Sensor
-			if (station == null)
+			if (mainStation)
 			{
 				LoadLastHoursFromDataLogs(cumulus.LastUpdateTime);
 			}
@@ -431,9 +448,29 @@ namespace CumulusMX
 						// 24hourrainin Ambient only?
 						// eventrainin
 
+						// same for piezo data
+						// ​rrain_piezo
+						// erain_piezo - event rain
+						// hrain_piezo
+						// drain_piezo
+						// wrain_piezo
+						// mrain_piezo
+						// yrain_piezo
+
+						string rain, rRate;
+
 						// if no yearly counter, try the total counter
-						var rain = data["yearlyrainin"] ?? data["totalrainin"];
-						var rRate = data["rainratein"];
+						if (cumulus.Gw1000PrimaryRainSensor == 0)
+						{
+							rain = data["yearlyrainin"] ?? data["totalrainin"];
+							rRate = data["rainratein"];
+						}
+						else
+						{
+							rain = data["yrain_piezo"];
+							rRate = data["​rrain_piezo"];
+						}
+
 
 						if (rRate == null)
 						{
@@ -1080,9 +1117,14 @@ namespace CumulusMX
 			}
 		}
 
-		private static void SetCustomServer(Stations.GW1000Api api)
+		private static void SetCustomServer(Stations.GW1000Api api, bool main)
 		{
 			Cumulus.LogMessage("Reading Ecowitt Gateway Custom Server config");
+
+			var customPath = main ? "/station/ecowitt" : "/station/ecowittextra";
+			var customServer = main ? cumulus.EcowittSettings.LocalAddr : cumulus.EcowittSettings.ExtraLocalAddr;
+			var customPort = cumulus.wsPort;
+			var customIntv = main ? cumulus.EcowittSettings.CustomInterval : cumulus.EcowittSettings.ExtraCustomInterval;
 
 			var data = api.DoCommand(Stations.GW1000Api.Commands.CMD_READ_CUSTOMIZED);
 
@@ -1134,7 +1176,7 @@ namespace CumulusMX
 
 					Cumulus.LogMessage($"Ecowitt Gateway Custom Server config: Server={server}, Port={port}, Path={ecPath}, Interval={intv}, Protocol={type}, Enabled={active}");
 
-					if (server != cumulus.EcowittSettings.LocalAddr || port != cumulus.wsPort || intv != cumulus.EcowittSettings.CustomInterval || type != "Ecowitt" || active != 1)
+					if (server != customServer || port != customPort || intv != customIntv || type != "Ecowitt" || active != 1)
 					{
 						Cumulus.LogMessage("Ecowitt Gateway Custom Server config does not match the required config, reconfiguring it...");
 
@@ -1151,7 +1193,7 @@ namespace CumulusMX
 						// f    - Active
 
 						var length = 1 + id.Length + 1 + pass.Length; // id.len + id + pass.len + pass
-						length += cumulus.EcowittSettings.LocalAddr.Length + 1; // Server name + length byte
+						length += customServer.Length + 1; // Server name + length byte
 						length += 2 + 2 + 1 + 1; // + port + interval + type + active
 						var send = new byte[length];
 						// set ID
@@ -1165,15 +1207,15 @@ namespace CumulusMX
 
 						// set server string length
 						idx += 1 + pass.Length;
-						send[idx] = (byte)cumulus.EcowittSettings.LocalAddr.Length;
+						send[idx] = (byte)customServer.Length;
 						// set server string
-						Encoding.ASCII.GetBytes(cumulus.EcowittSettings.LocalAddr).CopyTo(send, idx + 1);
+						Encoding.ASCII.GetBytes(customServer).CopyTo(send, idx + 1);
 						idx += 1 + server.Length;
 						// set the port id
-						Stations.GW1000Api.ConvertUInt16ToLittleEndianByteArray((ushort)cumulus.wsPort).CopyTo(send, idx);
+						Stations.GW1000Api.ConvertUInt16ToLittleEndianByteArray((ushort)customPort).CopyTo(send, idx);
 						// set the interval
 						idx += 2;
-						Stations.GW1000Api.ConvertUInt16ToLittleEndianByteArray((ushort)cumulus.EcowittSettings.CustomInterval).CopyTo(send, idx);
+						Stations.GW1000Api.ConvertUInt16ToLittleEndianByteArray((ushort)customIntv).CopyTo(send, idx);
 						// set type
 						idx += 2;
 						send[idx] = 0;
@@ -1186,26 +1228,34 @@ namespace CumulusMX
 
 						if (retData == null || retData[4] != 0)
 						{
-							Cumulus.LogMessage("Error - failed to set the Ecowitt Gateway config");
+							Cumulus.LogMessage("Error - failed to set the Ecowitt Gateway main config");
 						}
-
-						// does the path need setting as well?
-						if (ecPath != "/station/ecowitt")
+						else
 						{
-							ecPath = "/station/ecowitt";
-							var path = new byte[ecPath.Length + wuPath.Length + 2];
-							path[0] = (byte)ecPath.Length;
-							Encoding.ASCII.GetBytes(ecPath).CopyTo(path, 1);
-							idx = 1 + ecPath.Length;
-							path[idx] = (byte)wuPath.Length;
-							Encoding.ASCII.GetBytes(wuPath).CopyTo(path, idx + 1);
+							Cumulus.LogMessage($"Set Ecowitt Gateway Custom Server config to: Server={customServer}, Port={customPort}, Interval={customIntv}, Protocol={0}, Enabled={1}");
+						}
+					}
 
-							retData = api.DoCommand(Stations.GW1000Api.Commands.CMD_WRITE_USER_PATH, path);
+					// does the path need setting as well?
+					if (ecPath != customPath)
+					{
+						ecPath = customPath;
+						var path = new byte[ecPath.Length + wuPath.Length + 2];
+						path[0] = (byte)ecPath.Length;
+						Encoding.ASCII.GetBytes(ecPath).CopyTo(path, 1);
+						idx = 1 + ecPath.Length;
+						path[idx] = (byte)wuPath.Length;
+						Encoding.ASCII.GetBytes(wuPath).CopyTo(path, idx + 1);
 
-							if (retData == null || retData[4] != 0)
-							{
-								Cumulus.LogMessage("Error - failed to set the Ecowitt Gateway Path");
-							}
+						var retData = api.DoCommand(Stations.GW1000Api.Commands.CMD_WRITE_USER_PATH, path);
+
+						if (retData == null || retData[4] != 0)
+						{
+							Cumulus.LogMessage("Error - failed to set the Ecowitt Gateway Path");
+						}
+						else
+						{
+							Cumulus.LogMessage($"Set Ecowitt Gateway Custom Server path={path}");
 						}
 					}
 				}

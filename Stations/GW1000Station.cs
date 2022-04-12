@@ -61,6 +61,7 @@ namespace CumulusMX
 			{
 				// We are not using the primary T/H sensor so MX must calculate the wind chill as well
 				cumulus.StationOptions.CalculatedWC = true;
+				Cumulus.LogMessage("Overriding the default outdoor temp/hum data with Extra temp/hum sensor #" + cumulus.Gw1000PrimaryTHSensor);
 			}
 
 			ipaddr = cumulus.Gw1000IpAddress;
@@ -97,7 +98,7 @@ namespace CumulusMX
 
 			// Get the firmware version as check we are communicating
 			GW1000FirmwareVersion = GetFirmwareVersion();
-			Cumulus.LogMessage($"GW1000 firmware version: {GW1000FirmwareVersion}");
+			Cumulus.LogMessage($"Ecowitt firmware version: {GW1000FirmwareVersion}");
 			if (GW1000FirmwareVersion != "???")
 			{
 				var fwString = GW1000FirmwareVersion.Split("_V", StringSplitOptions.None);
@@ -120,7 +121,7 @@ namespace CumulusMX
 
 		public override void DoStartup()
 		{
-			Cumulus.LogMessage("Starting GW1000");
+			Cumulus.LogMessage("Starting Ecowitt Local API");
 			Task.Run(getAndProcessHistoryData);// grab old data, then start the station
 		}
 
@@ -145,15 +146,25 @@ namespace CumulusMX
 			{
 				try
 				{
+					var piezoLastRead = DateTime.MinValue;
+
 					while (!stop)
 					{
 						GetLiveData();
 
-						// at the start of every 10 minutes to trigger battery status check
+						// every 30 seconds read the rain rate
+						if (cumulus.Gw1000PrimaryRainSensor == 1 && (DateTime.Now - piezoLastRead).TotalSeconds >= 30)
+						{
+							GetPiezoRainData();
+							piezoLastRead = DateTime.Now;
+						}
+
 						var minute = DateTime.Now.Minute;
 						if (minute != lastMinute)
 						{
 							lastMinute = minute;
+
+							// at the start of every 10 minutes to trigger battery status check
 							if ((minute % 10) == 0)
 							{
 								GetSensorIdsNew();
@@ -266,7 +277,7 @@ namespace CumulusMX
 
 				// Get the primary IP address
 				var myIP = Utils.GetIpWithDefaultGateway();
-				cumulus.LogDebugMessage($"Using local IP address {myIP} to discover the GW1000");
+				cumulus.LogDebugMessage($"Using local IP address {myIP} to discover the Ecowitt device");
 
 				// bind the cient to the primary address - broadcast does not work with .Any address :(
 				client.Client.Bind(new IPEndPoint(myIP, broadcastPort));
@@ -308,7 +319,7 @@ namespace CumulusMX
 										{
 											if (!discovered.IP.Contains(ipAddr))
 											{
-												cumulus.LogDebugMessage($"Discovered GW1000 device: IP={ipAddr}, MAC={macHex}");
+												cumulus.LogDebugMessage($"Discovered Ecowitt device: IP={ipAddr}, MAC={macHex}");
 												discovered.IP.Add(ipAddr);
 												discovered.Mac.Add(macHex);
 											}
@@ -335,7 +346,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				cumulus.LogExceptionMessage(ex, "An error occurred during GW1000 auto-discovery");
+				cumulus.LogExceptionMessage(ex, "An error occurred during Ecowitt auto-discovery");
 			}
 
 			return discovered;
@@ -345,7 +356,7 @@ namespace CumulusMX
 		{
 			if (cumulus.Gw1000AutoUpdateIpAddress || string.IsNullOrWhiteSpace(cumulus.Gw1000IpAddress))
 			{
-				var msg = "Running GW-1000 auto-discovery...";
+				var msg = "Running Ecowitt Local API auto-discovery...";
 				Cumulus.LogMessage(msg);
 
 				var discoveredDevices = DiscoverGW1000();
@@ -353,17 +364,18 @@ namespace CumulusMX
 				if (discoveredDevices.IP.Count == 0)
 				{
 					// We didn't find anything on the network
-					msg = "Failed to discover any GW1000 devices";
+					msg = "Failed to discover any Ecowitt devices";
 					Cumulus.LogMessage(msg);
 					Cumulus.LogConsoleMessage(msg);
+					return false;
 				}
 				else if (discoveredDevices.IP.Count == 1 && (string.IsNullOrEmpty(macaddr) || discoveredDevices.Mac[0] == macaddr))
 				{
-					cumulus.LogDebugMessage("Discovered one GW1000 device");
+					cumulus.LogDebugMessage("Discovered one Ecowitt device");
 					// If only one device is discovered, and its MAC address matches (or our MAC is blank), then just use it
 					if (cumulus.Gw1000IpAddress != discoveredDevices.IP[0])
 					{
-						Cumulus.LogMessage("Discovered a new IP address for the GW1000 that does not match our current one");
+						Cumulus.LogMessage("Discovered a new IP address for the Ecowitt device that does not match our current one");
 						Cumulus.LogMessage($"Changing previous IP address: {ipaddr} to {discoveredDevices.IP[0]}");
 						ipaddr = discoveredDevices.IP[0].Trim();
 						cumulus.Gw1000IpAddress = ipaddr;
@@ -382,13 +394,13 @@ namespace CumulusMX
 				{
 					// Multiple devices discovered, but we have a MAC address match
 
-					cumulus.LogDebugMessage("Matching GW-1000 MAC address found on the network");
+					cumulus.LogDebugMessage("Matching Ecowitt MAC address found on the network");
 
 					var idx = discoveredDevices.Mac.IndexOf(macaddr);
 
 					if (discoveredDevices.IP[idx] != ipaddr)
 					{
-						Cumulus.LogMessage("Discovered a new IP address for the GW1000 that does not match our current one");
+						Cumulus.LogMessage("Discovered a new IP address for the Ecowitt device that does not match our current one");
 						Cumulus.LogMessage($"Changing previous IP address: {ipaddr} to {discoveredDevices.IP[idx]}");
 						ipaddr = discoveredDevices.IP[idx];
 						cumulus.Gw1000IpAddress = ipaddr;
@@ -400,7 +412,7 @@ namespace CumulusMX
 					// Multiple devices discovered, and we do not have a clue!
 
 					string iplist = "";
-					msg = "Discovered more than one potential GW1000 device.";
+					msg = "Discovered more than one potential Ecowitt device.";
 					Cumulus.LogMessage(msg);
 					Cumulus.LogConsoleMessage(msg);
 					msg = "Please select the IP address from the list and enter it manually into the configuration";
@@ -413,12 +425,13 @@ namespace CumulusMX
 					msg = "  discovered IPs = " + iplist;
 					Cumulus.LogMessage(msg);
 					Cumulus.LogConsoleMessage(msg);
+					return false;
 				}
 			}
 
 			if (string.IsNullOrWhiteSpace(ipaddr))
 			{
-				var msg = "No IP address configured or discovered for your GW1000, please remedy and restart Cumulus MX";
+				var msg = "No IP address configured or discovered for your Ecowitt device, please remedy and restart Cumulus MX";
 				Cumulus.LogMessage(msg);
 				Cumulus.LogConsoleMessage(msg);
 				return false;
@@ -474,7 +487,7 @@ namespace CumulusMX
 					var len = Stations.GW1000Api.ConvertBigEndianUInt16(data, 3);
 
 					// Only loop as far as last record (7 bytes) minus the checksum byte
-					for (int i = 5; i < len - 7; i += 7)
+					for (int i = 5; i <= len - 6; i += 7)
 					{
 						if (PrintSensorInfoNew(data, i))
 						{
@@ -568,8 +581,8 @@ namespace CumulusMX
 							Cumulus.LogMessage($"PrintSensorInfoNew: WS90 sensor detected, changing the update rate from {updateRate / 1000} seconds to 4 seconds");
 							updateRate = 4000;
 						}
-						battV = data[battPos] / 10.0;
-						batt = $"{battV:f1}V ({(battV > 2.4 ? "OK": "Low")})";  // volts/10, low = 1.2V
+						battV = data[battPos] * 0.02;
+						batt = $"{battV:f1}V ({(battV > 2.4 ? "OK" : "Low")})";
 						break;
 
 					case string wh31 when wh31.StartsWith("WH31"):  // ch 1-8
@@ -761,11 +774,17 @@ namespace CumulusMX
 								idx += 2;
 								break;
 							case 0x0D: //Rain Event (mm)
-								StormRain = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0);
+								if (cumulus.Gw1000PrimaryRainSensor == 0)
+								{
+									StormRain = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0);
+								}
 								idx += 2;
 								break;
 							case 0x0E: //Rain Rate (mm/h)
-								rainRateLast = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0);
+								if (cumulus.Gw1000PrimaryRainSensor == 0)
+								{
+									rainRateLast = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0);
+								}
 								idx += 2;
 								break;
 							case 0x0F: //Rain hour (mm)
@@ -781,7 +800,10 @@ namespace CumulusMX
 								idx += 4;
 								break;
 							case 0x13: //Rain Year (mm)
-								rainLast = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt32(data, idx) / 10.0);
+								if (cumulus.Gw1000PrimaryRainSensor == 0)
+								{
+									rainLast = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt32(data, idx) / 10.0);
+								}
 								idx += 4;
 								break;
 							case 0x14: //Rain Totals (mm)
@@ -1017,6 +1039,45 @@ namespace CumulusMX
 								DoLeafWetness(data[idx], chan);
 								idx += 1;
 								break;
+							case 0x80: // Piezo Rain Rate
+								if (cumulus.Gw1000PrimaryRainSensor == 1)
+								{
+									rainRateLast = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0);
+								}
+								idx += 2;
+								break;
+							case 0x81: // Piezo Rain Event
+								if (cumulus.Gw1000PrimaryRainSensor == 1)
+								{
+									StormRain = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0);
+								}
+								idx += 2;
+								break;
+							case 0x82: // Piezo Hourly Rain
+								idx += 2;
+								break;
+							case 0x83: // Piezo Daily Rain
+								idx += 2;
+								break;
+							case 0x84: // Piezo Weekly Rain
+								idx += 2;
+								break;
+							case 0x85: // Piezo Monthly Rain
+								idx += 4;
+								break;
+							case 0x86: // Piezo Yearly Rain
+								if (cumulus.Gw1000PrimaryRainSensor == 1)
+								{
+									rainLast = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt32(data, idx) / 10.0);
+								}
+								idx += 4;
+								break;
+							case 0x87: // Piezo Gain - doc says size = 2*10 ?
+								idx += 20;
+								break;
+							case 0x88: // Piezo Rain Reset Time 
+								idx += 3;
+								break;
 							default:
 								cumulus.LogDebugMessage($"Error: Unknown sensor id found = {data[idx - 1]}, at position = {idx - 1}");
 								// We will have lost our place now, so bail out
@@ -1121,7 +1182,7 @@ namespace CumulusMX
 		// We run this once at startup, we will run it synchronously to avoid overrunning the next command
 		private void GetSystemInfo()
 		{
-			Cumulus.LogMessage("Reading GW1000 system info");
+			Cumulus.LogMessage("Reading Ecowitt system info");
 
 			var data = Api.DoCommand(Stations.GW1000Api.Commands.CMD_READ_SSSS);
 
@@ -1136,6 +1197,12 @@ namespace CumulusMX
 			// 10  - time zone index (?)
 			// 11  - DST 0-1 - false/true
 			// 12  - 0x?? - checksum
+
+			if (data == null)
+			{
+				Cumulus.LogMessage("Nothing returned from System Info!");
+				return;
+			}
 
 			if (data.Length != 13)
 			{
@@ -1169,6 +1236,62 @@ namespace CumulusMX
 				cumulus.LogExceptionMessage(ex, "Error processing System Info");
 			}
 		}
+
+		private void GetPiezoRainData()
+		{
+			cumulus.LogDebugMessage("GetPiezoRainData: Reading piezo rain data");
+
+			var data = Api.DoCommand(Stations.GW1000Api.Commands.CMD_READ_RAIN);
+
+
+			// expected response - units mm
+			// 0   - 0xff - header
+			// 1   - 0xff - header
+			// 2   - 0x57 - rain data
+			// 3-4 - size
+			// 05-06 - rain rate
+			// 07-10 - rain day
+			// 11-14 - rain week
+			// 15-18 - rain month
+			// 19-22 - rain year
+			// 23-24 - rain event
+			// 26-27 - rain event
+			// 28-29 - rain hour
+			// 30-31 - piezo rain rate
+			// 32-33 - piezo rain event
+			// 34-35 - piezo rain hour
+			// 36-39 - piezo rain day
+			// 40-43 - piezo rain week
+			// 44-47 - piezo rain month
+			// 48-51 - piezo rain year
+			// 52-71 - piezo gain 0-9 (2 bytes each)
+			// 72-74 - rain reset time (hr, day [sun-0], month [jan=0])
+			// 75 - checksum
+
+			if (data == null)
+			{
+				Cumulus.LogMessage("GetPiezoRainData: Nothing returned from Read Rain!");
+				return;
+			}
+
+			if (data.Length != 76)
+			{
+				Cumulus.LogMessage("GetPiezoRainData: Unexpected response to Read Rain!");
+				return;
+			}
+			try
+			{
+				var rRate = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, 30) / 10.0);
+				var rain = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, 48) / 10.0);
+
+				DoRain(rain, rRate, DateTime.Now);
+			}
+			catch (Exception ex)
+			{
+				Cumulus.LogMessage("GetPiezoRainData: Error processing Rain Info: " + ex.Message);
+			}
+		}
+
 
 		private bool DoCO2Decode(byte[] data, int index)
 		{

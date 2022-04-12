@@ -21,5 +21,9 @@
 		public string AppKey { get; set; }
 		public string UserApiKey { get; set; }
 		public string MacAddress { get; set; }
+		public bool ExtraSetCustomServer { get; set; }
+		public string ExtraGatewayAddr { get; set; }
+		public string ExtraLocalAddr { get; set; }
+		public int ExtraCustomInterval { get; set; }
 	}
 }

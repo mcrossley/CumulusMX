@@ -699,8 +699,6 @@ namespace CumulusMX
 
 		public string loggingfile;
 
-		private PingReply pingReply;
-
 		public Cumulus()
 		{
 			// Set up the diagnostic tracing
@@ -1145,38 +1143,36 @@ namespace CumulusMX
 					var pingTask = Task.Run(() =>
 					{
 						var cnt = attempt;
-						using (var ping = new Ping())
+
+						using var ping = new Ping();
+						try
 						{
-							try
+							LogMessage($"Sending PING #{cnt} to {ProgramOptions.StartupPingHost}");
+
+							// set the actual ping timeout 5 secs less than the task timeout
+							var reply = ping.Send(ProgramOptions.StartupPingHost, (pingTimeoutSecs - 5) * 1000);
+
+							// were we hung on the network and now cancelled? if so just exit silently
+							if (pingCancelToken.IsCancellationRequested)
 							{
-								LogMessage($"Sending PING #{cnt} to {ProgramOptions.StartupPingHost}");
+								LogDebugMessage($"Cancelled PING #{cnt} task exiting");
+							}
+							else
+							{
+								var msg = $"Received PING #{cnt} response from {ProgramOptions.StartupPingHost}, status: {reply.Status}";
 
-								// set the actual ping timeout 5 secs less than the task timeout
-								var reply = ping.Send(ProgramOptions.StartupPingHost, (pingTimeoutSecs - 5) * 1000);
+								LogMessage(msg);
+								LogConsoleMessage(msg);
 
-								// were we hung on the network and now cancelled? if so just exit silently
-								if (pingCancelToken.IsCancellationRequested)
+								if (reply.Status == IPStatus.Success)
 								{
-									LogDebugMessage($"Cancelled PING #{cnt} task exiting");
-								}
-								else
-								{
-									var msg = $"Received PING #{cnt} response from {ProgramOptions.StartupPingHost}, status: {reply.Status}";
-
-									LogMessage(msg);
-									LogConsoleMessage(msg);
-
-									if (reply.Status == IPStatus.Success)
-									{
-										pingSuccess = true;
-									}
+									pingSuccess = true;
 								}
 							}
-							catch (Exception e)
-							{
-								LogMessage($"PING #{cnt} to {ProgramOptions.StartupPingHost} failed with error: {e.InnerException.Message}");
-							}
-
+						}
+						catch (Exception e)
+						{
+							LogMessage($"PING #{cnt} to {ProgramOptions.StartupPingHost} failed with error: {e.InnerException.Message}");
 						}
 					}, pingCancelToken);
 
@@ -3590,6 +3586,7 @@ namespace CumulusMX
 			Gw1000MacAddress = ini.GetValue("GW1000", "MACAddress", "");
 			Gw1000AutoUpdateIpAddress = ini.GetValue("GW1000", "AutoUpdateIpAddress", true);
 			Gw1000PrimaryTHSensor = ini.GetValue("GW1000", "PrimaryTHSensor", 0);  // 0=default, 1-8=extra t/h sensor number
+			Gw1000PrimaryRainSensor = ini.GetValue("GW1000", "PrimaryRainSensor", 0); //0=main station (tipping bucket) 1=piezo
 			EcowittSettings.ExtraEnabled = ini.GetValue("GW1000", "ExtraSensorDataEnabled", false);
 			EcowittSettings.ExtraUseSolar = ini.GetValue("GW1000", "ExtraSensorUseSolar", true);
 			EcowittSettings.ExtraUseUv = ini.GetValue("GW1000", "ExtraSensorUseUv", true);
@@ -3607,6 +3604,11 @@ namespace CumulusMX
 			var localIp = Utils.GetIpWithDefaultGateway();
 			EcowittSettings.LocalAddr = ini.GetValue("GW1000", "EcowittLocalAddr", localIp.ToString());
 			EcowittSettings.CustomInterval = ini.GetValue("GW1000", "EcowittCustomInterval", 16);
+			//
+			EcowittSettings.ExtraSetCustomServer = ini.GetValue("GW1000", "ExtraSetCustomServer", false);
+			EcowittSettings.ExtraGatewayAddr = ini.GetValue("GW1000", "EcowittExtraGwAddr", "0.0.0.0");
+			EcowittSettings.ExtraLocalAddr = ini.GetValue("GW1000", "EcowittExtraLocalAddr", localIp.ToString());
+			EcowittSettings.ExtraCustomInterval = ini.GetValue("GW1000", "EcowittExtraCustomInterval", 16);
 			// api
 			EcowittSettings.AppKey = ini.GetValue("GW1000", "EcowittAppKey", "");
 			EcowittSettings.UserApiKey = ini.GetValue("GW1000", "EcowittUserKey", "");
@@ -4784,6 +4786,7 @@ namespace CumulusMX
 			ini.SetValue("GW1000", "MACAddress", Gw1000MacAddress);
 			ini.SetValue("GW1000", "AutoUpdateIpAddress", Gw1000AutoUpdateIpAddress);
 			ini.SetValue("GW1000", "PrimaryTHSensor", Gw1000PrimaryTHSensor);
+			ini.SetValue("GW1000", "PrimaryRainSensor", Gw1000PrimaryRainSensor);
 			ini.SetValue("GW1000", "ExtraSensorDataEnabled", EcowittSettings.ExtraEnabled);
 			ini.SetValue("GW1000", "ExtraSensorUseSolar", EcowittSettings.ExtraUseSolar);
 			ini.SetValue("GW1000", "ExtraSensorUseUv", EcowittSettings.ExtraUseUv);
@@ -4800,6 +4803,10 @@ namespace CumulusMX
 			ini.SetValue("GW1000", "EcowittGwAddr", EcowittSettings.GatewayAddr);
 			ini.SetValue("GW1000", "EcowittLocalAddr", EcowittSettings.LocalAddr);
 			ini.SetValue("GW1000", "EcowittCustomInterval", EcowittSettings.CustomInterval);
+			ini.SetValue("GW1000", "ExtraSetCustomServer", EcowittSettings.ExtraSetCustomServer);
+			ini.SetValue("GW1000", "EcowittExtraGwAddr", EcowittSettings.ExtraGatewayAddr);
+			ini.SetValue("GW1000", "EcowittExtraLocalAddr", EcowittSettings.ExtraLocalAddr);
+			ini.SetValue("GW1000", "EcowittExtraCustomInterval", EcowittSettings.ExtraCustomInterval);
 			// api
 			ini.SetValue("GW1000", "EcowittAppKey", Crypto.EncryptString(EcowittSettings.AppKey, Program.InstanceId));
 			ini.SetValue("GW1000", "EcowittUserKey", Crypto.EncryptString(EcowittSettings.UserApiKey, Program.InstanceId));
@@ -5976,6 +5983,7 @@ namespace CumulusMX
 		public string Gw1000MacAddress;
 		public bool Gw1000AutoUpdateIpAddress = true;
 		public int Gw1000PrimaryTHSensor;
+		public int Gw1000PrimaryRainSensor;
 
 		public Timer WebTimer = new Timer();
 		public Timer MQTTTimer = new Timer();
@@ -9246,21 +9254,6 @@ namespace CumulusMX
 					LogMessage("Primary AQ Sensor = AirLink Outdoor");
 					break;
 			}
-		}
-
-		private void PingCompletedCallback(object sender, PingCompletedEventArgs e)
-		{
-			// If an error occurred, display the exception to the user.
-			if (e.Error != null)
-			{
-				LogExceptionMessage(e.Error, "Ping errored");
-			}
-			else
-			{
-				LogMessage("Ping reply: " + e.Reply.Status);
-			}
-
-			pingReply = e.Reply;
 		}
 
 		private void CreateRequiredFolders()

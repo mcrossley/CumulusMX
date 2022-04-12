@@ -128,7 +128,8 @@ namespace CumulusMX
 				ipaddress = cumulus.Gw1000IpAddress,
 				autoDiscover = cumulus.Gw1000AutoUpdateIpAddress,
 				macaddress = cumulus.Gw1000MacAddress,
-				primaryTHsensor = cumulus.Gw1000PrimaryTHSensor
+				primaryTHsensor = cumulus.Gw1000PrimaryTHSensor,
+				primaryRainSensor = cumulus.Gw1000PrimaryRainSensor
 			};
 
 			var ecowittapi = new EcowittApi()
@@ -197,7 +198,8 @@ namespace CumulusMX
 				gwaddr = cumulus.EcowittSettings.GatewayAddr,
 				localaddr = cumulus.EcowittSettings.LocalAddr,
 				interval = cumulus.EcowittSettings.CustomInterval,
-				primaryTHsensor = cumulus.Gw1000PrimaryTHSensor
+				primaryTHsensor = cumulus.Gw1000PrimaryTHSensor,
+				primaryRainSensor = cumulus.Gw1000PrimaryRainSensor
 			};
 
 			int deg, min, sec;
@@ -962,6 +964,7 @@ namespace CumulusMX
 						cumulus.Gw1000AutoUpdateIpAddress = settings.gw1000.autoDiscover;
 						cumulus.Gw1000MacAddress = settings.gw1000.macaddress;
 						cumulus.Gw1000PrimaryTHSensor = settings.gw1000.primaryTHsensor;
+						cumulus.Gw1000PrimaryRainSensor = settings.gw1000.primaryRainSensor;
 					}
 				}
 				catch (Exception ex)
@@ -982,6 +985,7 @@ namespace CumulusMX
 						cumulus.EcowittSettings.LocalAddr = settings.ecowitt.localaddr;
 						cumulus.EcowittSettings.CustomInterval = settings.ecowitt.interval;
 						cumulus.Gw1000PrimaryTHSensor = settings.ecowitt.primaryTHsensor;
+						cumulus.Gw1000PrimaryRainSensor = settings.ecowitt.primaryRainSensor;
 					}
 				}
 				catch (Exception ex)
@@ -1560,6 +1564,7 @@ namespace CumulusMX
 			public bool autoDiscover { get; set; }
 			public string macaddress { get; set; }
 			public int primaryTHsensor { get; set; }
+			public int primaryRainSensor { get; set; }
 		}
 
 		internal class EcowittApi
@@ -1837,6 +1842,7 @@ namespace CumulusMX
 			public string localaddr { get; set; }
 			public int interval { get; set; }
 			public int primaryTHsensor { get; set; }
+			public int primaryRainSensor { get; set; }
 		}
 	}
 }

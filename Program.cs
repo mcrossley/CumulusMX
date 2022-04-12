@@ -103,6 +103,10 @@ namespace CumulusMX
 					Cumulus.LogConsoleMessage("Ctrl+C pressed", ConsoleColor.Red);
 					Cumulus.LogMessage("Ctrl + C pressed");
 				}
+				else
+				{
+					Trace.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + "Ctrl+C pressed");
+				}
 				ev.Cancel = true;
 				exitSystem = true;
 			};
@@ -330,7 +334,7 @@ namespace CumulusMX
 		{
 			try
 			{
-				Trace.WriteLine("!!! Unhandled Exception !!!");
+				Trace.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + "!!! Unhandled Exception !!!");
 				Trace.WriteLine(e.ExceptionObject.ToString());
 
 				if (service)
