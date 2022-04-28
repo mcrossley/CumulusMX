@@ -351,7 +351,7 @@ namespace CumulusMX.Stations
 			CMD_READ_SENSOR_ID_NEW = bytes2,
 			CMD_READ_RSTRAIN_TIME = bytes1,
 			CMD_WRITE_RSTRAIN_TIME = bytes1,
-			CMD_READ_RAIN = bytes1,
+			CMD_READ_RAIN = bytes2,
 			CMD_WRITE_RAIN = bytes1
 		}
 

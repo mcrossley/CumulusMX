@@ -38,7 +38,8 @@ namespace CumulusMX
 		private bool broadcastReceived;
 		private int weatherLinkArchiveInterval = 16 * 60; // Used to get historic Health, 16 minutes in seconds only for initial fetch after load
 		private bool wllVoltageLow;
-		private bool stop;
+		private CancellationTokenSource tokenSource = new CancellationTokenSource();
+		private CancellationToken cancellationToken;
 		private readonly List<WlSensor> sensorList = new List<WlSensor>();
 		private readonly bool useWeatherLinkDotCom = true;
 
@@ -282,43 +283,51 @@ namespace CumulusMX
 					cumulus.WriteIniFile();
 				}
 
+				cancellationToken = tokenSource.Token;
+
 				// Create a broadcast listener
 				_ = Task.Run(() =>
-					{
-						using var udpClient = new UdpClient();
-						udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-						udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, port));
-						udpClient.Client.ReceiveTimeout = 4000;  // We should get a message every 2.5 seconds
-						var from = new IPEndPoint(0, 0);
+				{
+					using var udpClient = new UdpClient();
+					udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+					udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, port));
+					udpClient.Client.ReceiveTimeout = 4000;  // We should get a message every 2.5 seconds
+					var from = new IPEndPoint(0, 0);
 
-						while (!stop)
+					while (!cancellationToken.IsCancellationRequested)
+					{
+						try
 						{
-							try
+							// test is any data is available
+							if (udpClient.Client.Available > 0)
 							{
 								var jsonBtye = udpClient.Receive(ref from);
 								var jsonStr = Encoding.UTF8.GetString(jsonBtye);
-								if (!stop) // we may be waiting for a broadcast when a shutdown is started
-							  {
-									DecodeBroadcast(jsonStr);
-								}
+								DecodeBroadcast(jsonStr);
 							}
-							catch (SocketException ex)
+							else if (cancellationToken.WaitHandle.WaitOne(200))
 							{
-								if (ex.SocketErrorCode == SocketError.TimedOut)
-								{
-									multicastsBad++;
-									var msg = string.Format("WLL: Missed a WLL broadcast message. Percentage good packets {0:F2}% - ({1},{2})", (multicastsGood / (float)(multicastsBad + multicastsGood) * 100), multicastsBad, multicastsGood);
-									cumulus.LogDebugMessage(msg);
-								}
-								else
-								{
-									cumulus.LogExceptionMessage(ex, "WLL: UDP socket error");
-								}
+								Cumulus.LogMessage("WLL broadcast listener stop requested");
+								break;
 							}
 						}
-						udpClient.Close();
-						Cumulus.LogMessage("WLL broadcast listener stopped");
-					});
+						catch (SocketException ex)
+						{
+							if (ex.SocketErrorCode == SocketError.TimedOut)
+							{
+								multicastsBad++;
+								var msg = string.Format("WLL: Missed a WLL broadcast message. Percentage good packets {0:F2}% - ({1},{2})", (multicastsGood / (float)(multicastsBad + multicastsGood) * 100), multicastsBad, multicastsGood);
+								cumulus.LogDebugMessage(msg);
+							}
+							else
+							{
+								cumulus.LogExceptionMessage(ex, "WLL: UDP socket error");
+							}
+						}
+					}
+					udpClient.Close();
+					Cumulus.LogMessage("WLL broadcast listener stopped");
+				}, cancellationToken);
 
 				Cumulus.LogMessage($"WLL Now listening on broadcast port {port}");
 
@@ -352,12 +361,13 @@ namespace CumulusMX
 			Cumulus.LogMessage("Closing WLL connections");
 			try
 			{
-				stop = true;
+				tokenSource.Cancel();
 				tmrRealtime.Stop();
 				tmrCurrent.Stop();
 				tmrBroadcastWatchdog.Stop();
 				tmrHealth.Stop();
 				StopMinuteTimer();
+				tokenSource.Dispose();
 			}
 			catch
 			{

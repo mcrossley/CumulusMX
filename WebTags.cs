@@ -3355,13 +3355,13 @@ namespace CumulusMX
 				return "n/a";
 
 			// subtract today from yesterday, unless it has been reset, then its just today
-			var hrs = station.ChillHours > station.YestChillHours ? station.ChillHours - station.YestChillHours : station.ChillHours;
+			var hrs = station.ChillHours >= station.YestChillHours ? station.ChillHours - station.YestChillHours : station.ChillHours;
 			return CheckRcDp(hrs, tagParams, 1);
 		}
 
 		private string TagChillHoursYesterday(Dictionary<string, string> tagParams)
 		{
-			var dayb4yest = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day).AddDays(-2);
+			var dayb4yest = DateTime.Now.Date.AddDays(-2);
 			double val;
 			try
 			{
@@ -3384,7 +3384,6 @@ namespace CumulusMX
 
 			return CheckRcDp(hrs, tagParams, 1);
 		}
-
 
 		private string TagYChillHours(Dictionary<string, string> tagParams)
 		{

@@ -85,26 +85,19 @@ namespace CumulusMX
 
 			// Request the data in the correct units
 			sb.Append($"&temp_unitid={cumulus.Units.Temp + 1}"); // 1=C, 2=F
-			sb.Append($"&pressue_unitid={(cumulus.Units.Press == 1 ? "3" : "2")}"); // 3=hPa, 4=inHg, 5=mmHg
-			string windUnit;
-			switch (cumulus.Units.Wind)
+			sb.Append($"&pressure_unitid={(cumulus.Units.Press == 2 ? "4" : "3")}"); // 3=hPa, 4=inHg, 5=mmHg
+			var windUnit = cumulus.Units.Wind switch
 			{
-				case 0: // m/s
-					windUnit = "6";
-					break;
-				case 1: // mph
-					windUnit = "9";
-					break;
-				case 2: // km/h
-					windUnit = "7";
-					break;
-				case 3: // knots
-					windUnit = "8";
-					break;
-				default:
-					windUnit = "?";
-					break;
-			}
+				// m/s
+				0 => "6",
+				// mph
+				1 => "9",
+				// km/h
+				2 => "7",
+				// knots
+				3 => "8",
+				_ => "?",
+			};
 			sb.Append($"&wind_speed_unitid={windUnit}");
 			sb.Append($"&rainfall_unitid={cumulus.Units.Rain + 12}");
 
@@ -178,10 +171,12 @@ namespace CumulusMX
 
 			var url = sb.ToString();
 
+			var msg = $"Processing history data from {startTime.ToString("yyyy-MM-dd HH:mm")} to {endTime.AddMinutes(5).ToString("yyyy-MM-dd HH:mm")}...";
+			Cumulus.LogMessage($"API.GetHistoricData: " + msg);
+			Cumulus.LogConsoleMessage(msg);
+
 			var logUrl = url.Replace(cumulus.EcowittSettings.AppKey, "<<App-key>>").Replace(cumulus.EcowittSettings.UserApiKey, "<<User-key>>");
 			cumulus.LogDebugMessage($"Ecowitt URL = {logUrl}");
-
-			Cumulus.LogConsoleMessage($"Processing history data from {startTime:yyyy-MM-dd HH:mm} to {endTime:yyyy-MM-dd HH:mm}...");
 
 			EcowittHistoricResp histObj;
 			try
@@ -1491,7 +1486,7 @@ namespace CumulusMX
 				// === Extra Temperature ===
 				try
 				{
-					var tempVal = rec.Value.ExtraTemp[i - 1];
+					var tempVal = rec.Value.ExtraTemp[i];
 					if (i == cumulus.Gw1000PrimaryTHSensor)
 					{
 						station.DoTemperature(tempVal, rec.Key);
@@ -1508,10 +1503,10 @@ namespace CumulusMX
 				{
 					if (i == cumulus.Gw1000PrimaryTHSensor)
 					{
-						station.DoHumidity(rec.Value.ExtraHumidity[i - 1].Value, rec.Key);
+						station.DoHumidity(rec.Value.ExtraHumidity[i].Value, rec.Key);
 					}
 
-					station.DoExtraHum(rec.Value.ExtraHumidity[i - 1], i);
+					station.DoExtraHum(rec.Value.ExtraHumidity[i], i);
 				}
 				catch (Exception ex)
 				{
@@ -1522,7 +1517,14 @@ namespace CumulusMX
 				// === User Temperature ===
 				try
 				{
-					station.DoUserTemp(WeatherStation.ConvertTempFToUser(rec.Value.UserTemp[i - 1]), i);
+					if (cumulus.EcowittSettings.MapWN34[i] == 0)
+					{
+						station.DoUserTemp(rec.Value.UserTemp[i], i);
+					}
+					else
+					{
+						station.DoSoilTemp((double)rec.Value.UserTemp[i], cumulus.EcowittSettings.MapWN34[i]);
+					}
 				}
 				catch (Exception ex)
 				{
@@ -1532,7 +1534,7 @@ namespace CumulusMX
 				// === Soil Moisture ===
 				try
 				{
-					station.DoSoilMoisture(rec.Value.SoilMoist[i - 1], i);
+					station.DoSoilMoisture(rec.Value.SoilMoist[i], i);
 				}
 				catch (Exception ex)
 				{
@@ -1585,7 +1587,7 @@ namespace CumulusMX
 			{
 				try
 				{
-					station.DoAirQuality(rec.Value.pm25[i - 1], i);
+					station.DoAirQuality(rec.Value.pm25[i], i);
 				}
 				catch (Exception ex)
 				{
@@ -1867,12 +1869,12 @@ namespace CumulusMX
 
 			public HistoricData()
 			{
-				pm25 = new double?[4];
-				ExtraTemp = new double?[8];
-				ExtraHumidity = new int?[8];
-				SoilMoist = new int?[8];
-				UserTemp = new double?[8];
-				LeafWetness = new int?[8];
+				pm25 = new double?[5];
+				ExtraTemp = new double?[9];
+				ExtraHumidity = new int?[9];
+				SoilMoist = new int?[9];
+				UserTemp = new double?[9];
+				LeafWetness = new int?[9];
 			}
 		}
 	}

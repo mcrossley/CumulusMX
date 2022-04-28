@@ -121,15 +121,41 @@ namespace CumulusMX
 			};
 
 			var weatherflow = new WeatherFlowJson()
-				{deviceid = cumulus.WeatherFlowOptions.WFDeviceId, tcpport = cumulus.WeatherFlowOptions.WFTcpPort, token = cumulus.WeatherFlowOptions.WFToken, dayshistory = cumulus.WeatherFlowOptions.WFDaysHist};
+			{
+				deviceid = cumulus.WeatherFlowOptions.WFDeviceId, 
+				tcpport = cumulus.WeatherFlowOptions.WFTcpPort, 
+				token = cumulus.WeatherFlowOptions.WFToken, 
+				dayshistory = cumulus.WeatherFlowOptions.WFDaysHist
+			};
+
+			var ecowittmaps = new EcowittMappingsJson()
+			{
+				primaryTHsensor = cumulus.Gw1000PrimaryTHSensor,
+				primaryRainSensor = cumulus.Gw1000PrimaryRainSensor,
+				wn34chan1 = cumulus.EcowittSettings.MapWN34[1],
+				wn34chan2 = cumulus.EcowittSettings.MapWN34[2],
+				wn34chan3 = cumulus.EcowittSettings.MapWN34[3],
+				wn34chan4 = cumulus.EcowittSettings.MapWN34[4],
+				wn34chan5 = cumulus.EcowittSettings.MapWN34[5],
+				wn34chan6 = cumulus.EcowittSettings.MapWN34[6],
+				wn34chan7 = cumulus.EcowittSettings.MapWN34[7],
+				wn34chan8 = cumulus.EcowittSettings.MapWN34[8]
+			};
+
 
 			var gw1000 = new Gw1000ConnJson()
 			{
 				ipaddress = cumulus.Gw1000IpAddress,
 				autoDiscover = cumulus.Gw1000AutoUpdateIpAddress,
-				macaddress = cumulus.Gw1000MacAddress,
-				primaryTHsensor = cumulus.Gw1000PrimaryTHSensor,
-				primaryRainSensor = cumulus.Gw1000PrimaryRainSensor
+				macaddress = cumulus.Gw1000MacAddress
+			};
+
+			var ecowitt = new EcowittSettingsJson()
+			{
+				setcustom = cumulus.EcowittSettings.SetCustomServer,
+				gwaddr = cumulus.EcowittSettings.GatewayAddr,
+				localaddr = cumulus.EcowittSettings.LocalAddr,
+				interval = cumulus.EcowittSettings.CustomInterval,
 			};
 
 			var ecowittapi = new EcowittApi()
@@ -192,16 +218,6 @@ namespace CumulusMX
 				advanced = imetAdvanced
 			};
 
-			var ecowitt = new EcowittSettingsJson()
-			{ 
-				setcustom = cumulus.EcowittSettings.SetCustomServer,
-				gwaddr = cumulus.EcowittSettings.GatewayAddr,
-				localaddr = cumulus.EcowittSettings.LocalAddr,
-				interval = cumulus.EcowittSettings.CustomInterval,
-				primaryTHsensor = cumulus.Gw1000PrimaryTHSensor,
-				primaryRainSensor = cumulus.Gw1000PrimaryRainSensor
-			};
-
 			int deg, min, sec;
 			string hem;
 
@@ -243,9 +259,9 @@ namespace CumulusMX
 				solarmin = cumulus.SolarOptions.SolarMinimum,
 				sunthreshold = cumulus.SolarOptions.SunThreshold,
 				solarcalc = cumulus.SolarOptions.SolarCalc,
-				transfactorJul = cumulus.SolarOptions.RStransfactorJul,
+				transfactorJun = cumulus.SolarOptions.RStransfactorJun,
 				transfactorDec = cumulus.SolarOptions.RStransfactorDec,
-				turbidityJul = cumulus.SolarOptions.BrasTurbidityJul,
+				turbidityJun = cumulus.SolarOptions.BrasTurbidityJun,
 				turbidityDec = cumulus.SolarOptions.BrasTurbidityDec
 			};
 
@@ -443,6 +459,7 @@ namespace CumulusMX
 				gw1000 = gw1000,
 				ecowitt = ecowitt,
 				ecowittapi = ecowittapi,
+				ecowittmaps = ecowittmaps,
 				weatherflow = weatherflow,
 				fineoffset = fineoffset,
 				easyw = easyweather,
@@ -648,12 +665,12 @@ namespace CumulusMX
 						cumulus.SolarOptions.SunThreshold = settings.Solar.sunthreshold;
 						if (cumulus.SolarOptions.SolarCalc == 0)
 						{
-							cumulus.SolarOptions.RStransfactorJul = settings.Solar.transfactorJul;
+							cumulus.SolarOptions.RStransfactorJun = settings.Solar.transfactorJun;
 							cumulus.SolarOptions.RStransfactorDec = settings.Solar.transfactorDec;
 						}
 						else
 						{
-							cumulus.SolarOptions.BrasTurbidityJul = settings.Solar.turbidityJul;
+							cumulus.SolarOptions.BrasTurbidityJun = settings.Solar.turbidityJun;
 							cumulus.SolarOptions.BrasTurbidityDec = settings.Solar.turbidityDec;
 						}
 					}
@@ -963,8 +980,6 @@ namespace CumulusMX
 						cumulus.Gw1000IpAddress = settings.gw1000.ipaddress;
 						cumulus.Gw1000AutoUpdateIpAddress = settings.gw1000.autoDiscover;
 						cumulus.Gw1000MacAddress = settings.gw1000.macaddress;
-						cumulus.Gw1000PrimaryTHSensor = settings.gw1000.primaryTHsensor;
-						cumulus.Gw1000PrimaryRainSensor = settings.gw1000.primaryRainSensor;
 					}
 				}
 				catch (Exception ex)
@@ -984,13 +999,105 @@ namespace CumulusMX
 						cumulus.EcowittSettings.GatewayAddr = settings.ecowitt.gwaddr;
 						cumulus.EcowittSettings.LocalAddr = settings.ecowitt.localaddr;
 						cumulus.EcowittSettings.CustomInterval = settings.ecowitt.interval;
-						cumulus.Gw1000PrimaryTHSensor = settings.ecowitt.primaryTHsensor;
-						cumulus.Gw1000PrimaryRainSensor = settings.ecowitt.primaryRainSensor;
 					}
 				}
 				catch (Exception ex)
 				{
 					var msg = "Error processing Ecowitt settings";
+					cumulus.LogExceptionMessage(ex, msg);
+					errorMsg += msg + "\n\n";
+					context.Response.StatusCode = 500;
+				}
+
+				// Ecowitt sensor mappings
+				try
+				{
+					cumulus.Gw1000PrimaryTHSensor = settings.ecowittmaps.primaryTHsensor;
+					cumulus.Gw1000PrimaryRainSensor = settings.ecowittmaps.primaryRainSensor;
+
+					if (cumulus.EcowittSettings.MapWN34[1] != settings.ecowittmaps.wn34chan1)
+					{
+						if (cumulus.EcowittSettings.MapWN34[1] == 0)
+							station.UserTemp[1] = null;
+						else
+							station.SoilTemp[cumulus.EcowittSettings.MapWN34[1]] = null;
+
+						cumulus.EcowittSettings.MapWN34[1] = settings.ecowittmaps.wn34chan1;
+					}
+
+					if (cumulus.EcowittSettings.MapWN34[2] != settings.ecowittmaps.wn34chan2)
+					{
+						if (cumulus.EcowittSettings.MapWN34[2] == 0)
+							station.UserTemp[2] = null;
+						else
+							station.SoilTemp[cumulus.EcowittSettings.MapWN34[2]] = null;
+
+						cumulus.EcowittSettings.MapWN34[2] = settings.ecowittmaps.wn34chan2;
+					}
+
+					if (cumulus.EcowittSettings.MapWN34[3] != settings.ecowittmaps.wn34chan3)
+					{
+						if (cumulus.EcowittSettings.MapWN34[3] == 0)
+							station.UserTemp[3] = null;
+						else
+							station.SoilTemp[cumulus.EcowittSettings.MapWN34[3]] = null;
+
+						cumulus.EcowittSettings.MapWN34[3] = settings.ecowittmaps.wn34chan3;
+					}
+
+					if (cumulus.EcowittSettings.MapWN34[4] != settings.ecowittmaps.wn34chan4)
+					{
+						if (cumulus.EcowittSettings.MapWN34[4] == 0)
+							station.UserTemp[4] = null;
+						else
+							station.SoilTemp[cumulus.EcowittSettings.MapWN34[4]] = null;
+
+						cumulus.EcowittSettings.MapWN34[4] = settings.ecowittmaps.wn34chan4;
+					}
+
+					if (cumulus.EcowittSettings.MapWN34[5] != settings.ecowittmaps.wn34chan5)
+					{
+						if (cumulus.EcowittSettings.MapWN34[5] == 0)
+							station.UserTemp[5] = null;
+						else
+							station.SoilTemp[cumulus.EcowittSettings.MapWN34[5]] = null;
+
+						cumulus.EcowittSettings.MapWN34[5] = settings.ecowittmaps.wn34chan5;
+					}
+
+					if (cumulus.EcowittSettings.MapWN34[6] != settings.ecowittmaps.wn34chan6)
+					{
+						if (cumulus.EcowittSettings.MapWN34[6] == 0)
+							station.UserTemp[6] = null;
+						else
+							station.SoilTemp[cumulus.EcowittSettings.MapWN34[6]] = null;
+
+						cumulus.EcowittSettings.MapWN34[6] = settings.ecowittmaps.wn34chan6;
+					}
+
+					if (cumulus.EcowittSettings.MapWN34[7] != settings.ecowittmaps.wn34chan7)
+					{
+						if (cumulus.EcowittSettings.MapWN34[7] == 0)
+							station.UserTemp[7] = null;
+						else
+							station.SoilTemp[cumulus.EcowittSettings.MapWN34[7]] = null;
+
+						cumulus.EcowittSettings.MapWN34[7] = settings.ecowittmaps.wn34chan7;
+					}
+
+					if (cumulus.EcowittSettings.MapWN34[8] != settings.ecowittmaps.wn34chan8)
+					{
+						if (cumulus.EcowittSettings.MapWN34[8] == 0)
+							station.UserTemp[8] = null;
+						else
+							station.SoilTemp[cumulus.EcowittSettings.MapWN34[8]] = null;
+
+						cumulus.EcowittSettings.MapWN34[8] = settings.ecowittmaps.wn34chan8;
+					}
+				}
+				catch (Exception ex)
+				{
+					var msg = "Error processing Ecowitt sensor mapping";
 					cumulus.LogExceptionMessage(ex, msg);
 					errorMsg += msg + "\n\n";
 					context.Response.StatusCode = 500;
@@ -1402,13 +1509,14 @@ namespace CumulusMX
 			public DavisVp2Json davisvp2 { get; set; }
 			public Gw1000ConnJson gw1000 { get; set; }
 			public EcowittSettingsJson ecowitt { get; set; }
+			public EcowittApi ecowittapi { get; set; }
+			public EcowittMappingsJson ecowittmaps { get; set; }
 			public WeatherFlowJson weatherflow { get; set; }
 			public WLLJson daviswll { get; set; }
 			public FineOffsetJson fineoffset { get; set; }
 			public EasyWeatherJson easyw { get; set; }
 			public JImetJson imet { get; set; }
 			public WMR928Json wmr928 { get; set; }
-			public EcowittApi ecowittapi { get; set; }
 			public OptionsJson Options { get; set; }
 			public ForecastJson Forecast { get; set; }
 			public SolarJson Solar { get; set; }
@@ -1574,6 +1682,21 @@ namespace CumulusMX
 			public string mac { get; set; }
 		}
 
+		internal class EcowittMappingsJson
+		{
+			public int primaryTHsensor { get; set; }
+			public int primaryRainSensor { get; set; }
+
+			public int wn34chan1 { get; set; }
+			public int wn34chan2 { get; set; }
+			public int wn34chan3 { get; set; }
+			public int wn34chan4 { get; set; }
+			public int wn34chan5 { get; set; }
+			public int wn34chan6 { get; set; }
+			public int wn34chan7 { get; set; }
+			public int wn34chan8 { get; set; }
+		}
+
 		public class WMR928Json
 		{
 			public string comportname { get; set; }
@@ -1635,9 +1758,9 @@ namespace CumulusMX
 			public int sunthreshold { get; set; }
 			public int solarmin { get; set; }
 			public int solarcalc { get; set; }
-			public double transfactorJul { get; set; }
+			public double transfactorJun { get; set; }
 			public double transfactorDec { get; set; }
-			public double turbidityJul { get; set; }
+			public double turbidityJun { get; set; }
 			public double turbidityDec { get; set; }
 		}
 

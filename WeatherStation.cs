@@ -1708,14 +1708,6 @@ namespace CumulusMX
 				DoForecast("", true);
 			}
 
-
-			if (DataStopped)
-			{
-				// No data coming in, do not do anything else
-				return;
-			}
-
-
 			if (now.Hour == 0)
 			{
 				ResetMidnightRain(now);
@@ -4282,8 +4274,8 @@ namespace CumulusMX
 					ThisMonth.HighDewPoint.Val = Dewpoint ?? Cumulus.DefaultHiVal;
 					ThisMonth.LowDewPoint.Val = Dewpoint ?? Cumulus.DefaultLoVal;
 					ThisMonth.HighWindRun.Val = Cumulus.DefaultHiVal;
-					ThisMonth.LongestDryPeriod.Val = Cumulus.DefaultHiVal;
-					ThisMonth.LongestWetPeriod.Val = Cumulus.DefaultHiVal;
+					ThisMonth.LongestDryPeriod.Val = 0;
+					ThisMonth.LongestWetPeriod.Val = 0;
 					ThisMonth.HighDailyTempRange.Val = Cumulus.DefaultHiVal;
 					ThisMonth.LowDailyTempRange.Val = Cumulus.DefaultLoVal;
 
@@ -4352,8 +4344,8 @@ namespace CumulusMX
 					ThisYear.HighDewPoint.Val = Dewpoint ?? Cumulus.DefaultHiVal;
 					ThisYear.LowDewPoint.Val = Dewpoint ?? Cumulus.DefaultLoVal;
 					ThisYear.HighWindRun.Val = Cumulus.DefaultHiVal;
-					ThisYear.LongestDryPeriod.Val = Cumulus.DefaultHiVal;
-					ThisYear.LongestWetPeriod.Val = Cumulus.DefaultHiVal;
+					ThisYear.LongestDryPeriod.Val = 0;
+					ThisYear.LongestWetPeriod.Val = 0;
 					ThisYear.HighDailyTempRange.Val = Cumulus.DefaultHiVal;
 					ThisYear.LowDailyTempRange.Val = Cumulus.DefaultLoVal;
 
@@ -6785,10 +6777,10 @@ namespace CumulusMX
 			AllTime.MonthlyRain.Val = ini.GetValue("Rain", "highmonthlyrainvalue", Cumulus.DefaultHiVal);
 			AllTime.MonthlyRain.Ts = ini.GetValue("Rain", "highmonthlyraintime", cumulus.defaultRecordTS);
 
-			AllTime.LongestDryPeriod.Val = ini.GetValue("Rain", "longestdryperiodvalue", Cumulus.DefaultHiVal);
+			AllTime.LongestDryPeriod.Val = ini.GetValue("Rain", "longestdryperiodvalue", 0);
 			AllTime.LongestDryPeriod.Ts = ini.GetValue("Rain", "longestdryperiodtime", cumulus.defaultRecordTS);
 
-			AllTime.LongestWetPeriod.Val = ini.GetValue("Rain", "longestwetperiodvalue", Cumulus.DefaultHiVal);
+			AllTime.LongestWetPeriod.Val = ini.GetValue("Rain", "longestwetperiodvalue", 0);
 			AllTime.LongestWetPeriod.Ts = ini.GetValue("Rain", "longestwetperiodtime", cumulus.defaultRecordTS);
 
 			AllTime.HighPress.Val = ini.GetValue("Pressure", "highpressurevalue", Cumulus.DefaultHiVal);

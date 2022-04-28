@@ -605,7 +605,7 @@ namespace CumulusMX
 
 		public bool EODfilesNeedFTP;
 
-		public bool IsOSX;
+		public bool IsOSX = false;
 		public double CPUtemp = -999;
 
 		// Alarms
@@ -744,14 +744,11 @@ namespace CumulusMX
 
 			LogMessage("Command line: " + Environment.CommandLine + " " + startParms);
 
-			//Assembly thisAssembly = this.GetType().Assembly;
-			//Version = thisAssembly.GetName().Version.ToString();
-			//VersionLabel.Content = "Cumulus v." + thisAssembly.GetName().Version;
 			LogMessage($"Cumulus MX v.{Version} build {Build} - running 64 bit: {Environment.Is64BitProcess}");
 			LogConsoleMessage($"Cumulus MX v.{Version} build {Build} - running 64 bit: {Environment.Is64BitProcess}");
 			LogConsoleMessage("Working Dir: " + AppDir);
 
-			IsOSX = IsRunningOnMac();
+			IsOSX = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
 			Platform = IsOSX ? "Mac OS X" : Environment.OSVersion.Platform.ToString();
 
@@ -2598,34 +2595,6 @@ namespace CumulusMX
 
 		public string DecimalSeparator { get; set; }
 
-		[DllImport("libc")]
-		private static extern int uname(IntPtr buf);
-
-		private static bool IsRunningOnMac()
-		{
-			IntPtr buf = IntPtr.Zero;
-			try
-			{
-				buf = Marshal.AllocHGlobal(8192);
-				// This is a hacktastic way of getting sysname from uname ()
-				if (uname(buf) == 0)
-				{
-					string os = Marshal.PtrToStringAnsi(buf);
-					if (os == "Darwin")
-						return true;
-				}
-			}
-			catch
-			{
-			}
-			finally
-			{
-				if (buf != IntPtr.Zero)
-					Marshal.FreeHGlobal(buf);
-			}
-			return false;
-		}
-
 		internal void DoMoonPhase()
 		{
 			DateTime now = DateTime.Now;
@@ -3617,6 +3586,11 @@ namespace CumulusMX
 			{
 				EcowittSettings.MacAddress = Gw1000MacAddress;
 			}
+			// WN34 sensor mapping
+			for (int i = 1; i <= 8; i++)
+			{
+				EcowittSettings.MapWN34[i] = ini.GetValue("GW1000", "WN34MapChan" + i, 0);
+			}
 
 
 			// Ambient settings
@@ -4277,24 +4251,24 @@ namespace CumulusMX
 			// Migrate old single solar factors to the new dual scheme
 			if (ini.ValueExists("Solar", "RStransfactor"))
 			{
-				SolarOptions.RStransfactorJul = ini.GetValue("Solar", "RStransfactor", 0.8);
-				SolarOptions.RStransfactorDec = SolarOptions.RStransfactorJul;
+				SolarOptions.RStransfactorJun = ini.GetValue("Solar", "RStransfactor", 0.8);
+				SolarOptions.RStransfactorDec = SolarOptions.RStransfactorJun;
 				rewriteRequired = true;
 			}
 			else
 			{
-				SolarOptions.RStransfactorJul = ini.GetValue("Solar", "RStransfactorJul", 0.8);
+				SolarOptions.RStransfactorJun = ini.GetValue("Solar", "RStransfactorJun", 0.8);
 				SolarOptions.RStransfactorDec = ini.GetValue("Solar", "RStransfactorDec", 0.8);
 			}
 			if (ini.ValueExists("Solar", "BrasTurbidity"))
 			{
-				SolarOptions.BrasTurbidityJul = ini.GetValue("Solar", "BrasTurbidity", 2.0);
-				SolarOptions.BrasTurbidityDec = SolarOptions.BrasTurbidityJul;
+				SolarOptions.BrasTurbidityJun = ini.GetValue("Solar", "BrasTurbidity", 2.0);
+				SolarOptions.BrasTurbidityDec = SolarOptions.BrasTurbidityJun;
 				rewriteRequired = true;
 			}
 			else
 			{
-				SolarOptions.BrasTurbidityJul = ini.GetValue("Solar", "BrasTurbidityJul", 2.0);
+				SolarOptions.BrasTurbidityJun = ini.GetValue("Solar", "BrasTurbidityJun", 2.0);
 				SolarOptions.BrasTurbidityDec = ini.GetValue("Solar", "BrasTurbidityDec", 2.0);
 			}
 
@@ -4811,6 +4785,11 @@ namespace CumulusMX
 			ini.SetValue("GW1000", "EcowittAppKey", Crypto.EncryptString(EcowittSettings.AppKey, Program.InstanceId));
 			ini.SetValue("GW1000", "EcowittUserKey", Crypto.EncryptString(EcowittSettings.UserApiKey, Program.InstanceId));
 			ini.SetValue("GW1000", "EcowittMacAddress", EcowittSettings.MacAddress);
+			// WN34 sensor mapping
+			for (int i = 1; i <= 8; i++)
+			{
+				ini.SetValue("GW1000", "WN34MapChan" + i, EcowittSettings.MapWN34[i]);
+			}
 
 			// Ambient settings
 			ini.SetValue("Ambient", "ExtraSensorDataEnabled", AmbientExtraEnabled);
@@ -5248,9 +5227,9 @@ namespace CumulusMX
 			ini.SetValue("Solar", "UseBlakeLarsen", SolarOptions.UseBlakeLarsen);
 			ini.SetValue("Solar", "SolarCalc", SolarOptions.SolarCalc);
 			ini.SetValue("Solar", "LuxToWM2", SolarOptions.LuxToWM2);
-			ini.SetValue("Solar", "RStransfactorJul", SolarOptions.RStransfactorJul);
+			ini.SetValue("Solar", "RStransfactorJun", SolarOptions.RStransfactorJun);
 			ini.SetValue("Solar", "RStransfactorDec", SolarOptions.RStransfactorDec);
-			ini.SetValue("Solar", "BrasTurbidityJul", SolarOptions.BrasTurbidityJul);
+			ini.SetValue("Solar", "BrasTurbidityJun", SolarOptions.BrasTurbidityJun);
 			ini.SetValue("Solar", "BrasTurbidityDec", SolarOptions.BrasTurbidityDec);
 
 			ini.SetValue("NOAA", "Name", NOAAconf.Name);
@@ -7436,13 +7415,6 @@ namespace CumulusMX
 		{
 			LogMessage("Cumulus closing");
 
-			try
-			{
-				LogMessage("Releasing mutex");
-				Program.appMutex.ReleaseMutex();
-			}
-			catch { }
-
 			// Stop the timers
 			LogMessage("Stopping timers");
 			try { RealtimeTimer.Stop(); } catch { }
@@ -7455,6 +7427,21 @@ namespace CumulusMX
 			try { MySqlStuff.CustomSecondsTimer.Stop(); } catch { }
 			try { MQTTTimer.Stop(); } catch { }
 
+			try
+			{
+				LogMessage("Stopping extra sensors...");
+				// If we have a Outdoor AirLink sensor, and it is linked to this WLL then stop it now
+				airLinkOut?.Stop();
+				// If we have a Indoor AirLink sensor, and it is linked to this WLL then stop it now
+				airLinkIn?.Stop();
+				// If we have a Ecowitt Extra Sensors, stop it
+				ecowittExtra?.Stop();
+				// If we have a Ambient Extra Sensors, stop it
+				ambientExtra?.Stop();
+
+				LogMessage("Extra sensors stopped");
+			}
+			catch { }
 
 			if (station != null)
 			{
@@ -7476,19 +7463,6 @@ namespace CumulusMX
 					}
 				}
 				catch { }
-
-				LogMessage("Stopping extra sensors...");
-				// If we have a Outdoor AirLink sensor, and it is linked to this WLL then stop it now
-				airLinkOut?.Stop();
-				// If we have a Indoor AirLink sensor, and it is linked to this WLL then stop it now
-				airLinkIn?.Stop();
-				// If we have a Ecowitt Extra Sensors, stop it
-				ecowittExtra?.Stop();
-				// If we have a Ambient Extra Sensors, stop it
-				ambientExtra?.Stop();
-
-				LogMessage("Extra sensors stopped");
-
 			}
 			LogMessage("Station shutdown complete");
 		}
@@ -9552,9 +9526,9 @@ namespace CumulusMX
 		public double LuxToWM2 { get; set; }
 		public bool UseBlakeLarsen { get; set; }
 		public int SolarCalc { get; set; }
-		public double RStransfactorJul { get; set; }
+		public double RStransfactorJun { get; set; }
 		public double RStransfactorDec { get; set; }
-		public double BrasTurbidityJul { get; set; }
+		public double BrasTurbidityJun { get; set; }
 		public double BrasTurbidityDec { get; set; }
 	}
 

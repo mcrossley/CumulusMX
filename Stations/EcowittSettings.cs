@@ -25,5 +25,6 @@
 		public string ExtraGatewayAddr { get; set; }
 		public string ExtraLocalAddr { get; set; }
 		public int ExtraCustomInterval { get; set; }
+		public int[] MapWN34 = new int[9];
 	}
 }
