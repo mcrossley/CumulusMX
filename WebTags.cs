@@ -3262,7 +3262,7 @@ namespace CumulusMX
 
 		private string TagSolarRad(Dictionary<string,string> tagParams)
 		{
-			return ((int) station.SolarRad).ToString();
+			return station.SolarRad.HasValue ? station.SolarRad.Value.ToString() : "-";
 		}
 
 		private string TagCurrentSolarMax(Dictionary<string,string> tagParams)

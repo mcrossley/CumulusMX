@@ -373,7 +373,7 @@ namespace CumulusMX
 					}
 
 					// do the wind average for the day...
-					CalculateDayWindAverages(row.Timestamp.Date, ref dayList);
+					CalculateDayWindAverages(row.Timestamp.Date, ref dayList, ref windsamples, ref totalwindspeed);
 
 					daycount++;
 					dayList[daynumber].valid = true;
@@ -500,41 +500,60 @@ namespace CumulusMX
 				{
 					repLine.Clear();
 					repLine.Append(i.ToString("D2"));
-					if (dayList[i].meantemp < -999)
-					{
-						repLine.Append("  ----");
-					}
-					else
-					{
-						repLine.Append(string.Format(numFormat, "{0,6:F1}",dayList[i].meantemp));
-					}
-					;
-					repLine.Append(string.Format(numFormat, "{0,6:F1}", dayList[i].maxtemp));
-					string timestr = dayList[i].maxtemptimestamp.ToString(timeFormat);
-					repLine.Append(string.Format("{0,8}", timestr));
-					repLine.Append(string.Format(numFormat, "{0,6:F1}", dayList[i].mintemp));
-					timestr = dayList[i].mintemptimestamp.ToString(timeFormat);
-					repLine.Append(string.Format("{0,8}", timestr));
 
-					if (dayList[i].meantemp < -999)
+					if (dayList[i].meantemp <= -999)
+						repLine.Append("    --");
+					else
+						repLine.Append(string.Format(numFormat, "{0,6:F1}",dayList[i].meantemp));
+					
+					if (dayList[i].maxtemp <= -999)
 					{
-						repLine.Append("  ----");
+						repLine.Append("    --   --:--");
 					}
 					else
 					{
-						repLine.Append(string.Format(numFormat, "{0,6:F1}", dayList[i].heatingdegdays));
-						repLine.Append(string.Format(numFormat, "{0,6:F1}", dayList[i].coolingdegdays));
+						repLine.Append(string.Format(numFormat, "{0,6:F1}", dayList[i].maxtemp));
+						var timestr = dayList[i].maxtemptimestamp.ToString(timeFormat);
+						repLine.Append(string.Format("{0,8}", timestr));
 					}
+
+					if (dayList[i].mintemp >= 999)
+					{
+						repLine.Append("    --   --:--");
+					}
+					else
+					{
+						repLine.Append(string.Format(numFormat, "{0,6:F1}", dayList[i].mintemp));
+						var timestr = dayList[i].mintemptimestamp.ToString(timeFormat);
+						repLine.Append(string.Format("{0,8}", timestr));
+					}
+
+					if (dayList[i].heatingdegdays <= -999)
+						repLine.Append("    --");
+					else
+						repLine.Append(string.Format(numFormat, "{0,6:F1}", dayList[i].heatingdegdays));
+
+					if (dayList[i].coolingdegdays >= 999)
+						repLine.Append("    --");
+					else
+						repLine.Append(string.Format(numFormat, "{0,6:F1}", dayList[i].coolingdegdays));
+
 					repLine.Append(string.Format("{0,6}", dayList[i].rain.ToString(cumulus.RainFormat, numFormat)));
 
 					if (dayList[i].avgwindspeed < -999)
-						repLine.Append("  ----");
+						repLine.Append("    --");
 					else
 						repLine.Append(string.Format(numFormat, "{0,6:F1}", dayList[i].avgwindspeed));
 
-					repLine.Append(string.Format(numFormat, "{0,6:F1}", dayList[i].highwindspeed));
-					timestr = dayList[i].highwindtimestamp.ToString(timeFormat);
-					repLine.Append(string.Format("{0,8}", timestr));
+					if (dayList[i].highwindspeed < 0)
+						repLine.Append("    --   --:--");
+					else
+					{
+						repLine.Append(string.Format(numFormat, "{0,6:F1}", dayList[i].highwindspeed));
+						var timestr = dayList[i].highwindtimestamp.ToString(timeFormat);
+						repLine.Append(string.Format("{0,8}", timestr));
+					}
+
 					repLine.Append(string.Format("{0,6}", CompassPoint(dayList[i].winddomdir)));
 					output.Add(repLine.ToString());
 				}
@@ -545,7 +564,7 @@ namespace CumulusMX
 			repLine.Clear();
 			if (daycount == 0)
 			{
-				repLine.Append("    ----");
+				repLine.Append("      --");
 			}
 			else
 			{
@@ -554,7 +573,7 @@ namespace CumulusMX
 
 			if (maxtempday == 0)
 			{
-				repLine.Append("  ----    --");
+				repLine.Append("    --    --");
 			}
 			else
 			{
@@ -564,7 +583,7 @@ namespace CumulusMX
 
 			if (mintempday == 0)
 			{
-				repLine.Append("    ----    --");
+				repLine.Append("      --    --");
 			}
 			else
 			{
@@ -577,15 +596,14 @@ namespace CumulusMX
 
 			repLine.Append(string.Format("{0,6}", totalrain.ToString(cumulus.RainFormat, numFormat)));
 
-			if (avgwindspeed < -999)
+			if (avgwindspeed <= -999)
 			{
-				repLine.Append("  ----");
+				repLine.Append("    --");
 			}
 			else
 			{
 				repLine.Append(string.Format(numFormat, "{0,6:F1}", avgwindspeed));
 			}
-			;
 
 			repLine.Append(string.Format(numFormat, "{0,6:F1}", highwind));
 			repLine.Append(string.Format(numFormat, "{0,6:D}", highwindday));
@@ -611,13 +629,13 @@ namespace CumulusMX
 		}
 
 
-		public void CalculateDayWindAverages(DateTime thedate, ref Tdaysummary[] dayList)
+		public void CalculateDayWindAverages(DateTime thedate, ref Tdaysummary[] dayList, ref int windsamples, ref double totalwindspeed)
 		{
 			// Calculate average wind speed from log file
 
 			int daynumber = 1;
-			int windsamples = 0;
-			double totalwindspeed = 0;
+			//int windsamples = 0;
+			//double totalwindspeed = 0;
 
 			var start = thedate.AddHours(cumulus.GetHourInc(thedate));
 			var end = thedate.AddDays(1);

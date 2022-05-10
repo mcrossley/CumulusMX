@@ -44,6 +44,10 @@ namespace CumulusMX
 			// GW1000 does not provide average wind speeds
 			cumulus.StationOptions.CalcWind10MinAve = true;
 
+			// GW1000 does not provide an interval gust value, it gives us a 30 second high
+			// so force using the wind speed for the average calculation
+			cumulus.StationOptions.UseSpeedForAvgCalc = true;
+
 			LightningTime = DateTime.MinValue;
 			LightningDistance = 999;
 
@@ -209,9 +213,12 @@ namespace CumulusMX
 			Cumulus.LogMessage("Closing connection");
 			try
 			{
-				tokenSource.Cancel();
 				tmrDataWatchdog.Stop();
 				StopMinuteTimer();
+				if (tokenSource != null)
+				{
+					tokenSource.Cancel();
+				}
 				Task.WaitAll(historyTask, liveTask);
 			}
 			catch
@@ -224,9 +231,9 @@ namespace CumulusMX
 
 		public override void getAndProcessHistoryData()
 		{
-			cumulus.LogDebugMessage("Lock: Station waiting for the lock");
+			//cumulus.LogDebugMessage("Lock: Station waiting for the lock");
 			Cumulus.syncInit.Wait();
-			cumulus.LogDebugMessage("Lock: Station has the lock");
+			//cumulus.LogDebugMessage("Lock: Station has the lock");
 
 			if (string.IsNullOrEmpty(cumulus.EcowittSettings.AppKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.UserApiKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.MacAddress))
 			{
@@ -254,7 +261,7 @@ namespace CumulusMX
 				}
 			}
 
-			cumulus.LogDebugMessage("Lock: Station releasing the lock");
+			//cumulus.LogDebugMessage("Lock: Station releasing the lock");
 			_ = Cumulus.syncInit.Release();
 
 			if (cancellationToken.IsCancellationRequested)
@@ -612,11 +619,11 @@ namespace CumulusMX
 					case string wh34 when wh34.StartsWith("WH34"):  // ch 1-8
 					case string wh35 when wh35.StartsWith("WH35"):  // ch 1-8
 					case "WH90":
-						// if a WS90 is connected, it has a 4.75 second update rate, so reduce the MX update rate from the default 10 seconds
-						if (updateRate > 4000 && updateRate != 4000)
+						// if a WS90 is connected, it has an 8.8 second update rate, so reduce the MX update rate from the default 10 seconds
+						if (updateRate > 8000 && updateRate != 8000)
 						{
-							Cumulus.LogMessage($"PrintSensorInfoNew: WS90 sensor detected, changing the update rate from {updateRate / 1000} seconds to 4 seconds");
-							updateRate = 4000;
+							Cumulus.LogMessage($"PrintSensorInfoNew: WS90 sensor detected, changing the update rate from {updateRate / 1000} seconds to 8 seconds");
+							updateRate = 8000;
 						}
 						battV = data[battPos] * 0.02;
 						batt = $"{battV:f1}V ({(battV > 2.4 ? "OK" : "Low")})";
@@ -1162,6 +1169,9 @@ namespace CumulusMX
 
 					if (gustLast > -999 && windSpeedLast > -999 && windDirLast > -999)
 					{
+						DoWind(gustLast, windDirLast, windSpeedLast, dateTime);
+						
+						/*
 						// The protocol does not provide an average value
 						// so feed in current MX average
 						DoWind(windSpeedLast, windDirLast, (WindAverage ?? 0) / cumulus.Calib.WindSpeed.Mult, dateTime);
@@ -1179,6 +1189,7 @@ namespace CumulusMX
 
 							RecentMaxGust = gustLastCal;
 						}
+						*/
 					}
 
 

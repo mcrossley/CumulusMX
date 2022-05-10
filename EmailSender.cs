@@ -25,9 +25,9 @@ namespace CumulusMX
 		{
 			try
 			{
-				cumulus.LogDebugMessage($"SendEmail: Waiting for lock...");
+				//cumulus.LogDebugMessage($"SendEmail: Waiting for lock...");
 				await _writeLock.WaitAsync();
-				cumulus.LogDebugMessage($"SendEmail: Has the lock");
+				//cumulus.LogDebugMessage($"SendEmail: Has the lock");
 
 				Cumulus.LogMessage($"SendEmail: Sending email, to [{string.Join("; ", to)}], subject [{subject}], body [{message}]...");
 
@@ -74,7 +74,7 @@ namespace CumulusMX
 			}
 			finally
 			{
-				cumulus.LogDebugMessage($"SendEmail: Releasing lock...");
+				//cumulus.LogDebugMessage($"SendEmail: Releasing lock...");
 				_writeLock.Release();
 			}
 		}
@@ -85,9 +85,9 @@ namespace CumulusMX
 
 			try
 			{
-				cumulus.LogDebugMessage($"SendEmail: Waiting for lock...");
+				//cumulus.LogDebugMessage($"SendEmail: Waiting for lock...");
 				_writeLock.Wait();
-				cumulus.LogDebugMessage($"SendEmail: Has the lock");
+				//cumulus.LogDebugMessage($"SendEmail: Has the lock");
 
 				cumulus.LogDebugMessage($"SendEmail: Sending Test email, to [{string.Join("; ", to)}], subject [{subject}], body [{message}]...");
 
@@ -139,7 +139,7 @@ namespace CumulusMX
 			}
 			finally
 			{
-				cumulus.LogDebugMessage($"SendEmail: Releasing lock...");
+				//cumulus.LogDebugMessage($"SendEmail: Releasing lock...");
 				_writeLock.Release();
 			}
 

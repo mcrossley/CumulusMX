@@ -41,6 +41,7 @@ namespace CumulusMX
 		public readonly Object yearIniThreadLock = new Object();
 		public readonly Object alltimeIniThreadLock = new Object();
 		public readonly Object monthlyalltimeIniThreadLock = new Object();
+		private readonly Object webSocketThreadLock = new Object();
 
 		// holds all time highs and lows
 		public AllTimeRecords AllTime = new AllTimeRecords();
@@ -272,7 +273,7 @@ namespace CumulusMX
 			Database.ExecuteScalar<int>("PRAGMA synchronous=FULL");
 			Database.ExecuteScalar<int>("PRAGMA journal_mode=DELETE");
 			Database.ExecuteScalar<int>("PRAGMA temp_store=MEMORY");
-			Database.ExecuteScalar<int>("PRAGMA auto_vacuum=INCREMENTAL");
+			Database.ExecuteScalar<int>("PRAGMA auto_vacuum=NONE");
 
 			// Lock the database in EXCLUSIVE mode which prevent any other process opening the database
 			//Database.ExecuteScalar<int>("PRAGMA locking_mode=EXCLUSIVE");
@@ -294,12 +295,13 @@ namespace CumulusMX
 			Database.CreateTable<CO2Data>();
 
 			// now vacuum the database
+			/*
 			Cumulus.LogMessage("Compressing the database");
 			var dbOrigSize = new FileInfo(cumulus.dbfile).Length / 1048576.0;
 			Database.Execute("VACUUM");
 			var dbNewSize = new FileInfo(cumulus.dbfile).Length / 1048576.0;
 			Cumulus.LogMessage($"Completed compressing the database, was {dbOrigSize:F2} MB,  now {dbNewSize:F2} MB");
-
+			*/
 
 			Graphs = new GraphData(cumulus, this);
 
@@ -1273,11 +1275,25 @@ namespace CumulusMX
 				}
 			}
 
-			if ((int)timeNow.TimeOfDay.TotalMilliseconds % 2500 <= 500)
+			// send current data to web-socket every 5 seconds, unless it has already been sent within the 10 seconds
+			if (LastDataReadTimestamp.AddSeconds(5) < timeNow && (int)timeNow.TimeOfDay.TotalMilliseconds % 10000 <= 500)
 			{
-				// send current data to web-socket every 3 seconds
-				try
+				_ = sendWebSocketData();
+			}
+		}
+
+		private async Task sendWebSocketData()
+		{
+			// Return control to the calling method immediately.
+			await Task.Yield();
+
+			// send current data to web-socket
+			try
+			{
+				// wait for the ws lock object
+				lock (webSocketThreadLock);
 				{
+
 					StringBuilder windRoseData = new StringBuilder(80);
 
 					lock (windcounts)
@@ -1315,7 +1331,6 @@ namespace CumulusMX
 						FeelsLike, HiLoToday.HighFeelsLike, HiLoToday.HighFeelsLikeTime.ToString("HH:mm"), HiLoToday.LowFeelsLike, HiLoToday.LowFeelsLikeTime.ToString("HH:mm"),
 						HiLoToday.HighHumidex, HiLoToday.HighHumidexTime.ToString("HH:mm"));
 
-					//var json = jss.Serialize(data);
 
 					var ser = new DataContractJsonSerializer(typeof(WebSocketData));
 
@@ -1326,12 +1341,17 @@ namespace CumulusMX
 					stream.Position = 0;
 
 					cumulus.WebSock.SendMessage(new StreamReader(stream).ReadToEnd());
-				}
-				catch (Exception ex)
-				{
-					cumulus.LogExceptionMessage(ex, "SecondTimer: Error");
+
+					// ** CMX 3 - We can't be sure when the broadcast completes, so the best we can do is wait a short time 
+					// ** CMX 4 - the broadacst is now awaitable, so we can run it synchronously - therefore now no need to add an artifical delay
+					//await Task.Delay(500);
 				}
 			}
+			catch (Exception ex)
+			{
+				cumulus.LogExceptionMessage(ex, "sendWebSocketData: Error");
+			}
+
 		}
 
 		private static string getTimeString(DateTime time)
@@ -1672,7 +1692,7 @@ namespace CumulusMX
 					if (double.TryParse(raw, out var val))
 					{
 						cumulus.CPUtemp = ConvertTempCToUser(val / 1000).Value;
-					cumulus.LogDebugMessage($"Current CPU temp = {cumulus.CPUtemp.ToString(cumulus.TempFormat)}{cumulus.Units.TempText}");
+						cumulus.LogDebugMessage($"Current CPU temp = {cumulus.CPUtemp.ToString(cumulus.TempFormat)}{cumulus.Units.TempText}");
 					}
 					else
 					{
@@ -2301,7 +2321,7 @@ namespace CumulusMX
 			{
 				HeatIndex = ConvertTempCToUser(MeteoLib.HeatIndex(tempinC, Humidity.Value));
 
-				if (HeatIndex > HiLoToday.HighHeatIndex)
+				if (HeatIndex.Value > (HiLoToday.HighHeatIndex ?? -999.0))
 				{
 					HiLoToday.HighHeatIndex = HeatIndex;
 					HiLoToday.HighHeatIndexTime = timestamp;
@@ -2928,31 +2948,32 @@ namespace CumulusMX
 			{
 				// scale rainfall rate
 				RainRate = rate * cumulus.Calib.Rain.Mult;
+				var roundRate = Math.Round(RainRate.Value, cumulus.RainDPlaces);
 
-				if (RainRate > AllTime.HighRainRate.Val)
-					SetAlltime(AllTime.HighRainRate, RainRate.Value, timestamp);
+				if (roundRate > AllTime.HighRainRate.Val)
+					SetAlltime(AllTime.HighRainRate, roundRate, timestamp);
 
-				CheckMonthlyAlltime("HighRainRate", RainRate, true, timestamp);
+				CheckMonthlyAlltime("HighRainRate", roundRate, true, timestamp);
 
-				cumulus.HighRainRateAlarm.Triggered = DoAlarm(RainRate.Value, cumulus.HighRainRateAlarm.Value, cumulus.HighRainRateAlarm.Enabled, true);
+				cumulus.HighRainRateAlarm.Triggered = DoAlarm(roundRate, cumulus.HighRainRateAlarm.Value, cumulus.HighRainRateAlarm.Enabled, true);
 
-				if (RainRate > (HiLoToday.HighRainRate ?? Cumulus.DefaultHiVal))
+				if (roundRate > (HiLoToday.HighRainRate ?? Cumulus.DefaultHiVal))
 				{
-					HiLoToday.HighRainRate = RainRate;
+					HiLoToday.HighRainRate = roundRate;
 					HiLoToday.HighRainRateTime = timestamp;
 					WriteTodayFile(timestamp, false);
 				}
 
-				if (RainRate > ThisMonth.HighRainRate.Val)
+				if (roundRate > ThisMonth.HighRainRate.Val)
 				{
-					ThisMonth.HighRainRate.Val = RainRate.Value;
+					ThisMonth.HighRainRate.Val = roundRate;
 					ThisMonth.HighRainRate.Ts = timestamp;
 					WriteMonthIniFile();
 				}
 
-				if (RainRate > ThisYear.HighRainRate.Val)
+				if (roundRate > ThisYear.HighRainRate.Val)
 				{
-					ThisYear.HighRainRate.Val = RainRate.Value;
+					ThisYear.HighRainRate.Val = roundRate;
 					ThisYear.HighRainRate.Ts = timestamp;
 					WriteYearIniFile();
 				}
@@ -2998,38 +3019,42 @@ namespace CumulusMX
 				// rain this year so far
 				RainYear = rainthisyear + RainToday.Value;
 
-				if (RainToday > AllTime.DailyRain.Val)
-					SetAlltime(AllTime.DailyRain, RainToday.Value, offsetdate);
+				var roundToday = Math.Round(RainToday ?? 0, cumulus.RainDPlaces);
+				var roundMonth = Math.Round(RainMonth, cumulus.RainDPlaces);
+				var roundYear = Math.Round(RainYear, cumulus.RainDPlaces);
 
-				CheckMonthlyAlltime("DailyRain", RainToday, true, timestamp);
+				if (roundToday > AllTime.DailyRain.Val)
+					SetAlltime(AllTime.DailyRain, roundToday, offsetdate);
 
-				if (RainToday > ThisMonth.DailyRain.Val)
+				CheckMonthlyAlltime("DailyRain", roundToday, true, timestamp);
+
+				if (roundToday > ThisMonth.DailyRain.Val)
 				{
-					ThisMonth.DailyRain.Val = RainToday.Value;
+					ThisMonth.DailyRain.Val = roundToday;
 					ThisMonth.DailyRain.Ts = offsetdate;
 					WriteMonthIniFile();
 				}
 
-				if (RainToday > ThisYear.DailyRain.Val)
+				if (roundToday > ThisYear.DailyRain.Val)
 				{
-					ThisYear.DailyRain.Val = RainToday.Value;
+					ThisYear.DailyRain.Val = roundToday;
 					ThisYear.DailyRain.Ts = offsetdate;
 					WriteYearIniFile();
 				}
 
-				if (RainMonth > ThisYear.MonthlyRain.Val)
+				if (roundMonth > ThisYear.MonthlyRain.Val)
 				{
-					ThisYear.MonthlyRain.Val = RainMonth;
+					ThisYear.MonthlyRain.Val = roundMonth;
 					ThisYear.MonthlyRain.Ts = offsetdate;
 					WriteYearIniFile();
 				}
 
-				if (RainMonth > AllTime.MonthlyRain.Val)
-					SetAlltime(AllTime.MonthlyRain, RainMonth, offsetdate);
+				if (roundMonth > AllTime.MonthlyRain.Val)
+					SetAlltime(AllTime.MonthlyRain, roundMonth, offsetdate);
 
-				CheckMonthlyAlltime("MonthlyRain", RainMonth, true, timestamp);
+				CheckMonthlyAlltime("MonthlyRain", roundMonth, true, timestamp);
 
-				cumulus.HighRainTodayAlarm.Triggered = DoAlarm(RainToday ?? 0, cumulus.HighRainTodayAlarm.Value, cumulus.HighRainTodayAlarm.Enabled, true);
+				cumulus.HighRainTodayAlarm.Triggered = DoAlarm(roundToday, cumulus.HighRainTodayAlarm.Value, cumulus.HighRainTodayAlarm.Enabled, true);
 
 				// Yesterday"s rain - Scale for units
 				// rainyest = rainyesterday * RainMult;
@@ -3077,7 +3102,7 @@ namespace CumulusMX
 			// Calculate cloud base
 			if (Temperature.HasValue)
 			{
-				CloudBase = (int)Math.Floor((Temperature - ConvertUserTempToF(Dewpoint)).Value / 4.4 * 1000 / (cumulus.CloudBaseInFeet ? 1 : 3.2808399));
+				CloudBase = (int)Math.Floor((ConvertUserTempToF(Temperature) - ConvertUserTempToF(Dewpoint)).Value / 4.4 * 1000 / (cumulus.CloudBaseInFeet ? 1 : 3.2808399));
 				if (CloudBase < 0)
 					CloudBase = 0;
 			}
@@ -3392,8 +3417,14 @@ namespace CumulusMX
 			{
 				int count = 0;
 				double totalwind = 0;
-				for (int i = 0; i < MaxWindRecent; i++)
+				int i = nextwind;
+
+
+
+				do
 				{
+					//for (int i = 0; i < MaxWindRecent; i++)
+					//{
 					if (timestamp - WindRecent[i].Timestamp <= cumulus.AvgSpeedTime)
 					{
 						count++;
@@ -3406,7 +3437,10 @@ namespace CumulusMX
 							totalwind += WindRecent[i].Gust;
 						}
 					}
-				}
+					//}
+					i = (i + 1) % MaxWindRecent;
+				} while (i != nextwind);
+
 				// average the values
 				WindAverage = count > 0 ? totalwind / count : null;
 				//cumulus.LogDebugMessage("next=" + nextwind + " wind=" + uncalibratedgust + " tot=" + totalwind + " numv=" + numvalues + " avg=" + WindAverage);
@@ -3595,6 +3629,8 @@ namespace CumulusMX
 
 		public void DoSolarRad(int? value, DateTime timestamp)
 		{
+			CurrentSolarMax = AstroLib.SolarMax(timestamp, cumulus.Longitude, cumulus.Latitude, AltitudeM(cumulus.Altitude), out SolarElevation, cumulus.SolarOptions);
+
 			if (value.HasValue)
 			{
 				SolarRad = (int)Math.Round((value.Value * cumulus.Calib.Solar.Mult) + cumulus.Calib.Solar.Offset);
@@ -3615,8 +3651,6 @@ namespace CumulusMX
 			{
 				SolarRad = null;
 			}
-
-			CurrentSolarMax = AstroLib.SolarMax(timestamp, cumulus.Longitude, cumulus.Latitude, AltitudeM(cumulus.Altitude), out SolarElevation, cumulus.SolarOptions);
 
 			HaveReadData = true;
 		}
@@ -4605,17 +4639,19 @@ namespace CumulusMX
 						DateTime noaats = timestamp.AddDays(-1);
 
 						// do monthly NOAA report
-						Cumulus.LogMessage("Creating NOAA monthly report for " + noaats.ToLongDateString());
-						report = noaa.CreateMonthlyReport(noaats);
-						cumulus.NOAAconf.LatestMonthReport = FormatDateTime(cumulus.NOAAconf.MonthFile, noaats);
+						var monthDate = new DateTime(noaats.Year, noaats.Month, 1);
+						Cumulus.LogMessage($"Creating NOAA monthly report for {monthDate.Year}/{monthDate.Month:D2}");
+						report = noaa.CreateMonthlyReport(monthDate);
+						cumulus.NOAAconf.LatestMonthReport = FormatDateTime(cumulus.NOAAconf.MonthFile, monthDate);
 						string noaafile = cumulus.ReportPath + cumulus.NOAAconf.LatestMonthReport;
 						Cumulus.LogMessage("Saving monthly report as " + noaafile);
 						File.WriteAllLines(noaafile, report, encoding);
 
 						// do yearly NOAA report
-						Cumulus.LogMessage("Creating NOAA yearly report");
-						report = noaa.CreateYearlyReport(noaats);
-						cumulus.NOAAconf.LatestYearReport = FormatDateTime(cumulus.NOAAconf.YearFile, noaats);
+						var yearDate = new DateTime(noaats.Year, 1, 1);
+						Cumulus.LogMessage($"Creating NOAA yearly report for {yearDate.Year}");
+						report = noaa.CreateYearlyReport(yearDate);
+						cumulus.NOAAconf.LatestYearReport = FormatDateTime(cumulus.NOAAconf.YearFile, yearDate);
 						noaafile = cumulus.ReportPath + cumulus.NOAAconf.LatestYearReport;
 						Cumulus.LogMessage("Saving yearly report as " + noaafile);
 						File.WriteAllLines(noaafile, report, encoding);
@@ -6304,6 +6340,7 @@ namespace CumulusMX
 		internal void UpdateStatusPanel(DateTime timestamp)
 		{
 			LastDataReadTimestamp = timestamp;
+			_ = sendWebSocketData();
 		}
 
 
@@ -8394,13 +8431,15 @@ namespace CumulusMX
 						WriteYearIniFile();
 					}
 					// All time high gust?
-					if (gust > AllTime.HighGust.Val)
+					if (gustVal > AllTime.HighGust.Val)
 					{
 						SetAlltime(AllTime.HighGust, gustVal, timestamp);
 					}
 
 					// check for monthly all time records (and set)
 					CheckMonthlyAlltime("HighGust", gustVal, true, timestamp);
+
+					cumulus.HighGustAlarm.Triggered = DoAlarm(gustVal, cumulus.HighGustAlarm.Value, cumulus.HighGustAlarm.Enabled, true);
 				}
 				return true;
 			}

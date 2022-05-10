@@ -1,6 +1,4 @@
 ﻿using EmbedIO.WebSockets;
-using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace CumulusMX
@@ -33,9 +31,10 @@ namespace CumulusMX
 			await Task.CompletedTask;
 		}
 
+		// We will do this synchronously to avoid overlaps
 		public void SendMessage(string message)
 		{
-			BroadcastAsync(message);
+			BroadcastAsync(message).Wait();
 		}
 	}
 }

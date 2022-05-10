@@ -91,7 +91,6 @@ namespace CumulusMX
 				disconperiod = cumulus.DavisOptions.PeriodicDisconnectInterval
 			};
 
-
 			var davisvp2advanced = new DavisVp2AdvancedJson()
 			{
 				syncstationclock = cumulus.StationOptions.SyncTime,
@@ -142,7 +141,6 @@ namespace CumulusMX
 				wn34chan8 = cumulus.EcowittSettings.MapWN34[8]
 			};
 
-
 			var gw1000 = new Gw1000ConnJson()
 			{
 				ipaddress = cumulus.Gw1000IpAddress,
@@ -170,7 +168,6 @@ namespace CumulusMX
 				time = cumulus.RolloverHour == 9 ? "9am" : "midnight",
 				summer10am = cumulus.Use10amInSummer
 			};
-
 
 			var fineoffsetadvanced = new FineOffsetAdvancedJson()
 			{
@@ -1012,87 +1009,90 @@ namespace CumulusMX
 				// Ecowitt sensor mappings
 				try
 				{
-					cumulus.Gw1000PrimaryTHSensor = settings.ecowittmaps.primaryTHsensor;
-					cumulus.Gw1000PrimaryRainSensor = settings.ecowittmaps.primaryRainSensor;
-
-					if (cumulus.EcowittSettings.MapWN34[1] != settings.ecowittmaps.wn34chan1)
+					if (settings.ecowittmaps != null)
 					{
-						if (cumulus.EcowittSettings.MapWN34[1] == 0)
-							station.UserTemp[1] = null;
-						else
-							station.SoilTemp[cumulus.EcowittSettings.MapWN34[1]] = null;
+						cumulus.Gw1000PrimaryTHSensor = settings.ecowittmaps.primaryTHsensor;
+						cumulus.Gw1000PrimaryRainSensor = settings.ecowittmaps.primaryRainSensor;
 
-						cumulus.EcowittSettings.MapWN34[1] = settings.ecowittmaps.wn34chan1;
-					}
+						if (cumulus.EcowittSettings.MapWN34[1] != settings.ecowittmaps.wn34chan1)
+						{
+							if (cumulus.EcowittSettings.MapWN34[1] == 0)
+								station.UserTemp[1] = null;
+							else
+								station.SoilTemp[cumulus.EcowittSettings.MapWN34[1]] = null;
 
-					if (cumulus.EcowittSettings.MapWN34[2] != settings.ecowittmaps.wn34chan2)
-					{
-						if (cumulus.EcowittSettings.MapWN34[2] == 0)
-							station.UserTemp[2] = null;
-						else
-							station.SoilTemp[cumulus.EcowittSettings.MapWN34[2]] = null;
+							cumulus.EcowittSettings.MapWN34[1] = settings.ecowittmaps.wn34chan1;
+						}
 
-						cumulus.EcowittSettings.MapWN34[2] = settings.ecowittmaps.wn34chan2;
-					}
+						if (cumulus.EcowittSettings.MapWN34[2] != settings.ecowittmaps.wn34chan2)
+						{
+							if (cumulus.EcowittSettings.MapWN34[2] == 0)
+								station.UserTemp[2] = null;
+							else
+								station.SoilTemp[cumulus.EcowittSettings.MapWN34[2]] = null;
 
-					if (cumulus.EcowittSettings.MapWN34[3] != settings.ecowittmaps.wn34chan3)
-					{
-						if (cumulus.EcowittSettings.MapWN34[3] == 0)
-							station.UserTemp[3] = null;
-						else
-							station.SoilTemp[cumulus.EcowittSettings.MapWN34[3]] = null;
+							cumulus.EcowittSettings.MapWN34[2] = settings.ecowittmaps.wn34chan2;
+						}
 
-						cumulus.EcowittSettings.MapWN34[3] = settings.ecowittmaps.wn34chan3;
-					}
+						if (cumulus.EcowittSettings.MapWN34[3] != settings.ecowittmaps.wn34chan3)
+						{
+							if (cumulus.EcowittSettings.MapWN34[3] == 0)
+								station.UserTemp[3] = null;
+							else
+								station.SoilTemp[cumulus.EcowittSettings.MapWN34[3]] = null;
 
-					if (cumulus.EcowittSettings.MapWN34[4] != settings.ecowittmaps.wn34chan4)
-					{
-						if (cumulus.EcowittSettings.MapWN34[4] == 0)
-							station.UserTemp[4] = null;
-						else
-							station.SoilTemp[cumulus.EcowittSettings.MapWN34[4]] = null;
+							cumulus.EcowittSettings.MapWN34[3] = settings.ecowittmaps.wn34chan3;
+						}
 
-						cumulus.EcowittSettings.MapWN34[4] = settings.ecowittmaps.wn34chan4;
-					}
+						if (cumulus.EcowittSettings.MapWN34[4] != settings.ecowittmaps.wn34chan4)
+						{
+							if (cumulus.EcowittSettings.MapWN34[4] == 0)
+								station.UserTemp[4] = null;
+							else
+								station.SoilTemp[cumulus.EcowittSettings.MapWN34[4]] = null;
 
-					if (cumulus.EcowittSettings.MapWN34[5] != settings.ecowittmaps.wn34chan5)
-					{
-						if (cumulus.EcowittSettings.MapWN34[5] == 0)
-							station.UserTemp[5] = null;
-						else
-							station.SoilTemp[cumulus.EcowittSettings.MapWN34[5]] = null;
+							cumulus.EcowittSettings.MapWN34[4] = settings.ecowittmaps.wn34chan4;
+						}
 
-						cumulus.EcowittSettings.MapWN34[5] = settings.ecowittmaps.wn34chan5;
-					}
+						if (cumulus.EcowittSettings.MapWN34[5] != settings.ecowittmaps.wn34chan5)
+						{
+							if (cumulus.EcowittSettings.MapWN34[5] == 0)
+								station.UserTemp[5] = null;
+							else
+								station.SoilTemp[cumulus.EcowittSettings.MapWN34[5]] = null;
 
-					if (cumulus.EcowittSettings.MapWN34[6] != settings.ecowittmaps.wn34chan6)
-					{
-						if (cumulus.EcowittSettings.MapWN34[6] == 0)
-							station.UserTemp[6] = null;
-						else
-							station.SoilTemp[cumulus.EcowittSettings.MapWN34[6]] = null;
+							cumulus.EcowittSettings.MapWN34[5] = settings.ecowittmaps.wn34chan5;
+						}
 
-						cumulus.EcowittSettings.MapWN34[6] = settings.ecowittmaps.wn34chan6;
-					}
+						if (cumulus.EcowittSettings.MapWN34[6] != settings.ecowittmaps.wn34chan6)
+						{
+							if (cumulus.EcowittSettings.MapWN34[6] == 0)
+								station.UserTemp[6] = null;
+							else
+								station.SoilTemp[cumulus.EcowittSettings.MapWN34[6]] = null;
 
-					if (cumulus.EcowittSettings.MapWN34[7] != settings.ecowittmaps.wn34chan7)
-					{
-						if (cumulus.EcowittSettings.MapWN34[7] == 0)
-							station.UserTemp[7] = null;
-						else
-							station.SoilTemp[cumulus.EcowittSettings.MapWN34[7]] = null;
+							cumulus.EcowittSettings.MapWN34[6] = settings.ecowittmaps.wn34chan6;
+						}
 
-						cumulus.EcowittSettings.MapWN34[7] = settings.ecowittmaps.wn34chan7;
-					}
+						if (cumulus.EcowittSettings.MapWN34[7] != settings.ecowittmaps.wn34chan7)
+						{
+							if (cumulus.EcowittSettings.MapWN34[7] == 0)
+								station.UserTemp[7] = null;
+							else
+								station.SoilTemp[cumulus.EcowittSettings.MapWN34[7]] = null;
 
-					if (cumulus.EcowittSettings.MapWN34[8] != settings.ecowittmaps.wn34chan8)
-					{
-						if (cumulus.EcowittSettings.MapWN34[8] == 0)
-							station.UserTemp[8] = null;
-						else
-							station.SoilTemp[cumulus.EcowittSettings.MapWN34[8]] = null;
+							cumulus.EcowittSettings.MapWN34[7] = settings.ecowittmaps.wn34chan7;
+						}
 
-						cumulus.EcowittSettings.MapWN34[8] = settings.ecowittmaps.wn34chan8;
+						if (cumulus.EcowittSettings.MapWN34[8] != settings.ecowittmaps.wn34chan8)
+						{
+							if (cumulus.EcowittSettings.MapWN34[8] == 0)
+								station.UserTemp[8] = null;
+							else
+								station.SoilTemp[cumulus.EcowittSettings.MapWN34[8]] = null;
+
+							cumulus.EcowittSettings.MapWN34[8] = settings.ecowittmaps.wn34chan8;
+						}
 					}
 				}
 				catch (Exception ex)
@@ -1310,7 +1310,6 @@ namespace CumulusMX
 					context.Response.StatusCode = 500;
 				}
 
-
 				// Station type
 				try
 				{
@@ -1342,7 +1341,6 @@ namespace CumulusMX
 					errorMsg += msg + "\n\n";
 					context.Response.StatusCode = 500;
 				}
-
 
 				// Save the settings
 				cumulus.WriteIniFile();

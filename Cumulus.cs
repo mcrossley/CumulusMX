@@ -690,12 +690,27 @@ namespace CumulusMX
 
 		public string[] StationDesc =
 		{
-			"Davis Vantage Pro", "Davis Vantage Pro2", "Oregon Scientific WMR-928", "Oregon Scientific WM-918", "EasyWeather", "Fine Offset",
-			"LaCrosse WS2300", "Fine Offset with Solar", "Oregon Scientific WMR100", "Oregon Scientific WMR200", "Instromet", "Davis WLL", "GW1000",
-			"HTTP WUnderground", "HTTP Ecowitt", "HTTP Ambient", "WeatherFlow Tempest"
+			"Davis Vantage Pro",			// 0
+			"Davis Vantage Pro2",			// 1
+			"Oregon Scientific WMR-928",	// 2
+			"Oregon Scientific WM-918",		// 3
+			"EasyWeather",					// 4
+			"Fine Offset",					// 5
+			"LaCrosse WS2300",				// 6
+			"Fine Offset with Solar",		// 7
+			"Oregon Scientific WMR100",		// 8
+			"Oregon Scientific WMR200",		// 9
+			"Instromet",					// 10
+			"Davis WLL",					// 11
+			"GW1000",						// 12
+			"HTTP WUnderground",			// 13
+			"HTTP Ecowitt",					// 14
+			"HTTP Ambient",					// 15
+			"WeatherFlow Tempest",			// 16
+			"Simulator"						// 17
 		};
 
-		public string[] APRSstationtype = { "DsVP", "DsVP", "WMR928", "WM918", "EW", "FO", "WS2300", "FOs", "WMR100", "WMR200", "IMET", "DsVP", "Ecow", "Unkn", "Ecow", "Ambt", "Tmpt" };
+		public string[] APRSstationtype = { "DsVP", "DsVP", "WMR928", "WM918", "EW", "FO", "WS2300", "FOs", "WMR100", "WMR200", "IMET", "DsVP", "Ecow", "Unkn", "Ecow", "Ambt", "Tmpt", "Simul" };
 
 		public string loggingfile;
 
@@ -1425,9 +1440,9 @@ namespace CumulusMX
 			}
 			Console.WriteLine();
 
-			LogDebugMessage("Lock: Cumulus waiting for the lock");
+			//LogDebugMessage("Lock: Cumulus waiting for the lock");
 			syncInit.Wait();
-			LogDebugMessage("Lock: Cumulus has lock");
+			//LogDebugMessage("Lock: Cumulus has lock");
 
 			LogMessage("Opening station");
 
@@ -1495,6 +1510,10 @@ namespace CumulusMX
 				case StationTypes.HttpAmbient:
 					Manufacturer = AMBIENT;
 					station = new HttpStationAmbient(this);
+					break;
+				case StationTypes.Simulator:
+					Manufacturer = SIMULATOR;
+					station = new Simulator(this);
 					break;
 				default:
 					LogConsoleMessage("Station type not set", ConsoleColor.Red);
@@ -1624,7 +1643,7 @@ namespace CumulusMX
 				station.Graphs.CreateEodGraphDataFiles();
 			}
 
-			LogDebugMessage("Lock: Cumulus releasing the lock");
+			//LogDebugMessage("Lock: Cumulus releasing the lock");
 			syncInit.Release();
 		}
 
@@ -5978,6 +5997,7 @@ namespace CumulusMX
 		public int HTTPSTATION = 7;
 		public int AMBIENT = 8;
 		public int WEATHERFLOW = 9;
+		public int SIMULATOR = 10;
 
 		//public bool startingup = true;
 		public string ReportPath;
@@ -6979,7 +6999,6 @@ namespace CumulusMX
 						// for daily backup the db is in use, so use an online backup
 						try
 						{
-							// Take the backup before attempting to compress!
 							LogDebugMessage("Making backup copy of the database");
 							station.Database.Backup(dbBackup);
 							LogDebugMessage("Completed backup copy of the database");
@@ -9297,6 +9316,7 @@ namespace CumulusMX
 		public const int HttpEcowitt = 14;
 		public const int HttpAmbient = 15;
 		public const int Tempest = 16;
+		public const int Simulator = 17;
 	}
 
 	/*

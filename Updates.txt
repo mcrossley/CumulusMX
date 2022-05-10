@@ -1,3 +1,13 @@
+4.0.0 - b4011
+——————————————
+- Fix: Potential issue whereby Ecowitt historic data download could get stuck in a loop downloading the same block
+- Fix: NOAA report generation
+- Fix: SolarRad web tag, when no solar data available
+
+- Change: The "live" dashboard screens now refresh whenever new data is received, or every five seconds
+- Change: Removed database compression on every start-up
+
+
 4.0.0 - b4010
 ——————————————
 - More nullification
