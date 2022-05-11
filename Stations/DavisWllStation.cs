@@ -1190,6 +1190,7 @@ namespace CumulusMX
 				DoApparentTemp(dateTime);
 				DoFeelsLike(dateTime);
 				DoHumidex(dateTime);
+				DoCloudBaseHeatIndex(dateTime);
 
 				DoForecast(string.Empty, false);
 
@@ -1731,6 +1732,7 @@ namespace CumulusMX
 					DoApparentTemp(timestamp);
 					DoFeelsLike(timestamp);
 					DoHumidex(timestamp);
+					DoCloudBaseHeatIndex(timestamp);
 
 					// Log all the data
 					_ = cumulus.DoLogFile(timestamp, false); // let this run in background

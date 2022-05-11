@@ -156,6 +156,7 @@ namespace CumulusMX
 				DoApparentTemp(timestamp);
 				DoFeelsLike(timestamp);
 				DoHumidex(timestamp);
+				DoCloudBaseHeatIndex(timestamp);
 
 				DoUV((double) historydata.UV, timestamp);
 
@@ -296,6 +297,7 @@ namespace CumulusMX
 						DoApparentTemp(ts);
 						DoFeelsLike(ts);
 						DoHumidex(ts);
+						DoCloudBaseHeatIndex(ts);
 
 						UpdateStatusPanel(ts);
 						UpdateMQTT();

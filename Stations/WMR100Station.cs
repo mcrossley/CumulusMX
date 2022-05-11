@@ -452,6 +452,7 @@ namespace CumulusMX
 				DoApparentTemp(Now);
 				DoFeelsLike(Now);
 				DoHumidex(Now);
+				DoCloudBaseHeatIndex(Now);
 
 				// battery status
 				//if (PacketBuffer[0] & 0x40 == 0x40 )

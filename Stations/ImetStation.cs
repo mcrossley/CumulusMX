@@ -781,6 +781,7 @@ namespace CumulusMX
 							DoApparentTemp(timestamp);
 							DoFeelsLike(timestamp);
 							DoHumidex(timestamp);
+							DoCloudBaseHeatIndex(timestamp);
 
 							// sunshine hours
 							if (sl[SUNPOS].Length > 0)
@@ -1018,16 +1019,19 @@ namespace CumulusMX
 					Cumulus.LogMessage($"RDLV: Unexpected rain format, found: {sl[RAINPOS]}");
 				}
 
+				DoDewpoint(null, now);
+
 				if (temp1 > -999 && humidity > -999)
 				{
 					DoHumidex(now);
+					DoCloudBaseHeatIndex(now);
+
 					if (windspeed > -999)
 					{
 						DoApparentTemp(now);
 						DoFeelsLike(now);
 					}
 				}
-				DoDewpoint(null, now);
 
 				DoForecast("", false);
 

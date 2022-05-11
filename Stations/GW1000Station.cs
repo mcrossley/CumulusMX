@@ -1185,6 +1185,7 @@ namespace CumulusMX
 						DoApparentTemp(dateTime);
 						DoFeelsLike(dateTime);
 						DoHumidex(dateTime);
+						DoCloudBaseHeatIndex(dateTime);
 					}
 
 					DoForecast("", false);

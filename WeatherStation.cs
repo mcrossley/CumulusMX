@@ -2221,8 +2221,6 @@ namespace CumulusMX
 			if (!temp.HasValue)
 			{
 				Temperature = null;
-				CloudBase = null;
-				HeatIndex = null;
 
 				if ((cumulus.StationOptions.CalculatedDP || cumulus.DavisStation) && (Humidity ?? -1) != 0 && !cumulus.FineOffsetStation)
 				{
@@ -2252,9 +2250,6 @@ namespace CumulusMX
 			Temperature = CalibrateTemp(temp.Value);
 
 			dataValuesUpdated.Temperature = true;
-
-			//double tempinF = ConvertUserTempToF(Temperature).Value;
-			double tempinC = ConvertUserTempToC(Temperature).Value;
 
 			first_temp = false;
 
@@ -2317,6 +2312,37 @@ namespace CumulusMX
 			// Calculate temperature range
 			HiLoToday.TempRange = HiLoToday.HighTemp - HiLoToday.LowTemp;
 
+
+
+			TempReadyToPlot = true;
+			HaveReadData = true;
+		}
+
+		public void DoCloudBaseHeatIndex(DateTime timestamp)
+		{
+			if (Temperature is null || Dewpoint is null)
+			{
+				CloudBase = null;
+				HeatIndex = null;
+				return;
+			}
+
+			var tempinF = ConvertUserTempToF(Temperature).Value;
+			var tempinC = ConvertUserTempToC(Temperature).Value;
+
+			// Calculate cloud base
+			if (Dewpoint.HasValue)
+			{
+				CloudBase = (int)Math.Floor((tempinF - ConvertUserTempToF(Dewpoint)).Value / 4.4 * 1000 / (cumulus.CloudBaseInFeet ? 1 : 3.2808399));
+				if (CloudBase < 0)
+					CloudBase = 0;
+			}
+			else
+			{
+				CloudBase = null;
+			}
+
+
 			if (Humidity.HasValue)
 			{
 				HeatIndex = ConvertTempCToUser(MeteoLib.HeatIndex(tempinC, Humidity.Value));
@@ -2352,21 +2378,14 @@ namespace CumulusMX
 				HeatIndex = null;
 			}
 
-			// Find estimated wet bulb temp. First time this is called, required variables may not have been set up yet
-			try
-			{
-				if (Pressure.HasValue)
-					WetBulb = ConvertTempCToUser(MeteoLib.CalculateWetBulbC(tempinC, ConvertUserTempToC(Dewpoint).Value, ConvertUserPressToMB(Pressure).Value));
-				else
-					WetBulb = Temperature;
-			}
-			catch
-			{
-				WetBulb = Temperature;
-			}
 
-			TempReadyToPlot = true;
-			HaveReadData = true;
+
+
+			// Find estimated wet bulb temp. First time this is called, required variables may not have been set up yet
+			if (Pressure.HasValue && Dewpoint.HasValue)
+				WetBulb = ConvertTempCToUser(MeteoLib.CalculateWetBulbC(tempinC, ConvertUserTempToC(Dewpoint).Value, ConvertUserPressToMB(Pressure).Value));
+			else
+				WetBulb = null;
 		}
 
 		public void DoApparentTemp(DateTime timestamp)
@@ -3097,16 +3116,6 @@ namespace CumulusMX
 				cumulus.LogSpikeRemoval(msg);
 				return;
 			}
-
-
-			// Calculate cloud base
-			if (Temperature.HasValue)
-			{
-				CloudBase = (int)Math.Floor((ConvertUserTempToF(Temperature) - ConvertUserTempToF(Dewpoint)).Value / 4.4 * 1000 / (cumulus.CloudBaseInFeet ? 1 : 3.2808399));
-				if (CloudBase < 0)
-					CloudBase = 0;
-			}
-
 		}
 
 		public string LastRainTip { get; set; }

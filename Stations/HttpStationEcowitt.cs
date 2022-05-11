@@ -793,6 +793,7 @@ namespace CumulusMX
 					if (data["tempf"] != null && data["humidity"] != null)
 					{
 						DoHumidex(recDate);
+						DoCloudBaseHeatIndex(recDate);
 
 						// === Apparent === - requires temp, hum, and windspeed
 						if (data["windspeedmph"] != null)

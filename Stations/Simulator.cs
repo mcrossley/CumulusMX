@@ -139,6 +139,7 @@ namespace CumulusMX
 			DoHumidex(recDate);
 			DoApparentTemp(recDate);
 			DoFeelsLike(recDate);
+			DoCloudBaseHeatIndex(recDate);
 		}
 
 		private void doSolar(DateTime recDate)

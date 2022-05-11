@@ -163,6 +163,7 @@ namespace CumulusMX
 					DoApparentTemp(now);
 					DoFeelsLike(now);
 					DoHumidex(now);
+					DoCloudBaseHeatIndex(now);
 
 					DoForecast(string.Empty, false);
 

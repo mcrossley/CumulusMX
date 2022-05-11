@@ -1637,6 +1637,7 @@ namespace CumulusMX
 			try
 			{
 				station.DoHumidex(rec.Key);
+				station.DoCloudBaseHeatIndex(rec.Key);
 
 				// === Apparent & Feels Like ===
 				station.DoApparentTemp(rec.Key);

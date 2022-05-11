@@ -602,6 +602,7 @@ namespace CumulusMX
 				DoApparentTemp(now);
 				DoFeelsLike(now);
 				DoHumidex(now);
+				DoCloudBaseHeatIndex(now);
 			}
 			else if (sensor == 0)
 			{
@@ -1594,6 +1595,7 @@ namespace CumulusMX
 			DoApparentTemp(timestamp);
 			DoFeelsLike(timestamp);
 			DoHumidex(timestamp);
+			DoCloudBaseHeatIndex(timestamp);
 
 			_ = cumulus.DoLogFile(timestamp,false);
 			cumulus.MySqlStuff.DoRealtimeData(999, false, timestamp);
