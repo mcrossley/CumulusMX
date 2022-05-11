@@ -38,9 +38,9 @@ namespace CumulusMX
 		private bool broadcastReceived;
 		private int weatherLinkArchiveInterval = 16 * 60; // Used to get historic Health, 16 minutes in seconds only for initial fetch after load
 		private bool wllVoltageLow;
-		private CancellationTokenSource tokenSource = new CancellationTokenSource();
-		private CancellationToken cancellationToken;
-		private AutoResetEvent bwDoneEvent = new AutoResetEvent(false);
+		private readonly CancellationTokenSource tokenSource = new CancellationTokenSource();
+		private readonly CancellationToken cancellationToken;
+		private readonly AutoResetEvent bwDoneEvent = new AutoResetEvent(false);
 
 		private readonly List<WlSensor> sensorList = new List<WlSensor>();
 		private readonly bool useWeatherLinkDotCom = true;

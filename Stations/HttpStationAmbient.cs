@@ -792,7 +792,7 @@ namespace CumulusMX
 			}
 		}
 
-		private void ProcessBatteries(NameValueCollection data)
+		private static void ProcessBatteries(NameValueCollection data)
 		{
 			/*
 			Low Battery = 0, Normal Battery = 1
@@ -830,7 +830,7 @@ namespace CumulusMX
 			cumulus.BatteryLowAlarm.Triggered = lowBatt;
 		}
 
-		private void ProcessExtraDewPoint(WeatherStation station)
+		private static void ProcessExtraDewPoint(WeatherStation station)
 		{
 			for (var i = 1; i <= 10; i++)
 			{

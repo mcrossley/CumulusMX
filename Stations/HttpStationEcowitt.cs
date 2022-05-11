@@ -42,9 +42,9 @@ namespace CumulusMX
 				cumulus.StationOptions.CalcWind10MinAve = true;
 
 				// GW1000 does not provide an interval gust value, it gives us a 2 minute high
-				// So CMX porces the latest speed into the gust
-				// Therefore we need to force using the gust (but we actually input the speed) for the average calculation
-				cumulus.StationOptions.UseSpeedForAvgCalc = false;
+				// The speed is the average for that update
+				// Therefore we need to force using the speed for the average calculation
+				cumulus.StationOptions.UseSpeedForAvgCalc = true;
 
 				// does not send DP, so force MX to calculate it
 				cumulus.StationOptions.CalculatedDP = true;
@@ -297,25 +297,7 @@ namespace CumulusMX
 						int? dirVal = dir == null ? null : Convert.ToInt32(dir, invNum);
 						var spdVal = spd == null ? null : ConvertWindMPHToUser(Convert.ToDouble(spd, invNum));
 
-						// The protocol does not provide an average value
-						// so feed in current MX average
-						DoWind(spdVal, dirVal, (WindAverage ?? 0) / cumulus.Calib.WindSpeed.Mult, recDate);
-
-						var gustLastCal = gustVal * cumulus.Calib.WindGust.Mult;
-						if (gustLastCal > RecentMaxGust)
-						{
-							cumulus.LogDebugMessage("Setting max gust from current value: " + gustLastCal.Value.ToString(cumulus.WindFormat));
-							CheckHighGust(gustLastCal, dirVal, recDate);
-
-							// add to recent values so normal calculation includes this value
-							WindRecent[nextwind].Gust = gustVal.Value; // use uncalibrated value
-							WindRecent[nextwind].Speed = (WindAverage ?? 0) / cumulus.Calib.WindSpeed.Mult;
-							WindRecent[nextwind].Timestamp = recDate;
-							nextwind = (nextwind + 1) % MaxWindRecent;
-
-							RecentMaxGust = gustLastCal;
-						}
-
+						DoWind(gustVal, dirVal, spdVal, recDate);
 					}
 					catch (Exception ex)
 					{
@@ -1272,7 +1254,7 @@ namespace CumulusMX
 						}
 						else
 						{
-							Cumulus.LogMessage($"Set Ecowitt Gateway Custom Server path={path}");
+							Cumulus.LogMessage($"Set Ecowitt Gateway Custom Server Path={customPath}");
 						}
 					}
 				}

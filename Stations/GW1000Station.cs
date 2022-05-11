@@ -26,8 +26,8 @@ namespace CumulusMX
 		private bool dataReceived = false;
 
 		private readonly System.Timers.Timer tmrDataWatchdog;
-		private CancellationTokenSource tokenSource = new CancellationTokenSource();
-		private CancellationToken cancellationToken;
+		private readonly CancellationTokenSource tokenSource = new CancellationTokenSource();
+		private readonly CancellationToken cancellationToken;
 
 		private Task historyTask;
 		private Task liveTask;
@@ -1170,26 +1170,6 @@ namespace CumulusMX
 					if (gustLast > -999 && windSpeedLast > -999 && windDirLast > -999)
 					{
 						DoWind(gustLast, windDirLast, windSpeedLast, dateTime);
-						
-						/*
-						// The protocol does not provide an average value
-						// so feed in current MX average
-						DoWind(windSpeedLast, windDirLast, (WindAverage ?? 0) / cumulus.Calib.WindSpeed.Mult, dateTime);
-						var gustLastCal = gustLast * cumulus.Calib.WindGust.Mult;
-						if (gustLastCal > RecentMaxGust)
-						{
-							cumulus.LogDebugMessage("Setting max gust from current value: " + gustLastCal.ToString(cumulus.WindFormat));
-							CheckHighGust(gustLastCal, windDirLast, dateTime);
-
-							// add to recent values so normal calculation includes this value
-							WindRecent[nextwind].Gust = gustLast; // use uncalibrated value
-							WindRecent[nextwind].Speed = (WindAverage ?? 0) / cumulus.Calib.WindSpeed.Mult;
-							WindRecent[nextwind].Timestamp = dateTime;
-							nextwind = (nextwind + 1) % MaxWindRecent;
-
-							RecentMaxGust = gustLastCal;
-						}
-						*/
 					}
 
 

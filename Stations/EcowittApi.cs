@@ -171,7 +171,7 @@ namespace CumulusMX
 
 			var url = sb.ToString();
 
-			var msg = $"Processing history data from {startTime.ToString("yyyy-MM-dd HH:mm")} to {endTime.AddMinutes(5).ToString("yyyy-MM-dd HH:mm")}...";
+			var msg = $"Processing history data from {startTime:yyyy-MM-dd HH:mm} to {endTime.AddMinutes(5):yyyy-MM-dd HH:mm}...";
 			Cumulus.LogMessage($"API.GetHistoricData: " + msg);
 			Cumulus.LogConsoleMessage(msg);
 
@@ -613,8 +613,10 @@ namespace CumulusMX
 											}
 											else
 											{
-												var newItem = new HistoricData();
-												newItem.RainRate = item.Value;
+												var newItem = new HistoricData
+												{
+													RainRate = item.Value
+												};
 												buffer.Add(itemDate, newItem);
 											}
 										}
@@ -636,8 +638,10 @@ namespace CumulusMX
 											}
 											else
 											{
-												var newItem = new HistoricData();
-												newItem.RainYear = item.Value;
+												var newItem = new HistoricData
+												{
+													RainYear = item.Value
+												};
 												buffer.Add(itemDate, newItem);
 											}
 										}
@@ -674,8 +678,10 @@ namespace CumulusMX
 											}
 											else
 											{
-												var newItem = new HistoricData();
-												newItem.RainRate = item.Value;
+												var newItem = new HistoricData
+												{
+													RainRate = item.Value
+												};
 												buffer.Add(itemDate, newItem);
 											}
 										}
@@ -697,8 +703,10 @@ namespace CumulusMX
 											}
 											else
 											{
-												var newItem = new HistoricData();
-												newItem.RainYear = item.Value;
+												var newItem = new HistoricData
+												{
+													RainYear = item.Value
+												};
 												buffer.Add(itemDate, newItem);
 											}
 										}
@@ -1377,27 +1385,7 @@ namespace CumulusMX
 			// === Wind ==
 			try
 			{
-				// The protocol does not provide an average value
-				// so feed in current MX average
-				station.DoWind(rec.Value.WindSpd, rec.Value.WindDir, (station.WindAverage ?? 0) / cumulus.Calib.WindSpeed.Mult, rec.Key);
-
-				if (rec.Value.WindGust.HasValue && rec.Value.WindDir.HasValue)
-				{
-					var gustLastCal = rec.Value.WindGust * cumulus.Calib.WindGust.Mult;
-					if (gustLastCal > station.RecentMaxGust)
-					{
-						cumulus.LogDebugMessage("Setting max gust from current value: " + gustLastCal.Value.ToString(cumulus.WindFormat));
-						station.CheckHighGust(gustLastCal, rec.Value.WindDir, rec.Key);
-
-						// add to recent values so normal calculation includes this value
-						station.WindRecent[station.nextwind].Gust = (double)rec.Value.WindGust; // use uncalibrated value
-						station.WindRecent[station.nextwind].Speed = station.WindAverage.Value / cumulus.Calib.WindSpeed.Mult;
-						station.WindRecent[station.nextwind].Timestamp = rec.Key;
-						station.nextwind = (station.nextwind + 1) % WeatherStation.MaxWindRecent;
-
-						station.RecentMaxGust = gustLastCal;
-					}
-				}
+				station.DoWind(rec.Value.WindGust, rec.Value.WindDir, rec.Value.WindSpd, rec.Key);
 			}
 			catch (Exception ex)
 			{

@@ -28,6 +28,7 @@ namespace CumulusMX
 			// Build the settings data, convert to JSON, and return it
 			var optionsAdv = new OptionsAdvancedJson()
 			{
+				usezerobearing = cumulus.StationOptions.UseZeroBearing,
 				avgbearingmins = cumulus.StationOptions.AvgBearingMinutes,
 				avgspeedmins = cumulus.StationOptions.AvgSpeedMinutes,
 				peakgustmins = cumulus.StationOptions.PeakGustMinutes,
@@ -39,7 +40,6 @@ namespace CumulusMX
 
 			var options = new OptionsJson()
 			{
-				usezerobearing = cumulus.StationOptions.UseZeroBearing,
 				calcwindaverage = cumulus.StationOptions.CalcWind10MinAve,
 				usespeedforavg = cumulus.StationOptions.UseSpeedForAvgCalc,
 				use100for98hum = cumulus.StationOptions.Humidity98Fix,
@@ -739,7 +739,6 @@ namespace CumulusMX
 				// Options
 				try
 				{
-					cumulus.StationOptions.UseZeroBearing = settings.Options.usezerobearing;
 					cumulus.StationOptions.CalcWind10MinAve = settings.Options.calcwindaverage;
 					cumulus.StationOptions.UseSpeedForAvgCalc = settings.Options.usespeedforavg;
 					cumulus.StationOptions.Humidity98Fix = settings.Options.use100for98hum;
@@ -751,6 +750,7 @@ namespace CumulusMX
 					cumulus.StationOptions.RoundWindSpeed = settings.Options.roundwindspeeds;
 					cumulus.StationOptions.NoSensorCheck = settings.Options.nosensorcheck;
 
+					cumulus.StationOptions.UseZeroBearing = settings.Options.advanced.usezerobearing;
 					cumulus.StationOptions.AvgBearingMinutes = settings.Options.advanced.avgbearingmins;
 					cumulus.StationOptions.AvgSpeedMinutes = settings.Options.advanced.avgspeedmins;
 					cumulus.StationOptions.PeakGustMinutes = settings.Options.advanced.peakgustmins;
@@ -1569,6 +1569,7 @@ namespace CumulusMX
 
 		private class OptionsAdvancedJson
 		{
+			public bool usezerobearing { get; set; }
 			public int avgbearingmins { get; set; }
 			public int avgspeedmins { get; set; }
 			public int peakgustmins { get; set; }
@@ -1580,7 +1581,6 @@ namespace CumulusMX
 
 		private class OptionsJson
 		{
-			public bool usezerobearing { get; set; }
 			public bool calcwindaverage { get; set; }
 			public bool usespeedforavg { get; set; }
 			public bool use100for98hum { get; set; }
