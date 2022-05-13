@@ -33,6 +33,7 @@ namespace CumulusMX
 		private Task liveTask;
 
 		private readonly Version fwVersion;
+		private readonly string gatewayType;
 
 
 		public GW1000Station(Cumulus cumulus) : base(cumulus)
@@ -49,7 +50,7 @@ namespace CumulusMX
 			cumulus.StationOptions.UseSpeedForAvgCalc = true;
 
 			LightningTime = DateTime.MinValue;
-			LightningDistance = 999;
+			LightningDistance = -1.0;
 
 			tmrDataWatchdog = new System.Timers.Timer();
 
@@ -116,6 +117,7 @@ namespace CumulusMX
 				var fwString = GW1000FirmwareVersion.Split("_V", StringSplitOptions.None);
 				if (fwString.Length > 1)
 				{
+					gatewayType = fwString[0];
 					fwVersion = new Version(fwString[1]);
 				}
 				else
@@ -622,7 +624,7 @@ namespace CumulusMX
 						// if a WS90 is connected, it has an 8.8 second update rate, so reduce the MX update rate from the default 10 seconds
 						if (updateRate > 8000 && updateRate != 8000)
 						{
-							Cumulus.LogMessage($"PrintSensorInfoNew: WS90 sensor detected, changing the update rate from {updateRate / 1000} seconds to 8 seconds");
+							Cumulus.LogMessage($"PrintSensorInfoNew: WS90 sensor detected, changing the update rate from {(updateRate / 1000):D} seconds to 8 seconds");
 							updateRate = 8000;
 						}
 						battV = data[battPos] * 0.02;
@@ -652,7 +654,7 @@ namespace CumulusMX
 						// if a WS80 is connected, it has a 4.75 second update rate, so reduce the MX update rate from the default 10 seconds
 						if (updateRate > 4000 && updateRate != 4000)
 						{
-							Cumulus.LogMessage($"PrintSensorInfoNew: WS80 sensor detected, changing the update rate from {updateRate/1000} seconds to 4 seconds");
+							Cumulus.LogMessage($"PrintSensorInfoNew: WS80 sensor detected, changing the update rate from {(updateRate / 1000):D} seconds to 4 seconds");
 							updateRate = 4000;
 						}
 						battV = data[battPos] * 0.02;

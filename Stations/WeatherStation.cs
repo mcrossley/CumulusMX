@@ -41,7 +41,7 @@ namespace CumulusMX
 		public readonly Object yearIniThreadLock = new Object();
 		public readonly Object alltimeIniThreadLock = new Object();
 		public readonly Object monthlyalltimeIniThreadLock = new Object();
-		private readonly Object webSocketThreadLock = new Object();
+		private static readonly SemaphoreSlim webSocketSemaphore = new SemaphoreSlim(1, 1);
 
 		// holds all time highs and lows
 		public AllTimeRecords AllTime = new AllTimeRecords();
@@ -588,7 +588,7 @@ namespace CumulusMX
 			AlltimeRecordTimestamp = ini.GetValue("Records", "Alltime", DateTime.MinValue);
 
 			// Lightning (GW1000 for now)
-			LightningDistance = ini.GetValue("Lightning", "Distance", -1);
+			LightningDistance = ini.GetValue("Lightning", "Distance", -1.0);
 			LightningTime = ini.GetValue("Lightning", "LastStrike", DateTime.MinValue);
 		}
 
@@ -1290,68 +1290,76 @@ namespace CumulusMX
 			// send current data to web-socket
 			try
 			{
-				// wait for the ws lock object
-				lock (webSocketThreadLock)
+				// if we already have an update queued, don't add to the wait queue. Otherwise we get hundreds queued up during catch-up
+				if (webSocketSemaphore.CurrentCount == 0)
 				{
-
-					StringBuilder windRoseData = new StringBuilder(80);
-
-					lock (windcounts)
-					{
-						windRoseData.Append((windcounts[0] * cumulus.Calib.WindGust.Mult).ToString(cumulus.WindFormat, invNum));
-
-						for (var i = 1; i < cumulus.NumWindRosePoints; i++)
-						{
-							windRoseData.Append(',');
-							windRoseData.Append((windcounts[i] * cumulus.Calib.WindGust.Mult).ToString(cumulus.WindFormat, invNum));
-						}
-					}
-
-					string stormRainStart = StartOfStorm == DateTime.MinValue ? "-----" : StartOfStorm.ToString("d");
-
-					var data = new WebSocketData(cumulus, Temperature, Humidity, TempTotalToday / tempsamplestoday, IndoorTemp, Dewpoint, WindChill, IndoorHum,
-						Pressure, WindLatest, WindAverage, RecentMaxGust, WindRunToday, Bearing, AvgBearing, RainToday, RainYesterday, RainMonth, RainYear, RainRate,
-						RainLastHour, HeatIndex, Humidex, ApparentTemp, temptrendval, presstrendval, HiLoToday.HighGust, HiLoToday.HighGustTime.ToString("HH:mm"), HiLoToday.HighWind,
-						HiLoToday.HighGustBearing, cumulus.Units.WindText, BearingRangeFrom10, BearingRangeTo10, windRoseData.ToString(), HiLoToday.HighTemp, HiLoToday.LowTemp,
-						HiLoToday.HighTempTime.ToString("HH:mm"), HiLoToday.LowTempTime.ToString("HH:mm"), HiLoToday.HighPress, HiLoToday.LowPress, HiLoToday.HighPressTime.ToString("HH:mm"),
-						HiLoToday.LowPressTime.ToString("HH:mm"), HiLoToday.HighRainRate, HiLoToday.HighRainRateTime.ToString("HH:mm"), HiLoToday.HighHumidity, HiLoToday.LowHumidity,
-						HiLoToday.HighHumidityTime.ToString("HH:mm"), HiLoToday.LowHumidityTime.ToString("HH:mm"), cumulus.Units.PressText, cumulus.Units.TempText, cumulus.Units.RainText,
-						HiLoToday.HighDewPoint, HiLoToday.LowDewPoint, HiLoToday.HighDewPointTime.ToString("HH:mm"), HiLoToday.LowDewPointTime.ToString("HH:mm"), HiLoToday.LowWindChill,
-						HiLoToday.LowWindChillTime.ToString("HH:mm"), SolarRad, HiLoToday.HighSolar, HiLoToday.HighSolarTime.ToString("HH:mm"), UV, HiLoToday.HighUv,
-						HiLoToday.HighUvTime.ToString("HH:mm"), forecaststr, getTimeString(cumulus.SunRiseTime), getTimeString(cumulus.SunSetTime),
-						getTimeString(cumulus.MoonRiseTime), getTimeString(cumulus.MoonSetTime), HiLoToday.HighHeatIndex, HiLoToday.HighHeatIndexTime.ToString("HH:mm"), HiLoToday.HighAppTemp,
-						HiLoToday.LowAppTemp, HiLoToday.HighAppTempTime.ToString("HH:mm"), HiLoToday.LowAppTempTime.ToString("HH:mm"), CurrentSolarMax,
-						AllTime.HighPress.Val, AllTime.LowPress.Val, SunshineHours, CompassPoint(DominantWindBearing), LastRainTip,
-						HiLoToday.HighHourlyRain, HiLoToday.HighHourlyRainTime.ToString("HH:mm"), "F" + cumulus.Beaufort(HiLoToday.HighWind), "F" + cumulus.Beaufort(WindAverage ?? 0), cumulus.BeaufortDesc(WindAverage ?? 0),
-						LastDataReadTimestamp.ToString("HH:mm:ss"), DataStopped, StormRain, stormRainStart, CloudBase, cumulus.CloudBaseInFeet ? "ft" : "m", RainLast24Hour,
-						cumulus.LowTempAlarm.Triggered, cumulus.HighTempAlarm.Triggered, cumulus.TempChangeAlarm.UpTriggered, cumulus.TempChangeAlarm.DownTriggered, cumulus.HighRainTodayAlarm.Triggered, cumulus.HighRainRateAlarm.Triggered,
-						cumulus.LowPressAlarm.Triggered, cumulus.HighPressAlarm.Triggered, cumulus.PressChangeAlarm.UpTriggered, cumulus.PressChangeAlarm.DownTriggered, cumulus.HighGustAlarm.Triggered, cumulus.HighWindAlarm.Triggered,
-						cumulus.SensorAlarm.Triggered, cumulus.BatteryLowAlarm.Triggered, cumulus.SpikeAlarm.Triggered, cumulus.UpgradeAlarm.Triggered,
-						cumulus.HttpUploadAlarm.Triggered, cumulus.MySqlUploadAlarm.Triggered,
-						FeelsLike, HiLoToday.HighFeelsLike, HiLoToday.HighFeelsLikeTime.ToString("HH:mm"), HiLoToday.LowFeelsLike, HiLoToday.LowFeelsLikeTime.ToString("HH:mm"),
-						HiLoToday.HighHumidex, HiLoToday.HighHumidexTime.ToString("HH:mm"));
-
-
-					var ser = new DataContractJsonSerializer(typeof(WebSocketData));
-
-					var stream = new MemoryStream();
-
-					ser.WriteObject(stream, data);
-
-					stream.Position = 0;
-
-					cumulus.WebSock.SendMessage(new StreamReader(stream).ReadToEnd());
-
-					// ** CMX 3 - We can't be sure when the broadcast completes, so the best we can do is wait a short time 
-					// ** CMX 4 - the broadacst is now awaitable, so we can run it synchronously - therefore now no need to add an artifical delay
-					//Thread.Sleep(500);
+					cumulus.LogDebugMessage("sendWebSocketData: Update already queued, dropping this one");
+					return;
 				}
+
+				// wait for the ws lock object
+				webSocketSemaphore.Wait();
+
+				StringBuilder windRoseData = new StringBuilder(80);
+
+				lock (windcounts)
+				{
+					windRoseData.Append((windcounts[0] * cumulus.Calib.WindGust.Mult).ToString(cumulus.WindFormat, invNum));
+
+					for (var i = 1; i < cumulus.NumWindRosePoints; i++)
+					{
+						windRoseData.Append(',');
+						windRoseData.Append((windcounts[i] * cumulus.Calib.WindGust.Mult).ToString(cumulus.WindFormat, invNum));
+					}
+				}
+
+				string stormRainStart = StartOfStorm == DateTime.MinValue ? "-----" : StartOfStorm.ToString("d");
+
+				var data = new WebSocketData(cumulus, Temperature, Humidity, TempTotalToday / tempsamplestoday, IndoorTemp, Dewpoint, WindChill, IndoorHum,
+					Pressure, WindLatest, WindAverage, RecentMaxGust, WindRunToday, Bearing, AvgBearing, RainToday, RainYesterday, RainMonth, RainYear, RainRate,
+					RainLastHour, HeatIndex, Humidex, ApparentTemp, temptrendval, presstrendval, HiLoToday.HighGust, HiLoToday.HighGustTime.ToString("HH:mm"), HiLoToday.HighWind,
+					HiLoToday.HighGustBearing, cumulus.Units.WindText, BearingRangeFrom10, BearingRangeTo10, windRoseData.ToString(), HiLoToday.HighTemp, HiLoToday.LowTemp,
+					HiLoToday.HighTempTime.ToString("HH:mm"), HiLoToday.LowTempTime.ToString("HH:mm"), HiLoToday.HighPress, HiLoToday.LowPress, HiLoToday.HighPressTime.ToString("HH:mm"),
+					HiLoToday.LowPressTime.ToString("HH:mm"), HiLoToday.HighRainRate, HiLoToday.HighRainRateTime.ToString("HH:mm"), HiLoToday.HighHumidity, HiLoToday.LowHumidity,
+					HiLoToday.HighHumidityTime.ToString("HH:mm"), HiLoToday.LowHumidityTime.ToString("HH:mm"), cumulus.Units.PressText, cumulus.Units.TempText, cumulus.Units.RainText,
+					HiLoToday.HighDewPoint, HiLoToday.LowDewPoint, HiLoToday.HighDewPointTime.ToString("HH:mm"), HiLoToday.LowDewPointTime.ToString("HH:mm"), HiLoToday.LowWindChill,
+					HiLoToday.LowWindChillTime.ToString("HH:mm"), SolarRad, HiLoToday.HighSolar, HiLoToday.HighSolarTime.ToString("HH:mm"), UV, HiLoToday.HighUv,
+					HiLoToday.HighUvTime.ToString("HH:mm"), forecaststr, getTimeString(cumulus.SunRiseTime), getTimeString(cumulus.SunSetTime),
+					getTimeString(cumulus.MoonRiseTime), getTimeString(cumulus.MoonSetTime), HiLoToday.HighHeatIndex, HiLoToday.HighHeatIndexTime.ToString("HH:mm"), HiLoToday.HighAppTemp,
+					HiLoToday.LowAppTemp, HiLoToday.HighAppTempTime.ToString("HH:mm"), HiLoToday.LowAppTempTime.ToString("HH:mm"), CurrentSolarMax,
+					AllTime.HighPress.Val, AllTime.LowPress.Val, SunshineHours, CompassPoint(DominantWindBearing), LastRainTip,
+					HiLoToday.HighHourlyRain, HiLoToday.HighHourlyRainTime.ToString("HH:mm"), "F" + cumulus.Beaufort(HiLoToday.HighWind), "F" + cumulus.Beaufort(WindAverage ?? 0), cumulus.BeaufortDesc(WindAverage ?? 0),
+					LastDataReadTimestamp.ToString("HH:mm:ss"), DataStopped, StormRain, stormRainStart, CloudBase, cumulus.CloudBaseInFeet ? "ft" : "m", RainLast24Hour,
+					cumulus.LowTempAlarm.Triggered, cumulus.HighTempAlarm.Triggered, cumulus.TempChangeAlarm.UpTriggered, cumulus.TempChangeAlarm.DownTriggered, cumulus.HighRainTodayAlarm.Triggered, cumulus.HighRainRateAlarm.Triggered,
+					cumulus.LowPressAlarm.Triggered, cumulus.HighPressAlarm.Triggered, cumulus.PressChangeAlarm.UpTriggered, cumulus.PressChangeAlarm.DownTriggered, cumulus.HighGustAlarm.Triggered, cumulus.HighWindAlarm.Triggered,
+					cumulus.SensorAlarm.Triggered, cumulus.BatteryLowAlarm.Triggered, cumulus.SpikeAlarm.Triggered, cumulus.UpgradeAlarm.Triggered,
+					cumulus.HttpUploadAlarm.Triggered, cumulus.MySqlUploadAlarm.Triggered,
+					FeelsLike, HiLoToday.HighFeelsLike, HiLoToday.HighFeelsLikeTime.ToString("HH:mm"), HiLoToday.LowFeelsLike, HiLoToday.LowFeelsLikeTime.ToString("HH:mm"),
+					HiLoToday.HighHumidex, HiLoToday.HighHumidexTime.ToString("HH:mm"));
+
+
+				var ser = new DataContractJsonSerializer(typeof(WebSocketData));
+
+				var stream = new MemoryStream();
+
+				ser.WriteObject(stream, data);
+
+				stream.Position = 0;
+
+				cumulus.WebSock.SendMessage(new StreamReader(stream).ReadToEnd());
+
+				// ** CMX 3 - We can't be sure when the broadcast completes, so the best we can do is wait a short time 
+				// ** CMX 4 - the broadacst is now awaitable, so we can run it synchronously - therefore now no need to add an artifical delay
+				//Thread.Sleep(500);
 			}
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "sendWebSocketData: Error");
 			}
-
+			finally
+			{
+				webSocketSemaphore.Release();
+			}
 		}
 
 		private static string getTimeString(DateTime time)
@@ -7821,8 +7829,8 @@ namespace CumulusMX
 		{
 			var json = new StringBuilder("{\"data\":[", 256);
 
-			json.Append($"[\"Distance to last strike\",\"{LightningDistance.ToString(cumulus.WindRunFormat)}\",\"{cumulus.Units.WindRunText}\"],");
-			json.Append($"[\"Time of last strike\",\"{LightningTime}\",\"\"],");
+			json.Append($"[\"Distance to last strike\",\"{(LightningDistance == -1 ? "-" : LightningDistance.ToString(cumulus.WindRunFormat))}\",\"{cumulus.Units.WindRunText}\"],");
+			json.Append($"[\"Time of last strike\",\"{(DateTime.Equals(LightningTime, DateTime.MinValue) ? "-" : LightningTime.ToString("g"))}\",\"\"],");
 			json.Append($"[\"Number of strikes today\",\"{LightningStrikesToday}\",\"\"]");
 			json.Append("]}");
 			return json.ToString();
