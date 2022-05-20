@@ -23,7 +23,7 @@ namespace CumulusMX
 		public List<string> GenerateNoaaYearReport(int year)
 		{
 			NOAA noaa = new NOAA(cumulus, station);
-			DateTime noaats = new DateTime(year, 1, 1);
+			var noaats = new DateOnly(year, 1, 1);
 
 			Cumulus.LogMessage("Creating NOAA yearly report");
 			report = noaa.CreateYearlyReport(noaats);
@@ -48,7 +48,7 @@ namespace CumulusMX
 		public List<string> GenerateNoaaMonthReport(int year, int month)
 		{
 			NOAA noaa = new NOAA(cumulus, station);
-			DateTime noaats = new DateTime(year, month, 1);
+			var noaats = new DateOnly(year, month, 1);
 
 			Cumulus.LogMessage("Creating NOAA monthly report");
 			var report = noaa.CreateMonthlyReport(noaats);
@@ -73,7 +73,7 @@ namespace CumulusMX
 
 		public List<string> GetNoaaYearReport(int year)
 		{
-			DateTime noaats = new DateTime(year, 1, 1);
+			var noaats = new DateOnly(year, 1, 1);
 			var reportName = String.Empty;
 			try
 			{
@@ -91,7 +91,7 @@ namespace CumulusMX
 
 		public List<string> GetNoaaMonthReport(int year, int month)
 		{
-			DateTime noaats = new DateTime(year, month, 1);
+			var noaats = new DateOnly(year, month, 1);
 			var reportName = String.Empty;
 			try
 			{

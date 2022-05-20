@@ -9089,6 +9089,10 @@ namespace CumulusMX
 					updatingCustomHttpSeconds = false;
 				}
 			}
+			else
+			{
+				LogDebugMessage("CustomHttpSeconds: Query already in progress, skipping this attempt");
+			}
 		}
 
 		public async Task CustomHttpMinutesUpdate()

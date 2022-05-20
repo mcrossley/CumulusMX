@@ -128,7 +128,7 @@ namespace CumulusMX
 			double totalwinddirY = 0;
 			double totalwindspeed = 0;
 
-			var start = new DateTime(year, month, 1);
+			var start = new DateOnly(year, month, 1);
 			var end = start.AddMonths(1);
 			try
 			{
@@ -187,7 +187,7 @@ namespace CumulusMX
 			return avg;
 		}
 
-		public List<string> CreateMonthlyReport(DateTime thedate)
+		public List<string> CreateMonthlyReport(DateOnly thedate)
 		{
 			var output = new List<string>();
 
@@ -681,7 +681,7 @@ namespace CumulusMX
 		}
 
 
-		public List<string> CreateYearlyReport(DateTime thedate)
+		public List<string> CreateYearlyReport(DateOnly thedate)
 		{
 			var output = new List<string>();
 

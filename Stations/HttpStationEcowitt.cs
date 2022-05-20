@@ -262,8 +262,8 @@ namespace CumulusMX
 				if (recDate.Minute != lastMinute)
 				{
 
-					// at start-up or every 10 minutes trigger output of uptime
-					if ((recDate.Minute % 10) == 0 || lastMinute == -1 && data["runtime"] != null)
+					// at start-up or every 20 minutes trigger output of uptime
+					if ((recDate.Minute % 20) == 0 || lastMinute == -1 && data["runtime"] != null)
 					{
 						var runtime = Convert.ToInt32(data["runtime"]);
 						var uptime = TimeSpan.FromSeconds(runtime);
@@ -309,7 +309,7 @@ namespace CumulusMX
 
 						if (gust == null || dir == null || spd == null)
 						{
-							Cumulus.LogMessage($"ProcessData: Error, missing wind data");
+							cumulus.LogDebugMessage($"ProcessData: Error, missing wind data");
 						}
 						var gustVal = gust == null ? null : ConvertWindMPHToUser(Convert.ToDouble(gust, invNum));
 						int? dirVal = dir == null ? null : Convert.ToInt32(dir, invNum);
@@ -349,7 +349,7 @@ namespace CumulusMX
 							if (thisHum == null)
 							{
 								DoHumidity(null, recDate);
-								Cumulus.LogMessage("ProcessData: Error, missing outdoor humidity");
+								cumulus.LogDebugMessage("ProcessData: Error, missing outdoor humidity");
 							}
 							else
 							{
@@ -377,7 +377,7 @@ namespace CumulusMX
 						if (press == null)
 						{
 							DoPressure(null, recDate);
-							Cumulus.LogMessage($"ProcessData: Error, missing baro pressure");
+							cumulus.LogDebugMessage($"ProcessData: Error, missing baro pressure");
 						}
 						else
 						{
@@ -404,7 +404,7 @@ namespace CumulusMX
 						if (temp == null)
 						{
 							DoIndoorTemp(null);
-							Cumulus.LogMessage($"ProcessData: Error, missing indoor temp");
+							cumulus.LogDebugMessage($"ProcessData: Error, missing indoor temp");
 						}
 						else
 						{
@@ -429,7 +429,7 @@ namespace CumulusMX
 							if (thisTemp == null)
 							{
 								DoTemperature(null, recDate);
-								Cumulus.LogMessage($"ProcessData: Error, missing outdoor temp");
+								cumulus.LogDebugMessage($"ProcessData: Error, missing outdoor temp");
 							}
 							else
 							{
@@ -498,7 +498,7 @@ namespace CumulusMX
 
 						if (rain == null)
 						{
-							Cumulus.LogMessage($"ProcessData: Error, missing rainfall");
+							cumulus.LogDebugMessage($"ProcessData: Error, missing rainfall");
 							var rateVal = ConvertRainINToUser(Convert.ToDouble(rRate, invNum));
 							DoRain(null, rateVal, recDate);
 						}

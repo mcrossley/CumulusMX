@@ -935,6 +935,10 @@ namespace CumulusMX
 			return timestamp.ToString(fmt);
 		}
 
+		private static string FormatDateTime(string fmt, DateOnly timestamp)
+		{
+			return timestamp.ToString(fmt);
+		}
 
 		public int CurrentDay { get; set; }
 
@@ -1431,9 +1435,10 @@ namespace CumulusMX
 			if ((now.Minute + 1) % 5 == 0)
 				dataValuesUpdated.CheckDataValuesForUpdate();
 
+			CurrentSolarMax = AstroLib.SolarMax(now, cumulus.Longitude, cumulus.Latitude, AltitudeM(cumulus.Altitude), out SolarElevation, cumulus.SolarOptions);
+			
 			if (!DataStopped)
 			{
-				CurrentSolarMax = AstroLib.SolarMax(now, cumulus.Longitude, cumulus.Latitude, AltitudeM(cumulus.Altitude), out SolarElevation, cumulus.SolarOptions);
 				//if (cumulus.StationOptions.NoSensorCheck)
 
 				// increment wind run by one minute's worth of average speed
@@ -1493,7 +1498,7 @@ namespace CumulusMX
 				AddRecentDataWithAq(now, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex, Humidity,
 					Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate);
 				DoTrendValues(now);
-				DoPressTrend("Pressure trend");
+				DoPressTrend("Enable Cumulus pressure trend");
 
 				// calculate ET just before the hour so it is included in the correct day at roll over - only affects 9am met days really
 				if (cumulus.StationOptions.CalculatedET && now.Minute == 59)
@@ -4656,7 +4661,7 @@ namespace CumulusMX
 						DateTime noaats = timestamp.AddDays(-1);
 
 						// do monthly NOAA report
-						var monthDate = new DateTime(noaats.Year, noaats.Month, 1);
+						var monthDate = new DateOnly(noaats.Year, noaats.Month, 1);
 						Cumulus.LogMessage($"Creating NOAA monthly report for {monthDate.Year}/{monthDate.Month:D2}");
 						report = noaa.CreateMonthlyReport(monthDate);
 						cumulus.NOAAconf.LatestMonthReport = FormatDateTime(cumulus.NOAAconf.MonthFile, monthDate);
@@ -4665,7 +4670,7 @@ namespace CumulusMX
 						File.WriteAllLines(noaafile, report, encoding);
 
 						// do yearly NOAA report
-						var yearDate = new DateTime(noaats.Year, 1, 1);
+						var yearDate = new DateOnly(noaats.Year, 1, 1);
 						Cumulus.LogMessage($"Creating NOAA yearly report for {yearDate.Year}");
 						report = noaa.CreateYearlyReport(yearDate);
 						cumulus.NOAAconf.LatestYearReport = FormatDateTime(cumulus.NOAAconf.YearFile, yearDate);

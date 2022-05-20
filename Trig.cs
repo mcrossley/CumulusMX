@@ -92,52 +92,28 @@ namespace CumulusMX
 
 		public static double PutIn360Deg(double pfDeg)
 		{
-			while (pfDeg >= 360)
-			{
-				pfDeg -= 360;
-			}
-			while (pfDeg < 0)
-			{
-				pfDeg += 360;
-			}
-			return pfDeg;
+			return PutInRange(pfDeg, 360);
 		}
-
-		/*!
-		* \brief Corrects an angle.
-		*
-		* \param angleInRadians An angle expressed in radians.
-		* \return An angle in the range 0 to 2*PI.
-		 *
-		 * http://guideving.blogspot.co.uk/2010/08/sun-position-in-c.html
-		*/
-		public static double CorrectAngleTo2Pi(double angleInRadians)
-		{
-			if (angleInRadians < 0)
-			{
-				return 2 * Math.PI - (Math.Abs(angleInRadians) % (2 * Math.PI));
-			}
-
-			if (angleInRadians > 2 * Math.PI)
-			{
-				return angleInRadians % (2 * Math.PI);
-			}
-
-			return angleInRadians;
-		}
-
 
 		public static double PutIn24Hour(double pfHour)
 		{
-			while (pfHour >= 24)
-			{
-				pfHour -= 24;
-			}
-			while (pfHour < 0)
-			{
-				pfHour += 24;
-			}
-			return pfHour;
+			return PutInRange(pfHour, 24);
+		}
+
+		public static double PutInRange(double val, double range)
+		{
+			while (val >= range)
+				val -= range;
+
+			while (val < 0)
+				val += range;
+
+			return val;
+		}
+
+		public static double CorrectAngleTo2Pi(double angleInRadians)
+		{
+			return PutInRange(angleInRadians, 2 * Math.PI);
 		}
 
 		public static double TanQuadrant(double pfX, double pfY, double pfTanVal)
@@ -226,7 +202,5 @@ namespace CumulusMX
 			}
 			return diff;
 		}
-
-
 	}
 }
