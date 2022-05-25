@@ -744,7 +744,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		private double ConvertWMR200Rain(double value)
+		private static double ConvertWMR200Rain(double value)
 		{
 			double num;
 			if (cumulus.Units.Rain == 0)

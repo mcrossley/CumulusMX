@@ -8276,8 +8276,7 @@ namespace CumulusMX
 				{
 					LogMessage($"FTP[{cycleStr}]: Upload of {localfile} to {remotefile} failed");
 				}
-
-				if (status.IsSuccess() && FTPRename)
+				else if (FTPRename)
 				{
 					// rename the file
 					LogFtpDebugMessage($"FTP[{cycleStr}]: Renaming {remotefilename} to {remotefile}");

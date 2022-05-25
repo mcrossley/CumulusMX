@@ -238,12 +238,12 @@ namespace CumulusMX
 			};
 		}
 
-		private string ConvertPeriodToSystemDecimal(string aStr)
+		private static string ConvertPeriodToSystemDecimal(string aStr)
 		{
 			return aStr.Replace(".", cumulus.DecimalSeparator);
 		}
 
-		private double GetConvertedValue(string aStr)
+		private static double GetConvertedValue(string aStr)
 		{
 			return Convert.ToDouble(ConvertPeriodToSystemDecimal(aStr));
 		}

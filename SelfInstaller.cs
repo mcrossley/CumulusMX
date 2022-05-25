@@ -32,12 +32,13 @@ namespace CumulusMX
 
 				var path = AppDomain.CurrentDomain.BaseDirectory + "\\CumulusMX.exe";
 
-				var startinfo = new ProcessStartInfo {
+				var startinfo = new ProcessStartInfo
+				{
 					FileName = "sc.exe",
 					UseShellExecute = false,
-					CreateNoWindow = true
+					CreateNoWindow = true,
+					Arguments = $"create CumulusMX binpath=\"{path}\" start=delayed-auto depend=Netman"
 				};
-				startinfo.Arguments = $"create CumulusMX binpath=\"{path}\" start=delayed-auto depend=Netman";
 
 				var sc = new Process
 				{
@@ -209,9 +210,9 @@ namespace CumulusMX
 				{
 					FileName = exe,
 					UseShellExecute = false,
-					CreateNoWindow = true
+					CreateNoWindow = true,
+					Arguments = args
 				};
-				startinfo.Arguments = args;
 
 				var sc = new Process
 				{

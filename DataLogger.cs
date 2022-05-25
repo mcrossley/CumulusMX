@@ -8,11 +8,11 @@ namespace CumulusMX
 {
 	internal class DataLogger : IDisposable
 	{
-		private BlockingCollection<string> blockingCollection = new BlockingCollection<string>();
-		private StreamWriter log = null;
+		private readonly BlockingCollection<string> blockingCollection = new BlockingCollection<string>();
+		private readonly StreamWriter log = null;
 		public bool run = true;
 		public bool disposed = false;
-		Task task = null;
+		readonly Task task = null;
 
 		public DataLogger(string logFilePath)
 		{

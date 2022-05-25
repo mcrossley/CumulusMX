@@ -190,7 +190,7 @@ namespace CumulusMX.ThirdParty
 		/// </summary>
 		/// <param name="wind"></param>
 		/// <returns></returns>
-		private string APRSwind(double wind)
+		private static string APRSwind(double wind)
 		{
 			var windMPH = Convert.ToInt32(WeatherStation.ConvertUserWindToMPH(wind));
 			return windMPH.ToString("D3");
@@ -202,7 +202,7 @@ namespace CumulusMX.ThirdParty
 		/// </summary>
 		/// <param name="press"></param>
 		/// <returns></returns>
-		private string APRSpress(double press)
+		private static string APRSpress(double press)
 		{
 			var press10mb = Convert.ToInt32(WeatherStation.ConvertUserPressToMB(press) * 10);
 			return press10mb.ToString("D5");
@@ -236,7 +236,7 @@ namespace CumulusMX.ThirdParty
 		/// </summary>
 		/// <param name="rain"></param>
 		/// <returns></returns>
-		private string APRSrain(double rain)
+		private static string APRSrain(double rain)
 		{
 			var rain100IN = Convert.ToInt32(WeatherStation.ConvertUserRainToIN(rain) * 100);
 			return rain100IN.ToString("D3");

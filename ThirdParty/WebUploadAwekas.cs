@@ -450,7 +450,7 @@ namespace CumulusMX.ThirdParty
 			sb.Append(station.ConvertUserRainToMM(station.ThisYear.HighRainRate.Val).Value.ToString("F1", InvC) + sep); // 82
 			sb.Append(sep);                                                                 // 83 avg solar today
 			if (SendSolar && station.HiLoToday.HighSolar.HasValue)
-				sb.Append(station.HiLoToday.HighSolar.Value.ToString());                    // 84
+				sb.Append(station.HiLoToday.HighSolar.Value);                               // 84
 			else
 				sb.Append(sep);
 

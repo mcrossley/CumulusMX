@@ -6,8 +6,8 @@ namespace CumulusMX
 	public class WebSocketData // The annotations on this class are so it can be serialised as JSON
 	{
 		private readonly Cumulus cumulus;
-		private static string nullVal = "-";
-		private static string nullTime = "--:--";
+		private static readonly string nullVal = "-";
+		private static readonly string nullTime = "--:--";
 
 		public WebSocketData(Cumulus cumulus, double? outdoorTemp, int? outdoorHum, double avgTempToday, double? indoorTemp, double? outdoorDewpoint, double? windChill,
 							int? indoorHum, double? pressure, double? windLatest, double? windAverage, double? recentmaxgust, double windRunToday, int? bearing, int? avgbearing,

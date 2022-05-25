@@ -211,8 +211,8 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "EditDataPost: Error");
-					using (var writer = HttpContext.OpenResponseText())
-						await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
+					using var writer = HttpContext.OpenResponseText();
+					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
 			}
@@ -321,6 +321,8 @@ namespace CumulusMX
 			[Route(HttpVerbs.Post, "/tags/{req}")]
 			public async Task PostTags(string req)
 			{
+				Response.ContentType = "application/json";
+
 				if (Station == null)
 				{
 					using var writer = HttpContext.OpenResponseText();
@@ -470,6 +472,16 @@ namespace CumulusMX
 			[Route(HttpVerbs.Post, "/graphdata/{req}")]
 			public async Task SetGraphData(string req)
 			{
+				Response.ContentType = "application/json";
+
+				if (Station == null)
+				{
+					using var writer = HttpContext.OpenResponseText();
+					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
+					Response.StatusCode = 500;
+					return;
+				}
+
 				try
 				{
 					using var writer = HttpContext.OpenResponseText();
@@ -1165,6 +1177,5 @@ namespace CumulusMX
 				}
 			}
 		}
-
 	}
 }

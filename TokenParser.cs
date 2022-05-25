@@ -238,7 +238,7 @@ namespace CumulusMX
 						Cumulus.LogMessage("** The output file will contain an error message starting \"**Web tag error\"");
 						//Cumulus.LogMessage(InputText);
 						Cumulus.LogConsoleMessage($"*** web tag error in file '{SourceFile}' - see MXdiags file ***", ConsoleColor.Red);
-						outText.Append($"**Web tag error, tag starting: <#{token.Substring(0, token.Length > 40 ? 39 : token.Length - 1)}**");
+						_ = outText.Append($"**Web tag error, tag starting: <#{token[..(token.Length > 40 ? 39 : token.Length - 1)]}**");
 					}
 					i = match.Index + match.Length;
 				}

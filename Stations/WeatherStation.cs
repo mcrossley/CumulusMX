@@ -1288,6 +1288,12 @@ namespace CumulusMX
 
 		private async Task sendWebSocketData()
 		{
+			// Don't do anything if there are no clients connected
+			if (cumulus.WebSock.ConnectedClients == 0)
+			{
+				return;
+			}
+
 			// Return control to the calling method immediately.
 			await Task.Yield();
 
@@ -1297,7 +1303,7 @@ namespace CumulusMX
 				// if we already have an update queued, don't add to the wait queue. Otherwise we get hundreds queued up during catch-up
 				if (webSocketSemaphore.CurrentCount == 0)
 				{
-					cumulus.LogDebugMessage("sendWebSocketData: Update already queued, dropping this one");
+					cumulus.LogDebugMessage("sendWebSocketData: Update already running, skipping this one");
 					return;
 				}
 

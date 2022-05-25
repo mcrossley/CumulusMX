@@ -22,7 +22,7 @@ namespace CumulusMX
 		/// <inheritdoc />
 		protected override async Task OnClientDisconnectedAsync(IWebSocketContext context)
 		{
-			cumulus.LogDebugMessage("WS Client Disconnected");
+			cumulus.LogDebugMessage("WS Client Disconnected: " + context.RemoteEndPoint.Address.ToString());
 			await Task.CompletedTask;
 		}
 
@@ -35,6 +35,11 @@ namespace CumulusMX
 		public void SendMessage(string message)
 		{
 			BroadcastAsync(message).Wait();
+		}
+
+		public int ConnectedClients
+		{
+			get { return ActiveContexts.Count; }
 		}
 	}
 }

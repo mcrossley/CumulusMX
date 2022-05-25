@@ -478,7 +478,7 @@ namespace CumulusMX
 				"...." => "Always Down",
 				"----" => "No event",
 				"****" => "Always Up",
-				_ => sOut.Substring(0, 2) + "h " + sOut.Substring(2, 2) + "m",
+				_ => string.Concat(sOut.AsSpan(0, 2), "h ", sOut.AsSpan(2, 2), "m"),
 			};
 			return eventTime;
 		}
@@ -491,7 +491,7 @@ namespace CumulusMX
 				"...." => "Always Down",
 				"----" => "No event",
 				"****" => "Always Up",
-				_ => sOut.Substring(0, 2) + "h " + sOut.Substring(2, 2) + "m",
+				_ => string.Concat(sOut.AsSpan(0, 2), "h ", sOut.AsSpan(2, 2), "m"),
 			};
 			return eventTime;
 		}
@@ -504,7 +504,7 @@ namespace CumulusMX
 				"...." => "Always Down",
 				"----" => "No event",
 				"****" => "Always Up",
-				_ => sOut.Substring(0, 2) + "h " + sOut.Substring(2, 2) + "m",
+				_ => string.Concat(sOut.AsSpan(0, 2), "h ", sOut.AsSpan(2, 2), "m"),
 			};
 			return eventTime;
 		}
@@ -517,7 +517,7 @@ namespace CumulusMX
 				"...." => "Always Down",
 				"----" => "No event",
 				"****" => "Always Up",
-				_ => sOut.Substring(0, 2) + "h " + sOut.Substring(2, 2) + "m",
+				_ => string.Concat(sOut.AsSpan(0, 2), "h ", sOut.AsSpan(2, 2), "m"),
 			};
 			return eventTime;
 		}

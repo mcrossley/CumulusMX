@@ -31,14 +31,13 @@ namespace CumulusMX
 			{
 				Server = cumulus.MQTT.Server,
 				Port = cumulus.MQTT.Port,
-				TlsOptions = new MQTTnet.Client.Options.MqttClientTlsOptions { UseTls = cumulus.MQTT.UseTLS }
-			};
-
-			mqttTcpOptions.AddressFamily = cumulus.MQTT.IpVersion switch
-			{
-				4 => System.Net.Sockets.AddressFamily.InterNetwork,
-				6 => System.Net.Sockets.AddressFamily.InterNetworkV6,
-				_ => System.Net.Sockets.AddressFamily.Unspecified,
+				TlsOptions = new MQTTnet.Client.Options.MqttClientTlsOptions { UseTls = cumulus.MQTT.UseTLS },
+				AddressFamily = cumulus.MQTT.IpVersion switch
+				{
+					4 => System.Net.Sockets.AddressFamily.InterNetwork,
+					6 => System.Net.Sockets.AddressFamily.InterNetworkV6,
+					_ => System.Net.Sockets.AddressFamily.Unspecified,
+				}
 			};
 			var mqttOptions = new MQTTnet.Client.Options.MqttClientOptions
 			{
