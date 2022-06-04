@@ -610,8 +610,14 @@ namespace CumulusMX
 				{
 					case "WH40":
 						// Older WH40 units do not send battery info
+						// Old ones report a dummy value of 16 = 1.6V
+						// Newer ones report volts * 100!
 						battV = data[battPos] * 0.1;
-						batt = $"{battV:f2}V ({TestBattery10(data[battPos])})"; // volts/10, low = 1.2V
+						if (battV > 2)
+						{
+							battV /= 10;
+						}
+						batt = $"{battV:f2}V ({TestBatteryWh40(data[battPos], battV)})"; // low = 1.2V
 						break;
 
 					case "WH65":
@@ -1625,6 +1631,14 @@ namespace CumulusMX
 		private static double TestBattery10V(byte value)
 		{
 			return value / 10.0;
+		}
+
+		private static string TestBatteryWh40(byte value, double volts)
+		{
+			if (value == 255)
+				return "n/a";
+
+			return volts > 1.2 ? "OK" : "Low";
 		}
 
 		/*
