@@ -612,12 +612,20 @@ namespace CumulusMX
 						// Older WH40 units do not send battery info
 						// Old ones report a dummy value of 16 = 1.6V
 						// Newer ones report volts * 100!
-						battV = data[battPos] * 0.1;
+						battV = data[battPos] / 10;
 						if (battV > 2)
 						{
 							battV /= 10;
+							batt = $"{battV:f2}V ({TestBatteryWh40(data[battPos], battV)})"; // low = 1.2V
 						}
-						batt = $"{battV:f2}V ({TestBatteryWh40(data[battPos], battV)})"; // low = 1.2V
+						else
+						{
+							batt = $"{battV:f2}V ({TestBatteryWh40(data[battPos], battV)})"; // low = 1.2V
+							if (battV == 1.6)
+							{
+								batt += " dummy value?";
+							}
+						}
 						break;
 
 					case "WH65":
