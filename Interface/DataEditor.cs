@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using EmbedIO;
-using System.Threading.Tasks;
 using SQLite;
 
 namespace CumulusMX
@@ -27,7 +26,6 @@ namespace CumulusMX
 		{
 			this.station = station;
 		}
-
 
 		internal string GetAllTimeRecData()
 		{
@@ -1006,7 +1004,6 @@ namespace CumulusMX
 
 			return json.ToString();
 		}
-
 
 		internal string EditAllTimeRecs(IHttpContext context)
 		{
@@ -3006,8 +3003,6 @@ namespace CumulusMX
 			return $"{{\"result\":\"{((result == 1) ? "Success" : "Failed")}\"}}";
 		}
 
-
-
 		internal string GetCurrentCond()
 		{
 			string fileName = cumulus.AppDir + "currentconditions.txt";
@@ -3046,9 +3041,6 @@ namespace CumulusMX
 				return false;
 			}
 		}
-
-
-
 
 		internal string EditRainToday(IHttpContext context)
 		{
@@ -3098,8 +3090,6 @@ namespace CumulusMX
 			return json;
 		}
 
-
-
 		private void AddLastHourRainEntry(DateTime ts, double rain)
 		{
 			var lasthourrain = new LastHourRainLog(ts, rain);
@@ -3132,7 +3122,6 @@ namespace CumulusMX
 				hourRainLog.RemoveAt(0);
 			}
 		}
-
 
 		private class DbDateTimeDouble
 		{

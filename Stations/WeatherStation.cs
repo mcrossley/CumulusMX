@@ -163,7 +163,6 @@ namespace CumulusMX
 			public DateTime HighSolarTime;
 			public double? HighUv;
 			public DateTime HighUvTime;
-
 		};
 
 		// today highs and lows
@@ -171,6 +170,12 @@ namespace CumulusMX
 
 		// yesterdays highs and lows
 		public DailyHighLow HiLoYest = new DailyHighLow();
+
+		// todays midnight highs and lows
+		public DailyHighLow HiLoTodayMidnight = new DailyHighLow();
+
+		// todays midnight highs and lows
+		public DailyHighLow HiLoYestMidnight = new DailyHighLow();
 
 
 		public int IndoorBattStatus;
@@ -322,7 +327,6 @@ namespace CumulusMX
 
 			// rollover/create raw data log files if required
 			cumulus.RollOverDataLogs();
-
 		}
 
 		private void GetRainCounter()
@@ -496,17 +500,17 @@ namespace CumulusMX
 
 			// Solar
 			HiLoToday.HighSolar = ini.GetValue("Solar", "HighSolarRad", nullInt);
-			HiLoToday.HighSolarTime = ini.GetValue("Solar", "HighSolarRadTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.HighSolarTime = ini.GetValue("Solar", "HighSolarRadTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			HiLoToday.HighUv = ini.GetValue("Solar", "HighUV", nullDbl);
-			HiLoToday.HighUvTime = ini.GetValue("Solar", "HighUVTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.HighUvTime = ini.GetValue("Solar", "HighUVTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			StartOfDaySunHourCounter = ini.GetValue("Solar", "SunStart", Cumulus.DefaultHiVal);
 			RG11RainToday = ini.GetValue("Rain", "RG11Today", 0.0);
 
 			// Wind
 			HiLoToday.HighWind = ini.GetValue("Wind", "Speed", nullDbl);
-			HiLoToday.HighWindTime = ini.GetValue("Wind", "SpTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.HighWindTime = ini.GetValue("Wind", "SpTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			HiLoToday.HighGust = ini.GetValue("Wind", "Gust", nullDbl);
-			HiLoToday.HighGustTime = ini.GetValue("Wind", "Time", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.HighGustTime = ini.GetValue("Wind", "Time", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			HiLoToday.HighGustBearing = ini.GetValue("Wind", "Bearing", (int)Cumulus.DefaultHiVal);
 			HiLoToday.HighGustBearing = HiLoToday.HighGustBearing == Cumulus.DefaultHiVal ? null : HiLoToday.HighGustBearing;
 			WindRunToday = ini.GetValue("Wind", "Windrun", 0.0);
@@ -514,11 +518,12 @@ namespace CumulusMX
 			DominantWindBearingMinutes = ini.GetValue("Wind", "DominantWindBearingMinutes", 0);
 			DominantWindBearingX = ini.GetValue("Wind", "DominantWindBearingX", 0.0);
 			DominantWindBearingY = ini.GetValue("Wind", "DominantWindBearingY", 0.0);
+
 			// Temperature
 			HiLoToday.LowTemp = ini.GetValue("Temp", "Low", nullDbl);
-			HiLoToday.LowTempTime = ini.GetValue("Temp", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.LowTempTime = ini.GetValue("Temp", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			HiLoToday.HighTemp = ini.GetValue("Temp", "High", nullDbl);
-			HiLoToday.HighTempTime = ini.GetValue("Temp", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.HighTempTime = ini.GetValue("Temp", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 
 			if (HiLoToday.HighTemp.HasValue && HiLoToday.LowTemp.HasValue)
 				HiLoToday.TempRange = HiLoToday.HighTemp.Value - HiLoToday.LowTemp.Value;
@@ -527,21 +532,27 @@ namespace CumulusMX
 			TempTotalToday = ini.GetValue("Temp", "Total", 0.0);
 			tempsamplestoday = ini.GetValue("Temp", "Samples", 1);
 
+			// Temperature midnight rollover
+			HiLoTodayMidnight.LowTemp = ini.GetValue("TempMidnight", "Low", nullDbl);
+			HiLoTodayMidnight.LowTempTime = ini.GetValue("TempMidnight", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
+			HiLoTodayMidnight.HighTemp = ini.GetValue("TempMidnight", "High", nullDbl);
+			HiLoTodayMidnight.HighTempTime = ini.GetValue("TempMidnight", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
+
 			HeatingDegreeDays = ini.GetValue("Temp", "HeatingDegreeDays", 0.0);
 			CoolingDegreeDays = ini.GetValue("Temp", "CoolingDegreeDays", 0.0);
 
 			GrowingDegreeDaysThisYear1 = ini.GetValue("Temp", "GrowingDegreeDaysThisYear1", 0.0);
 			GrowingDegreeDaysThisYear2 = ini.GetValue("Temp", "GrowingDegreeDaysThisYear2", 0.0);
-			// PressureHighDewpoint
+			// Pressure
 			HiLoToday.LowPress = ini.GetValue("Pressure", "Low", nullDbl);
-			HiLoToday.LowPressTime = ini.GetValue("Pressure", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.LowPressTime = ini.GetValue("Pressure", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			HiLoToday.HighPress = ini.GetValue("Pressure", "High", nullDbl);
-			HiLoToday.HighPressTime = ini.GetValue("Pressure", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.HighPressTime = ini.GetValue("Pressure", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			// rain
 			HiLoToday.HighRainRate = ini.GetValue("Rain", "High", nullDbl);
-			HiLoToday.HighRainRateTime = ini.GetValue("Rain", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.HighRainRateTime = ini.GetValue("Rain", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			HiLoToday.HighHourlyRain = ini.GetValue("Rain", "HourlyHigh", 0.0);
-			HiLoToday.HighHourlyRainTime = ini.GetValue("Rain", "HHourlyTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.HighHourlyRainTime = ini.GetValue("Rain", "HHourlyTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			raindaystart = ini.GetValue("Rain", "Start", -1.0);
 			Raincounter = ini.GetValue("Rain", "Last", -1.0);
 			Cumulus.LogMessage($"ReadTodayfile: Rain day start = {raindaystart}, last = {Raincounter}");
@@ -554,35 +565,35 @@ namespace CumulusMX
 			// humidity
 			HiLoToday.LowHumidity = ini.GetValue("Humidity", "Low", nullInt);
 			HiLoToday.HighHumidity = ini.GetValue("Humidity", "High", nullInt);
-			HiLoToday.LowHumidityTime = ini.GetValue("Humidity", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
-			HiLoToday.HighHumidityTime = ini.GetValue("Humidity", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.LowHumidityTime = ini.GetValue("Humidity", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
+			HiLoToday.HighHumidityTime = ini.GetValue("Humidity", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			// Solar
 			SunshineHours = ini.GetValue("Solar", "SunshineHours", 0.0);
 			SunshineToMidnight = ini.GetValue("Solar", "SunshineHoursToMidnight", 0.0);
 			// heat index
 			HiLoToday.HighHeatIndex = ini.GetValue("HeatIndex", "High", nullDbl);
-			HiLoToday.HighHeatIndexTime = ini.GetValue("HeatIndex", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.HighHeatIndexTime = ini.GetValue("HeatIndex", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			// Apparent temp
 			HiLoToday.HighAppTemp = ini.GetValue("AppTemp", "High", nullDbl);
-			HiLoToday.HighAppTempTime = ini.GetValue("AppTemp", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.HighAppTempTime = ini.GetValue("AppTemp", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			HiLoToday.LowAppTemp = ini.GetValue("AppTemp", "Low", nullDbl);
-			HiLoToday.LowAppTempTime = ini.GetValue("AppTemp", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.LowAppTempTime = ini.GetValue("AppTemp", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			// wind chill
 			HiLoToday.LowWindChill = ini.GetValue("WindChill", "Low", nullDbl);
-			HiLoToday.LowWindChillTime = ini.GetValue("WindChill", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.LowWindChillTime = ini.GetValue("WindChill", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			// Dew point
 			HiLoToday.HighDewPoint = ini.GetValue("Dewpoint", "High", nullDbl);
-			HiLoToday.HighDewPointTime = ini.GetValue("Dewpoint", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.HighDewPointTime = ini.GetValue("Dewpoint", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			HiLoToday.LowDewPoint = ini.GetValue("Dewpoint", "Low", nullDbl);
-			HiLoToday.LowDewPointTime = ini.GetValue("Dewpoint", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.LowDewPointTime = ini.GetValue("Dewpoint", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			// Feels like
 			HiLoToday.HighFeelsLike = ini.GetValue("FeelsLike", "High", nullDbl);
-			HiLoToday.HighFeelsLikeTime = ini.GetValue("FeelsLike", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.HighFeelsLikeTime = ini.GetValue("FeelsLike", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			HiLoToday.LowFeelsLike = ini.GetValue("FeelsLike", "Low", nullDbl);
-			HiLoToday.LowFeelsLikeTime = ini.GetValue("FeelsLike", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.LowFeelsLikeTime = ini.GetValue("FeelsLike", "LTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 			// Humidex
 			HiLoToday.HighHumidex = ini.GetValue("Humidex", "High", nullDbl);
-			HiLoToday.HighHumidexTime = ini.GetValue("Humidex", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay, 0, 0, 0));
+			HiLoToday.HighHumidexTime = ini.GetValue("Humidex", "HTime", new DateTime(CurrentYear, CurrentMonth, CurrentDay));
 
 			// Records
 			AlltimeRecordTimestamp = ini.GetValue("Records", "Alltime", DateTime.MinValue);
@@ -631,6 +642,11 @@ namespace CumulusMX
 				ini.SetValue("Temp", "CoolingDegreeDays", CoolingDegreeDays);
 				ini.SetValue("Temp", "GrowingDegreeDaysThisYear1", GrowingDegreeDaysThisYear1);
 				ini.SetValue("Temp", "GrowingDegreeDaysThisYear2", GrowingDegreeDaysThisYear2);
+				// Temperature midnight rollover
+				ini.SetValue("TempMidnight", "Low", HiLoTodayMidnight.LowTemp);
+				ini.SetValue("TempMidnight", "LTime", HiLoTodayMidnight.LowTempTime);
+				ini.SetValue("TempMidnight", "High", HiLoTodayMidnight.HighTemp);
+				ini.SetValue("TempMidnight", "HTime", HiLoTodayMidnight.HighTempTime);
 				// Pressure
 				ini.SetValue("Pressure", "Low", HiLoToday.LowPress);
 				ini.SetValue("Pressure", "LTime", HiLoToday.LowPressTime.ToString("HH:mm"));
@@ -1763,6 +1779,7 @@ namespace CumulusMX
 			if (now.Hour == 0)
 			{
 				ResetSunshineHours();
+				ResetMidnightTemperatures();
 			}
 
 			RemoveOldRecentData(now);
@@ -2055,7 +2072,6 @@ namespace CumulusMX
 			};
 		}
 
-
 		public void ResetSunshineHours() // called at midnight irrespective of roll-over time
 		{
 			YestSunshineHours = SunshineHours;
@@ -2065,6 +2081,19 @@ namespace CumulusMX
 			SunshineToMidnight = SunshineHours;
 			SunshineHours = 0;
 			StartOfDaySunHourCounter = SunHourCounter;
+			WriteYesterdayFile();
+		}
+
+		public void ResetMidnightTemperatures() // called at midnight irrespective of roll-over time
+		{
+			HiLoYestMidnight.LowTemp = HiLoTodayMidnight.LowTemp;
+			HiLoYestMidnight.HighTemp = HiLoTodayMidnight.HighTemp;
+			HiLoYestMidnight.LowTempTime = HiLoTodayMidnight.LowTempTime;
+			HiLoYestMidnight.HighTempTime = HiLoTodayMidnight.HighTempTime;
+
+			HiLoTodayMidnight.LowTemp = 999;
+			HiLoTodayMidnight.HighTemp = -999;
+
 			WriteYesterdayFile();
 		}
 
@@ -2297,6 +2326,20 @@ namespace CumulusMX
 			{
 				HiLoToday.LowTemp = Temperature;
 				HiLoToday.LowTempTime = timestamp;
+				WriteTodayFile(timestamp, false);
+			}
+
+			if (Temperature > (HiLoTodayMidnight.HighTemp ?? Cumulus.DefaultLoVal))
+			{
+				HiLoTodayMidnight.HighTemp = Temperature;
+				HiLoTodayMidnight.HighTempTime = timestamp;
+				WriteTodayFile(timestamp, false);
+			}
+
+			if (Temperature < (HiLoTodayMidnight.LowTemp ?? Cumulus.DefaultLoVal))
+			{
+				HiLoTodayMidnight.LowTemp = Temperature;
+				HiLoTodayMidnight.LowTempTime = timestamp;
 				WriteTodayFile(timestamp, false);
 			}
 
@@ -3885,6 +3928,11 @@ namespace CumulusMX
 			ini.SetValue("Temp", "HeatingDegreeDays", YestHeatingDegreeDays);
 			ini.SetValue("Temp", "CoolingDegreeDays", YestCoolingDegreeDays);
 			ini.SetValue("Temp", "AvgTemp", YestAvgTemp);
+			// Temperature midnight
+			ini.SetValue("TempMidnight", "Low", HiLoYestMidnight.LowTemp);
+			ini.SetValue("TempMidnight", "LTime", HiLoYestMidnight.LowTempTime.ToString("HH:mm"));
+			ini.SetValue("TempMidnight", "High", HiLoYestMidnight.HighTemp);
+			ini.SetValue("TempMidnight", "HTime", HiLoYestMidnight.HighTempTime.ToString("HH:mm"));
 			// Pressure
 			ini.SetValue("Pressure", "Low", HiLoYest.LowPress);
 			ini.SetValue("Pressure", "LTime", HiLoYest.LowPressTime.ToString("HH:mm"));
@@ -3966,6 +4014,11 @@ namespace CumulusMX
 			YestCoolingDegreeDays = ini.GetValue("Temp", "CoolingDegreeDays", 0.0);
 			YestAvgTemp = ini.GetValue("Temp", "AvgTemp", 0.0);
 			HiLoYest.TempRange = HiLoYest.HighTemp - HiLoYest.LowTemp;
+			// Temperature midnight
+			HiLoYestMidnight.LowTemp = ini.GetValue("TempMidnight", "Low", nullDbl);
+			HiLoYestMidnight.LowTempTime = ini.GetValue("TempMidnight", "LTime", DateTime.MinValue);
+			HiLoYestMidnight.HighTemp = ini.GetValue("TempMidnight", "High", nullDbl);
+			HiLoYestMidnight.HighTempTime = ini.GetValue("TempMidnight", "HTime", DateTime.MinValue);
 			// Pressure
 			HiLoYest.LowPress = ini.GetValue("Pressure", "Low", nullDbl);
 			HiLoYest.LowPressTime = ini.GetValue("Pressure", "LTime", DateTime.MinValue);
@@ -5769,6 +5822,7 @@ namespace CumulusMX
 				ResetMidnightRain(DateTime.Now);
 				ResetSunshineHours();
 				//RecalcSolarFactor(DateTime.Now);
+				ResetMidnightTemperatures();
 			}
 
 			if (cumulus.LastUpdateTime.AddHours(hourInc).Date != DateTime.Now.AddHours(hourInc).Date)

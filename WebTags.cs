@@ -140,7 +140,7 @@ namespace CumulusMX
 			double depth;
 			try
 			{
-				var result = cumulus.DiaryDB.QueryScalars<double>("SELECT snowDepth FROM DiaryData WHERE Date(Timestamp) = ?", day.Date);
+				var result = cumulus.DiaryDB.QueryScalars<double>("SELECT snowDepth FROM DiaryData WHERE Timestamp = ?", day.Date);
 
 				depth = result.Count == 1 ? result[0] : 0;
 			}
@@ -157,7 +157,7 @@ namespace CumulusMX
 			int lying;
 			try
 			{
-				var result = cumulus.DiaryDB.QueryScalars<int>("SELECT snowLying FROM DiaryData WHERE Date(Timestamp) = ?", day.Date);
+				var result = cumulus.DiaryDB.QueryScalars<int>("SELECT snowLying FROM DiaryData WHERE Timestamp = ?", day.Date);
 
 				lying = result.Count == 1 ? result[0] : 0;
 			}
@@ -174,7 +174,7 @@ namespace CumulusMX
 			int falling;
 			try
 			{
-				var result = cumulus.DiaryDB.QueryScalars<int>("SELECT snowFalling FROM DiaryData WHERE Date(Timestamp) = ?", day.Date);
+				var result = cumulus.DiaryDB.QueryScalars<int>("SELECT snowFalling FROM DiaryData WHERE Timestamp = ?", day.Date);
 
 				falling = result.Count == 1 ? result[0] : 0;
 			}
@@ -1329,19 +1329,19 @@ namespace CumulusMX
 		private string Tagsnowdepth(Dictionary<string,string> tagParams)
 		{
 			var ts = DateTime.Now.Hour < cumulus.SnowDepthHour ? DateTime.Now.AddDays(-1) : DateTime.Now;
-			return CheckRc(GetSnowDepth(ts).ToString(), tagParams);
+			return CheckRc(GetSnowDepth(ts.Date).ToString(), tagParams);
 		}
 
 		private string Tagsnowlying(Dictionary<string, string> tagParams)
 		{
 			var ts = DateTime.Now.Hour < cumulus.SnowDepthHour ? DateTime.Now.AddDays(-1) : DateTime.Now;
-			return GetSnowLying(ts).ToString();
+			return GetSnowLying(ts.Date).ToString();
 		}
 
 		private string Tagsnowfalling(Dictionary<string, string> tagParams)
 		{
 			var ts = DateTime.Now.Hour < cumulus.SnowDepthHour ? DateTime.Now.AddDays(-1) : DateTime.Now;
-			return GetSnowFalling(ts).ToString();
+			return GetSnowFalling(ts.Date).ToString();
 		}
 
 		private string Tagnewrecord(Dictionary<string,string> tagParams)
@@ -1592,6 +1592,26 @@ namespace CumulusMX
 		private string TagTtempTl(Dictionary<string,string> tagParams)
 		{
 			return GetFormattedDateTime(station.HiLoToday.LowTempTime, "HH:mm", tagParams);
+		}
+
+		private string TagtempMidnightTh(Dictionary<string, string> tagParams)
+		{
+			return CheckRcDp(station.HiLoTodayMidnight.HighTemp, tagParams, cumulus.TempDPlaces);
+		}
+
+		private string TagTtempMidnightTh(Dictionary<string, string> tagParams)
+		{
+			return GetFormattedDateTime(station.HiLoTodayMidnight.HighTempTime, "HH:mm", tagParams);
+		}
+
+		private string TagtempMidnightTl(Dictionary<string, string> tagParams)
+		{
+			return CheckRcDp(station.HiLoTodayMidnight.LowTemp, tagParams, cumulus.TempDPlaces);
+		}
+
+		private string TagTtempMidnightTl(Dictionary<string, string> tagParams)
+		{
+			return GetFormattedDateTime(station.HiLoTodayMidnight.LowTempTime, "HH:mm", tagParams);
 		}
 
 		private string TagSolarTh(Dictionary<string,string> tagParams)
@@ -1934,6 +1954,26 @@ namespace CumulusMX
 		private string TagTtempYl(Dictionary<string,string> tagParams)
 		{
 			return GetFormattedDateTime(station.HiLoYest.LowTempTime, "HH:mm", tagParams);
+		}
+
+		private string TagtempMidnightYh(Dictionary<string, string> tagParams)
+		{
+			return CheckRcDp(station.HiLoYestMidnight.HighTemp, tagParams, cumulus.TempDPlaces);
+		}
+
+		private string TagTtempMidnightYh(Dictionary<string, string> tagParams)
+		{
+			return GetFormattedDateTime(station.HiLoYestMidnight.HighTempTime, "HH:mm", tagParams);
+		}
+
+		private string TagtempMidnightYl(Dictionary<string, string> tagParams)
+		{
+			return CheckRcDp(station.HiLoYestMidnight.LowTemp, tagParams, cumulus.TempDPlaces);
+		}
+
+		private string TagTtempMidnightYl(Dictionary<string, string> tagParams)
+		{
+			return GetFormattedDateTime(station.HiLoYestMidnight.LowTempTime, "HH:mm", tagParams);
 		}
 
 		private string TagapptempYh(Dictionary<string,string> tagParams)
@@ -5441,6 +5481,10 @@ namespace CumulusMX
 				{ "TtempTH", TagTtempTh },
 				{ "tempTL", TagtempTl },
 				{ "TtempTL", TagTtempTl },
+				{ "tempMidnightTH", TagtempMidnightTh },
+				{ "TtempMidnightTH", TagTtempMidnightTh },
+				{ "tempMidnightTL", TagtempMidnightTl },
+				{ "TtempMidnightTL", TagTtempMidnightTl },
 				{ "wchillTL", TagwchillTl },
 				{ "TwchillTL", TagTwchillTl },
 				{ "apptempTH", TagapptempTh },
@@ -5493,6 +5537,10 @@ namespace CumulusMX
 				{ "TtempYH", TagTtempYh },
 				{ "tempYL", TagtempYl },
 				{ "TtempYL", TagTtempYl },
+				{ "tempMidnightYH", TagtempMidnightYh },
+				{ "TtempMidnightYH", TagTtempMidnightYh },
+				{ "tempMidnightYL", TagtempMidnightYl },
+				{ "TtempMidnightYL", TagTtempMidnightYl },
 				{ "wchillYL", TagwchillYl },
 				{ "TwchillYL", TagTwchillYl },
 				{ "apptempYH", TagapptempYh },

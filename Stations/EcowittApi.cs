@@ -1320,6 +1320,7 @@ namespace CumulusMX
 				{
 					station.ResetMidnightRain(rec.Key);
 					station.ResetSunshineHours();
+					station.ResetMidnightTemperatures();
 					midnightraindone = true;
 				}
 

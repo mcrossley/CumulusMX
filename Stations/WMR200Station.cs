@@ -1411,6 +1411,7 @@ namespace CumulusMX
 			{
 				ResetMidnightRain(timestamp);
 				ResetSunshineHours();
+				ResetMidnightTemperatures();
 				midnightraindone = true;
 			}
 			// there seems to be no way of determining the log interval other than subtracting one logMainUnit.Units.MainUnit.cumulus.LogMessage

@@ -27,11 +27,11 @@ namespace CumulusMX
 
 			var clientId = Guid.NewGuid().ToString();
 
-			var mqttTcpOptions = new MQTTnet.Client.Options.MqttClientTcpOptions
+			var mqttTcpOptions = new MqttClientTcpOptions
 			{
 				Server = cumulus.MQTT.Server,
 				Port = cumulus.MQTT.Port,
-				TlsOptions = new MQTTnet.Client.Options.MqttClientTlsOptions { UseTls = cumulus.MQTT.UseTLS },
+				TlsOptions = new MqttClientTlsOptions { UseTls = cumulus.MQTT.UseTLS },
 				AddressFamily = cumulus.MQTT.IpVersion switch
 				{
 					4 => System.Net.Sockets.AddressFamily.InterNetwork,
@@ -39,23 +39,19 @@ namespace CumulusMX
 					_ => System.Net.Sockets.AddressFamily.Unspecified,
 				}
 			};
-			var mqttOptions = new MQTTnet.Client.Options.MqttClientOptions
+			var mqttOptions = new MqttClientOptions
 			{
 				ChannelOptions = mqttTcpOptions,
 				ClientId = clientId,
 				Credentials = string.IsNullOrEmpty(cumulus.MQTT.Password)
 					? null
-					: new MQTTnet.Client.Options.MqttClientCredentials
-					{
-						Username = cumulus.MQTT.Username,
-						Password = System.Text.Encoding.UTF8.GetBytes(cumulus.MQTT.Password)
-					},
+					: new MqttClientCredentials(cumulus.MQTT.Username, System.Text.Encoding.UTF8.GetBytes(cumulus.MQTT.Password)),
 				CleanSession = true
 			};
 
 			_ = Connect(mqttOptions); // let this run in background
 
-			mqttClient.UseDisconnectedHandler(async e =>
+			mqttClient.DisconnectedAsync += (async e =>
 			{
 				Cumulus.LogMessage("Error: MQTT disconnected from the server");
 				await Task.Delay(TimeSpan.FromSeconds(5));
@@ -95,7 +91,7 @@ namespace CumulusMX
 			}
 		}
 
-		private static async Task Connect(MQTTnet.Client.Options.IMqttClientOptions options)
+		private static async Task Connect(MqttClientOptions options)
 		{
 			try
 			{
