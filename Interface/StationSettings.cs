@@ -1673,14 +1673,14 @@ namespace CumulusMX
 			public int primaryRainSensor { get; set; }
 		}
 
-		internal class EcowittApi
+		public class EcowittApi
 		{
 			public string applicationkey { get; set; }
 			public string userkey { get; set; }
 			public string mac { get; set; }
 		}
 
-		internal class EcowittMappingsJson
+		public class EcowittMappingsJson
 		{
 			public int primaryTHsensor { get; set; }
 			public int primaryRainSensor { get; set; }

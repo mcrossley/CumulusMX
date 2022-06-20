@@ -1086,65 +1086,39 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		//internal string GetAllDailyWindDirGraphData()
-		//{
-		//	int linenum = 0;
-		//	int valInt;
+		internal string GetAllDailyWindDirGraphData()
+		{
+			/* returns:
+			 *	{
+			 *		highgust:[[date1,val1],[date2,val2]...],
+			 *		mintemp:[[date1,val1],[date2,val2]...],
+			 *		etc
+			 *	}
+			 */
 
-		//	/* returns:
-		//	 *	{
-		//	 *		highgust:[[date1,val1],[date2,val2]...],
-		//	 *		mintemp:[[date1,val1],[date2,val2]...],
-		//	 *		etc
-		//	 *	}
-		//	 */
+			StringBuilder sb = new StringBuilder("{");
+			StringBuilder windDir = new StringBuilder("[");
 
-		//	StringBuilder sb = new StringBuilder("{");
-		//	StringBuilder windDir = new StringBuilder("[");
+			// Read the database and extract the data from there
+			var data = station.Database.Query<DayData>("select Timestamp, HighRainRate, Totalrain from Daydata order by Timestamp");
+			
+			if (data.Count > 0)
+			{
+				for (var i = 0; i < data.Count; i++)
+				{
+					var recDate = Utils.ToGraphTime(data[i].Timestamp);
 
-		//	var watch = Stopwatch.StartNew();
+					windDir.Append($"[{recDate},{(data[i].DominantWindBearing.HasValue ? data[i].DominantWindBearing.Value : "null")}],");
+				}
+				// strip trailing comma
+				windDir.Length--;
+			}
 
-		//	// Read the dayfile and extract the records from there
-		//	if (File.Exists(cumulus.DayFile))
-		//	{
-		//		try
-		//		{
-		//			var dayfile = File.ReadAllLines(cumulus.DayFile);
+			sb.Append("\"windDir\":" + windDir.ToString() + "]");
+			sb.Append('}');
 
-		//			foreach (var line in dayfile)
-		//			{
-		//				linenum++;
-		//				List<string> st = new List<string>(line.Split(','));
-
-		//				if (st.Count <= 0) continue;
-
-		//				// dominant wind direction
-		//				if (st.Count > 39)
-		//				{
-		//					long recDate = Utils.FromUnixTimeStamp(int.Parse(st[1])) * 1000;
-
-		//					if (int.TryParse(st[39], out valInt))
-		//						windDir.Append($"[{recDate},{valInt}]");
-		//					else
-		//						windDir.Append($"[{recDate},null]");
-		//					if (linenum < dayfile.Length)
-		//						windDir.Append(",");
-		//				}
-		//			}
-		//		}
-		//		catch (Exception e)
-		//		{
-		//			Cumulus.LogMessage("GetAllDailyWindDirGraphData: Error on line " + linenum + " of " + cumulus.DayFile + ": " + e.Message);
-		//		}
-		//	}
-		//	sb.Append("\"windDir\":" + windDir.ToString() + "]");
-		//	sb.Append("}");
-
-		//	watch.Stop();
-		//	cumulus.LogDebugMessage($"GetAllDailyWindDirGraphData: Dayfile parse = {watch.ElapsedMilliseconds} ms");
-
-		//	return sb.ToString();
-		//}
+			return sb.ToString();
+		}
 
 		internal string GetAllDailyHumGraphData()
 		{
@@ -1167,7 +1141,6 @@ namespace CumulusMX
 			{
 				for (var i = 0; i < data.Count; i++)
 				{
-
 					var recDate = Utils.ToGraphTime(data[i].Timestamp);
 
 					// lo humidity
