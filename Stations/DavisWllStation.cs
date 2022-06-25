@@ -26,7 +26,7 @@ namespace CumulusMX
 		private readonly System.Timers.Timer tmrBroadcastWatchdog;
 		private readonly System.Timers.Timer tmrHealth;
 		private readonly object threadSafer = new object();
-		private static readonly SemaphoreSlim WebReq = new SemaphoreSlim(1);
+		private static readonly SemaphoreSlim WebReq = new SemaphoreSlim(1, 1);
 		private bool startupDayResetIfRequired = true;
 		private bool savedUseSpeedForAvgCalc;
 		private bool savedCalculatePeakGust;
@@ -467,8 +467,12 @@ namespace CumulusMX
 			{
 				var urlCurrent = $"http://{ip}/v1/current_conditions";
 
-				// wait a random time of 0 to 5 seconds before making the request to try and avoid continued clashes with other software or instances of MX
-				await Task.Delay(random.Next(0, 5000));
+				if (DateTime.Now.Subtract(LastDataReadTimestamp).TotalSeconds > 2.1)
+				{
+					// Another brodcast is due, half a second or so
+					cumulus.LogDebugMessage("GetWllCurrent: Delaying");
+					await Task.Delay(600);
+				}
 
 				//cumulus.LogDebugMessage("GetWllCurrent: Waiting for lock");
 				await WebReq.WaitAsync();
@@ -500,12 +504,22 @@ namespace CumulusMX
 					}
 					catch (Exception ex)
 					{
+						// less chatty, only ouput the error on the third attempt
+						if (retry == 3)
+						{
+							Cumulus.LogMessage("GetWllCurrent: Error processing WLL response");
+
+							if (ex.InnerException != null && ex.InnerException.Message.Contains("response ended prematurely"))
+								cumulus.LogDebugMessage("GetWllCurrent: Error - The WLL rejected our request");
+							else
+								cumulus.LogExceptionMessage(ex, "GetWllCurrent: Error processing WLL response");
+						}
 						retry++;
-						if (ex.InnerException != null && ex.InnerException.Message.Contains("response ended prematurely"))
-							cumulus.LogDebugMessage("GetWllCurrent: Error - The WLL rejected our request");
-						else
-							cumulus.LogExceptionMessage(ex, "GetWllCurrent: Error processing WLL response");
-						await Task.Delay(1000);
+
+						// also shift the timer by a second
+						tmrCurrent.Stop();
+						Thread.Sleep(1000);
+						tmrCurrent.Start();
 					}
 				} while (retry < 3);
 
