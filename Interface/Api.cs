@@ -535,7 +535,7 @@ namespace CumulusMX
 							await writer.WriteAsync(Station.Graphs.GetAllDailyPressGraphData());
 							break;
 						case "wdirdata.json":
-							await writer.WriteAsync(Station.GetAllDailyWindDirGraphData());
+							await writer.WriteAsync(Station.Graphs.GetAllDailyWindDirGraphData());
 							break;
 						case "humdata.json":
 							await writer.WriteAsync(Station.Graphs.GetAllDailyHumGraphData());

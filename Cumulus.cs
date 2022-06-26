@@ -722,11 +722,17 @@ namespace CumulusMX
 			Program.svcTextListener.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + "Creating main MX log file - " + loggingfile);
 			Program.svcTextListener.Flush();
 
-			if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			// Get the build configuration
+			var assemblyConfigurationAttribute = typeof(Cumulus).Assembly.GetCustomAttribute<AssemblyConfigurationAttribute>();
+			var buildConfigurationName = assemblyConfigurationAttribute?.Configuration;
+
+			// on Linux the default listener writes everything to the syslog :(
+			// remove the default listener on Release code as well
+			if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || buildConfigurationName == "Release")
 			{
-				// on Linux the default listener writes everything to the syslog :(
 				Trace.Listeners.Remove("Default");
 			}
+
 			TextWriterTraceListener myTextListener = new TextWriterTraceListener(loggingfile, "MXlog");
 			Trace.Listeners.Add(myTextListener);
 			Trace.AutoFlush = true;
