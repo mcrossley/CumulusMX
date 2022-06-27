@@ -45,6 +45,8 @@ namespace CumulusMX
 		private readonly List<WlSensor> sensorList = new List<WlSensor>();
 		private readonly bool useWeatherLinkDotCom = true;
 
+		private static byte[] broadcastBuffer = new byte[8192];
+
 		public DavisWllStation(Cumulus cumulus) : base(cumulus)
 		{
 			Cumulus.LogMessage("Station type = Davis WLL");
@@ -295,11 +297,11 @@ namespace CumulusMX
 							// test is any data is available
 							if (udpClient.Client.Available > 0)
 							{
-								var jsonBtye = udpClient.Receive(ref from);
-								var jsonStr = Encoding.UTF8.GetString(jsonBtye);
+								broadcastBuffer = udpClient.Receive(ref from);
+								var jsonStr = Encoding.UTF8.GetString(broadcastBuffer);
 								DecodeBroadcast(jsonStr);
 							}
-							else if (cancellationToken.WaitHandle.WaitOne(200))
+							else if (cancellationToken.WaitHandle.WaitOne(100))
 							{
 								Cumulus.LogMessage("WLL broadcast listener stop requested");
 								break;
