@@ -13,6 +13,8 @@ namespace CumulusMX
 		private readonly Cumulus cumulus;
 		private WeatherStation station;
 
+		private static readonly string hidden = "*****";
+
 		internal StationSettings(Cumulus cumulus)
 		{
 			this.cumulus = cumulus;
@@ -28,6 +30,7 @@ namespace CumulusMX
 			// Build the settings data, convert to JSON, and return it
 			var optionsAdv = new OptionsAdvancedJson()
 			{
+				usespeedforavg = cumulus.StationOptions.UseSpeedForAvgCalc,
 				usezerobearing = cumulus.StationOptions.UseZeroBearing,
 				avgbearingmins = cumulus.StationOptions.AvgBearingMinutes,
 				avgspeedmins = cumulus.StationOptions.AvgSpeedMinutes,
@@ -41,7 +44,6 @@ namespace CumulusMX
 			var options = new OptionsJson()
 			{
 				calcwindaverage = cumulus.StationOptions.CalcWind10MinAve,
-				usespeedforavg = cumulus.StationOptions.UseSpeedForAvgCalc,
 				use100for98hum = cumulus.StationOptions.Humidity98Fix,
 				calculatedewpoint = cumulus.StationOptions.CalculatedDP,
 				calculatewindchill = cumulus.StationOptions.CalculatedWC,
@@ -159,7 +161,7 @@ namespace CumulusMX
 			var ecowittapi = new EcowittApi()
 			{
 				applicationkey = cumulus.EcowittSettings.AppKey,
-				userkey = cumulus.EcowittSettings.UserApiKey,
+				userkey = cumulus.ProgramOptions.DisplayPasswords ? cumulus.EcowittSettings.UserApiKey : hidden,
 				mac = cumulus.EcowittSettings.MacAddress
 			};
 
@@ -357,7 +359,7 @@ namespace CumulusMX
 			var wllApi = new WLLApiJson()
 			{
 				apiKey = cumulus.WllApiKey,
-				apiSecret = cumulus.WllApiSecret,
+				apiSecret = cumulus.ProgramOptions.DisplayPasswords ? cumulus.WllApiSecret : hidden,
 				apiStationId = cumulus.WllStationId
 			};
 
@@ -740,7 +742,6 @@ namespace CumulusMX
 				try
 				{
 					cumulus.StationOptions.CalcWind10MinAve = settings.Options.calcwindaverage;
-					cumulus.StationOptions.UseSpeedForAvgCalc = settings.Options.usespeedforavg;
 					cumulus.StationOptions.Humidity98Fix = settings.Options.use100for98hum;
 					cumulus.StationOptions.CalculatedDP = settings.Options.calculatedewpoint;
 					cumulus.StationOptions.CalculatedWC = settings.Options.calculatewindchill;
@@ -750,6 +751,7 @@ namespace CumulusMX
 					cumulus.StationOptions.RoundWindSpeed = settings.Options.roundwindspeeds;
 					cumulus.StationOptions.NoSensorCheck = settings.Options.nosensorcheck;
 
+					cumulus.StationOptions.UseSpeedForAvgCalc = settings.Options.advanced.usespeedforavg;
 					cumulus.StationOptions.UseZeroBearing = settings.Options.advanced.usezerobearing;
 					cumulus.StationOptions.AvgBearingMinutes = settings.Options.advanced.avgbearingmins;
 					cumulus.StationOptions.AvgSpeedMinutes = settings.Options.advanced.avgspeedmins;
@@ -855,7 +857,8 @@ namespace CumulusMX
 						cumulus.DavisOptions.IPAddr = settings.daviswll.network.ipaddress ?? string.Empty;
 
 						cumulus.WllApiKey = settings.daviswll.api.apiKey;
-						cumulus.WllApiSecret = settings.daviswll.api.apiSecret;
+						if (settings.daviswll.api.apiSecret != hidden)
+							cumulus.WllApiSecret = settings.daviswll.api.apiSecret;
 						cumulus.WllStationId = settings.daviswll.api.apiStationId;
 
 						cumulus.WllPrimaryRain = settings.daviswll.primary.rain;
@@ -1208,7 +1211,8 @@ namespace CumulusMX
 					if (settings.ecowittapi != null)
 					{
 						cumulus.EcowittSettings.AppKey = settings.ecowittapi.applicationkey;
-						cumulus.EcowittSettings.UserApiKey = settings.ecowittapi.userkey;
+						if (settings.daviswll.api.apiSecret != hidden)
+							cumulus.EcowittSettings.UserApiKey = settings.ecowittapi.userkey;
 						cumulus.EcowittSettings.MacAddress = settings.ecowittapi.mac;
 					}
 				}
@@ -1569,6 +1573,7 @@ namespace CumulusMX
 
 		private class OptionsAdvancedJson
 		{
+			public bool usespeedforavg { get; set; }
 			public bool usezerobearing { get; set; }
 			public int avgbearingmins { get; set; }
 			public int avgspeedmins { get; set; }
@@ -1582,7 +1587,6 @@ namespace CumulusMX
 		private class OptionsJson
 		{
 			public bool calcwindaverage { get; set; }
-			public bool usespeedforavg { get; set; }
 			public bool use100for98hum { get; set; }
 			public bool calculatedewpoint { get; set; }
 			public bool calculatewindchill { get; set; }
@@ -1669,6 +1673,16 @@ namespace CumulusMX
 			public string ipaddress { get; set; }
 			public bool autoDiscover { get; set; }
 			public string macaddress { get; set; }
+			public int primaryTHsensor { get; set; }
+			public int primaryRainSensor { get; set; }
+		}
+
+		private class EcowittSettingsJson
+		{
+			public bool setcustom { get; set; }
+			public string gwaddr { get; set; }
+			public string localaddr { get; set; }
+			public int interval { get; set; }
 			public int primaryTHsensor { get; set; }
 			public int primaryRainSensor { get; set; }
 		}
@@ -1954,16 +1968,6 @@ namespace CumulusMX
 		{
 			public double threshold { get; set; }
 			public int month { get; set; }
-		}
-
-		private class EcowittSettingsJson
-		{
-			public bool setcustom { get; set; }
-			public string gwaddr { get; set; }
-			public string localaddr { get; set; }
-			public int interval { get; set; }
-			public int primaryTHsensor { get; set; }
-			public int primaryRainSensor { get; set; }
 		}
 	}
 }

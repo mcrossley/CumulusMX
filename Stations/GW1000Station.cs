@@ -84,6 +84,8 @@ namespace CumulusMX
 			ipaddr = cumulus.Gw1000IpAddress;
 			macaddr = cumulus.Gw1000MacAddress;
 
+			Api = new Stations.GW1000Api(cumulus);
+
 			if (DoDiscovery())
 			{
 				PostDiscovery();

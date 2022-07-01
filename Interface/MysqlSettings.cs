@@ -11,6 +11,8 @@ namespace CumulusMX
 	{
 		private readonly Cumulus cumulus;
 
+		private static string hidden = "*****";
+
 		public MysqlSettings(Cumulus cumulus)
 		{
 			this.cumulus = cumulus;
@@ -22,7 +24,7 @@ namespace CumulusMX
 			{
 				database = cumulus.MySqlStuff.ConnSettings.Database,
 				host = cumulus.MySqlStuff.ConnSettings.Server,
-				pass = cumulus.MySqlStuff.ConnSettings.Password,
+				pass = cumulus.ProgramOptions.DisplayPasswords ? cumulus.MySqlStuff.ConnSettings.Password : hidden,
 				port = cumulus.MySqlStuff.ConnSettings.Port,
 				user = cumulus.MySqlStuff.ConnSettings.UserID
 			};
@@ -136,7 +138,8 @@ namespace CumulusMX
 				}
 				cumulus.MySqlStuff.ConnSettings.Database = settings.server.database;
 				cumulus.MySqlStuff.ConnSettings.UserID = settings.server.user;
-				cumulus.MySqlStuff.ConnSettings.Password = settings.server.pass;
+				if (settings.server.pass != hidden)
+					cumulus.MySqlStuff.ConnSettings.Password = settings.server.pass;
 
 				// options
 				cumulus.MySqlStuff.Settings.UpdateOnEdit = settings.options.updateonedit;

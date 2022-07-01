@@ -9,6 +9,7 @@ namespace CumulusMX
 	public class ThirdPartySettings
 	{
 		private readonly Cumulus cumulus;
+		private static readonly string hidden = "*****";
 
 		public ThirdPartySettings(Cumulus cumulus)
 		{
@@ -47,28 +48,6 @@ namespace CumulusMX
 			{
 				Cumulus.LogMessage("Updating third party settings");
 
-				// twitter
-				/*
-				try
-				{
-					cumulus.Twitter.Enabled = settings.twitter.enabled;
-					if (cumulus.Twitter.Enabled)
-					{
-						cumulus.Twitter.Interval = settings.twitter.interval;
-						cumulus.Twitter.PW = settings.twitter.password ?? string.Empty;
-						cumulus.Twitter.SendLocation = settings.twitter.sendlocation;
-						cumulus.Twitter.ID = settings.twitter.user ?? string.Empty;
-					}
-				}
-				catch (Exception ex)
-				{
-					var msg = "Error processing twitter settings: " + ex.Message;
-					Cumulus.LogMessage(msg);
-					errorMsg += msg + "\n\n";
-					context.Response.StatusCode = 500;
-				}
-				*/
-
 				// wunderground
 				try
 				{
@@ -80,7 +59,10 @@ namespace CumulusMX
 						cumulus.Wund.SendUV = settings.wunderground.includeuv;
 						cumulus.Wund.SendAirQuality = settings.wunderground.includeaq;
 						cumulus.Wund.Interval = settings.wunderground.interval;
-						cumulus.Wund.PW = settings.wunderground.password ?? string.Empty;
+						if (settings.wunderground.password != hidden)
+						{
+							cumulus.Wund.PW = settings.wunderground.password ?? string.Empty;
+						}
 						cumulus.Wund.RapidFireEnabled = settings.wunderground.rapidfire;
 						cumulus.Wund.SendAverage = settings.wunderground.sendavgwind;
 						cumulus.Wund.ID = settings.wunderground.stationid ?? string.Empty;
@@ -108,7 +90,10 @@ namespace CumulusMX
 						//cumulus.WindySendSolar = settings.windy.includesolar;
 						cumulus.Windy.SendUV = settings.windy.includeuv;
 						cumulus.Windy.Interval = settings.windy.interval;
-						cumulus.Windy.ApiKey = settings.windy.apikey;
+						if (settings.windy.apikey != hidden)
+						{
+							cumulus.Windy.ApiKey = settings.windy.apikey;
+						}
 						cumulus.Windy.StationIdx = settings.windy.stationidx;
 						cumulus.Windy.CatchUp = settings.windy.catchup;
 					}
@@ -129,7 +114,10 @@ namespace CumulusMX
 					{
 						cumulus.AWEKAS.Interval = settings.awekas.interval;
 						cumulus.AWEKAS.Lang = settings.awekas.lang;
-						cumulus.AWEKAS.PW = settings.awekas.password ?? string.Empty;
+						if (settings.awekas.password != hidden)
+						{
+							cumulus.AWEKAS.PW = settings.awekas.password ?? string.Empty;
+						}
 						cumulus.AWEKAS.ID = settings.awekas.user ?? string.Empty;
 						cumulus.AWEKAS.SendSolar = settings.awekas.includesolar;
 						cumulus.AWEKAS.SendUV = settings.awekas.includeuv;
@@ -159,7 +147,10 @@ namespace CumulusMX
 					if (cumulus.WCloud.Enabled)
 					{
 						cumulus.WCloud.ID = settings.weathercloud.wid ?? string.Empty;
-						cumulus.WCloud.PW = settings.weathercloud.key ?? string.Empty;
+						if (settings.weathercloud.key != hidden)
+						{
+							cumulus.WCloud.PW = settings.weathercloud.key ?? string.Empty;
+						}
 						cumulus.WCloud.Interval = settings.weathercloud.interval;
 						cumulus.WCloud.SendSolar = settings.weathercloud.includesolar;
 						cumulus.WCloud.SendUV = settings.weathercloud.includeuv;
@@ -187,7 +178,10 @@ namespace CumulusMX
 						cumulus.PWS.Interval = settings.pwsweather.interval;
 						cumulus.PWS.SendSolar = settings.pwsweather.includesolar;
 						cumulus.PWS.SendUV = settings.pwsweather.includeuv;
-						cumulus.PWS.PW = settings.pwsweather.password ?? string.Empty;
+						if (settings.pwsweather.password != hidden)
+						{
+							cumulus.PWS.PW = settings.pwsweather.password ?? string.Empty;
+						}
 						cumulus.PWS.ID = settings.pwsweather.stationid ?? string.Empty;
 						cumulus.PWS.CatchUp = settings.pwsweather.catchup;
 					}
@@ -211,7 +205,10 @@ namespace CumulusMX
 						cumulus.WOW.SendSoilTemp = settings.wow.includesoiltemp;
 						cumulus.WOW.SoilTempSensor = settings.wow.soiltempsensor;
 						cumulus.WOW.Interval = settings.wow.interval;
-						cumulus.WOW.PW = settings.wow.password ?? string.Empty;
+						if (settings.wow.password != hidden)
+						{
+							cumulus.WOW.PW = settings.wow.password ?? string.Empty;
+						}
 						cumulus.WOW.ID = settings.wow.stationid ?? string.Empty;
 						cumulus.WOW.CatchUp = settings.wow.catchup;
 					}
@@ -233,7 +230,10 @@ namespace CumulusMX
 						cumulus.APRS.ID = settings.cwop.id ?? string.Empty; ;
 						cumulus.APRS.Interval = settings.cwop.interval;
 						cumulus.APRS.SendSolar = settings.cwop.includesolar;
-						cumulus.APRS.PW = settings.cwop.password ?? string.Empty; ;
+						if (settings.cwop.password != hidden)
+						{
+							cumulus.APRS.PW = settings.cwop.password ?? string.Empty;
+						}
 						cumulus.APRS.Port = settings.cwop.port;
 						cumulus.APRS.Server = settings.cwop.server ?? string.Empty; ;
 					}
@@ -253,7 +253,10 @@ namespace CumulusMX
 					if (cumulus.OpenWeatherMap.Enabled)
 					{
 						cumulus.OpenWeatherMap.CatchUp = settings.openweathermap.catchup;
-						cumulus.OpenWeatherMap.PW = settings.openweathermap.apikey;
+						if (settings.openweathermap.apikey != hidden)
+						{
+							cumulus.OpenWeatherMap.PW = settings.openweathermap.apikey;
+						}
 						cumulus.OpenWeatherMap.ID = settings.openweathermap.stationid;
 						cumulus.OpenWeatherMap.Interval = settings.openweathermap.interval;
 					}
@@ -273,7 +276,10 @@ namespace CumulusMX
 					if (cumulus.WindGuru.Enabled)
 					{
 						cumulus.WindGuru.ID = settings.windguru.uid;
-						cumulus.WindGuru.PW = settings.windguru.password;
+						if (settings.windguru.password != hidden)
+						{
+							cumulus.WindGuru.PW = settings.windguru.password;
+						}
 						cumulus.WindGuru.SendRain = settings.windguru.includerain;
 						cumulus.WindGuru.Interval = settings.windguru.interval;
 					}
@@ -367,7 +373,7 @@ namespace CumulusMX
 				includesolar = cumulus.Wund.SendSolar,
 				includeuv = cumulus.Wund.SendUV,
 				interval = cumulus.Wund.Interval,
-				password = cumulus.Wund.PW,
+				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.Wund.PW : hidden,
 				rapidfire = cumulus.Wund.RapidFireEnabled,
 				sendavgwind = cumulus.Wund.SendAverage,
 				stationid = cumulus.Wund.ID,
@@ -380,7 +386,7 @@ namespace CumulusMX
 				enabled = cumulus.Windy.Enabled,
 				includeuv = cumulus.Windy.SendUV,
 				interval = cumulus.Windy.Interval,
-				apikey = cumulus.Windy.ApiKey,
+				apikey = cumulus.ProgramOptions.DisplayPasswords ? cumulus.Windy.ApiKey : hidden,
 				stationidx = cumulus.Windy.StationIdx
 			};
 
@@ -396,7 +402,7 @@ namespace CumulusMX
 				includeaq = cumulus.AWEKAS.SendAirQuality,
 				interval = cumulus.AWEKAS.Interval,
 				lang = cumulus.AWEKAS.Lang,
-				password = cumulus.AWEKAS.PW,
+				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.AWEKAS.PW : hidden,
 				user = cumulus.AWEKAS.ID
 			};
 
@@ -411,7 +417,7 @@ namespace CumulusMX
 				moistsensor = cumulus.WCloud.SoilMoistureSensor,
 				includeleafwet = cumulus.WCloud.SendLeafWetness,
 				leafwetsensor = cumulus.WCloud.LeafWetnessSensor,
-				key = cumulus.WCloud.PW,
+				key = cumulus.ProgramOptions.DisplayPasswords ? cumulus.WCloud.PW : hidden,
 				wid = cumulus.WCloud.ID
 			};
 
@@ -422,7 +428,7 @@ namespace CumulusMX
 				interval = cumulus.PWS.Interval,
 				includesolar = cumulus.PWS.SendSolar,
 				includeuv = cumulus.PWS.SendUV,
-				password = cumulus.PWS.PW,
+				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.PWS.PW : hidden,
 				stationid = cumulus.PWS.ID
 			};
 
@@ -435,7 +441,7 @@ namespace CumulusMX
 				includesoiltemp = cumulus.WOW.SendSoilTemp,
 				soiltempsensor = cumulus.WOW.SoilTempSensor,
 				interval = cumulus.WOW.Interval,
-				password = cumulus.WOW.PW,
+				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.WOW.PW : hidden,
 				stationid = cumulus.WOW.ID
 			};
 
@@ -445,7 +451,7 @@ namespace CumulusMX
 				id = cumulus.APRS.ID,
 				interval = cumulus.APRS.Interval,
 				includesolar = cumulus.APRS.SendSolar,
-				password = cumulus.APRS.PW,
+				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.APRS.PW : hidden,
 				port = cumulus.APRS.Port,
 				server = cumulus.APRS.Server
 			};
@@ -454,7 +460,7 @@ namespace CumulusMX
 			{
 				enabled = cumulus.OpenWeatherMap.Enabled,
 				catchup = cumulus.OpenWeatherMap.CatchUp,
-				apikey = cumulus.OpenWeatherMap.PW,
+				apikey = cumulus.ProgramOptions.DisplayPasswords ? cumulus.OpenWeatherMap.PW : hidden,
 				stationid = cumulus.OpenWeatherMap.ID,
 				interval = cumulus.OpenWeatherMap.Interval
 			};
@@ -463,7 +469,7 @@ namespace CumulusMX
 			{
 				enabled = cumulus.WindGuru.Enabled,
 				uid = cumulus.WindGuru.ID,
-				password = cumulus.WindGuru.PW,
+				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.WindGuru.PW : hidden,
 				includerain = cumulus.WindGuru.SendRain,
 				interval = cumulus.WindGuru.Interval
 			};

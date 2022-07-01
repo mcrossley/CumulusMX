@@ -1,11 +1,18 @@
 4.0.0 - b4011
 ——————————————
-- Fix: Potential issue whereby Ecowitt historic data download could get stuck in a loop downloading the same block
-- Fix: NOAA report generation
-- Fix: SolarRad web tag, when no solar data available
+Incorporates v3 changes up to b3191
 
-- Change: The "live" dashboard screens now refresh whenever new data is received, or every five seconds
-- Change: Removed database compression on every start-up
+Fixed
+- Potential issue whereby Ecowitt historic data download could get stuck in a loop downloading the same block
+- NOAA report generation
+- SolarRad web tag, when no solar data available
+
+Changed
+- The "live" dashboard screens now refresh whenever new data is received, or every five seconds
+- Removed database compression on every start-up
+
+New
+- Display passwords option in Program Settings | Options. When disabled (default), all passwords are sent to the settings pages as "*****". You can still enter new passwords whilst in this mode.
 
 
 4.0.0 - b4010

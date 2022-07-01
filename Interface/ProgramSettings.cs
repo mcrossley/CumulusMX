@@ -42,7 +42,8 @@ namespace CumulusMX
 			var options = new GeneralOptionsJson()
 			{
 				stopsecondinstance = cumulus.ProgramOptions.WarnMultiple,
-				listwebtags = cumulus.ProgramOptions.ListWebTags
+				listwebtags = cumulus.ProgramOptions.ListWebTags,
+				displaypasswords = cumulus.ProgramOptions.DisplayPasswords
 			};
 
 			var culture = new CultureOptionsJson()
@@ -105,6 +106,8 @@ namespace CumulusMX
 				cumulus.ErrorLogSpikeRemoval = settings.logging.spikelogging;
 				cumulus.ProgramOptions.WarnMultiple = settings.options.stopsecondinstance;
 				cumulus.ProgramOptions.ListWebTags = settings.options.listwebtags;
+				cumulus.ProgramOptions.DisplayPasswords = settings.options.displaypasswords;
+
 				cumulus.ProgramOptions.Culture.RemoveSpaceFromDateSeparator = settings.culture.removespacefromdateseparator;
 
 				if (cumulus.ProgramOptions.Culture.RemoveSpaceFromDateSeparator && CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(' '))
@@ -200,6 +203,7 @@ namespace CumulusMX
 		{
 			public bool stopsecondinstance { get; set; }
 			public bool listwebtags { get; set; }
+			public bool displaypasswords { get; set; }
 		}
 
 		private class CultureOptionsJson

@@ -1675,6 +1675,9 @@ namespace CumulusMX
 					station.StartLoop();
 				}
 
+				// let the web socket know about the station
+				WebSock.SetStation = station;
+
 				// If enabled generate the daily graph data files, and upload at first opportunity
 				LogDebugMessage("Generating the daily graph data files");
 				station.Graphs.CreateEodGraphDataFiles();
@@ -3220,6 +3223,7 @@ namespace CumulusMX
 
 			ProgramOptions.UpdateDayfile = ini.GetValue("Program", "UpdateDayfile", true);
 			ProgramOptions.UpdateLogfile = ini.GetValue("Program", "UpdateLogfile", true);
+			ProgramOptions.DisplayPasswords = ini.GetValue("Program", "DisplayPasswords", false);
 
 			ProgramOptions.WarnMultiple = ini.GetValue("Station", "WarnMultiple", true);
 			ProgramOptions.ListWebTags = ini.GetValue("Station", "ListWebTags", false);
@@ -4620,6 +4624,7 @@ namespace CumulusMX
 
 			ini.SetValue("Program", "UpdateDayfile", ProgramOptions.UpdateDayfile);
 			ini.SetValue("Program", "UpdateLogfile", ProgramOptions.UpdateLogfile);
+			ini.SetValue("Program", "DisplayPasswords", ProgramOptions.DisplayPasswords);
 
 
 			ini.SetValue("Culture", "RemoveSpaceFromDateSeparator", ProgramOptions.Culture.RemoveSpaceFromDateSeparator);
@@ -9404,6 +9409,7 @@ namespace CumulusMX
 		public bool UpdateLogfile { get; set; }
 		public bool LogRawStationData { get; set; }
 		public bool LogRawExtraData { get; set; }
+		public bool DisplayPasswords { get; set; }
 	}
 
 	public class CultureConfig

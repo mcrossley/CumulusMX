@@ -472,6 +472,7 @@ namespace CumulusMX
 
 			FOSensorClockTime = ini.GetValue("FineOffset", "FOSensorClockTime", DateTime.MinValue);
 			FOStationClockTime = ini.GetValue("FineOffset", "FOStationClockTime", DateTime.MinValue);
+			FOSolarClockTime = ini.GetValue("FineOffset", "FOSolarClockTime", DateTime.MinValue);
 			if (cumulus.FineOffsetOptions.SyncReads)
 			{
 				Cumulus.LogMessage("Sensor clock  " + FOSensorClockTime.ToLongTimeString());
@@ -715,6 +716,7 @@ namespace CumulusMX
 				// Special Fine Offset data
 				ini.SetValue("FineOffset", "FOSensorClockTime", FOSensorClockTime);
 				ini.SetValue("FineOffset", "FOStationClockTime", FOStationClockTime);
+				ini.SetValue("FineOffset", "FOSolarClockTime", FOSolarClockTime);
 
 				// Records
 				ini.SetValue("Records", "Alltime", AlltimeRecordTimestamp);
@@ -1302,7 +1304,7 @@ namespace CumulusMX
 			}
 		}
 
-		private async Task sendWebSocketData()
+		internal async Task sendWebSocketData(bool wait = false)
 		{
 			// Don't do anything if there are no clients connected
 			if (cumulus.WebSock.ConnectedClients == 0)
@@ -5851,6 +5853,7 @@ namespace CumulusMX
 		public int ConsecutiveDryDays { get; set; }
 		public DateTime FOSensorClockTime { get; set; }
 		public DateTime FOStationClockTime { get; set; }
+		public DateTime FOSolarClockTime { get; set; }
 		public double YestAvgTemp { get; set; }
 		public double? AltimeterPressure { get; set; } = null;
 		public int YestDominantWindBearing { get; set; }

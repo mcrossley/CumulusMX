@@ -12,6 +12,7 @@ namespace CumulusMX
 	public class InternetSettings
 	{
 		private readonly Cumulus cumulus;
+		private static string hidden = "*****";
 
 		public InternetSettings(Cumulus cumulus)
 		{
@@ -61,7 +62,10 @@ namespace CumulusMX
 						cumulus.FtpOptions.Port = settings.website.ftpport;
 						cumulus.FtpOptions.Hostname = settings.website.hostname ?? string.Empty;
 						cumulus.FtpOptions.FtpMode = (Cumulus.FtpProtocols)settings.website.sslftp;
-						cumulus.FtpOptions.Password = settings.website.password ?? string.Empty;
+						if (cumulus.FtpOptions.Password != hidden)
+						{
+							cumulus.FtpOptions.Password = settings.website.password ?? string.Empty;
+						}
 						cumulus.FtpOptions.Username = settings.website.username ?? string.Empty;
 						cumulus.FtpOptions.SshAuthen = settings.website.sshAuth ?? string.Empty;
 						cumulus.FtpOptions.SshPskFile = settings.website.pskFile ?? string.Empty;
@@ -186,7 +190,10 @@ namespace CumulusMX
 					cumulus.MQTT.Port = settings.mqtt.port;
 					cumulus.MQTT.UseTLS = settings.mqtt.useTls;
 					cumulus.MQTT.Username = settings.mqtt.username ?? string.Empty;
-					cumulus.MQTT.Password = settings.mqtt.password ?? string.Empty;
+					if (cumulus.FtpOptions.Password != hidden)
+					{
+						cumulus.MQTT.Password = settings.mqtt.password ?? string.Empty;
+					}
 					cumulus.MQTT.EnableDataUpdate = settings.mqtt.dataUpdate.enabled;
 					if (cumulus.MQTT.EnableDataUpdate)
 					{
@@ -241,7 +248,10 @@ namespace CumulusMX
 				// HTTP proxy
 				try
 				{
-					cumulus.HTTPProxyPassword = settings.proxies.httpproxy.password ?? string.Empty;
+					if (cumulus.FtpOptions.Password != hidden)
+					{
+						cumulus.HTTPProxyPassword = settings.proxies.httpproxy.password ?? string.Empty;
+					}
 					cumulus.HTTPProxyPort = settings.proxies.httpproxy.port;
 					cumulus.HTTPProxyName = settings.proxies.httpproxy.proxy ?? string.Empty;
 					cumulus.HTTPProxyUser = settings.proxies.httpproxy.user ?? string.Empty;
@@ -266,8 +276,10 @@ namespace CumulusMX
 						cumulus.SmtpOptions.SslOption = settings.emailsettings.ssloption;
 						cumulus.SmtpOptions.RequiresAuthentication = settings.emailsettings.authenticate;
 						cumulus.SmtpOptions.User = settings.emailsettings.user;
-						cumulus.SmtpOptions.Password = settings.emailsettings.password;
-
+						if (cumulus.FtpOptions.Password != hidden)
+						{
+							cumulus.SmtpOptions.Password = settings.emailsettings.password;
+						}
 						if (cumulus.emailer == null)
 						{
 							cumulus.emailer = new EmailSender(cumulus);
@@ -365,7 +377,7 @@ namespace CumulusMX
 				ftpport = cumulus.FtpOptions.Port,
 				sslftp = (int)cumulus.FtpOptions.FtpMode,
 				hostname = cumulus.FtpOptions.Hostname,
-				password = cumulus.FtpOptions.Password,
+				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.FtpOptions.Password : hidden,
 				username = cumulus.FtpOptions.Username,
 				sshAuth = cumulus.FtpOptions.SshAuthen,
 				pskFile = cumulus.FtpOptions.SshPskFile,
@@ -486,7 +498,7 @@ namespace CumulusMX
 				port = cumulus.MQTT.Port,
 				useTls = cumulus.MQTT.UseTLS,
 				username = cumulus.MQTT.Username,
-				password = cumulus.MQTT.Password,
+				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.MQTT.Password : hidden,
 				dataUpdate = mqttUpdate,
 				interval = mqttInterval
 			};
@@ -504,7 +516,7 @@ namespace CumulusMX
 
 			var httpproxy = new HTTPproxySettingsJson()
 			{
-				password = cumulus.HTTPProxyPassword,
+				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.HTTPProxyPassword : hidden,
 				port = cumulus.HTTPProxyPort,
 				proxy = cumulus.HTTPProxyName,
 				user = cumulus.HTTPProxyUser
@@ -520,7 +532,7 @@ namespace CumulusMX
 				ssloption = cumulus.SmtpOptions.SslOption,
 				authenticate = cumulus.SmtpOptions.RequiresAuthentication,
 				user = cumulus.SmtpOptions.User,
-				password = cumulus.SmtpOptions.Password
+				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.SmtpOptions.Password : hidden
 			};
 
 			var misc = new MiscJson()

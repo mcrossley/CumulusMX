@@ -128,7 +128,7 @@ namespace CumulusMX
 			double totalwinddirY = 0;
 			double totalwindspeed = 0;
 
-			var start = new DateOnly(year, month, 1);
+			var start = new DateTime(year, month, 1);
 			var end = start.AddMonths(1);
 			try
 			{
@@ -236,8 +236,9 @@ namespace CumulusMX
 
 			try
 			{
-				var toDate = thedate.AddMonths(1);
-				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", thedate, toDate);
+				var fromDate = thedate.ToDateTime(new TimeOnly());
+				var toDate = fromDate.AddMonths(1);
+				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", fromDate, toDate);
 
 				foreach (var row in rows)
 				{
@@ -382,7 +383,7 @@ namespace CumulusMX
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, $"CreateMonthlyReport: Error");
-				Cumulus.LogMessage("Please edit the file to correct the error");
+				Cumulus.LogMessage("Please report this error");
 			}
 
 
@@ -759,7 +760,9 @@ namespace CumulusMX
 			string rowDateTime = "";
 			try
 			{
-				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ?", thedate, thedate.AddYears(1));
+				var fromDate = thedate.ToDateTime(new TimeOnly());
+				var toDate = fromDate.AddYears(1);
+				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ?", fromDate, toDate);
 
 				foreach (var row in rows)
 				{

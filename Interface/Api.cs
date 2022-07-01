@@ -1084,13 +1084,10 @@ namespace CumulusMX
 				NOAAReports noaarpts = new NOAAReports(Program.cumulus, Station);
 				try
 				{
-					// read the last segment of the URL to determine what data the caller wants
-					var lastSegment = Request.Url.Segments.Last();
-
 					var query = HttpUtility.ParseQueryString(Request.Url.Query);
 					int month, year;
 
-					Response.ContentType = "application/json";
+					Response.ContentType = "text/plain";
 
 					using var writer = HttpContext.OpenResponseText();
 					{
@@ -1104,7 +1101,7 @@ namespace CumulusMX
 						switch (req)
 						{
 							case "noaayear":
-								await writer.WriteAsync(Json.Serialize(noaarpts.GetNoaaYearReport(year)));
+								await writer.WriteAsync(String.Join("\n", noaarpts.GetNoaaYearReport(year).ToArray()));
 								break;
 							case "noaamonth":
 								if (!Int32.TryParse(query["month"], out month) || month < 1 || month > 12)
@@ -1113,7 +1110,7 @@ namespace CumulusMX
 									Response.StatusCode = 406;
 									return;
 								}
-								await writer.WriteAsync(Json.Serialize(noaarpts.GetNoaaMonthReport(year, month)));
+								await writer.WriteAsync(String.Join("\n", noaarpts.GetNoaaMonthReport(year, month).ToArray()));
 								break;
 							default:
 								throw new KeyNotFoundException("Key Not Found: " + req);
@@ -1123,8 +1120,8 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "Reports GetData: Error");
-					using var writer = HttpContext.OpenResponseText();
-					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
+					//using var writer = HttpContext.OpenResponseText();
+					//await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
 			}
@@ -1137,7 +1134,7 @@ namespace CumulusMX
 				{
 					var query = HttpUtility.ParseQueryString(Request.Url.Query);
 					int month, year;
-					Response.ContentType = "application/json";
+					Response.ContentType = "text/plain";
 
 
 					using var writer = HttpContext.OpenResponseText();
@@ -1152,7 +1149,7 @@ namespace CumulusMX
 						switch (req)
 						{
 							case "noaayear":
-								await writer.WriteAsync(Json.Serialize(noaarpts.GenerateNoaaYearReport(year)));
+								await writer.WriteAsync(String.Join("\n", noaarpts.GenerateNoaaYearReport(year).ToArray()));
 								break;
 							case "noaamonth":
 								if (!Int32.TryParse(query["month"], out month) || month < 1 || month > 12)
@@ -1161,7 +1158,7 @@ namespace CumulusMX
 									Response.StatusCode = 406;
 									return;
 								}
-								await writer.WriteAsync(Json.Serialize(noaarpts.GenerateNoaaMonthReport(year, month)));
+								await writer.WriteAsync(String.Join("\n", noaarpts.GenerateNoaaMonthReport(year, month).ToArray()));
 								break;
 							default:
 								throw new KeyNotFoundException("Key Not Found: " + req);
@@ -1171,8 +1168,8 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "GenReports: Error");
-					using var writer = HttpContext.OpenResponseText();
-						await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
+					//using var writer = HttpContext.OpenResponseText();
+					//	await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
 			}
