@@ -1211,7 +1211,7 @@ namespace CumulusMX
 					if (settings.ecowittapi != null)
 					{
 						cumulus.EcowittSettings.AppKey = settings.ecowittapi.applicationkey;
-						if (settings.daviswll.api.apiSecret != hidden)
+						if (settings.ecowittapi.userkey != hidden)
 							cumulus.EcowittSettings.UserApiKey = settings.ecowittapi.userkey;
 						cumulus.EcowittSettings.MacAddress = settings.ecowittapi.mac;
 					}

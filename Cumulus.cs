@@ -1113,11 +1113,12 @@ namespace CumulusMX
 				{
 					var text = File.ReadAllText(@"/proc/uptime");
 					var strTime = text.Split(' ')[0];
+					LogDebugMessage("Found /proc/uptime string: " + strTime);
 					_ = double.TryParse(strTime, out ts);
 				}
 
 				// Only delay if the delay uptime is undefined (0), or the current uptime is less than the user specified max uptime to apply the delay
-				LogMessage($"System uptime = {(int)ts} secs");
+				LogMessage($"System uptime = {ts:F0} secs");
 				if (ProgramOptions.StartupDelayMaxUptime == 0 || (ts > -1 && ProgramOptions.StartupDelayMaxUptime > ts))
 				{
 					var msg1 = $"Delaying start for {ProgramOptions.StartupDelaySecs} seconds";

@@ -6,8 +6,8 @@
     <StartupObject>CumulusMX.Program</StartupObject>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <NoWin32Manifest>true</NoWin32Manifest>
-    <AssemblyVersion>4.0.0.4011</AssemblyVersion>
-    <FileVersion>4.0.0.4011</FileVersion>
+    <AssemblyVersion>4.0.0.4012</AssemblyVersion>
+    <FileVersion>4.0.0.4012</FileVersion>
     <PackageIcon>icon.ico</PackageIcon>
     <PackageIconUrl />
     <UserSecretsId>06d97cbf-708b-41a7-b6fa-82bb67d5da0c</UserSecretsId>

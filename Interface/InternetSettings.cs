@@ -62,7 +62,7 @@ namespace CumulusMX
 						cumulus.FtpOptions.Port = settings.website.ftpport;
 						cumulus.FtpOptions.Hostname = settings.website.hostname ?? string.Empty;
 						cumulus.FtpOptions.FtpMode = (Cumulus.FtpProtocols)settings.website.sslftp;
-						if (cumulus.FtpOptions.Password != hidden)
+						if (settings.website.password != hidden)
 						{
 							cumulus.FtpOptions.Password = settings.website.password ?? string.Empty;
 						}
@@ -190,7 +190,7 @@ namespace CumulusMX
 					cumulus.MQTT.Port = settings.mqtt.port;
 					cumulus.MQTT.UseTLS = settings.mqtt.useTls;
 					cumulus.MQTT.Username = settings.mqtt.username ?? string.Empty;
-					if (cumulus.FtpOptions.Password != hidden)
+					if (settings.mqtt.password != hidden)
 					{
 						cumulus.MQTT.Password = settings.mqtt.password ?? string.Empty;
 					}
@@ -248,7 +248,7 @@ namespace CumulusMX
 				// HTTP proxy
 				try
 				{
-					if (cumulus.FtpOptions.Password != hidden)
+					if (settings.proxies.httpproxy.password != hidden)
 					{
 						cumulus.HTTPProxyPassword = settings.proxies.httpproxy.password ?? string.Empty;
 					}
@@ -276,7 +276,7 @@ namespace CumulusMX
 						cumulus.SmtpOptions.SslOption = settings.emailsettings.ssloption;
 						cumulus.SmtpOptions.RequiresAuthentication = settings.emailsettings.authenticate;
 						cumulus.SmtpOptions.User = settings.emailsettings.user;
-						if (cumulus.FtpOptions.Password != hidden)
+						if (settings.emailsettings.password != hidden)
 						{
 							cumulus.SmtpOptions.Password = settings.emailsettings.password;
 						}
