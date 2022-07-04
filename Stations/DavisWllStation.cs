@@ -101,7 +101,7 @@ namespace CumulusMX
 			wlHttpClient.Timeout = TimeSpan.FromSeconds(20); // 20 seconds for internet queries
 
 			// used for kicking real time, and getting current conditions
-			dogsBodyClient.Timeout = TimeSpan.FromSeconds(10); // 10 seconds for local queries
+			dogsBodyClient.Timeout = TimeSpan.FromSeconds(5); // 5 seconds for local queries
 			dogsBodyClient.DefaultRequestHeaders.Add("Connection", "close");
 
 			// The Davis leafwetness sensors send a decimal value via WLL (only integer available via VP2/Vue)
@@ -440,6 +440,10 @@ namespace CumulusMX
 					}
 					retry = 0;
 				}
+				catch (TimeoutException)
+				{
+					cumulus.LogDataMessage("GetWllRealtime: Timed out waiting for WLL response");
+				}
 				catch (Exception ex)
 				{
 					retry--;
@@ -512,9 +516,17 @@ namespace CumulusMX
 							Cumulus.LogMessage("GetWllCurrent: Error processing WLL response");
 
 							if (ex.InnerException != null && ex.InnerException.Message.Contains("response ended prematurely"))
+							{
 								cumulus.LogDebugMessage("GetWllCurrent: Error - The WLL rejected our request");
+							}
+							else if (ex is TimeoutException)
+							{
+								cumulus.LogDebugMessage("GetWllCurrent: Error - Timed out waiting for WLL response");
+							}
 							else
+							{
 								cumulus.LogExceptionMessage(ex, "GetWllCurrent: Error processing WLL response");
+							}
 						}
 						retry++;
 

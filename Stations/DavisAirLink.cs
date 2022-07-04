@@ -221,7 +221,7 @@ namespace CumulusMX
 			Cumulus.LogMessage($"Davis AirLink ({locationStr}) - using IP address {(indoor ? cumulus.AirLinkInIPAddr : cumulus.AirLinkOutIPAddr)}");
 
 			wlHttpClient.Timeout = TimeSpan.FromSeconds(20); // 20 seconds for internet queries
-			dogsBodyClient.Timeout = TimeSpan.FromSeconds(10); // 10 seconds for local queries
+			dogsBodyClient.Timeout = TimeSpan.FromSeconds(5); // 5 seconds for local queries
 
 			// Only start reading history if the main station isn't a WLL
 			// and we have a station id
@@ -352,10 +352,21 @@ namespace CumulusMX
 					catch (Exception ex)
 					{
 						retry++;
-						if (ex.InnerException != null && ex.InnerException.Message.Contains("response ended prematurely"))
-							cumulus.LogDebugMessage("GetAlCurrent: Error - The AirLink rejected our request");
-						else
-							cumulus.LogExceptionMessage(ex, $"GetAlCurrent: {locationStr}");
+						if (retry == 3)
+						{
+							if (ex.InnerException != null && ex.InnerException.Message.Contains("response ended prematurely"))
+							{
+								cumulus.LogDebugMessage("GetAlCurrent: Error - The AirLink rejected our request");
+							}
+							else if (ex is TimeoutException)
+							{
+								cumulus.LogDebugMessage("GetAlCurrent: Error - Timed out waiting for AirLink response");
+							}
+							else
+							{
+								cumulus.LogExceptionMessage(ex, $"GetAlCurrent: {locationStr}");
+							}
+						}
 						await Task.Delay(1000);
 					}
 				} while (retry < 3);
