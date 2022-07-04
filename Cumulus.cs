@@ -4578,7 +4578,7 @@ namespace CumulusMX
 				//Twitter.OauthTokenSecret =Crypto.DecryptString(Twitter.OauthTokenSecret);
 				PWS.PW = Crypto.DecryptString(PWS.PW, Program.InstanceId);
 				WOW.PW = Crypto.DecryptString(WOW.PW, Program.InstanceId);
-				APRS.PW = Crypto.DecryptString(AirLinkApiKey, Program.InstanceId);
+				APRS.PW = Crypto.DecryptString(APRS.PW, Program.InstanceId);
 				OpenWeatherMap.PW = Crypto.DecryptString(OpenWeatherMap.PW, Program.InstanceId);
 				MQTT.Username = Crypto.DecryptString(MQTT.Username, Program.InstanceId);
 				MQTT.Password = Crypto.DecryptString(MQTT.Password, Program.InstanceId);

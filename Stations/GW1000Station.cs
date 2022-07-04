@@ -1173,7 +1173,7 @@ namespace CumulusMX
 								idx = size;
 								break;
 						}
-					} while (idx < data.Length - 2);
+					} while (idx < size);
 
 					// Some debugging info
 					cumulus.LogDebugMessage($"LiveDate: Wind Decode >> Last={windSpeedLast:F1}, LastDir={windDirLast}, Gust={gustLast:F1}, (MXAvg={WindAverage:F1})");

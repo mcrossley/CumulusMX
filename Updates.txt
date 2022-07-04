@@ -1,4 +1,12 @@
-4.0.0 - b4011
+4.0.0 - b4013
+——————————————
+Fixed
+- Ecowitt Local API going into an infinite loop on bad response from device
+- Incorrect SSH.Net library
+
+
+
+4.0.0 - b4012
 ——————————————
 Incorporates v3 changes up to b3191
 
@@ -12,7 +20,7 @@ Changed
 - Removed database compression on every start-up
 
 New
-- Display passwords option in Program Settings | Options. When disabled (default), all passwords are sent to the settings pages as "*****". You can still enter new passwords whilst in this mode.
+- Display passwords option in Program Settings | General Options. When disabled (default), all passwords are sent to the settings pages as "*****". You can still enter new passwords whilst in this mode.
 
 
 4.0.0 - b4010
