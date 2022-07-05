@@ -557,8 +557,8 @@ namespace CumulusMX
 						cumulus.LogDebugMessage($"DecodeAlCurrent: {locationStr} - Found an unknown transmitter type [{type}]!");
 						break;
 				}
-				//UpdateStatusPanel(DateTime.Now);
-				//UpdateMQTT();
+				//station.UpdateStatusPanel(DateTime.Now);
+				//sttaion.UpdateMQTT();
 			}
 			catch (Exception ex)
 			{

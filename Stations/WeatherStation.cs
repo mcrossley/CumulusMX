@@ -1370,7 +1370,7 @@ namespace CumulusMX
 
 				var ser = new DataContractJsonSerializer(typeof(WebSocketData));
 
-				var stream = new MemoryStream();
+				using var stream = new MemoryStream();
 
 				ser.WriteObject(stream, data);
 
@@ -6431,7 +6431,7 @@ namespace CumulusMX
 		}
 
 
-		protected static void UpdateMQTT()
+		internal static void UpdateMQTT()
 		{
 			if (cumulus.MQTT.EnableDataUpdate)
 			{
