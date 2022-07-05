@@ -828,9 +828,6 @@ namespace CumulusMX
 
 			//stringsFile = "strings.ini";
 
-			// Take a backup of all the data before we start proper
-			BackupData(false, DateTime.Now);
-
 			// initialise the third party uploads
 			Wund = new ThirdParty.WebUploadWund(this, "WUnderground");
 			Windy = new ThirdParty.WebUploadWindy(this, "Windy");
@@ -1051,6 +1048,10 @@ namespace CumulusMX
 			LogMessage("Standard time zone name:   " + localZone.StandardName);
 			LogMessage("Daylight saving time name: " + localZone.DaylightName);
 			LogMessage("Daylight saving time? " + localZone.IsDaylightSavingTime(now));
+
+			// Take a backup of all the data before we start proper
+			BackupData(false, DateTime.Now);
+
 
 			// Do we prevent more than one copy of CumulusMX running?
 			try
@@ -7039,7 +7040,6 @@ namespace CumulusMX
 							archive.CreateEntryFromFile(LogFile, logbackup);
 							archive.CreateEntryFromFile(MonthIniFile, monthbackup);
 							archive.CreateEntryFromFile(YearIniFile, yearbackup);
-							archive.CreateEntryFromFile(diaryfile, diarybackup);
 							archive.CreateEntryFromFile("Cumulus.ini", configbackup);
 							archive.CreateEntryFromFile("UniqueId.txt", uniquebackup);
 
@@ -7060,6 +7060,19 @@ namespace CumulusMX
 
 									LogDebugMessage("Deleting backup copy of the database");
 									File.Delete(backUpDest);
+
+									backUpDest = folderpath + "diary.db";
+									zipLocation = datafolder + "diary.db";
+									LogDebugMessage("Making backup copy of the diary");
+									DiaryDB.Backup(backUpDest);
+									LogDebugMessage("Completed backup copy of the diary");
+
+									LogDebugMessage("Archiving backup copy of the diary");
+									archive.CreateEntryFromFile(backUpDest, zipLocation);
+									LogDebugMessage("Completed backup copy of the diary");
+
+									LogDebugMessage("Deleting backup copy of the diary");
+									File.Delete(backUpDest);
 								}
 								catch (Exception ex)
 								{
@@ -7071,12 +7084,19 @@ namespace CumulusMX
 								// start-up backup - the db is not yet in use, do a file copy including any recovery files
 								LogDebugMessage("Archiving the database");
 								archive.CreateEntryFromFile(dbfile, dbBackup);
-
 								if (File.Exists(dbfile + "-journal"))
 								{
 									archive.CreateEntryFromFile(dbfile + "-journal", dbBackup + "-journal");
 								}
+
+								archive.CreateEntryFromFile(diaryfile, diarybackup);
+								if (File.Exists(diaryfile + "-journal"))
+								{
+									archive.CreateEntryFromFile(diaryfile + "-journal", diarybackup + "-journal");
+								}
+
 								LogDebugMessage("Completed archive of the database");
+
 
 								//CopyBackupFile(dbfile + "-shm", dbBackup + "-shm");
 								//CopyBackupFile(dbfile + "-wal", dbBackup + "-wal");
