@@ -23,6 +23,7 @@ using Timer = System.Timers.Timer;
 using SQLite;
 using Renci.SshNet;
 using FluentFTP.Helpers;
+using System.IO.Compression;
 
 //using MQTTnet;
 
@@ -6985,15 +6986,13 @@ namespace CumulusMX
 
 				}
 
-				string foldername = timestamp.ToString("yyyyMMddHHmmss");
+				string foldername = daily ? timestamp.ToString("yyyyMMdd") : timestamp.ToString("yyyyMMddHHmmss");
 
-				foldername = dirpath + foldername + DirectorySeparator;
-				string datafolder = foldername + "datav4" + DirectorySeparator;
+				string folderpath = dirpath + foldername + DirectorySeparator;
+				string datafolder = "datav4" + DirectorySeparator;
 
-				LogMessage("BackupData: Creating backup folder " + foldername);
-
-				var configbackup = foldername + "Cumulus.ini";
-				var uniquebackup = foldername + "UniqueId.txt";
+				var configbackup =  "Cumulus.ini";
+				var uniquebackup = "UniqueId.txt";
 				var alltimebackup = datafolder + Path.GetFileName(AlltimeIniFile);
 				var monthlyAlltimebackup = datafolder + Path.GetFileName(MonthlyAlltimeIniFile);
 				var daybackup = datafolder + Path.GetFileName(DayFileName);
@@ -7013,11 +7012,11 @@ namespace CumulusMX
 				var AirLinkFile = GetAirLinkLogFileName(timestamp);
 				var AirLinkBackup = datafolder + Path.GetFileName(AirLinkFile);
 
-				if (!Directory.Exists(foldername))
+				if (!Directory.Exists(folderpath))
 				{
 					try
 					{
-						Directory.CreateDirectory(foldername);
+						Directory.CreateDirectory(folderpath);
 						if (!Directory.Exists(datafolder))
 							Directory.CreateDirectory(datafolder);
 					}
@@ -7026,61 +7025,86 @@ namespace CumulusMX
 						LogExceptionMessage(ex, "Backup: Error creating folders");
 					}
 
-					_ = CopyBackupFile(AlltimeIniFile, alltimebackup);
-					_ = CopyBackupFile(MonthlyAlltimeIniFile, monthlyAlltimebackup);
-					_ = CopyBackupFile(DayFileName, daybackup);
-					_ = CopyBackupFile(TodayIniFile, todaybackup);
-					_ = CopyBackupFile(YesterdayFile, yesterdaybackup);
-					_ = CopyBackupFile(LogFile, logbackup);
-					_ = CopyBackupFile(MonthIniFile, monthbackup);
-					_ = CopyBackupFile(YearIniFile, yearbackup);
-					_ = CopyBackupFile(diaryfile, diarybackup);
-					_ = CopyBackupFile("Cumulus.ini", configbackup);
-					_ = CopyBackupFile("UniqueId.txt", uniquebackup);
 
-					if (daily)
+					// create a zip archive file for the backup
+					using (FileStream zipFile = new FileStream(folderpath + DirectorySeparator + foldername + ".zip", FileMode.Create))
 					{
-						// for daily backup the db is in use, so use an online backup
-						try
+						using (ZipArchive archive = new ZipArchive(zipFile, ZipArchiveMode.Create))
 						{
-							LogDebugMessage("Making backup copy of the database");
-							station.Database.Backup(dbBackup);
-							LogDebugMessage("Completed backup copy of the database");
+							archive.CreateEntryFromFile(AlltimeIniFile, alltimebackup);
+							archive.CreateEntryFromFile(MonthlyAlltimeIniFile, monthlyAlltimebackup);
+							archive.CreateEntryFromFile(DayFileName, daybackup);
+							archive.CreateEntryFromFile(TodayIniFile, todaybackup);
+							archive.CreateEntryFromFile(YesterdayFile, yesterdaybackup);
+							archive.CreateEntryFromFile(LogFile, logbackup);
+							archive.CreateEntryFromFile(MonthIniFile, monthbackup);
+							archive.CreateEntryFromFile(YearIniFile, yearbackup);
+							archive.CreateEntryFromFile(diaryfile, diarybackup);
+							archive.CreateEntryFromFile("Cumulus.ini", configbackup);
+							archive.CreateEntryFromFile("UniqueId.txt", uniquebackup);
+
+							if (daily)
+							{
+								// for daily backup the db is in use, so use an online backup
+								try
+								{
+									var backUpDest = folderpath + "cumulusmx-v4.db";
+									var zipLocation = datafolder + "cumulusmx-v4.db";
+									LogDebugMessage("Making backup copy of the database");
+									station.Database.Backup(backUpDest);
+									LogDebugMessage("Completed backup copy of the database");
+
+									LogDebugMessage("Archiving backup copy of the database");
+									archive.CreateEntryFromFile(backUpDest, zipLocation);
+									LogDebugMessage("Completed backup copy of the database");
+
+									LogDebugMessage("Deleting backup copy of the database");
+									File.Delete(backUpDest);
+								}
+								catch (Exception ex)
+								{
+									LogExceptionMessage(ex, "Error making db backup");
+								}
+							}
+							else
+							{
+								// start-up backup - the db is not yet in use, do a file copy including any recovery files
+								LogDebugMessage("Archiving the database");
+								archive.CreateEntryFromFile(dbfile, dbBackup);
+
+								if (File.Exists(dbfile + "-journal"))
+								{
+									archive.CreateEntryFromFile(dbfile + "-journal", dbBackup + "-journal");
+								}
+								LogDebugMessage("Completed archive of the database");
+
+								//CopyBackupFile(dbfile + "-shm", dbBackup + "-shm");
+								//CopyBackupFile(dbfile + "-wal", dbBackup + "-wal");
+							}
+
+							archive.CreateEntryFromFile(extraFile, extraBackup);
+							archive.CreateEntryFromFile(AirLinkFile, AirLinkBackup);
+
+							// Do not do this extra backup between 00:00 & Roll-over hour on the first of the month
+							// as the month has not yet rolled over - only applies for start-up backups
+							if (timestamp.Day == 1 && timestamp.Hour >= RolloverHour)
+							{
+								// on the first of month, we also need to backup last months files as well
+								var LogFile2 = GetLogFileName(timestamp.AddDays(-1));
+								var logbackup2 = datafolder + Path.GetFileName(LogFile2);
+
+								var extraFile2 = GetExtraLogFileName(timestamp.AddDays(-1));
+								var extraBackup2 = datafolder + Path.GetFileName(extraFile2);
+
+								var AirLinkFile2 = GetAirLinkLogFileName(timestamp.AddDays(-1));
+								var AirLinkBackup2 = datafolder + Path.GetFileName(AirLinkFile2);
+
+								archive.CreateEntryFromFile(LogFile2, logbackup2);
+								archive.CreateEntryFromFile(extraFile2, extraBackup2);
+								archive.CreateEntryFromFile(AirLinkFile2, AirLinkBackup2);
+							}
 						}
-						catch (Exception ex)
-						{
-							LogExceptionMessage(ex, "Error making db backup");
-						}
 					}
-					else
-					{
-						// start-up backup - the db is not yet in use, do a file copy including any recovery files
-						_ = CopyBackupFile(dbfile, dbBackup);
-						_ = CopyBackupFile(dbfile + "-journal", dbBackup + "-journal");
-						//CopyBackupFile(dbfile + "-shm", dbBackup + "-shm");
-						//CopyBackupFile(dbfile + "-wal", dbBackup + "-wal");
-					}
-					_ = CopyBackupFile(extraFile, extraBackup);
-					_ = CopyBackupFile(AirLinkFile, AirLinkBackup);
-					// Do not do this extra backup between 00:00 & Roll-over hour on the first of the month
-					// as the month has not yet rolled over - only applies for start-up backups
-					if (timestamp.Day == 1 && timestamp.Hour >= RolloverHour)
-					{
-						// on the first of month, we also need to backup last months files as well
-						var LogFile2 = GetLogFileName(timestamp.AddDays(-1));
-						var logbackup2 = datafolder + Path.GetFileName(LogFile2);
-
-						var extraFile2 = GetExtraLogFileName(timestamp.AddDays(-1));
-						var extraBackup2 = datafolder + Path.GetFileName(extraFile2);
-
-						var AirLinkFile2 = GetAirLinkLogFileName(timestamp.AddDays(-1));
-						var AirLinkBackup2 = datafolder + Path.GetFileName(AirLinkFile2);
-
-						_ = CopyBackupFile(LogFile2, logbackup2);
-						_ = CopyBackupFile(extraFile2, extraBackup2);
-						_ = CopyBackupFile(AirLinkFile2, AirLinkBackup2);
-					}
-
 					LogMessage("Created backup folder " + foldername);
 				}
 				else
@@ -7090,6 +7114,7 @@ namespace CumulusMX
 			}
 		}
 
+		/*
 		private async Task CopyBackupFile(string src, string dest)
 		{
 			try
@@ -7105,6 +7130,7 @@ namespace CumulusMX
 				LogExceptionMessage(ex, $"BackupData: Error copying {src} to {dest}");
 			}
 		}
+		*/
 
 		/*
 		/// <summary>

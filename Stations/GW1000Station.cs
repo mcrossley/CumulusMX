@@ -1176,7 +1176,7 @@ namespace CumulusMX
 					} while (idx < size);
 
 					// Some debugging info
-					cumulus.LogDebugMessage($"LiveDate: Wind Decode >> Last={windSpeedLast:F1}, LastDir={windDirLast}, Gust={gustLast:F1}, (MXAvg={WindAverage:F1})");
+					cumulus.LogDebugMessage($"LiveData: Wind Decode >> Last={windSpeedLast:F1}, LastDir={windDirLast}, Gust={gustLast:F1}, (MXAvg={WindAverage:F1})");
 
 					// Now do the stuff that requires more than one input parameter
 
