@@ -1865,19 +1865,16 @@ namespace CumulusMX
 
 		public void SetFtpLogging(bool isSet)
 		{
-			try
-			{
-				FtpTrace.EnableTracing = false;
-			}
-			catch
-			{
-				// ignored
-			}
-
 			if (isSet)
 			{
 				FtpTrace.LogPassword = false;
 				FtpTrace.LogToFile = "MXdiags" + DirectorySeparator + "ftplog.txt";
+				FtpTrace.EnableTracing = true;
+			}
+			else
+			{
+				FtpTrace.LogToFile = "false";
+				FtpTrace.EnableTracing = false;
 			}
 		}
 
