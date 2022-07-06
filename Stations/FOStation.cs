@@ -24,11 +24,11 @@ namespace CumulusMX
 		private int prevaddr = -1;
 		private int prevraintotal = -1;
 		private int ignoreraincount;
-		private int synchroPhase;
 		private DateTime previousSensorClock;
-		private DateTime previousStationClock;
+		//private DateTime previousStationClock;
 		private DateTime previousSolarClock;
 		private bool synchronising;
+		private int synchroniseAttempts;
 		//private DateTime lastraintip;
 		//private int raininlasttip = 0;
 		//private readonly double[] WindRunHourMult = {3.6, 1.0, 1.0, 1.0};
@@ -858,8 +858,10 @@ namespace CumulusMX
 				if ((DateTime.Now - FOSensorClockTime).TotalDays > 1)
 				{
 					// (re)synchronise data reads to try to avoid USB lock-up problem
-
-					StartSynchronising();
+					if (synchroniseAttempts <= 2)
+					{
+						StartSynchronising();
+					}
 				}
 				else
 				{
@@ -1286,6 +1288,7 @@ namespace CumulusMX
 
 		private void StartSynchronising()
 		{
+			synchroniseAttempts++;
 			previousSensorClock = FOSensorClockTime;
 			//previousStationClock = FOStationClockTime;
 			previousSolarClock = FOSolarClockTime;
@@ -1303,7 +1306,9 @@ namespace CumulusMX
 			int secsdiff;
 
 			synchronising = false;
-			synchroPhase = 0;
+			tmrDataRead.Interval = 16000; // 16 seconds
+			synchroniseAttempts = 0;
+
 			if (previousSensorClock == DateTime.MinValue)
 			{
 				Cumulus.LogMessage("Sensor clock  " + FOSensorClockTime.ToLongTimeString());
@@ -1350,8 +1355,6 @@ namespace CumulusMX
 					Cumulus.LogMessage("Solar clock  " + FOSolarClockTime.ToLongTimeString() + " drift = " + secsdiff + " seconds");
 				}
 			}
-
-			tmrDataRead.Interval = 16000; // 16 seconds
 
 			Cumulus.LogMessage("Stop Synchronising");
 			Cumulus.LogConsoleMessage("Stop Synchronising");
