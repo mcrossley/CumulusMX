@@ -1614,6 +1614,11 @@ namespace CumulusMX
 			return GetFormattedDateTime(station.HiLoTodayMidnight.LowTempTime, "HH:mm", tagParams);
 		}
 
+		private string TagtempMidnightRangeT(Dictionary<string, string> tagParams)
+		{
+			return CheckRcDp((station.HiLoTodayMidnight.HighTemp - station.HiLoTodayMidnight.LowTemp), tagParams, cumulus.TempDPlaces);
+		}
+
 		private string TagSolarTh(Dictionary<string,string> tagParams)
 		{
 			return station.HiLoToday.HighSolar.HasValue ? station.HiLoToday.HighSolar.Value.ToString() : "-";
@@ -1974,6 +1979,11 @@ namespace CumulusMX
 		private string TagTtempMidnightYl(Dictionary<string, string> tagParams)
 		{
 			return GetFormattedDateTime(station.HiLoYestMidnight.LowTempTime, "HH:mm", tagParams);
+		}
+
+		private string TagtempMidnightRangeY(Dictionary<string, string> tagParams)
+		{
+			return CheckRcDp((station.HiLoYestMidnight.HighTemp - station.HiLoYestMidnight.LowTemp), tagParams, cumulus.TempDPlaces);
 		}
 
 		private string TagapptempYh(Dictionary<string,string> tagParams)
@@ -5485,6 +5495,7 @@ namespace CumulusMX
 				{ "TtempMidnightTH", TagTtempMidnightTh },
 				{ "tempMidnightTL", TagtempMidnightTl },
 				{ "TtempMidnightTL", TagTtempMidnightTl },
+				{ "tempMidnightRangeT", TagtempMidnightRangeT },
 				{ "wchillTL", TagwchillTl },
 				{ "TwchillTL", TagTwchillTl },
 				{ "apptempTH", TagapptempTh },
@@ -5541,6 +5552,7 @@ namespace CumulusMX
 				{ "TtempMidnightYH", TagTtempMidnightYh },
 				{ "tempMidnightYL", TagtempMidnightYl },
 				{ "TtempMidnightYL", TagTtempMidnightYl },
+				{ "tempMidnightRangeY", TagtempMidnightRangeY },
 				{ "wchillYL", TagwchillYl },
 				{ "TwchillYL", TagTwchillYl },
 				{ "apptempYH", TagapptempYh },
