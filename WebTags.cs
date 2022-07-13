@@ -4080,6 +4080,16 @@ namespace CumulusMX
 			return "0";
 		}
 
+		private string TagIsRainingAlarm(Dictionary<string, string> tagParams)
+		{
+			if (cumulus.IsRainingAlarm.Enabled)
+			{
+				return cumulus.IsRainingAlarm.Triggered ? "1" : "0";
+			}
+
+			return "0";
+		}
+
 		private string TagHighWindGustAlarm(Dictionary<string,string> tagParams)
 		{
 			if (cumulus.HighGustAlarm.Enabled)
@@ -5862,6 +5872,7 @@ namespace CumulusMX
 				{ "PressChangeDownAlarm", TagPressChangeDownAlarm },
 				{ "HighRainTodayAlarm", TagHighRainTodayAlarm },
 				{ "HighRainRateAlarm", TagHighRainRateAlarm },
+				{ "IsRainingAlarm", TagIsRainingAlarm },
 				{ "HighWindGustAlarm", TagHighWindGustAlarm },
 				{ "HighWindSpeedAlarm", TagHighWindSpeedAlarm },
 				{ "BatteryLowAlarm", TagBatteryLowAlarm },

@@ -1363,7 +1363,7 @@ namespace CumulusMX
 					cumulus.LowTempAlarm.Triggered, cumulus.HighTempAlarm.Triggered, cumulus.TempChangeAlarm.UpTriggered, cumulus.TempChangeAlarm.DownTriggered, cumulus.HighRainTodayAlarm.Triggered, cumulus.HighRainRateAlarm.Triggered,
 					cumulus.LowPressAlarm.Triggered, cumulus.HighPressAlarm.Triggered, cumulus.PressChangeAlarm.UpTriggered, cumulus.PressChangeAlarm.DownTriggered, cumulus.HighGustAlarm.Triggered, cumulus.HighWindAlarm.Triggered,
 					cumulus.SensorAlarm.Triggered, cumulus.BatteryLowAlarm.Triggered, cumulus.SpikeAlarm.Triggered, cumulus.UpgradeAlarm.Triggered,
-					cumulus.HttpUploadAlarm.Triggered, cumulus.MySqlUploadAlarm.Triggered,
+					cumulus.HttpUploadAlarm.Triggered, cumulus.MySqlUploadAlarm.Triggered, cumulus.IsRainingAlarm.Triggered,
 					FeelsLike, HiLoToday.HighFeelsLike, HiLoToday.HighFeelsLikeTime.ToString("HH:mm"), HiLoToday.LowFeelsLike, HiLoToday.LowFeelsLikeTime.ToString("HH:mm"),
 					HiLoToday.HighHumidex, HiLoToday.HighHumidexTime.ToString("HH:mm"));
 
@@ -1444,6 +1444,7 @@ namespace CumulusMX
 			cumulus.HighGustAlarm.Clear();
 			cumulus.HighRainRateAlarm.Clear();
 			cumulus.HighRainTodayAlarm.Clear();
+			cumulus.IsRainingAlarm.Clear();
 			cumulus.HighPressAlarm.Clear();
 			cumulus.LowPressAlarm.Clear();
 			cumulus.HighTempAlarm.Clear();
@@ -3035,6 +3036,12 @@ namespace CumulusMX
 				RainRate = rate * cumulus.Calib.Rain.Mult;
 				var roundRate = Math.Round(RainRate.Value, cumulus.RainDPlaces);
 
+				if (cumulus.StationOptions.UseRainForIsRaining)
+				{
+					IsRaining = RainRate > 0;
+					cumulus.IsRainingAlarm.Triggered = IsRaining;
+				}
+
 				if (roundRate > AllTime.HighRainRate.Val)
 					SetAlltime(AllTime.HighRainRate, roundRate, timestamp);
 
@@ -3071,6 +3078,17 @@ namespace CumulusMX
 				{
 					// rain has occurred
 					LastRainTip = timestamp.ToString("yyyy-MM-dd HH:mm");
+
+					if (cumulus.StationOptions.UseRainForIsRaining)
+					{
+						IsRaining = true;
+						cumulus.IsRainingAlarm.Triggered = true;
+					}
+				}
+				else if (cumulus.StationOptions.UseRainForIsRaining && RainRate <= 0)
+				{
+					IsRaining = false;
+					cumulus.IsRainingAlarm.Triggered = false;
 				}
 
 				// Calculate today"s rainfall
@@ -8457,7 +8475,7 @@ namespace CumulusMX
 				cumulus.BeaufortDesc(WindAverage ?? 0), LastDataReadTimestamp.ToString("HH:mm:ss"), DataStopped, StormRain, stormRainStart, CloudBase, cumulus.CloudBaseInFeet ? "ft" : "m", RainLast24Hour,
 				cumulus.LowTempAlarm.Triggered, cumulus.HighTempAlarm.Triggered, cumulus.TempChangeAlarm.UpTriggered, cumulus.TempChangeAlarm.DownTriggered, cumulus.HighRainTodayAlarm.Triggered, cumulus.HighRainRateAlarm.Triggered,
 				cumulus.LowPressAlarm.Triggered, cumulus.HighPressAlarm.Triggered, cumulus.PressChangeAlarm.UpTriggered, cumulus.PressChangeAlarm.DownTriggered, cumulus.HighGustAlarm.Triggered, cumulus.HighWindAlarm.Triggered,
-				cumulus.SensorAlarm.Triggered, cumulus.BatteryLowAlarm.Triggered, cumulus.SpikeAlarm.Triggered, cumulus.UpgradeAlarm.Triggered, cumulus.HttpUploadAlarm.Triggered, cumulus.MySqlUploadAlarm.Triggered,
+				cumulus.SensorAlarm.Triggered, cumulus.BatteryLowAlarm.Triggered, cumulus.SpikeAlarm.Triggered, cumulus.UpgradeAlarm.Triggered, cumulus.HttpUploadAlarm.Triggered, cumulus.MySqlUploadAlarm.Triggered, cumulus.IsRainingAlarm.Triggered,
 				FeelsLike, HiLoToday.HighFeelsLike, HiLoToday.HighFeelsLikeTime.ToString("HH:mm:ss"), HiLoToday.LowFeelsLike, HiLoToday.LowFeelsLikeTime.ToString("HH:mm:ss"),
 				HiLoToday.HighHumidex, HiLoToday.HighHumidexTime.ToString("HH:mm:ss"));
 

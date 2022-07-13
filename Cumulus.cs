@@ -627,6 +627,7 @@ namespace CumulusMX
 		public Alarm UpgradeAlarm;
 		public Alarm HttpUploadAlarm;
 		public Alarm MySqlUploadAlarm;
+		public Alarm IsRainingAlarm;
 
 
 		private const double DEFAULTFCLOWPRESS = 950.0;
@@ -1030,6 +1031,7 @@ namespace CumulusMX
 			UpgradeAlarm = new Alarm(this, "CMX Upgrade");
 			HttpUploadAlarm = new Alarm(this, "HTTP Upload");
 			MySqlUploadAlarm = new Alarm(this, "MySQL Upload");
+			IsRainingAlarm = new Alarm(this, "Is Raining");
 
 			// Read the configuration file
 
@@ -1978,6 +1980,7 @@ namespace CumulusMX
 				else
 				{
 					station.IsRaining = isOn;
+					IsRainingAlarm.Triggered = isOn;
 				}
 			}
 			else if (isDevice2)
@@ -1993,6 +1996,7 @@ namespace CumulusMX
 				else
 				{
 					station.IsRaining = isOn;
+					IsRainingAlarm.Triggered = isOn;
 				}
 			}
 		}
@@ -3324,6 +3328,7 @@ namespace CumulusMX
 			StationOptions.CalcWind10MinAve = ini.GetValue("Station", "Wind10MinAverage", false);
 			StationOptions.UseSpeedForAvgCalc = ini.GetValue("Station", "UseSpeedForAvgCalc", false);
 			StationOptions.UseSpeedForLatest = ini.GetValue("Station", "UseSpeedForLatest", false);
+			StationOptions.UseRainForIsRaining = ini.GetValue("Station", "UseRainForIsRaining", false);
 
 			StationOptions.AvgBearingMinutes = ini.GetValue("Station", "AvgBearingMinutes", 10);
 			if (StationOptions.AvgBearingMinutes > 120)
@@ -4165,6 +4170,14 @@ namespace CumulusMX
 			HighRainRateAlarm.Latch = ini.GetValue("Alarms", "HighRainRateAlarmLatch", false);
 			HighRainRateAlarm.LatchHours = ini.GetValue("Alarms", "HighRainRateAlarmLatchHours", 24);
 
+			IsRainingAlarm.Enabled = ini.GetValue("Alarms", "IsRainingAlarmSet", false);
+			IsRainingAlarm.Sound = ini.GetValue("Alarms", "IsRainingAlarmSound", false);
+			IsRainingAlarm.SoundFile = ini.GetValue("Alarms", "IsRainingAlarmSoundFile", DefaultSoundFile);
+			IsRainingAlarm.Notify = ini.GetValue("Alarms", "IsRainingAlarmNotify", false);
+			IsRainingAlarm.Email = ini.GetValue("Alarms", "IsRainingAlarmEmail", false);
+			IsRainingAlarm.Latch = ini.GetValue("Alarms", "IsRainingAlarmLatch", false);
+			IsRainingAlarm.LatchHours = ini.GetValue("Alarms", "IsRainingAlarmLatchHours", 1);
+
 			HighGustAlarm.Value = ini.GetValue("Alarms", "alarmhighgust", 0.0);
 			HighGustAlarm.Enabled = ini.GetValue("Alarms", "HighGustAlarmSet", false);
 			HighGustAlarm.Sound = ini.GetValue("Alarms", "HighGustAlarmSound", false);
@@ -4654,6 +4667,7 @@ namespace CumulusMX
 			ini.SetValue("Station", "LCMaxWind", LCMaxWind);
 			ini.SetValue("Station", "RecordSetTimeoutHrs", RecordSetTimeoutHrs);
 			ini.SetValue("Station", "SnowDepthHour", SnowDepthHour);
+			ini.SetValue("Station", "UseRainForIsRaining", StationOptions.UseRainForIsRaining);
 
 			ini.SetValue("Station", "Logging", ProgramOptions.DebugLogging);
 			ini.SetValue("Station", "DataLogging", ProgramOptions.DataLogging);
@@ -5164,6 +5178,15 @@ namespace CumulusMX
 			ini.SetValue("Alarms", "HighRainRateAlarmEmail", HighRainRateAlarm.Email);
 			ini.SetValue("Alarms", "HighRainRateAlarmLatch", HighRainRateAlarm.Latch);
 			ini.SetValue("Alarms", "HighRainRateAlarmLatchHours", HighRainRateAlarm.LatchHours);
+
+			ini.SetValue("Alarms", "IsRainingAlarmSet", IsRainingAlarm.Enabled);
+			ini.SetValue("Alarms", "IsRainingAlarmSound", IsRainingAlarm.Sound);
+			ini.SetValue("Alarms", "IsRainingAlarmSoundFile", IsRainingAlarm.SoundFile);
+			ini.SetValue("Alarms", "IsRainingAlarmNotify", IsRainingAlarm.Notify);
+			ini.SetValue("Alarms", "IsRainingAlarmEmail", IsRainingAlarm.Email);
+			ini.SetValue("Alarms", "IsRainingAlarmLatch", IsRainingAlarm.Latch);
+			ini.SetValue("Alarms", "IsRainingAlarmLatchHours", IsRainingAlarm.LatchHours);
+			ini.SetValue("Alarms", "IsRainingAlarmTriggerCount", IsRainingAlarm.TriggerThreshold);
 
 			ini.SetValue("Alarms", "alarmhighgust", HighGustAlarm.Value);
 			ini.SetValue("Alarms", "HighGustAlarmSet", HighGustAlarm.Enabled);
@@ -7027,99 +7050,98 @@ namespace CumulusMX
 					// create a zip archive file for the backup
 					using (FileStream zipFile = new FileStream(folderpath + DirectorySeparator + foldername + ".zip", FileMode.Create))
 					{
-						using (ZipArchive archive = new ZipArchive(zipFile, ZipArchiveMode.Create))
+						using ZipArchive archive = new ZipArchive(zipFile, ZipArchiveMode.Create);
+
+						archive.CreateEntryFromFile(AlltimeIniFile, alltimebackup);
+						archive.CreateEntryFromFile(MonthlyAlltimeIniFile, monthlyAlltimebackup);
+						archive.CreateEntryFromFile(DayFileName, daybackup);
+						archive.CreateEntryFromFile(TodayIniFile, todaybackup);
+						archive.CreateEntryFromFile(YesterdayFile, yesterdaybackup);
+						archive.CreateEntryFromFile(LogFile, logbackup);
+						archive.CreateEntryFromFile(MonthIniFile, monthbackup);
+						archive.CreateEntryFromFile(YearIniFile, yearbackup);
+						archive.CreateEntryFromFile("Cumulus.ini", configbackup);
+						archive.CreateEntryFromFile("UniqueId.txt", uniquebackup);
+
+						if (daily)
 						{
-							archive.CreateEntryFromFile(AlltimeIniFile, alltimebackup);
-							archive.CreateEntryFromFile(MonthlyAlltimeIniFile, monthlyAlltimebackup);
-							archive.CreateEntryFromFile(DayFileName, daybackup);
-							archive.CreateEntryFromFile(TodayIniFile, todaybackup);
-							archive.CreateEntryFromFile(YesterdayFile, yesterdaybackup);
-							archive.CreateEntryFromFile(LogFile, logbackup);
-							archive.CreateEntryFromFile(MonthIniFile, monthbackup);
-							archive.CreateEntryFromFile(YearIniFile, yearbackup);
-							archive.CreateEntryFromFile("Cumulus.ini", configbackup);
-							archive.CreateEntryFromFile("UniqueId.txt", uniquebackup);
-
-							if (daily)
+							// for daily backup the db is in use, so use an online backup
+							try
 							{
-								// for daily backup the db is in use, so use an online backup
-								try
-								{
-									var backUpDest = folderpath + "cumulusmx-v4.db";
-									var zipLocation = datafolder + "cumulusmx-v4.db";
-									LogDebugMessage("Making backup copy of the database");
-									station.Database.Backup(backUpDest);
-									LogDebugMessage("Completed backup copy of the database");
+								var backUpDest = folderpath + "cumulusmx-v4.db";
+								var zipLocation = datafolder + "cumulusmx-v4.db";
+								LogDebugMessage("Making backup copy of the database");
+								station.Database.Backup(backUpDest);
+								LogDebugMessage("Completed backup copy of the database");
 
-									LogDebugMessage("Archiving backup copy of the database");
-									archive.CreateEntryFromFile(backUpDest, zipLocation);
-									LogDebugMessage("Completed backup copy of the database");
+								LogDebugMessage("Archiving backup copy of the database");
+								archive.CreateEntryFromFile(backUpDest, zipLocation);
+								LogDebugMessage("Completed backup copy of the database");
 
-									LogDebugMessage("Deleting backup copy of the database");
-									File.Delete(backUpDest);
+								LogDebugMessage("Deleting backup copy of the database");
+								File.Delete(backUpDest);
 
-									backUpDest = folderpath + "diary.db";
-									zipLocation = datafolder + "diary.db";
-									LogDebugMessage("Making backup copy of the diary");
-									DiaryDB.Backup(backUpDest);
-									LogDebugMessage("Completed backup copy of the diary");
+								backUpDest = folderpath + "diary.db";
+								zipLocation = datafolder + "diary.db";
+								LogDebugMessage("Making backup copy of the diary");
+								DiaryDB.Backup(backUpDest);
+								LogDebugMessage("Completed backup copy of the diary");
 
-									LogDebugMessage("Archiving backup copy of the diary");
-									archive.CreateEntryFromFile(backUpDest, zipLocation);
-									LogDebugMessage("Completed backup copy of the diary");
+								LogDebugMessage("Archiving backup copy of the diary");
+								archive.CreateEntryFromFile(backUpDest, zipLocation);
+								LogDebugMessage("Completed backup copy of the diary");
 
-									LogDebugMessage("Deleting backup copy of the diary");
-									File.Delete(backUpDest);
-								}
-								catch (Exception ex)
-								{
-									LogExceptionMessage(ex, "Error making db backup");
-								}
+								LogDebugMessage("Deleting backup copy of the diary");
+								File.Delete(backUpDest);
 							}
-							else
+							catch (Exception ex)
 							{
-								// start-up backup - the db is not yet in use, do a file copy including any recovery files
-								LogDebugMessage("Archiving the database");
-								archive.CreateEntryFromFile(dbfile, dbBackup);
-								if (File.Exists(dbfile + "-journal"))
-								{
-									archive.CreateEntryFromFile(dbfile + "-journal", dbBackup + "-journal");
-								}
-
-								archive.CreateEntryFromFile(diaryfile, diarybackup);
-								if (File.Exists(diaryfile + "-journal"))
-								{
-									archive.CreateEntryFromFile(diaryfile + "-journal", diarybackup + "-journal");
-								}
-
-								LogDebugMessage("Completed archive of the database");
-
-
-								//CopyBackupFile(dbfile + "-shm", dbBackup + "-shm");
-								//CopyBackupFile(dbfile + "-wal", dbBackup + "-wal");
+								LogExceptionMessage(ex, "Error making db backup");
+							}
+						}
+						else
+						{
+							// start-up backup - the db is not yet in use, do a file copy including any recovery files
+							LogDebugMessage("Archiving the database");
+							archive.CreateEntryFromFile(dbfile, dbBackup);
+							if (File.Exists(dbfile + "-journal"))
+							{
+								archive.CreateEntryFromFile(dbfile + "-journal", dbBackup + "-journal");
 							}
 
-							archive.CreateEntryFromFile(extraFile, extraBackup);
-							archive.CreateEntryFromFile(AirLinkFile, AirLinkBackup);
-
-							// Do not do this extra backup between 00:00 & Roll-over hour on the first of the month
-							// as the month has not yet rolled over - only applies for start-up backups
-							if (timestamp.Day == 1 && timestamp.Hour >= RolloverHour)
+							archive.CreateEntryFromFile(diaryfile, diarybackup);
+							if (File.Exists(diaryfile + "-journal"))
 							{
-								// on the first of month, we also need to backup last months files as well
-								var LogFile2 = GetLogFileName(timestamp.AddDays(-1));
-								var logbackup2 = datafolder + Path.GetFileName(LogFile2);
-
-								var extraFile2 = GetExtraLogFileName(timestamp.AddDays(-1));
-								var extraBackup2 = datafolder + Path.GetFileName(extraFile2);
-
-								var AirLinkFile2 = GetAirLinkLogFileName(timestamp.AddDays(-1));
-								var AirLinkBackup2 = datafolder + Path.GetFileName(AirLinkFile2);
-
-								archive.CreateEntryFromFile(LogFile2, logbackup2);
-								archive.CreateEntryFromFile(extraFile2, extraBackup2);
-								archive.CreateEntryFromFile(AirLinkFile2, AirLinkBackup2);
+								archive.CreateEntryFromFile(diaryfile + "-journal", diarybackup + "-journal");
 							}
+
+							LogDebugMessage("Completed archive of the database");
+
+
+							//CopyBackupFile(dbfile + "-shm", dbBackup + "-shm");
+							//CopyBackupFile(dbfile + "-wal", dbBackup + "-wal");
+						}
+
+						archive.CreateEntryFromFile(extraFile, extraBackup);
+						archive.CreateEntryFromFile(AirLinkFile, AirLinkBackup);
+
+						// Do not do this extra backup between 00:00 & Roll-over hour on the first of the month
+						// as the month has not yet rolled over - only applies for start-up backups
+						if (timestamp.Day == 1 && timestamp.Hour >= RolloverHour)
+						{
+							// on the first of month, we also need to backup last months files as well
+							var LogFile2 = GetLogFileName(timestamp.AddDays(-1));
+							var logbackup2 = datafolder + Path.GetFileName(LogFile2);
+
+							var extraFile2 = GetExtraLogFileName(timestamp.AddDays(-1));
+							var extraBackup2 = datafolder + Path.GetFileName(extraFile2);
+
+							var AirLinkFile2 = GetAirLinkLogFileName(timestamp.AddDays(-1));
+							var AirLinkBackup2 = datafolder + Path.GetFileName(AirLinkFile2);
+
+							archive.CreateEntryFromFile(LogFile2, logbackup2);
+							archive.CreateEntryFromFile(extraFile2, extraBackup2);
+							archive.CreateEntryFromFile(AirLinkFile2, AirLinkBackup2);
 						}
 					}
 					LogMessage("Created backup folder " + foldername);
@@ -9530,6 +9552,7 @@ namespace CumulusMX
 		public int AvgSpeedMinutes { get; set; }
 		public int PeakGustMinutes { get; set; }
 		public double AnemometerHeightM { get; set; }
+		public bool UseRainForIsRaining { get; set; }
 	}
 
 	public class FtpOptionsClass

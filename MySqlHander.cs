@@ -145,35 +145,38 @@ namespace CumulusMX
 						mySqlConn.Open();
 
 						using var transaction = Cmds.Count > 2 ? mySqlConn.BeginTransaction() : null;
-
-						foreach (var cmdStr in Cmds)
 						{
-							lastCmd = cmdStr;
-							using MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn);
+							foreach (var cmdStr in Cmds)
+							{
+								lastCmd = cmdStr;
+								using MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn);
 
-							if (Cmds.Count == 1)
-								cumulus.LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
+								if (Cmds.Count == 1)
+									cumulus.LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
+
+								if (transaction != null)
+								{
+									cmd.Transaction = transaction;
+								}
+
+								updated += cmd.ExecuteNonQuery();
+
+								if (Cmds.Count == 1)
+									cumulus.LogDebugMessage($"{CallingFunction}: MySQL {updated} rows were affected.");
+
+							}
 
 							if (transaction != null)
 							{
-								cmd.Transaction = transaction;
+								cumulus.LogDebugMessage($"{CallingFunction}: Committing {updated} updates to DB");
+								transaction.Commit();
+								cumulus.LogDebugMessage($"{CallingFunction}: Commit complete");
+								transaction.Dispose();
 							}
-
-							updated += cmd.ExecuteNonQuery();
-
-							if (Cmds.Count == 1)
-								cumulus.LogDebugMessage($"{CallingFunction}: MySQL {updated} rows were affected.");
-
-						}
-
-						if (transaction != null)
-						{
-							cumulus.LogDebugMessage($"{CallingFunction}: Committing {updated} updates to DB");
-							transaction.Commit();
-							cumulus.LogDebugMessage($"{CallingFunction}: Commit complete");
 						}
 
 						mySqlConn.Close();
+						mySqlConn.Dispose();
 					}
 
 					cumulus.MySqlUploadAlarm.Triggered = false;
@@ -216,40 +219,47 @@ namespace CumulusMX
 			try
 			{
 				using var mySqlConn = new MySqlConnection(ConnSettings.ToString());
-				using var transaction = Cmds.Count > 2 ? mySqlConn.BeginTransaction() : null;
-				mySqlConn.Open();
-
-				var updated = 0;
-
-				foreach (var cmdStr in Cmds)
 				{
-					lastCmd = cmdStr;
+					mySqlConn.Open();
 
-					using (MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn))
+					using var transaction = Cmds.Count > 2 ? mySqlConn.BeginTransaction() : null;
 					{
-						if (Cmds.Count == 1)
-							cumulus.LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
+
+						var updated = 0;
+
+						foreach (var cmdStr in Cmds)
+						{
+							lastCmd = cmdStr;
+
+							using (MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn))
+							{
+								if (Cmds.Count == 1)
+									cumulus.LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
+
+								if (transaction != null)
+									cmd.Transaction = transaction;
+
+								updated += cmd.ExecuteNonQuery();
+
+								if (Cmds.Count == 1)
+									cumulus.LogDebugMessage($"{CallingFunction}: MySQL {updated} rows were affected.");
+							}
+
+							cumulus.MySqlUploadAlarm.Triggered = false;
+						}
 
 						if (transaction != null)
-							cmd.Transaction = transaction;
-
-						updated += cmd.ExecuteNonQuery();
-
-						if (Cmds.Count == 1)
-							cumulus.LogDebugMessage($"{CallingFunction}: MySQL {updated} rows were affected.");
+						{
+							cumulus.LogDebugMessage($"{CallingFunction}: Committing {updated} updates to DB");
+							transaction.Commit();
+							cumulus.LogDebugMessage($"{CallingFunction}: Commit complete");
+							transaction.Dispose();
+						}
 					}
 
-					cumulus.MySqlUploadAlarm.Triggered = false;
+					mySqlConn.Close();
+					mySqlConn.Dispose();
 				}
-
-				if (transaction != null)
-				{
-					cumulus.LogDebugMessage($"{CallingFunction}: Committing {updated} updates to DB");
-					transaction.Commit();
-					cumulus.LogDebugMessage($"{CallingFunction}: Commit complete");
-				}
-
-				mySqlConn.Close();
 			}
 			catch (Exception ex)
 			{
