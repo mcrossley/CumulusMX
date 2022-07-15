@@ -3329,6 +3329,8 @@ namespace CumulusMX
 			StationOptions.UseSpeedForAvgCalc = ini.GetValue("Station", "UseSpeedForAvgCalc", false);
 			StationOptions.UseSpeedForLatest = ini.GetValue("Station", "UseSpeedForLatest", false);
 			StationOptions.UseRainForIsRaining = ini.GetValue("Station", "UseRainForIsRaining", false);
+			StationOptions.LeafWetnessIsRainingIdx = ini.GetValue("Station", "LeafWetnessIsRainingIdx", -1);
+			StationOptions.LeafWetnessIsRainingThrsh = ini.GetValue("Station", "LeafWetnessIsRainingVal", 0.0);
 
 			StationOptions.AvgBearingMinutes = ini.GetValue("Station", "AvgBearingMinutes", 10);
 			if (StationOptions.AvgBearingMinutes > 120)
@@ -4668,6 +4670,8 @@ namespace CumulusMX
 			ini.SetValue("Station", "RecordSetTimeoutHrs", RecordSetTimeoutHrs);
 			ini.SetValue("Station", "SnowDepthHour", SnowDepthHour);
 			ini.SetValue("Station", "UseRainForIsRaining", StationOptions.UseRainForIsRaining);
+			ini.SetValue("Station", "LeafWetnessIsRainingIdx", StationOptions.LeafWetnessIsRainingIdx);
+			ini.SetValue("Station", "LeafWetnessIsRainingVal", StationOptions.LeafWetnessIsRainingThrsh);
 
 			ini.SetValue("Station", "Logging", ProgramOptions.DebugLogging);
 			ini.SetValue("Station", "DataLogging", ProgramOptions.DataLogging);
@@ -9553,6 +9557,8 @@ namespace CumulusMX
 		public int PeakGustMinutes { get; set; }
 		public double AnemometerHeightM { get; set; }
 		public bool UseRainForIsRaining { get; set; }
+		public int LeafWetnessIsRainingIdx { get; set; }
+		public double LeafWetnessIsRainingThrsh { get; set; }
 	}
 
 	public class FtpOptionsClass

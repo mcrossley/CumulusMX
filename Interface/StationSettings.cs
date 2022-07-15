@@ -56,6 +56,8 @@ namespace CumulusMX
 				ignorelacrosseclock = cumulus.StationOptions.WS2300IgnoreStationClock,
 				roundwindspeeds = cumulus.StationOptions.RoundWindSpeed,
 				nosensorcheck = cumulus.StationOptions.NoSensorCheck,
+				leafwetisrainingidx = cumulus.StationOptions.LeafWetnessIsRainingIdx,
+				leafwetisrainingthrsh = cumulus.StationOptions.LeafWetnessIsRainingThrsh,
 				advanced = optionsAdv
 			};
 
@@ -756,6 +758,8 @@ namespace CumulusMX
 					cumulus.StationOptions.WS2300IgnoreStationClock = settings.Options.ignorelacrosseclock;
 					cumulus.StationOptions.RoundWindSpeed = settings.Options.roundwindspeeds;
 					cumulus.StationOptions.NoSensorCheck = settings.Options.nosensorcheck;
+					cumulus.StationOptions.LeafWetnessIsRainingIdx = settings.Options.leafwetisrainingidx;
+					cumulus.StationOptions.LeafWetnessIsRainingThrsh = settings.Options.leafwetisrainingthrsh;
 
 					cumulus.StationOptions.UseSpeedForAvgCalc = settings.Options.advanced.usespeedforavg;
 					cumulus.StationOptions.UseZeroBearing = settings.Options.advanced.usezerobearing;
@@ -1604,6 +1608,8 @@ namespace CumulusMX
 			public bool ignorelacrosseclock { get; set; }
 			public bool stopsecondinstance { get; set; }
 			public bool nosensorcheck { get; set; }
+			public int leafwetisrainingidx { get; set; }
+			public double leafwetisrainingthrsh { get; set; }
 			public OptionsAdvancedJson advanced { get; set; }
 		}
 

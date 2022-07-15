@@ -1334,12 +1334,13 @@ namespace CumulusMX
 
 				lock (windcounts)
 				{
-					windRoseData.Append((windcounts[0] * cumulus.Calib.WindGust.Mult).ToString(cumulus.WindFormat, invNum));
+					// no need to use multiplier as rose data is all relative
+					windRoseData.Append(windcounts[0].ToString(cumulus.WindFormat, invNum));
 
 					for (var i = 1; i < cumulus.NumWindRosePoints; i++)
 					{
 						windRoseData.Append(',');
-						windRoseData.Append((windcounts[i] * cumulus.Calib.WindGust.Mult).ToString(cumulus.WindFormat, invNum));
+						windRoseData.Append(windcounts[i].ToString(cumulus.WindFormat, invNum));
 					}
 				}
 
@@ -2924,6 +2925,7 @@ namespace CumulusMX
 			{
 				// A reading has apparently arrived at the start of a new day, but before we have done the roll-over
 				// Ignore it, as otherwise it may cause a new monthly record to be logged using last month's total
+				cumulus.LogDebugMessage("DoRain: A reading arrived at the start of a new day, but before we have done the roll-over. Ignoring it");
 				return;
 			}
 
@@ -6565,6 +6567,12 @@ namespace CumulusMX
 			{
 				LeafWetness[index] = value;
 				dataValuesUpdated.LeafWetness[index] = value.HasValue;
+
+				if (cumulus.StationOptions.LeafWetnessIsRainingIdx == index)
+				{
+					IsRaining = value >= cumulus.StationOptions.LeafWetnessIsRainingThrsh;
+					cumulus.IsRainingAlarm.Triggered = IsRaining;
+				}
 			}
 		}
 
@@ -8447,13 +8455,14 @@ namespace CumulusMX
 
 		internal string GetCurrentData()
 		{
-			StringBuilder windRoseData = new StringBuilder((windcounts[0] * cumulus.Calib.WindGust.Mult).ToString(cumulus.WindFormat, invNum), 4096);
+			// no need to use multiplier as rose is all relative
+			StringBuilder windRoseData = new StringBuilder(windcounts[0].ToString(cumulus.WindFormat, invNum), 4096);
 			lock (windRoseData)
 			{
 				for (var i = 1; i < cumulus.NumWindRosePoints; i++)
 				{
 					windRoseData.Append(',');
-					windRoseData.Append((windcounts[i] * cumulus.Calib.WindGust.Mult).ToString(cumulus.WindFormat, invNum));
+					windRoseData.Append(windcounts[i].ToString(cumulus.WindFormat, invNum));
 				}
 			}
 			string stormRainStart = StartOfStorm == DateTime.MinValue ? "-----" : StartOfStorm.ToString("d");

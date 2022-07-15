@@ -887,10 +887,11 @@ namespace CumulusMX
 
 		private string Tagwspddata(Dictionary<string,string> tagParams)
 		{
-			var sb = new StringBuilder((station.windspeeds[0]*cumulus.Calib.WindGust.Mult).ToString(cumulus.WindFormat, invNum));
+			// no need to use multiplier as the rose is all relative
+			var sb = new StringBuilder(station.windspeeds[0].ToString(cumulus.WindFormat, invNum));
 			for (var i = 1; i < station.numwindvalues; i++)
 			{
-				sb.Append("," + (station.windspeeds[i]*cumulus.Calib.WindGust.Mult).ToString(cumulus.WindFormat, invNum));
+				sb.Append("," + station.windspeeds[i].ToString(cumulus.WindFormat, invNum));
 			}
 
 			return sb.ToString();
