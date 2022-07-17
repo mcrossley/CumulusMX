@@ -29,9 +29,10 @@ namespace CumulusMX
 		private bool synchronising;
 		private int synchroniseAttempts;
 		private DateTime syncStart;
-		private bool sensorSync;
-		private bool stationSync;
-		private bool solarSync;
+		private bool sensorSyncDone;
+		private bool stationSyncDone;
+		private bool solarSyncDone;
+		private bool doSolarSync;
 		//private DateTime lastraintip;
 		//private int raininlasttip = 0;
 		//private readonly double[] WindRunHourMult = {3.6, 1.0, 1.0, 1.0};
@@ -859,16 +860,49 @@ namespace CumulusMX
 
 			if (cumulus.FineOffsetOptions.SyncReads && !synchronising)
 			{
-				if (DateTime.Now.Subtract(FOSensorClockTime).TotalDays > 1 || DateTime.Now.Subtract(FOStationClockTime).TotalDays > 1 || (hasSolar && DateTime.Now.Subtract(FOSolarClockTime).TotalDays > 1))
-				{
-					// (re)synchronise data reads to try to avoid USB lock-up problem
-					if ((!sensorSync || !solarSync || !stationSync) && synchroniseAttempts <= 2)
-					{
-						if (synchroniseAttempts == 0)
-						{
-							InitialiseSync();
-						}
+				var doSensorSync = DateTime.Now.Subtract(FOSensorClockTime).TotalDays > 1;
+				var doStationSync = DateTime.Now.Subtract(FOStationClockTime).TotalDays > 1;
+				doSolarSync = hasSolar && DateTime.Now.Subtract(FOSolarClockTime).TotalDays > 1;
 
+				if (doSensorSync || doStationSync || doSolarSync)
+				{
+					doSolarSync = hasSolar;
+
+					if (hasSolar && DateTime.Now.Subtract(FOSolarClockTime).TotalDays > 1)
+					{
+						if (DateTime.Now.CompareTo(cumulus.SunRiseTime.AddMinutes(30)) > 0)
+						{
+							// after sunrise
+							if (DateTime.Now.CompareTo(cumulus.SunSetTime.AddMinutes(-30)) > 0)
+							{
+								// before sunset, we can go!
+							}
+							else
+							{
+								// after sunset, delay until after next sunrise plus 0.5 hour (approx, we use todays sunrise rather than tomorrows)
+								var delayMins = 1440 - FOSolarClockTime.TimeOfDay.TotalMinutes; // from solar time to midnight
+								delayMins += cumulus.SunRiseTime.TimeOfDay.TotalMinutes + 30;   // from midnight to sunrise plus 1/2 hour
+								FOSolarClockTime.AddMinutes(delayMins);
+								doSolarSync = false;
+							}
+						}
+						else
+						{
+							// prior to sunrise, delay until after sunrise
+							var delayMins = cumulus.SunRiseTime.TimeOfDay.TotalMinutes - FOSolarClockTime.TimeOfDay.TotalMinutes + 30;
+							FOSolarClockTime.AddMinutes(delayMins);
+							doSolarSync = false;
+						}
+					}
+
+					if (synchroniseAttempts == 0)
+					{
+						InitialiseSync(doSolarSync);
+					}
+
+					// (re)synchronise data reads to try to avoid USB lock-up problem
+					if ((!sensorSyncDone || !solarSyncDone || !stationSyncDone) && synchroniseAttempts <= 2)
+					{
 						StartSynchronising();
 					}
 				}
@@ -966,13 +1000,13 @@ namespace CumulusMX
 				cumulus.LogDebugMessage("Address changed, delay reading data this time");
 				cumulus.LogDebugMessage("addr=" + addr.ToString("X4") + " previous=" + prevaddr.ToString("X4"));
 
-				if (synchronising && !stationSync)
+				if (synchronising && !stationSyncDone)
 				{
 					//cumulus.LogConsoleMessage(" - Console clock minute changed");
 					Cumulus.LogMessage("Synchronise: Console clock minute changed");
 
 					FOStationClockTime = DateTime.Now;
-					stationSync = true;
+					stationSyncDone = true;
 				}
 
 				prevaddr = addr;
@@ -1017,10 +1051,10 @@ namespace CumulusMX
 						//Cumulus.LogConsoleMessage("Sensor data changed");
 						Cumulus.LogMessage("Synchronise: Sensor data changed");
 
-						if (!sensorSync)
+						if (!sensorSyncDone)
 						{
 							FOSensorClockTime = now;
-							sensorSync = true;
+							sensorSyncDone = true;
 						}
 
 						for (int i = 1; i < 16; i++)
@@ -1077,10 +1111,10 @@ namespace CumulusMX
 							Cumulus.LogConsoleMessage("Solar data changed");
 							Cumulus.LogMessage("Synchronise: Solar data changed");
 
-							if (!solarSync)
+							if (!solarSyncDone)
 							{
 								FOSolarClockTime = now;
-								solarSync = true;
+								solarSyncDone = true;
 							}
 
 							for (int i = 16; i < 20; i++)
@@ -1091,7 +1125,7 @@ namespace CumulusMX
 					}
 				}
 
-				if (sensorSync && solarSync && stationSync)
+				if (sensorSyncDone && solarSyncDone && stationSyncDone)
 				{
 					StopSynchronising();
 					FinaliseSync();
@@ -1337,7 +1371,7 @@ namespace CumulusMX
 			readCounter = 0;
 			syncStart = DateTime.Now;
 			Cumulus.LogMessage("Start Synchronising with console");
-			Cumulus.LogConsoleMessage("Start Synchronising with console");
+			Cumulus.LogConsoleMessage(DateTime.Now.ToString("yy-MM-dd HH:mm:ss ") + "Start Synchronising with console, run #" + synchroniseAttempts);
 
 			tmrDataRead.Interval = 500; // half a second
 		}
@@ -1349,7 +1383,11 @@ namespace CumulusMX
 			synchronising = false;
 			tmrDataRead.Interval = 16000; // 16 seconds
 
-			if (sensorSync && previousSensorClock != DateTime.MinValue)
+			var foundSensor = true;
+			var foundStation = true;
+			var foundSolar = true;
+
+			if (sensorSyncDone && previousSensorClock != DateTime.MinValue)
 			{
 				secsdiff = (int) Math.Floor((FOSensorClockTime - previousSensorClock).TotalSeconds) % 48;
 				if (secsdiff > 24)
@@ -1358,17 +1396,17 @@ namespace CumulusMX
 				}
 				Cumulus.LogMessage("Sensor clock  " + FOSensorClockTime.ToLongTimeString() + " drift = " + secsdiff + " seconds");
 			}
-			else if (sensorSync)
+			else if (sensorSyncDone)
 			{
 				Cumulus.LogMessage("Station clock " + FOStationClockTime.ToLongTimeString());
 			}
 			else
 			{
-				Cumulus.LogConsoleMessage(" - No sensor change time found");
+				foundSensor = false;
 				Cumulus.LogMessage("Synchronisation: No sensor change time found");
 			}
 
-			if (stationSync && previousStationClock == DateTime.MinValue)
+			if (stationSyncDone && previousStationClock == DateTime.MinValue)
 			{
 				secsdiff = (int)Math.Floor((FOStationClockTime - previousStationClock).TotalSeconds) % 60;
 				if (secsdiff > 30)
@@ -1377,20 +1415,20 @@ namespace CumulusMX
 				}
 				Cumulus.LogMessage("Station clock  " + FOStationClockTime.ToLongTimeString() + " drift = " + secsdiff + " seconds");
 			}
-			else if (stationSync)
+			else if (stationSyncDone)
 			{
 				Cumulus.LogMessage("Station clock " + FOStationClockTime.ToLongTimeString());
 			}
 			else
 			{
-				Cumulus.LogConsoleMessage(" - No station clock change time found");
+				foundStation = false;
 				Cumulus.LogMessage("Synchronisation: No station clock change time found");
 			}
 
 
 			if (hasSolar)
 			{
-				if (solarSync && previousSolarClock != DateTime.MinValue)
+				if (solarSyncDone && previousSolarClock != DateTime.MinValue)
 				{
 					secsdiff = (int)Math.Floor((FOSolarClockTime - previousSolarClock).TotalSeconds) % 60;
 					if (secsdiff > 30)
@@ -1399,27 +1437,31 @@ namespace CumulusMX
 					}
 					Cumulus.LogMessage("Solar clock  " + FOSolarClockTime.ToLongTimeString() + " drift = " + secsdiff + " seconds");
 				}
-				else if (solarSync)
+				else if (solarSyncDone)
 				{
 					Cumulus.LogMessage("Solar clock " + FOSolarClockTime.ToLongTimeString());
 				}
 				else
 				{
-					Cumulus.LogConsoleMessage(" - No solar change time found");
+					foundSolar = false;
 					Cumulus.LogMessage("Synchronisation: No solar change time found");
 				}
 			}
 
+			Cumulus.LogConsoleMessage($" - Found times for:- sensor: {foundSensor}, station: {foundStation} {(hasSolar ? (", solar:" + (doSolarSync ? foundSolar.ToString() : "supressed")) : "")}");
+
+
 			Cumulus.LogMessage("Stop Synchronising");
-			Cumulus.LogConsoleMessage("Stop Synchronising");
+			Cumulus.LogConsoleMessage(DateTime.Now.ToString("yy-MM-dd HH:mm:ss ") + "Stop Synchronising");
 		}
 
-		private void InitialiseSync()
+		private void InitialiseSync(bool solarSync)
 		{
 			synchroniseAttempts = 0;
-			sensorSync = false;
-			stationSync = false;
-			solarSync = !hasSolar;
+			sensorSyncDone = false;
+			stationSyncDone = false;
+			solarSyncDone = !(hasSolar && solarSync);
+
 			previousSensorClock = FOSensorClockTime;
 			previousStationClock = FOStationClockTime;
 			previousSolarClock = FOSolarClockTime;
@@ -1429,7 +1471,7 @@ namespace CumulusMX
 		{
 			Cumulus.LogMessage("Finalise Synchronisation");
 			// the best we can do is assume the station and CMX clocks are in sync - possibly true if the station has an RCC, otherwise...!
-			if (!stationSync)
+			if (!stationSyncDone)
 			{
 				var oneMin = new TimeSpan(0, 1, 0);
 				var now = DateTime.Now;
@@ -1438,7 +1480,6 @@ namespace CumulusMX
 			}
 		}
 
-		//public double EWpressureoffset { get; set; }
 
 		private class HistoryData
 		{
