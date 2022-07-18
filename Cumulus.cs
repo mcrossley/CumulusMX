@@ -2172,8 +2172,6 @@ namespace CumulusMX
 					CreateRealtimeHTMLfiles(cycle).Wait();
 					RealtimeCopyInProgress = false;
 
-					MySqlStuff.DoRealtimeData(cycle, true);
-
 					if (FtpOptions.LocalCopyEnabled)
 					{
 						_ = RealtimeLocalCopy(cycle); // let this run in background
@@ -2237,6 +2235,8 @@ namespace CumulusMX
 						ExecuteProgram(RealtimeProgram, RealtimeParams);
 					}
 				}
+
+				MySqlStuff.DoRealtimeData(cycle, true);
 			}
 			catch (Exception ex)
 			{
@@ -8563,10 +8563,14 @@ namespace CumulusMX
 			}
 		}
 
-		public static void LogConsoleMessage(string message, ConsoleColor colour = ConsoleColor.White)
+		public static void LogConsoleMessage(string message, ConsoleColor colour = ConsoleColor.White, bool LogDateTime = false)
 		{
 			if (!Program.service)
 			{
+				if (LogDateTime)
+				{
+					message = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss ") + message;
+				}
 
 				Console.ForegroundColor = colour;
 				Console.WriteLine(message);
@@ -8929,8 +8933,8 @@ namespace CumulusMX
 			else
 			{
 				// start the archive upload thread
-				LogMessage("Starting MySQL catchup thread");
-				_ = MySqlStuff.CommandAsync(MySqlStuff.CatchUpList, "MySQL Archive");
+				LogMessage($"Starting MySQL catchup thread. Found {MySqlStuff.CatchUpList.Count} commands to execute");
+				_ = MySqlStuff.CommandAsync(MySqlStuff.CatchUpList, "MySQL Archive", true);
 			}
 
 			WebTimer.Interval = UpdateInterval * 60 * 1000; // mins to millisecs

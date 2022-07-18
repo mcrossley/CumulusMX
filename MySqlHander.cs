@@ -45,7 +45,7 @@ namespace CumulusMX
 
 		// Use thread safe queues for the MySQL command lists
 		internal readonly ConcurrentQueue<string> CatchUpList = new ConcurrentQueue<string>();
-		internal readonly ConcurrentQueue<string> FailedList = new ConcurrentQueue<string>();
+		internal ConcurrentQueue<string> FailedList = new ConcurrentQueue<string>();
 
 		private readonly static DateTimeFormatInfo invDate = CultureInfo.InvariantCulture.DateTimeFormat;
 		private readonly static NumberFormatInfo invNum = CultureInfo.InvariantCulture.NumberFormat;
@@ -118,24 +118,21 @@ namespace CumulusMX
 		{
 			var Cmds = new ConcurrentQueue<string>();
 			Cmds.Enqueue(Cmd);
-			await CommandAsync(Cmds, CallingFunction);
+			await CommandAsync(Cmds, CallingFunction, false);
 		}
 
 		internal async Task CommandAsync(List<string> Cmds, string CallingFunction)
 		{
-			var tempQ = new ConcurrentQueue<string>();
-			foreach (var cmd in Cmds)
-			{
-				tempQ.Enqueue(cmd);
-			}
-			await CommandAsync(tempQ, CallingFunction);
+			var tempQ = new ConcurrentQueue<string>(Cmds);
+			await CommandAsync(tempQ, CallingFunction, false);
 		}
 
-		internal async Task CommandAsync(ConcurrentQueue<string> Cmds, string CallingFunction)
+		internal async Task CommandAsync(ConcurrentQueue<string> Cmds, string CallingFunction, bool UseFailedList)
 		{
 			await Task.Run(() =>
 			{
-				string lastCmd = string.Empty;
+				ConcurrentQueue<string> queue = UseFailedList ? ref FailedList : ref Cmds;
+
 				try
 				{
 					using (var mySqlConn = new MySqlConnection(ConnSettings.ToString()))
@@ -146,25 +143,28 @@ namespace CumulusMX
 
 						using var transaction = Cmds.Count > 2 ? mySqlConn.BeginTransaction() : null;
 						{
-							foreach (var cmdStr in Cmds)
+							do
 							{
-								lastCmd = cmdStr;
-								using MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn);
+								// Do not remove the item from the stack until we know the command worked
+								if (queue.TryPeek(out var cmdStr))
+								{
+									using MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn);
 
-								if (Cmds.Count == 1)
 									cumulus.LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
 
-								if (transaction != null)
-								{
-									cmd.Transaction = transaction;
-								}
+									if (transaction != null)
+									{
+										cmd.Transaction = transaction;
+									}
 
-								updated += cmd.ExecuteNonQuery();
-
-								if (Cmds.Count == 1)
+									updated += cmd.ExecuteNonQuery();
+									
 									cumulus.LogDebugMessage($"{CallingFunction}: MySQL {updated} rows were affected.");
 
-							}
+									// Success, pop the value from the queue
+									queue.TryDequeue(out cmdStr);
+								}
+							} while (!queue.IsEmpty);
 
 							if (transaction != null)
 							{
@@ -190,15 +190,15 @@ namespace CumulusMX
 
 					// do we save this command/commands on failure to be resubmitted?
 					// if we have a syntax error, it is never going to work so do not save it for retry
-					if (!ex.Message.Contains("syntax")) // TODO: Change to checking error code
+					if (Settings.BufferOnfailure && !ex.Message.Contains("syntax") && !UseFailedList)
 					{
-						if (Settings.BufferOnfailure)
+						while (!queue.IsEmpty)
 						{
-							if (!string.IsNullOrEmpty(lastCmd))
+							queue.TryDequeue(out var cmd);
+							if (!cmd.StartsWith("DELETE IGNORE FROM"))
 							{
-								FailedList.Enqueue(lastCmd);
+								FailedList.Enqueue(cmd);
 							}
-							_ = FailedList.Concat(Cmds);
 						}
 					}
 				}
@@ -209,12 +209,12 @@ namespace CumulusMX
 		{
 			var Cmds = new ConcurrentQueue<string>();
 			Cmds.Enqueue(Cmd);
-			CommandSync(Cmds, CallingFunction);
+			CommandSync(Cmds, CallingFunction, false);
 		}
 
-		internal void CommandSync(ConcurrentQueue<string> Cmds, string CallingFunction)
+		internal void CommandSync(ConcurrentQueue<string> Cmds, string CallingFunction, bool UseFailedList)
 		{
-			string lastCmd = string.Empty;
+			ConcurrentQueue<string> queue = UseFailedList ? ref FailedList : ref Cmds;
 
 			try
 			{
@@ -227,26 +227,28 @@ namespace CumulusMX
 
 						var updated = 0;
 
-						foreach (var cmdStr in Cmds)
+						do
 						{
-							lastCmd = cmdStr;
-
-							using (MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn))
+							// Do not remove the item from the stack until we know the command worked
+							if (queue.TryPeek(out var cmdStr))
 							{
-								if (Cmds.Count == 1)
+								using (MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn))
+								{
 									cumulus.LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
 
-								if (transaction != null)
-									cmd.Transaction = transaction;
+									if (transaction != null)
+									{
+										cmd.Transaction = transaction;
+									}
 
-								updated += cmd.ExecuteNonQuery();
+									updated += cmd.ExecuteNonQuery();
 
-								if (Cmds.Count == 1)
 									cumulus.LogDebugMessage($"{CallingFunction}: MySQL {updated} rows were affected.");
-							}
+								}
 
-							cumulus.MySqlUploadAlarm.Triggered = false;
-						}
+								cumulus.MySqlUploadAlarm.Triggered = false;
+							}
+						} while (!queue.IsEmpty);
 
 						if (transaction != null)
 						{
@@ -269,18 +271,72 @@ namespace CumulusMX
 
 				// do we save this command/commands on failure to be resubmitted?
 				// if we have a syntax error, it is never going to work so do not save it for retry
-				if (!ex.Message.Contains("syntax")) // TODO: Change to using error code
+				if (Settings.BufferOnfailure && !ex.Message.Contains("syntax") && !UseFailedList)
 				{
-					if (!string.IsNullOrEmpty(lastCmd))
+					while (!queue.IsEmpty)
 					{
-						FailedList.Enqueue(lastCmd);
+						queue.TryDequeue(out var cmd);
+						FailedList.Enqueue(cmd);
 					}
-					_ = FailedList.Concat(Cmds);
 				}
 				throw;
 			}
 		}
 
+		internal async Task CheckMySQLFailedUploads(string callingFunction, string cmd)
+		{
+			await CheckMySQLFailedUploads(callingFunction, new List<string>() { cmd });
+		}
+
+		internal async Task CheckMySQLFailedUploads(string callingFunction, List<string> cmds)
+		{
+			var connectionOK = true;
+
+			try
+			{
+				if (!FailedList.IsEmpty)
+				{
+					Cumulus.LogMessage($"{callingFunction}: Failed MySQL updates are present");
+
+					if (CheckConnection())
+					{
+						Thread.Sleep(500);
+						Cumulus.LogMessage($"{callingFunction}: Connection to MySQL server is OK, trying to upload {FailedList.Count} failed commands");
+
+						await CommandAsync(FailedList, callingFunction, true);
+						Cumulus.LogMessage($"{callingFunction}: Upload of failed MySQL commands complete");
+					}
+					else if (Settings.BufferOnfailure)
+					{
+						connectionOK = false;
+						Cumulus.LogMessage($"{callingFunction}: Connection to MySQL server has failed, adding this update to the failed list");
+						if (callingFunction.StartsWith("Realtime["))
+						{
+							// don't bother buffering the realtime deletes - if present
+							FailedList.Enqueue(cmds[0]);
+						}
+						else
+						{
+							FailedList = (ConcurrentQueue<string>)FailedList.Concat<string>(cmds);
+						}
+					}
+					else
+					{
+						connectionOK = false;
+					}
+				}
+
+				// now do what we came here to do
+				if (connectionOK)
+				{
+					await CommandAsync(cmds, callingFunction);
+				}
+			}
+			catch (Exception ex)
+			{
+				Cumulus.LogMessage($"{callingFunction}: Error - " + ex.Message);
+			}
+		}
 
 
 		internal void DoRealtimeData(int cycle, bool live, DateTime? logdate = null)
@@ -368,7 +424,7 @@ namespace CumulusMX
 				}
 
 				// do the update, and let it run in background
-				_ = CommandAsync(cmds, $"Realtime[{cycle}]");
+				_ = CheckMySQLFailedUploads($"Realtime[{cycle}]", cmds);
 			}
 			else
 			{
@@ -379,29 +435,6 @@ namespace CumulusMX
 
 		internal void DoIntervalData(DateTime timestamp, bool live)
 		{
-			if (!FailedList.IsEmpty)
-			{
-				// We have buffered commands run the catch up
-				Cumulus.LogMessage("DoLogFile: We have buffered MySQL commands to send, checking connection to server...");
-				if (CheckConnection())
-				{
-					Thread.Sleep(500);
-					Cumulus.LogMessage("DoLogFile: MySQL server connection OK, trying to send the buffered commands...");
-
-					try
-					{
-						CommandSync(FailedList, "Buffered");
-					}
-					catch
-					{
-					}
-				}
-				else if (Settings.BufferOnfailure)
-				{
-					Cumulus.LogMessage("DoLogFile: MySQL server connection failed. Try again at next update");
-				}
-			}
-
 			StringBuilder values = new StringBuilder(StartOfMonthlyInsertSQL, 600);
 			values.Append(" Values('");
 			values.Append(timestamp.ToString("yy-MM-dd HH:mm", invDate) + "',");
@@ -441,7 +474,7 @@ namespace CumulusMX
 			if (live)
 			{
 				// do the update
-				CommandSync(queryString, "DoLogFile");
+				_ = CheckMySQLFailedUploads("DoLogFile", queryString);
 			}
 			else
 			{
@@ -632,26 +665,13 @@ namespace CumulusMX
 
 				customSecondsTokenParser.InputText = Settings.CustomSecs.Command;
 
-				if (!FailedList.IsEmpty)
+				try
 				{
-					Cumulus.LogMessage("CustomSqlSecs: Failed MySQL updates are present");
-					if (CheckConnection())
-					{
-						Thread.Sleep(500);
-						Cumulus.LogMessage("CustomSqlSecs: Connection to MySQL server is OK, trying to upload failed commands");
-
-						await CommandAsync(FailedList, "CustomSqlSecs");
-						Cumulus.LogMessage("CustomSqlSecs: Upload of failed MySQL commands complete");
-					}
-					else if (Settings.BufferOnfailure)
-					{
-						Cumulus.LogMessage("CustomSqlSecs: Connection to MySQL server has failed, adding this update to the failed list");
-						FailedList.Enqueue(customSecondsTokenParser.ToStringFromString());
-					}
+					await CheckMySQLFailedUploads("CustomSqlSecs", customSecondsTokenParser.ToStringFromString());
 				}
-				else
+				catch (Exception ex)
 				{
-					await CommandAsync(customSecondsTokenParser.ToStringFromString(), "CustomSqlSecs");
+					cumulus.LogExceptionMessage(ex, "CustomSqlSecs: Error - ");
 				}
 
 				customSecondsUpdateInProgress = false;
@@ -672,27 +692,17 @@ namespace CumulusMX
 
 				customMinutesTokenParser.InputText = Settings.CustomMins.Command;
 
-				if (!FailedList.IsEmpty)
+				try
 				{
-					Cumulus.LogMessage("CustomSqlMins: Failed MySQL updates are present");
-					if (CheckConnection())
-					{
-						Thread.Sleep(500);
-						Cumulus.LogMessage("CustomSqlMins: Connection to MySQL server is OK, trying to upload failed commands");
+					await CheckMySQLFailedUploads("CustomSqlMins", customMinutesTokenParser.ToStringFromString());
+				}
+				catch (Exception ex)
+				{
+					Cumulus.LogMessage("CustomSqlMins: Error - " + ex.Message);
+				}
 
-						await CommandAsync(FailedList, "CustomSqlMins");
-						Cumulus.LogMessage("CustomSqlMins: Upload of failed MySQL commands complete");
-					}
-					else if (Settings.BufferOnfailure)
-					{
-						Cumulus.LogMessage("CustomSqlMins: Connection to MySQL server has failed, adding this update to the failed list");
-						FailedList.Enqueue(customMinutesTokenParser.ToStringFromString());
-					}
-				}
-				else
-				{
-					await CommandAsync(customMinutesTokenParser.ToStringFromString(), "CustomSqlMins");
-				}
+				// now do what we came here to do
+				await CommandAsync(customMinutesTokenParser.ToStringFromString(), "CustomSqlMins");
 
 				customMinutesUpdateInProgress = false;
 			}
@@ -712,26 +722,13 @@ namespace CumulusMX
 
 				customRolloverTokenParser.InputText = Settings.CustomRollover.Command;
 
-				if (!FailedList.IsEmpty)
+				try
 				{
-					Cumulus.LogMessage("CustomSqlRollover: Failed MySQL updates are present");
-					if (CheckConnection())
-					{
-						Thread.Sleep(500);
-						Cumulus.LogMessage("CustomSqlRollover: Connection to MySQL server is OK, trying to upload failed commands");
-
-						await CommandAsync(FailedList, "CustomSqlRollover");
-						Cumulus.LogMessage("CustomSqlRollover: Upload of failed MySQL commands complete");
-					}
-					else if (Settings.BufferOnfailure)
-					{
-						Cumulus.LogMessage("CustomSqlRollover: Connection to MySQL server has failed, adding this update to the failed list");
-						FailedList.Enqueue(customRolloverTokenParser.ToStringFromString());
-					}
+					await CheckMySQLFailedUploads("CustomSqlRollover", customRolloverTokenParser.ToStringFromString());
 				}
-				else
+				catch (Exception ex)
 				{
-					await CommandAsync(customRolloverTokenParser.ToStringFromString(), "CustomSqlRollover");
+					Cumulus.LogMessage("CustomSqlRollover: Error - " + ex.Message);
 				}
 
 				customRolloverUpdateInProgress = false;

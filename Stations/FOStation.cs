@@ -727,7 +727,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogConsoleMessage("Error sending command to station - it may need resetting", ConsoleColor.Red);
+				Cumulus.LogConsoleMessage("Error sending command to station - it may need resetting", ConsoleColor.Red, true);
 				cumulus.LogExceptionMessage(ex, "Error sending command to station - it may need resetting");
 				DataStopped = true;
 				cumulus.DataStoppedAlarm.LastError = "Error reading data from station - it may need resetting. " + ex.Message;
@@ -745,7 +745,7 @@ namespace CumulusMX
 				}
 				catch (Exception ex)
 				{
-					Cumulus.LogConsoleMessage("Error reading data from station - it may need resetting", ConsoleColor.Red);
+					Cumulus.LogConsoleMessage("Error reading data from station - it may need resetting", ConsoleColor.Red, true);
 					cumulus.LogExceptionMessage(ex, "Error reading data from station - it may need resetting");
 					DataStopped = true;
 					cumulus.DataStoppedAlarm.LastError = "Error reading data from station - it may need resetting. " + ex.Message;
@@ -1371,7 +1371,7 @@ namespace CumulusMX
 			readCounter = 0;
 			syncStart = DateTime.Now;
 			Cumulus.LogMessage("Start Synchronising with console");
-			Cumulus.LogConsoleMessage(DateTime.Now.ToString("yy-MM-dd HH:mm:ss ") + "Start Synchronising with console, run #" + synchroniseAttempts);
+			Cumulus.LogConsoleMessage(DateTime.Now.ToString("yy-MM-dd HH:mm:ss ") + "Start Synchronising with console, run #" + synchroniseAttempts, ConsoleColor.Gray, true);
 
 			tmrDataRead.Interval = 500; // half a second
 		}
@@ -1448,11 +1448,11 @@ namespace CumulusMX
 				}
 			}
 
-			Cumulus.LogConsoleMessage($" - Found times for:- sensor: {foundSensor}, station: {foundStation} {(hasSolar ? (", solar:" + (doSolarSync ? foundSolar.ToString() : "supressed")) : "")}");
+			Cumulus.LogConsoleMessage($" - Found times for:- sensor: {foundSensor}, station: {foundStation} {(hasSolar ? (", solar:" + (doSolarSync ? foundSolar.ToString() : "supressed")) : "")}", ConsoleColor.Gray);
 
 
 			Cumulus.LogMessage("Stop Synchronising");
-			Cumulus.LogConsoleMessage(DateTime.Now.ToString("yy-MM-dd HH:mm:ss ") + "Stop Synchronising");
+			Cumulus.LogConsoleMessage(DateTime.Now.ToString("yy-MM-dd HH:mm:ss ") + "Stop Synchronising", ConsoleColor.Gray, true);
 		}
 
 		private void InitialiseSync(bool solarSync)

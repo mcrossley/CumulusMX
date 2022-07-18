@@ -389,7 +389,7 @@ namespace CumulusMX
 					// We didn't find anything on the network
 					msg = "Failed to discover any Ecowitt devices";
 					Cumulus.LogMessage(msg);
-					Cumulus.LogConsoleMessage(msg);
+					Cumulus.LogConsoleMessage(msg, ConsoleColor.DarkYellow, true);
 					return false;
 				}
 				else if (discoveredDevices.IP.Count == 1 && (string.IsNullOrEmpty(macaddr) || discoveredDevices.Mac[0] == macaddr))
@@ -476,12 +476,12 @@ namespace CumulusMX
 			if (connectedOk)
 			{
 				Cumulus.LogMessage("Connected OK");
-				Cumulus.LogConsoleMessage("Connected to station");
+				Cumulus.LogConsoleMessage("Connected to station", ConsoleColor.White, true);
 			}
 			else
 			{
 				Cumulus.LogMessage("Not Connected");
-				Cumulus.LogConsoleMessage("Unable to connect to station", ConsoleColor.Red);
+				Cumulus.LogConsoleMessage("Unable to connect to station", ConsoleColor.Red, true);
 			}
 
 			if (connectedOk)

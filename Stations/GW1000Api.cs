@@ -45,6 +45,7 @@ namespace CumulusMX.Stations
 						try
 						{
 							socket.Close();
+							socket.Dispose();
 						}
 						catch
 						{ }
@@ -71,6 +72,10 @@ namespace CumulusMX.Stations
 
 					connected = true;
 				}
+				catch (ObjectDisposedException)
+				{
+					socket = null;
+				}
 				catch (Exception ex)
 				{
 					cumulus.LogExceptionMessage(ex, "Error reconnecting Ecowitt Gateway");
@@ -92,7 +97,10 @@ namespace CumulusMX.Stations
 			{
 				if (socket != null)
 				{
-					socket.GetStream().WriteByte(10);
+					if (socket.Connected)
+					{
+						socket.GetStream().WriteByte(10);
+					}
 					socket.Close();
 				}
 			}
@@ -196,6 +204,7 @@ namespace CumulusMX.Stations
 			{
 				cumulus.LogExceptionMessage(ex, $"DoCommand({cmdName}): Error");
 				Cumulus.LogMessage("Attempting to reopen the TCP port");
+				Thread.Sleep(1000);
 				ReOpenTcpPort();
 				return null;
 			}

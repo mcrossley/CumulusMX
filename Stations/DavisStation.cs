@@ -3020,7 +3020,7 @@ namespace CumulusMX
 				}
 				catch (Exception ex)
 				{
-					Cumulus.LogConsoleMessage("Error opening serial port - " + ex.Message, ConsoleColor.Red);
+					Cumulus.LogConsoleMessage("Error opening serial port - " + ex.Message, ConsoleColor.Red, true);
 					Cumulus.LogConsoleMessage("Will retry in 30 seconds...");
 					cumulus.LogExceptionMessage(ex, "InitSerial: Error opening port");
 				}
@@ -3117,7 +3117,7 @@ namespace CumulusMX
 				if (socket == null && !stop)
 				{
 					Cumulus.LogMessage("InitTCP: Failed to connect to the station, waiting 30 seconds before trying again");
-					Cumulus.LogConsoleMessage("Failed to connect to the station, waiting 30 seconds before trying again", ConsoleColor.Red);
+					Cumulus.LogConsoleMessage("Failed to connect to the station, waiting 30 seconds before trying again", ConsoleColor.Red, true);
 					Thread.Sleep(30000);
 				}
 			} while ((socket == null || !socket.Connected) && !stop);
