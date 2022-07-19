@@ -190,16 +190,13 @@ namespace CumulusMX
 
 					// do we save this command/commands on failure to be resubmitted?
 					// if we have a syntax error, it is never going to work so do not save it for retry
-					if (Settings.BufferOnfailure && !ex.Message.Contains("syntax") && !UseFailedList)
+					if (Settings.BufferOnfailure && !UseFailedList)
 					{
-						while (!queue.IsEmpty)
-						{
-							queue.TryDequeue(out var cmd);
-							if (!cmd.StartsWith("DELETE IGNORE FROM"))
-							{
-								FailedList.Enqueue(cmd);
-							}
-						}
+						// do we save this command/commands on failure to be resubmitted?
+						// if we have a syntax error, it is never going to work so do not save it for retry
+						// A selection of the more common(?) errors to ignore...
+						var errorCode = (int) ex.Data["Server Error Code"];
+						CommandErrorHandler(CallingFunction, errorCode, queue);
 					}
 				}
 			});
@@ -271,17 +268,48 @@ namespace CumulusMX
 
 				// do we save this command/commands on failure to be resubmitted?
 				// if we have a syntax error, it is never going to work so do not save it for retry
-				if (Settings.BufferOnfailure && !ex.Message.Contains("syntax") && !UseFailedList)
+				if (Settings.BufferOnfailure && !UseFailedList)
 				{
-					while (!queue.IsEmpty)
-					{
-						queue.TryDequeue(out var cmd);
-						FailedList.Enqueue(cmd);
-					}
+					var errorCode = (int)ex.Data["Server Error Code"];
+					CommandErrorHandler(CallingFunction, errorCode, queue);
 				}
+
 				throw;
 			}
 		}
+
+		internal void CommandErrorHandler(string CallingFunction, int ErrorCode, ConcurrentQueue<string> Cmds)
+		{
+			var ignore = ErrorCode == (int)MySqlErrorCode.ParseError ||
+			 ErrorCode == (int)MySqlErrorCode.EmptyQuery ||
+			 ErrorCode == (int)MySqlErrorCode.TooBigSelect ||
+			 ErrorCode == (int)MySqlErrorCode.InvalidUseOfNull ||
+			 ErrorCode == (int)MySqlErrorCode.MixOfGroupFunctionAndFields ||
+			 ErrorCode == (int)MySqlErrorCode.SyntaxError ||
+			 ErrorCode == (int)MySqlErrorCode.TooLongString ||
+			 ErrorCode == (int)MySqlErrorCode.WrongColumnName ||
+			 ErrorCode == (int)MySqlErrorCode.DuplicateUnique ||
+			 ErrorCode == (int)MySqlErrorCode.PrimaryCannotHaveNull ||
+			 ErrorCode == (int)MySqlErrorCode.DivisionByZero;
+
+			if (ignore)
+			{
+				cumulus.LogDebugMessage($"{CallingFunction}: Not buffering this command due to a problem with the query");
+			}
+			else
+			{
+				while (!Cmds.IsEmpty)
+				{
+					Cmds.TryDequeue(out var cmd);
+					if (!cmd.StartsWith("DELETE IGNORE FROM"))
+					{
+						FailedList.Enqueue(cmd);
+					}
+				}
+			}
+
+		}
+
 
 		internal async Task CheckMySQLFailedUploads(string callingFunction, string cmd)
 		{
