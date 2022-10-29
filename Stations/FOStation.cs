@@ -146,9 +146,6 @@ namespace CumulusMX
 
 		public override void startReadingHistoryData()
 		{
-			cumulus.CurrentActivity = "Getting archive data";
-			//lastArchiveTimeUTC = getLastArchiveTime();
-
 			LoadLastHoursFromDataLogs(cumulus.LastUpdateTime);
 
 			bw = new BackgroundWorker();
@@ -174,7 +171,7 @@ namespace CumulusMX
 
 		private void bw_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
 		{
-			cumulus.CurrentActivity = "Normal running";
+			cumulus.NormalRunning = true;
 			Cumulus.LogMessage("Archive reading thread completed");
 			Start();
 			DoDayResetIfNeeded();
@@ -404,8 +401,8 @@ namespace CumulusMX
 				if (h == 0 && !midnightraindone)
 				{
 					ResetMidnightRain(timestamp);
-					ResetSunshineHours();
-					ResetMidnightTemperatures();
+					ResetSunshineHours(timestamp);
+					ResetMidnightTemperatures(timestamp);
 					midnightraindone = true;
 				}
 
@@ -714,7 +711,11 @@ namespace CumulusMX
 
 			if (hidDevice == null)
 			{
-				DataStopped = true;
+				if (!DataStopped)
+				{
+					DataStoppedTime = DateTime.Now;
+					DataStopped = true;
+				}
 				cumulus.DataStoppedAlarm.LastError = "USB device no longer detected";
 				cumulus.DataStoppedAlarm.Triggered = true;
 				return false;
@@ -729,7 +730,11 @@ namespace CumulusMX
 			{
 				Cumulus.LogConsoleMessage("Error sending command to station - it may need resetting", ConsoleColor.Red, true);
 				cumulus.LogExceptionMessage(ex, "Error sending command to station - it may need resetting");
-				DataStopped = true;
+				if (!DataStopped)
+				{
+					DataStoppedTime = DateTime.Now;
+					DataStopped = true;
+				}
 				cumulus.DataStoppedAlarm.LastError = "Error reading data from station - it may need resetting. " + ex.Message;
 				cumulus.DataStoppedAlarm.Triggered = true;
 				return false;
@@ -747,7 +752,11 @@ namespace CumulusMX
 				{
 					Cumulus.LogConsoleMessage("Error reading data from station - it may need resetting", ConsoleColor.Red, true);
 					cumulus.LogExceptionMessage(ex, "Error reading data from station - it may need resetting");
-					DataStopped = true;
+					if (!DataStopped)
+					{
+						DataStoppedTime = DateTime.Now;
+						DataStopped = true;
+					}
 					cumulus.DataStoppedAlarm.LastError = "Error reading data from station - it may need resetting. " + ex.Message;
 					cumulus.DataStoppedAlarm.Triggered = true;
 					return false;
@@ -785,7 +794,11 @@ namespace CumulusMX
 			{
 				Cumulus.LogConsoleMessage("Error sending command to station - it may need resetting");
 				cumulus.LogExceptionMessage(ex, "Error sending command to station - it may need resetting");
-				DataStopped = true;
+				if (!DataStopped)
+				{
+					DataStoppedTime = DateTime.Now;
+					DataStopped = true;
+				}
 				cumulus.DataStoppedAlarm.LastError = "Error sending command to station - it may need resetting: " + ex.Message;
 				cumulus.DataStoppedAlarm.Triggered = true;
 				return false;

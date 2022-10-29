@@ -24,6 +24,7 @@ namespace CumulusMX
 		internal static CalibrationSettings calibrationSettings { private get; set; }
 		internal static NOAASettings noaaSettings { private get; set; }
 		internal static MysqlSettings mySqlSettings { private get; set; }
+		internal static CustomLogs customLogs {private get; set; }
 		internal static Wizard wizard { private get; set; }
 		internal static AlarmSettings alarmSettings { private get; set; }
 		internal static DataEditor dataEditor { get; set; }
@@ -45,6 +46,7 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
+		// Get/Post Edit data
 		public class EditController : WebApiController
 		{
 			[Route(HttpVerbs.Get, "/edit/{req}")]
@@ -54,15 +56,15 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
-					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+						await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
 					Response.StatusCode = 500;
 					return;
 				}
 
 				try
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "raintodayeditdata.json":
@@ -117,7 +119,7 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "GetEditData: Error");
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
@@ -130,7 +132,7 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
 					Response.StatusCode = 500;
 					return;
@@ -138,7 +140,9 @@ namespace CumulusMX
 
 				try
 				{
-					using var writer = HttpContext.OpenResponseText();
+					string res;
+
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "raintodayeditdata.json":
@@ -157,16 +161,36 @@ namespace CumulusMX
 							await writer.WriteAsync(dataEditor.EditCurrentCond(HttpContext));
 							break;
 						case "alltime":
-							await writer.WriteAsync(dataEditor.EditAllTimeRecs(HttpContext));
+							res = dataEditor.EditAllTimeRecs(HttpContext);
+							if (res != "Success")
+							{
+								Response.StatusCode = 500;
+							}
+							await writer.WriteAsync(res);
 							break;
 						case "monthly":
-							await writer.WriteAsync(dataEditor.EditMonthlyRecs(HttpContext));
+							res = dataEditor.EditMonthlyRecs(HttpContext);
+							if (res != "Success")
+							{
+								Response.StatusCode = 500;
+							}
+							await writer.WriteAsync(res);
 							break;
 						case "thismonth":
-							await writer.WriteAsync(dataEditor.EditThisMonthRecs(HttpContext));
+							res = dataEditor.EditThisMonthRecs(HttpContext);
+							if (res != "Success")
+							{
+								Response.StatusCode = 500;
+							}
+							await writer.WriteAsync(res);
 							break;
 						case "thisyear":
-							await writer.WriteAsync(dataEditor.EditThisYearRecs(HttpContext));
+							res = dataEditor.EditThisYearRecs(HttpContext);
+							if (res != "Success")
+							{
+								Response.StatusCode = 500;
+							}
+							await writer.WriteAsync(res);
 							break;
 						case "dayfile":
 							await writer.WriteAsync(logfileEditor.EditDailyData(HttpContext));
@@ -211,7 +235,7 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "EditDataPost: Error");
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
@@ -228,7 +252,7 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
 					Response.StatusCode = 500;
 					return;
@@ -249,7 +273,7 @@ namespace CumulusMX
 					int length = Convert.ToInt32(query["length"]);
 					var search = query["search[value]"];
 
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (lastSegment)
 					{
 						case "dayfile":
@@ -307,8 +331,8 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "GetData: Error");
-					using (var writer = HttpContext.OpenResponseText())
-						await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
 			}
@@ -325,7 +349,7 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
 					Response.StatusCode = 500;
 					return;
@@ -333,7 +357,7 @@ namespace CumulusMX
 
 				try
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "process.txt":
@@ -347,8 +371,8 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "PostTags: Error");
-					using (var writer = HttpContext.OpenResponseText())
-						await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 404;
 				}
 			}
@@ -360,7 +384,7 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
 					Response.StatusCode = 500;
 					return;
@@ -368,7 +392,7 @@ namespace CumulusMX
 
 				try
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "process.json":
@@ -382,8 +406,8 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "GetTags: Error");
-					using (var writer = HttpContext.OpenResponseText())
-						await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
 			}
@@ -399,7 +423,7 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
 					Response.StatusCode = 500;
 					return;
@@ -407,29 +431,29 @@ namespace CumulusMX
 
 				try
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "tempdata.json":
-							await writer.WriteAsync(Station.Graphs.GetTempGraphData());
+							await writer.WriteAsync(Station.Graphs.GetTempGraphData(DateTime.Now));
 							break;
 						case "winddata.json":
-							await writer.WriteAsync(Station.Graphs.GetWindGraphData());
+							await writer.WriteAsync(Station.Graphs.GetWindGraphData(DateTime.Now));
 							break;
 						case "raindata.json":
-							await writer.WriteAsync(Station.Graphs.GetRainGraphData());
+							await writer.WriteAsync(Station.Graphs.GetRainGraphData(DateTime.Now));
 							break;
 						case "pressdata.json":
-							await writer.WriteAsync(Station.Graphs.GetPressGraphData());
+							await writer.WriteAsync(Station.Graphs.GetPressGraphData(DateTime.Now));
 							break;
 						case "wdirdata.json":
-							await writer.WriteAsync(Station.Graphs.GetWindDirGraphData());
+							await writer.WriteAsync(Station.Graphs.GetWindDirGraphData(DateTime.Now));
 							break;
 						case "humdata.json":
-							await writer.WriteAsync(Station.Graphs.GetHumGraphData());
+							await writer.WriteAsync(Station.Graphs.GetHumGraphData(DateTime.Now));
 							break;
 						case "solardata.json":
-							await writer.WriteAsync(Station.Graphs.GetSolarGraphData());
+							await writer.WriteAsync(Station.Graphs.GetSolarGraphData(DateTime.Now));
 							break;
 						case "dailyrain.json":
 							await writer.WriteAsync(Station.Graphs.GetDailyRainGraphData());
@@ -447,7 +471,7 @@ namespace CumulusMX
 							await writer.WriteAsync(Station.Graphs.GetGraphConfig());
 							break;
 						case "airqualitydata.json":
-							await writer.WriteAsync(Station.Graphs.GetAqGraphData());
+							await writer.WriteAsync(Station.Graphs.GetAqGraphData(DateTime.Now));
 							break;
 						case "availabledata.json":
 							await writer.WriteAsync(Station.Graphs.GetAvailGraphData());
@@ -462,12 +486,11 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "GetGraphData: Error");
-					using var writer = HttpContext.OpenResponseText();
-						await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
 			}
-
 
 			[Route(HttpVerbs.Post, "/graphdata/{req}")]
 			public async Task SetGraphData(string req)
@@ -476,7 +499,7 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
 					Response.StatusCode = 500;
 					return;
@@ -484,7 +507,7 @@ namespace CumulusMX
 
 				try
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "selectachart.json":
@@ -497,12 +520,11 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "SetGraphData: Error");
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
 			}
-
 
 			[Route(HttpVerbs.Get, "/dailygraphdata/{req}")]
 			public async Task GetDailyGraphData(string req)
@@ -511,7 +533,7 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
 					Response.StatusCode = 500;
 					return;
@@ -519,7 +541,7 @@ namespace CumulusMX
 
 				try
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "tempdata.json":
@@ -562,13 +584,12 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "GetDailyGraphData: Error");
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
 			}
 		}
-
 
 		public class RecordsController : WebApiController
 		{
@@ -579,14 +600,14 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync("{}");
 					return;
 				}
 
 				try
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "temperature.json":
@@ -611,8 +632,8 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "GetAlltimeData: Error");
-					using var writer = HttpContext.OpenResponseText();
-						await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
 			}
@@ -624,7 +645,7 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
 					Response.StatusCode = 500;
 					return;
@@ -634,38 +655,40 @@ namespace CumulusMX
 				{
 					int month = Convert.ToInt32(mon);
 
-					using var writer = HttpContext.OpenResponseText();
-					if (month < 1 || month > 12)
+					using (var writer = HttpContext.OpenResponseText(new UTF8Encoding(false)))
 					{
-						await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"406\",\"Description\":\"Month value is out of range\"}}");
-						Response.StatusCode = 406;
-					}
+						if (month < 1 || month > 12)
+						{
+							await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"406\",\"Description\":\"Month value is out of range\"}}");
+							Response.StatusCode = 406;
+						}
 
-					switch (req)
-					{
-						case "temperature.json":
-							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyTempRecords(month)));
-							break;
-						case "humidity.json":
-							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyHumRecords(month)));
-							break;
-						case "pressure.json":
-							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyPressRecords(month)));
-							break;
-						case "wind.json":
-							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyWindRecords(month)));
-							break;
-						case "rain.json":
-							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyRainRecords(month)));
-							break;
-						default:
-							throw new KeyNotFoundException("Key Not Found: " + req);
+						switch (req)
+						{
+							case "temperature.json":
+								await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyTempRecords(month)));
+								break;
+							case "humidity.json":
+								await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyHumRecords(month)));
+								break;
+							case "pressure.json":
+								await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyPressRecords(month)));
+								break;
+							case "wind.json":
+								await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyWindRecords(month)));
+								break;
+							case "rain.json":
+								await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyRainRecords(month)));
+								break;
+							default:
+								throw new KeyNotFoundException("Key Not Found: " + req);
+						}
 					}
 				}
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "GetMonthlyRecordData: Error");
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
@@ -678,7 +701,7 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
 					Response.StatusCode = 500;
 					return;
@@ -686,7 +709,7 @@ namespace CumulusMX
 
 				try
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "temperature.json":
@@ -711,7 +734,7 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "GetThisMonthrecordData: Error");
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
@@ -724,14 +747,14 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync("{}");
 					return;
 				}
 
 				try
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "temperature.json":
@@ -756,8 +779,110 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "GetThisYearRecordData: Error");
-					using (var writer = HttpContext.OpenResponseText())
-						await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
+					Response.StatusCode = 500;
+				}
+			}
+
+			[Route(HttpVerbs.Get, "/records/thisperiod")]
+			public async Task GetThisPeriodRecordData(string req)
+			{
+				Response.ContentType = "application/json";
+
+				if (Station == null)
+				{
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+					await writer.WriteAsync("{}");
+					return;
+				}
+
+				try
+				{
+					int startday, startmonth, startyear;
+					int endday, endmonth, endyear;
+
+					var query = HttpUtility.ParseQueryString(Request.Url.Query);
+
+					using (var writer = HttpContext.OpenResponseText(new UTF8Encoding(false)))
+					{
+						if (query.AllKeys.Contains("startdate"))
+						{
+							// we expect "yyyy-mm-dd"
+							var start = query["startdate"].Split('-');
+
+							if (!Int32.TryParse(start[0], out startyear) || startyear < 2000 || startyear > 2050)
+							{
+								await writer.WriteAsync("Invalid start year supplied: " + startyear);
+								Response.StatusCode = 406;
+								return;
+							}
+
+							if (!Int32.TryParse(start[1], out startmonth) || startmonth < 1 || startmonth > 12)
+							{
+								await writer.WriteAsync("Invalid start month supplied: " + startmonth);
+								Response.StatusCode = 406;
+								return;
+							}
+
+							if (!Int32.TryParse(start[2], out startday) || startday < 1 || startday > 31)
+							{
+								await writer.WriteAsync("Invalid start day supplied: " + startday);
+								Response.StatusCode = 406;
+								return;
+							}
+						}
+						else
+						{
+							await writer.WriteAsync("No start date supplied: ");
+							Response.StatusCode = 406;
+							return;
+						}
+
+						if (query.AllKeys.Contains("enddate"))
+						{
+							// we expect "yyyy-mm-dd"
+							var end = query["enddate"].Split('-');
+
+							if (!Int32.TryParse(end[0], out endyear) || endyear < 2000 || endyear > 2050)
+							{
+								await writer.WriteAsync("Invalid end year supplied: " + endyear);
+								Response.StatusCode = 406;
+								return;
+							}
+
+							if (!Int32.TryParse(end[1], out endmonth) || endmonth < 1 || endmonth > 12)
+							{
+								await writer.WriteAsync("Invalid end month supplied: " + endmonth);
+								Response.StatusCode = 406;
+								return;
+							}
+
+							if (!Int32.TryParse(end[2], out endday) || endday < 1 || endday > 31)
+							{
+								await writer.WriteAsync("Invalid end day supplied: " + endday);
+								Response.StatusCode = 406;
+								return;
+							}
+						}
+						else
+						{
+							await writer.WriteAsync("No start date supplied: ");
+							Response.StatusCode = 406;
+							return;
+						}
+
+						var startDate = new DateTime(startyear, startmonth, startday);
+						var endDate = new DateTime(endyear, endmonth, endday);
+
+						await writer.WriteAsync(EscapeUnicode(dataEditor.GetRecordsDayFile("thisperiod", startDate, endDate)));
+					}
+				}
+				catch (Exception ex)
+				{
+					Program.cumulus.LogExceptionMessage(ex, "api/records/thisperiod: Unexpected Error");
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
 			}
@@ -773,7 +898,7 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
 					Response.StatusCode = 500;
 					return;
@@ -781,7 +906,7 @@ namespace CumulusMX
 
 				try
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "temp.json":
@@ -809,7 +934,7 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "GetYesterdayData: Error");
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
@@ -826,7 +951,7 @@ namespace CumulusMX
 
 				if (Station == null)
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"500\",\"Description\":\"The station is not running\"}}");
 					Response.StatusCode = 500;
 					return;
@@ -834,7 +959,7 @@ namespace CumulusMX
 
 				try
 				{
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "temp.json":
@@ -898,7 +1023,7 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "GetExtraData: Error");
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
@@ -941,7 +1066,7 @@ namespace CumulusMX
 				{
 					Response.ContentType = "application/json";
 
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "programdata.json":
@@ -986,6 +1111,10 @@ namespace CumulusMX
 						case "datalogging.json":
 							await writer.WriteAsync(dataLoggingSettings.GetAlpacaFormData());
 							break;
+						case "dateformat.txt":
+							Response.ContentType = "text/plain";
+							await writer.WriteAsync(CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern);
+							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
 					}
@@ -993,7 +1122,7 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "SettingsGet: Error");
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
@@ -1006,7 +1135,7 @@ namespace CumulusMX
 				{
 					Response.ContentType = "application/json";
 
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					switch (req)
 					{
 						case "updateprogramconfig.json":
@@ -1045,11 +1174,17 @@ namespace CumulusMX
 						case "createrealtimesql.json":
 							await writer.WriteAsync(mySqlSettings.CreateRealtimeSQL(HttpContext));
 							break;
+						case "updatemonthlysql.json":
+							await writer.WriteAsync(mySqlSettings.UpdateMonthlySQL(HttpContext));
+							break;
+						case "updatedayfilesql.json":
+							await writer.WriteAsync(mySqlSettings.UpdateDayfileSQL(HttpContext));
+							break;
+						case "updaterealtimesql.json":
+							await writer.WriteAsync(mySqlSettings.UpdateRealtimeSQL(HttpContext));
+							break;
 						case "updatealarmconfig.json":
 							await writer.WriteAsync(alarmSettings.UpdateSettings(HttpContext));
-							break;
-						case "ftpnow.json":
-							await writer.WriteAsync(stationSettings.FtpNow(HttpContext));
 							break;
 						case "testemail.json":
 							await writer.WriteAsync(alarmSettings.TestEmail(HttpContext));
@@ -1067,7 +1202,7 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "SettingsSet: Error");
-					using var writer = HttpContext.OpenResponseText();
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
@@ -1089,7 +1224,7 @@ namespace CumulusMX
 
 					Response.ContentType = "text/plain";
 
-					using var writer = HttpContext.OpenResponseText();
+					using (var writer = HttpContext.OpenResponseText(new UTF8Encoding(false)))
 					{
 						if (!Int32.TryParse(query["year"], out year) || year < 2000 || year > 2050)
 						{
@@ -1120,7 +1255,7 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "Reports GetData: Error");
-					//using var writer = HttpContext.OpenResponseText();
+					//using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					//await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
 					Response.StatusCode = 500;
 				}
@@ -1137,7 +1272,7 @@ namespace CumulusMX
 					Response.ContentType = "text/plain";
 
 
-					using var writer = HttpContext.OpenResponseText();
+					using (var writer = HttpContext.OpenResponseText(new UTF8Encoding(false)))
 					{
 						if (!Int32.TryParse(query["year"], out year) || year < 2000 || year > 2050)
 						{
@@ -1168,8 +1303,97 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					Program.cumulus.LogExceptionMessage(ex, "GenReports: Error");
-					//using var writer = HttpContext.OpenResponseText();
+					// using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 					//	await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"{ex.GetType().Name}\",\"Description\":\"{ex.Message}\"}}");
+					Response.StatusCode = 500;
+				}
+			}
+		}
+
+		public class UtilsController : WebApiController
+		{
+			[Route(HttpVerbs.Get, "/utils/{req}")]
+			public async Task GetUtilData(string req)
+			{
+				Response.ContentType = "plain/text";
+
+				if (Station == null)
+				{
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+					await writer.WriteAsync("The station is not running");
+					Response.StatusCode = 500;
+					return;
+				}
+
+				try
+				{
+					using (var writer = HttpContext.OpenResponseText(new UTF8Encoding(false)))
+					{
+						switch (req)
+						{
+							case "reloaddayfile":
+								await writer.WriteAsync(Station.LoadDayFileToDb());
+								break;
+							case "purgemysql":
+								var cnt = 0;
+								while (Program.cumulus.MySqlFailedList.TryDequeue(out var item))
+								{
+									cnt++;
+								};
+								_ = Station.Database.Execute("DELETE FROM SqlCache");
+								string msg;
+								if (cnt == 0)
+								{
+									msg = "The MySQL cache is already empty!";
+								}
+								else
+								{
+									msg = $"Cached MySQL queue cleared of {cnt} commands";
+								}
+								await writer.WriteAsync(msg);
+								break;
+							default:
+								Response.StatusCode = 404;
+								break;
+						}
+					}
+				}
+				catch (Exception ex)
+				{
+					Program.cumulus.LogExceptionMessage(ex, "api/utils: Unexpected Error");
+					Response.StatusCode = 500;
+				}
+			}
+
+			[Route(HttpVerbs.Post, "/utils/{req}")]
+			public async Task PostUtilsData(string req)
+			{
+				if (Station == null)
+				{
+					Response.StatusCode = 500;
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+					await writer.WriteAsync("The station is not running");
+					return;
+				}
+
+				try
+				{
+					using (var writer = HttpContext.OpenResponseText(new UTF8Encoding(false)))
+					{
+						switch (req)
+						{
+							case "ftpnow.json":
+								await writer.WriteAsync(stationSettings.FtpNow(HttpContext));
+								break;
+							default:
+								Response.StatusCode = 404;
+								break;
+						}
+					}
+				}
+				catch (Exception ex)
+				{
+					Program.cumulus.LogExceptionMessage(ex, "api/edit: Unexpected Error");
 					Response.StatusCode = 500;
 				}
 			}

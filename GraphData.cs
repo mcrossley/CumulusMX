@@ -19,7 +19,7 @@ namespace CumulusMX
 			station = stn;
 		}
 
-		internal async Task CreateGraphDataFiles()
+		internal async Task CreateGraphDataFiles(DateTime ts)
 		{
 			// Chart data for Highcharts graphs
 			string json = "";
@@ -39,22 +39,22 @@ namespace CumulusMX
 							json = GetAvailGraphData();
 							break;
 						case "tempdata.json":
-							json = GetTempGraphData();
+							json = GetTempGraphData(ts);
 							break;
 						case "pressdata.json":
-							json = GetPressGraphData();
+							json = GetPressGraphData(ts);
 							break;
 						case "winddata.json":
-							json = GetWindGraphData();
+							json = GetWindGraphData(ts);
 							break;
 						case "wdirdata.json":
-							json = GetWindDirGraphData();
+							json = GetWindDirGraphData(ts);
 							break;
 						case "humdata.json":
-							json = GetHumGraphData();
+							json = GetHumGraphData(ts);
 							break;
 						case "raindata.json":
-							json = GetRainGraphData();
+							json = GetRainGraphData(ts);
 							break;
 						case "dailyrain.json":
 							json = GetDailyRainGraphData();
@@ -63,13 +63,13 @@ namespace CumulusMX
 							json = GetDailyTempGraphData();
 							break;
 						case "solardata.json":
-							json = GetSolarGraphData();
+							json = GetSolarGraphData(ts);
 							break;
 						case "sunhours.json":
 							json = GetSunHoursGraphData();
 							break;
 						case "airquality.json":
-							json = GetAqGraphData();
+							json = GetAqGraphData(ts);
 							break;
 					}
 
@@ -151,14 +151,14 @@ namespace CumulusMX
 			}
 		}
 
-		internal string GetSolarGraphData()
+		internal string GetSolarGraphData(DateTime ts)
 		{
 			var sb = new StringBuilder("{");
 			var sbUv = new StringBuilder("\"UV\":[");
 			var sbSol = new StringBuilder("\"SolarRad\":[");
 			var sbMax = new StringBuilder("\"CurrentSolarMax\":[");
 
-			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
+			var dataFrom = ts.AddHours(-cumulus.GraphHours);
 
 			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
@@ -208,13 +208,13 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetRainGraphData()
+		internal string GetRainGraphData(DateTime ts)
 		{
 			var sb = new StringBuilder("{");
 			var sbRain = new StringBuilder("\"rfall\":[");
 			var sbRate = new StringBuilder("\"rrate\":[");
 
-			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
+			var dataFrom = ts.AddHours(-cumulus.GraphHours);
 
 			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
@@ -237,13 +237,13 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetHumGraphData()
+		internal string GetHumGraphData(DateTime ts)
 		{
 			var sb = new StringBuilder("{", 10240);
 			var sbOut = new StringBuilder("\"hum\":[");
 			var sbIn = new StringBuilder("\"inhum\":[");
 
-			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
+			var dataFrom = ts.AddHours(-cumulus.GraphHours);
 
 			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
@@ -286,11 +286,11 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetWindDirGraphData()
+		internal string GetWindDirGraphData(DateTime ts)
 		{
 			var sb = new StringBuilder("{\"bearing\":[");
 			var sbAvg = new StringBuilder("\"avgbearing\":[");
-			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
+			var dataFrom = ts.AddHours(-cumulus.GraphHours);
 
 			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
@@ -314,11 +314,11 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetWindGraphData()
+		internal string GetWindGraphData(DateTime ts)
 		{
 			var sb = new StringBuilder("{\"wgust\":[");
 			var sbSpd = new StringBuilder("\"wspeed\":[");
-			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
+			var dataFrom = ts.AddHours(-cumulus.GraphHours);
 
 			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
@@ -341,10 +341,10 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetPressGraphData()
+		internal string GetPressGraphData(DateTime ts)
 		{
 			StringBuilder sb = new StringBuilder("{\"press\":[");
-			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
+			var dataFrom = ts.AddHours(-cumulus.GraphHours);
 
 			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
@@ -360,7 +360,7 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetTempGraphData()
+		internal string GetTempGraphData(DateTime ts)
 		{
 			bool append = false;
 			var sb = new StringBuilder("{", 10240);
@@ -372,7 +372,7 @@ namespace CumulusMX
 			var sbHeat = new StringBuilder("\"heatindex\":[");
 			var sbTemp = new StringBuilder("\"temp\":[");
 			var sbHumidex = new StringBuilder("\"humidex\":[");
-			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
+			var dataFrom = ts.AddHours(-cumulus.GraphHours);
 
 			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
 
@@ -486,13 +486,13 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetAqGraphData()
+		internal string GetAqGraphData(DateTime ts)
 		{
 			bool append = false;
 			var sb = new StringBuilder("{");
 			var sb2p5 = new StringBuilder("\"pm2p5\":[");
 			var sb10 = new StringBuilder(",\"pm10\":[");
-			var dataFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
+			var dataFrom = ts.AddHours(-cumulus.GraphHours);
 
 
 			// Check if we are to generate AQ data at all. Only if a primary sensor is defined and it isn't the Indoor AirLink
@@ -741,6 +741,7 @@ namespace CumulusMX
 					{
 						sb.Append($"[{Utils.ToGraphTime(data[i].Timestamp)},{data[i].SunShineHours.Value.ToString(cumulus.SunFormat, InvC)}],");
 					}
+
 					// remove trailing comma
 					sb.Length--;
 				}

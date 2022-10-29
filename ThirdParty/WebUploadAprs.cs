@@ -137,7 +137,7 @@ namespace CumulusMX.ThirdParty
 		private static string APRSLat(Cumulus cumulus)
 		{
 			string dir;
-			double lat;
+			decimal lat;
 			int d, m, s;
 			if (cumulus.Latitude < 0)
 			{
@@ -165,7 +165,7 @@ namespace CumulusMX.ThirdParty
 		private static string APRSLon(Cumulus cumulus)
 		{
 			string dir;
-			double lon;
+			decimal lon;
 			int d, m, s;
 			if (cumulus.Longitude < 0)
 			{

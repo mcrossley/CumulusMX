@@ -3,7 +3,6 @@
 // **************************
 // *** (C)2009 S.T.A. snc ***
 // **************************
-// Modified Jan/Feb 2022 by M Crossley to accept nullable values for double/int/bool
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -108,7 +107,7 @@ namespace CumulusMX
 								else
 								{
 									CurrentSection = new Dictionary<string, string>();
-									m_Sections.Add(SectionName,CurrentSection);
+									m_Sections.Add(SectionName, CurrentSection);
 								}
 							}
 						}
@@ -127,15 +126,16 @@ namespace CumulusMX
 							}
 							else if ((i = s.IndexOf('=')) > 0)
 							{
+								// It's a value
 								int j = s.Length - i - 1;
 								string Key = s[..i].Trim();
-								if (Key.Length  > 0)
+								if (Key.Length > 0)
 								{
 									// *** Only first occurrence of a key is loaded ***
 									if (!CurrentSection.ContainsKey(Key))
 									{
-										string Value = (j > 0) ? (s.Substring(i+1,j).Trim()) : ("");
-										CurrentSection.Add(Key,Value);
+										string Value = (j > 0) ? (s.Substring(i + 1, j).Trim()) : ("");
+										CurrentSection.Add(Key, Value);
 									}
 								}
 							}
@@ -305,7 +305,33 @@ namespace CumulusMX
 			}
 		}
 
-			// *** Encode byte array ***
+		internal void DeleteValue(string SectionName, string Key)
+		{
+			// *** Lazy loading ***
+			if (m_Lazy)
+			{
+				m_Lazy = false;
+				Refresh();
+			}
+
+			lock (m_Lock)
+			{
+				// *** Check if the section exists ***
+				Dictionary<string, string> Section;
+				if (!m_Sections.TryGetValue(SectionName, out Section)) return;
+
+				// *** Check if the key exists ***
+				string Value;
+				if (Section.TryGetValue(Key, out Value))
+				{
+					m_CacheModified = true;
+					Section.Remove(Key);
+				}
+			}
+
+		}
+
+		// *** Encode byte array ***
 		private static string EncodeByteArray(byte[] Value)
 		{
 			if (Value == null) return null;
@@ -317,7 +343,7 @@ namespace CumulusMX
 				int l = hex.Length;
 				if (l > 2)
 				{
-					sb.Append(hex.AsSpan(l-2,2));
+					sb.Append(hex.AsSpan(l - 2, 2));
 				}
 				else
 				{
@@ -345,7 +371,7 @@ namespace CumulusMX
 		// *** Getters for various types ***
 		internal bool GetValue(string SectionName, string Key, bool DefaultValue)
 		{
-			string StringValue=GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
+			string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
 			int Value;
 			if (int.TryParse(StringValue, out Value)) return (Value != 0);
 			return DefaultValue;
@@ -395,7 +421,7 @@ namespace CumulusMX
 			if (double.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value)) return Value;
 			return DefaultValue;
 		}
-
+		
 		internal double? GetValue(string SectionName, string Key, double? DefaultValue)
 		{
 			string defVal = DefaultValue.HasValue ? DefaultValue.Value.ToString(CultureInfo.InvariantCulture) : "null";
@@ -410,6 +436,13 @@ namespace CumulusMX
 				else
 					return Value;
 			}
+			return DefaultValue;
+		}
+		internal decimal GetValue(string SectionName, string Key, decimal DefaultValue)
+		{
+			string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
+			decimal Value;
+			if (decimal.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value)) return Value;
 			return DefaultValue;
 		}
 
@@ -462,6 +495,11 @@ namespace CumulusMX
 			SetValue(SectionName, Key, val);
 		}
 
+		internal void SetValue(string SectionName, string Key, decimal Value)
+		{
+			SetValue(SectionName, Key, Value.ToString(CultureInfo.InvariantCulture));
+		}
+
 		internal void SetValue(string SectionName, string Key, byte[] Value)
 		{
 			SetValue(SectionName, Key, EncodeByteArray(Value));
@@ -475,5 +513,4 @@ namespace CumulusMX
 
 		#endregion
 	}
-
 }

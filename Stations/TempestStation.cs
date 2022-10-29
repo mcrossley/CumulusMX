@@ -112,8 +112,8 @@ namespace CumulusMX
 				if (h == 0 && !midnightraindone)
 				{
 					ResetMidnightRain(timestamp);
-					ResetSunshineHours();
-					ResetMidnightTemperatures();
+					ResetSunshineHours(timestamp);
+					ResetMidnightTemperatures(timestamp);
 					midnightraindone = true;
 				}
 
@@ -224,7 +224,7 @@ namespace CumulusMX
 
 		public override void Start()
 		{
-			cumulus.CurrentActivity = "Normal running";
+			cumulus.NormalRunning = true;
 			StationListener.WeatherPacketReceived = WeatherPacketReceived;
 			StationListener.Start(cumulus);
 			DoDayResetIfNeeded();

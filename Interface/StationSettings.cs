@@ -487,9 +487,9 @@ namespace CumulusMX
 			return JsonSerializer.SerializeToString(data);
 		}
 
-		private static void LongToDMS(double longitude, out int d, out int m, out int s, out string hem)
+		private static void LongToDMS(decimal longitude, out int d, out int m, out int s, out string hem)
 		{
-			double coordinate;
+			decimal coordinate;
 			if (longitude < 0)
 			{
 				coordinate = -longitude;
@@ -510,9 +510,9 @@ namespace CumulusMX
 			d = secs / 60;
 		}
 
-		private static void LatToDMS(double latitude, out int d, out int m, out int s, out string hem)
+		private static void LatToDMS(decimal latitude, out int d, out int m, out int s, out string hem)
 		{
-			double coordinate;
+			decimal coordinate;
 			if (latitude < 0)
 			{
 				coordinate = -latitude;
@@ -720,7 +720,7 @@ namespace CumulusMX
 					cumulus.StationOptions.AnemometerHeightM = settings.general.Location.anemomheight;
 
 
-					cumulus.Latitude = settings.general.Location.Latitude.degrees + (settings.general.Location.Latitude.minutes / 60.0) + (settings.general.Location.Latitude.seconds / 3600.0);
+					cumulus.Latitude = (decimal) (settings.general.Location.Latitude.degrees + (settings.general.Location.Latitude.minutes / 60.0) + (settings.general.Location.Latitude.seconds / 3600.0));
 					if (settings.general.Location.Latitude.hemisphere == "South")
 					{
 						cumulus.Latitude = -cumulus.Latitude;
@@ -729,7 +729,7 @@ namespace CumulusMX
 					cumulus.LatTxt = string.Format("{0}&nbsp;{1:D2}&deg;&nbsp;{2:D2}&#39;&nbsp;{3:D2}&quot;", settings.general.Location.Latitude.hemisphere[0], settings.general.Location.Latitude.degrees, settings.general.Location.Latitude.minutes,
 						settings.general.Location.Latitude.seconds);
 
-					cumulus.Longitude = settings.general.Location.Longitude.degrees + (settings.general.Location.Longitude.minutes / 60.0) + (settings.general.Location.Longitude.seconds / 3600.0);
+					cumulus.Longitude = (decimal) (settings.general.Location.Longitude.degrees + (settings.general.Location.Longitude.minutes / 60.0) + (settings.general.Location.Longitude.seconds / 3600.0));
 					if (settings.general.Location.Longitude.hemisphere == "West")
 					{
 						cumulus.Longitude = -cumulus.Longitude;
@@ -1384,25 +1384,26 @@ namespace CumulusMX
 		{
 			if (station == null)
 			{
-				return "{\"result\":\"Not possible, station is not initialised\"}";
+				return "Not possible, station is not initialised}";
 			}
 
 			try
 			{
 				var data = new StreamReader(context.Request.InputStream).ReadToEnd();
 				var json = WebUtility.UrlDecode(data);
+				var now = DateTime.Now;
 
 				// Dead simple (dirty), there is only one setting at present!
 				var includeGraphs = json.Contains("true");
 
 				if (!cumulus.FtpOptions.Enabled && !cumulus.FtpOptions.LocalCopyEnabled)
-					return "{\"result\":\"FTP/local copy is not enabled!\"}";
+					return "FTP/local copy is not enabled!";
 
 
 				if (cumulus.WebUpdating == 1)
 				{
 					Cumulus.LogMessage("FTP Now: Warning, a previous web update is still in progress, first chance, skipping attempt");
-					return "{\"result\":\"A web update is already in progress\"}";
+					return "A web update is already in progress";
 				}
 
 				if (cumulus.WebUpdating >= 2)
@@ -1419,7 +1420,7 @@ namespace CumulusMX
 						cumulus.GraphDataFiles[i].CopyRequired = true;
 					}
 					cumulus.LogDebugMessage("FTP Now: Re-Generating the graph data files, if required");
-					station.Graphs.CreateGraphDataFiles().Wait();
+					station.Graphs.CreateGraphDataFiles(now).Wait();
 
 					// (re)generate the daily graph data files, and upload if required
 					cumulus.LogDebugMessage("FTP Now: Generating the daily graph data files, if required");
@@ -1427,9 +1428,9 @@ namespace CumulusMX
 
 					Cumulus.LogMessage("FTP Now: Trying new web update");
 					cumulus.WebUpdating = 1;
-					cumulus.ftpThread = new Thread(cumulus.DoHTMLFiles) { IsBackground = true };
+					cumulus.ftpThread = new Thread(() => cumulus.DoHTMLFiles(now)) { IsBackground = true };
 					cumulus.ftpThread.Start();
-					return "{\"result\":\"An existing FTP process was aborted, and a new FTP process invoked\"}";
+					return "An existing FTP process was aborted, and a new FTP process invoked";
 				}
 
 				// Graph configs may have changed, so force re-create and upload the json files - just flag everything!
@@ -1440,22 +1441,22 @@ namespace CumulusMX
 					cumulus.GraphDataFiles[i].CopyRequired = true;
 				}
 				cumulus.LogDebugMessage("FTP Now: Re-Generating the graph data files, if required");
-				station.Graphs.CreateGraphDataFiles().Wait();
+				station.Graphs.CreateGraphDataFiles(now).Wait();
 
 				// (re)generate the daily graph data files, and upload if required
 				cumulus.LogDebugMessage("FTP Now: Generating the daily graph data files, if required");
 				station.Graphs.CreateEodGraphDataFiles();
 
 				cumulus.WebUpdating = 1;
-				cumulus.ftpThread = new Thread(cumulus.DoHTMLFiles) { IsBackground = true };
+				cumulus.ftpThread = new Thread(() => cumulus.DoHTMLFiles(now)) { IsBackground = true };
 				cumulus.ftpThread.Start();
-				return "{\"result\":\"FTP process invoked\"}";
+				return "FTP process invoked";
 			}
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "FTP Now: Error");
 				context.Response.StatusCode = 500;
-				return $"{{\"result\":\"Error: {ex.Message}\"}}";
+				return $"Error: {ex.Message}";
 			}
 		}
 

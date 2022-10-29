@@ -65,7 +65,6 @@ namespace CumulusMX
 			if (comport.IsOpen)
 			{
 				// Read the data from the logger
-				cumulus.CurrentActivity = "Reading archive data";
 				startReadingHistoryData();
 			}
 		}
@@ -455,7 +454,7 @@ namespace CumulusMX
 			//histprog.Close();
 			//mainWindow.FillLastHourGraphData();
 
-			cumulus.CurrentActivity = "Normal running";
+			cumulus.NormalRunning = true;
 			Cumulus.LogMessage("Archive reading thread completed");
 			DoDayResetIfNeeded();
 			DoTrendValues(DateTime.Now);
@@ -820,8 +819,8 @@ namespace CumulusMX
 							if ((hour == 0) && !midnightraindone)
 							{
 								ResetMidnightRain(timestamp);
-								ResetSunshineHours();
-								ResetMidnightTemperatures();
+								ResetSunshineHours(timestamp);
+								ResetMidnightTemperatures(timestamp);
 								midnightraindone = true;
 							}
 						}

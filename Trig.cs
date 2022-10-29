@@ -165,7 +165,7 @@ namespace CumulusMX
 			return pfTanVal;
 		}
 
-		public static void DegToDMS(double degrees, out int d, out int m, out int s)
+		public static void DegToDMS(decimal degrees, out int d, out int m, out int s)
 		{
 			int secs = (int)(degrees * 60 * 60);
 

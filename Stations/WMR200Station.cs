@@ -96,7 +96,6 @@ namespace CumulusMX
 
 		public override void startReadingHistoryData()
 		{
-			cumulus.CurrentActivity = "Getting archive data";
 			Cumulus.LogConsoleMessage("Reading archive data");
 
 			//lastArchiveTimeUTC = getLastArchiveTime();
@@ -1410,8 +1409,8 @@ namespace CumulusMX
 			if ((h == 0) && !midnightraindone)
 			{
 				ResetMidnightRain(timestamp);
-				ResetSunshineHours();
-				ResetMidnightTemperatures();
+				ResetSunshineHours(timestamp);
+				ResetMidnightTemperatures(timestamp);
 				midnightraindone = true;
 			}
 			// there seems to be no way of determining the log interval other than subtracting one logMainUnit.Units.MainUnit.cumulus.LogMessage

@@ -300,7 +300,14 @@ namespace CumulusMX
 					cumulus.CustomHttpSecondsTimer.Enabled = cumulus.CustomHttpSecondsEnabled;
 					if (cumulus.CustomHttpSecondsEnabled)
 					{
-						cumulus.CustomHttpSecondsString = settings.customhttp.customseconds.url ?? string.Empty;
+						cumulus.CustomHttpSecondsStrings[0] = settings.customhttp.customseconds.url[0] ?? string.Empty;
+						for (var i = 1; i < 10; i++)
+						{
+							if (i < settings.customhttp.customseconds.url.Length)
+								cumulus.CustomHttpSecondsStrings[i] = settings.customhttp.customseconds.url[i] ?? null;
+							else
+								cumulus.CustomHttpSecondsStrings[i] = null;
+						}
 						cumulus.CustomHttpSecondsInterval = settings.customhttp.customseconds.interval;
 						cumulus.CustomHttpSecondsTimer.Interval = cumulus.CustomHttpSecondsInterval * 1000;
 					}
@@ -308,7 +315,14 @@ namespace CumulusMX
 					cumulus.CustomHttpMinutesEnabled = settings.customhttp.customminutes.enabled;
 					if (cumulus.CustomHttpMinutesEnabled)
 					{
-						cumulus.CustomHttpMinutesString = settings.customhttp.customminutes.url ?? string.Empty;
+						cumulus.CustomHttpMinutesStrings[0] = settings.customhttp.customminutes.url[0] ?? string.Empty;
+						for (var i = 1; i < 10; i++)
+						{
+							if (i < settings.customhttp.customseconds.url.Length)
+								cumulus.CustomHttpMinutesStrings[i] = settings.customhttp.customminutes.url[i] ?? null;
+							else
+								cumulus.CustomHttpMinutesStrings[i] = null;
+						}
 						cumulus.CustomHttpMinutesIntervalIndex = settings.customhttp.customminutes.intervalindex;
 						if (cumulus.CustomHttpMinutesIntervalIndex >= 0 && cumulus.CustomHttpMinutesIntervalIndex < cumulus.FactorsOf60.Length)
 						{
@@ -323,7 +337,14 @@ namespace CumulusMX
 					cumulus.CustomHttpRolloverEnabled = settings.customhttp.customrollover.enabled;
 					if (cumulus.CustomHttpRolloverEnabled)
 					{
-						cumulus.CustomHttpRolloverString = settings.customhttp.customrollover.url ?? string.Empty;
+						cumulus.CustomHttpRolloverStrings[0] = settings.customhttp.customrollover.url[0] ?? string.Empty;
+						for (var i = 1; i < 10; i++)
+						{
+							if (i < settings.customhttp.customrollover.url.Length)
+								cumulus.CustomHttpMinutesStrings[i] = settings.customhttp.customrollover.url[i] ?? null;
+							else
+								cumulus.CustomHttpMinutesStrings[i] = null;
+						}
 					}
 				}
 				catch (Exception ex)
@@ -477,22 +498,66 @@ namespace CumulusMX
 			var customseconds = new CustomHttpSecondsJson()
 			{
 				enabled = cumulus.CustomHttpSecondsEnabled,
-				interval = cumulus.CustomHttpSecondsInterval,
-				url = cumulus.CustomHttpSecondsString
+				interval = cumulus.CustomHttpSecondsInterval
 			};
+
+			var urlCnt = 1;
+			for (int i = 1; i < 10; i++)
+			{
+				if (!string.IsNullOrEmpty(cumulus.CustomHttpSecondsStrings[i]))
+					urlCnt++;
+			}
+			customseconds.url = new string[urlCnt];
+
+			var index = 0;
+			for (var i = 0; i < 10; i++)
+			{
+				if (!string.IsNullOrEmpty(cumulus.CustomHttpSecondsStrings[i]))
+					customseconds.url[index++] = cumulus.CustomHttpSecondsStrings[i];
+			}
 
 			var customminutes = new CustomHttpMinutesJson()
 			{
 				enabled = cumulus.CustomHttpMinutesEnabled,
-				intervalindex = cumulus.CustomHttpMinutesIntervalIndex,
-				url = cumulus.CustomHttpMinutesString
+				intervalindex = cumulus.CustomHttpMinutesIntervalIndex
 			};
+
+			urlCnt = 1;
+			for (int i = 1; i < 10; i++)
+			{
+				if (!string.IsNullOrEmpty(cumulus.CustomHttpMinutesStrings[i]))
+					urlCnt++;
+			}
+
+			customminutes.url = new string[urlCnt];
+
+			index = 0;
+			for (var i = 0; i < 10; i++)
+			{
+				if (!string.IsNullOrEmpty(cumulus.CustomHttpMinutesStrings[i]))
+					customminutes.url[index++] = cumulus.CustomHttpMinutesStrings[i];
+			}
 
 			var customrollover = new CustomHttpRolloverJson()
 			{
-				enabled = cumulus.CustomHttpRolloverEnabled,
-				url = cumulus.CustomHttpRolloverString
+				enabled = cumulus.CustomHttpRolloverEnabled
 			};
+
+			urlCnt = 1;
+			for (int i = 1; i < 10; i++)
+			{
+				if (!string.IsNullOrEmpty(cumulus.CustomHttpRolloverStrings[i]))
+					urlCnt++;
+			}
+
+			customrollover.url = new string[urlCnt];
+
+			index = 0;
+			for (var i = 0; i < urlCnt; i++)
+			{
+				if (!string.IsNullOrEmpty(cumulus.CustomHttpRolloverStrings[i]))
+					customrollover.url[index] = cumulus.CustomHttpRolloverStrings[i];
+			}
 
 			var customhttp = new JsonThirdPartySettingsCustomHttpSettings() { customseconds = customseconds, customminutes = customminutes, customrollover = customrollover };
 
@@ -654,21 +719,21 @@ namespace CumulusMX
 
 		private class CustomHttpSecondsJson
 		{
-			public string url { get; set; }
+			public string[] url { get; set; }
 			public bool enabled { get; set; }
 			public int interval { get; set; }
 		}
 
 		private class CustomHttpMinutesJson
 		{
-			public string url { get; set; }
+			public string[] url { get; set; }
 			public bool enabled { get; set; }
 			public int intervalindex { get; set; }
 		}
 
 		private class CustomHttpRolloverJson
 		{
-			public string url { get; set; }
+			public string[] url { get; set; }
 			public bool enabled { get; set; }
 		}
 

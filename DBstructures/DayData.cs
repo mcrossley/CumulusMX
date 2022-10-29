@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using Org.BouncyCastle.Ocsp;
 using SQLite;
 
 namespace CumulusMX
@@ -62,6 +63,8 @@ namespace CumulusMX
 		public double? HighHumidex { get; set; }        // 50  High Humidex
 		public DateTime? HighHumidexTime { get; set; }  // 51  Time of high Humidex
 		public double? ChillHours { get; set; }         // 52  Total chill hours
+		public double? HighRain24Hours { get; set; }       // 53  Highest rain in 24h value
+		public DateTime? HighRain24HoursTime { get; set; } // 54  Time of highest rain in 24h
 
 		public string ToCSV(bool Tofile=false)
 		{
@@ -178,6 +181,10 @@ namespace CumulusMX
 			sb.Append(HighHumidexTime.HasValue ? HighHumidexTime.Value.ToString(timForm, invDate) : blank);
 			sb.Append(sep);
 			sb.Append(ChillHours.HasValue ? ChillHours.Value.ToString("F1", invNum) : blank);
+			sb.Append(sep);
+			sb.Append(HighRain24Hours.HasValue ? HighRain24Hours.Value.ToString(Program.cumulus.RainFormat, invNum): blank);
+			sb.Append(sep);
+			sb.Append(HighRain24HoursTime.HasValue ? HighRain24HoursTime.Value.ToString(timForm, invDate) : blank);
 
 			return sb.ToString();
 		}
@@ -244,6 +251,8 @@ namespace CumulusMX
 			HighHumidex = Utils.TryParseNullDouble(data2[50]);
 			HighHumidexTime = Utils.TryParseNullTimeSpan(Timestamp, data2[51], timForm);
 			ChillHours = Utils.TryParseNullDouble(data2[52]);
+			HighRain24Hours = Utils.TryParseNullDouble(data[53]);
+			HighRain24HoursTime = Utils.TryParseNullTimeSpan(Timestamp, data[54], timForm);
 
 			return true;
 		}
@@ -404,6 +413,12 @@ namespace CumulusMX
 
 				if (st.Count > idx++ && double.TryParse(st[52], NumberStyles.Float, invNum, out varDbl))
 					ChillHours = varDbl;
+
+				if (st.Count > idx++ && double.TryParse(st[53], NumberStyles.Float, invNum, out varDbl))
+					HighRain24Hours = varDbl;
+
+				if (st.Count > idx++ && st[54].Length == 5)
+					HighRain24HoursTime = Utils.AddTimeToDate(Timestamp, st[54]);
 			}
 			catch (Exception ex)
 			{

@@ -702,7 +702,7 @@ namespace CumulusMX
 
 		public override void startReadingHistoryData()
 		{
-			cumulus.CurrentActivity = "Reading archive data";
+			cumulus.NormalRunning = true;
 			//lastArchiveTimeUTC = getLastArchiveTime();
 			Cumulus.LogMessage("Reading history data from log files");
 
@@ -763,7 +763,7 @@ namespace CumulusMX
 			//{
 			//    UpdateHighsAndLows(dataContext);
 			//}
-			cumulus.CurrentActivity = "Normal running";
+			cumulus.NormalRunning = true;
 			//if (cumulus.UseDavisLoop2 && cumulus.PeakGustMinutes >= 10)
 			//{
 			//    CalcRecentMaxGust = false;
@@ -2334,8 +2334,8 @@ namespace CumulusMX
 							if ((h == 0) && !midnightraindone)
 							{
 								ResetMidnightRain(timestamp);
-								ResetSunshineHours();
-								ResetMidnightTemperatures();
+								ResetSunshineHours(timestamp);
+								ResetMidnightTemperatures(timestamp);
 								midnightraindone = true;
 							}
 

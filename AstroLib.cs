@@ -52,7 +52,7 @@ namespace CumulusMX
 
 
 
-		public static int SolarMax(DateTime timestamp, double longitude, double latitude, double altitude,
+		public static int SolarMax(DateTime timestamp, decimal longitude, decimal latitude, double altitude,
 									  out double solarelevation, SolarOptions options)
 		{
 			double factor = 0;
@@ -68,7 +68,7 @@ namespace CumulusMX
 		}
 
 
-		private static int SolarMax(DateTime timestamp, double longitude, double latitude, double altitude,
+		private static int SolarMax(DateTime timestamp, decimal longitude, decimal latitude, double altitude,
 									  out double solarelevation, double factor, int method)
 		{
 			DateTime utctime = timestamp.ToUniversalTime();
@@ -103,7 +103,7 @@ namespace CumulusMX
 		// https://gml.noaa.gov/grad/solcalc/calcdetails.html
 		#region NOAA_Solar
 
-		private static void CalculateSunPosition(DateTime dateTime, double latitude, double longitude, out double altitude, out double azimuth)
+		private static void CalculateSunPosition(DateTime dateTime, decimal latitude, decimal longitude, out double altitude, out double azimuth)
 		{
 			// We will use DateTime.ToOADate() which automatically includes the TZ
 			var zone = 0.0;
@@ -129,9 +129,9 @@ namespace CumulusMX
 			//var sunriseTimeLst = solarNoonLst - haSunRise * 4 / 1440.0;
 			//var sunsetTimeLst = solarNoonLst + haSunRise * 4 / 1440.0;
 			//var sunlightDurationMins = 8 * haSunRise; 
-			var trueSolarTime = Trig.PutInRange(dateTime.TimeOfDay.TotalMinutes + eqOfTime + 4 * longitude - 60 * zone, 1440);
+			var trueSolarTime = Trig.PutInRange(dateTime.TimeOfDay.TotalMinutes + eqOfTime + 4 * (double)longitude - 60 * zone, 1440);
 			var hourAngle = trueSolarTime / 4.0 < 0 ? trueSolarTime / 4.0 + 180 : trueSolarTime / 4.0 - 180;
-			var solarZenithAngle = Trig.RadToDeg(Math.Acos(Math.Sin(Trig.DegToRad(latitude)) * Math.Sin(Trig.DegToRad(sunDec)) + Math.Cos(Trig.DegToRad(latitude)) * Math.Cos(Trig.DegToRad(sunDec)) * Math.Cos(Trig.DegToRad(hourAngle))));
+			var solarZenithAngle = Trig.RadToDeg(Math.Acos(Math.Sin(Trig.DegToRad((double)latitude)) * Math.Sin(Trig.DegToRad(sunDec)) + Math.Cos(Trig.DegToRad((double)latitude)) * Math.Cos(Trig.DegToRad(sunDec)) * Math.Cos(Trig.DegToRad(hourAngle))));
 			var solarElevation = 90 - solarZenithAngle;
 
 			double refraction;
@@ -148,9 +148,9 @@ namespace CumulusMX
 			altitude = solarElevation + refraction / 3600.0;
 
 			if (hourAngle > 0)
-				azimuth = Trig.PutIn360Deg(Trig.DegToRad(Math.Acos(((Math.Sin(Trig.DegToRad(latitude)) * Math.Cos(Trig.DegToRad(solarZenithAngle))) - Math.Sin(Trig.DegToRad(sunDec))) / (Math.Sin(Trig.DegToRad(latitude)) * Math.Sin(Trig.DegToRad(solarZenithAngle))))) + 180);
+				azimuth = Trig.PutIn360Deg(Trig.DegToRad(Math.Acos(((Math.Sin(Trig.DegToRad((double)latitude)) * Math.Cos(Trig.DegToRad(solarZenithAngle))) - Math.Sin(Trig.DegToRad(sunDec))) / (Math.Sin(Trig.DegToRad((double)latitude)) * Math.Sin(Trig.DegToRad(solarZenithAngle))))) + 180);
 			else
-				azimuth = Trig.PutIn360Deg(540 - Trig.DegToRad(Math.Acos(((Math.Sin(Trig.DegToRad(latitude)) * Math.Cos(Trig.DegToRad(solarZenithAngle))) - Math.Sin(Trig.DegToRad(sunDec))) / (Math.Cos(Trig.DegToRad(latitude)) * Math.Sin(Trig.DegToRad(solarZenithAngle))))));
+				azimuth = Trig.PutIn360Deg(540 - Trig.DegToRad(Math.Acos(((Math.Sin(Trig.DegToRad((double)latitude)) * Math.Cos(Trig.DegToRad(solarZenithAngle))) - Math.Sin(Trig.DegToRad(sunDec))) / (Math.Cos(Trig.DegToRad((double)latitude)) * Math.Sin(Trig.DegToRad(solarZenithAngle))))));
 
 		}
 

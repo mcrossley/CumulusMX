@@ -27,6 +27,10 @@ namespace CumulusMX
 		internal string CreateDayfileSQL;
 		internal string CreateRealtimeSQL;
 
+		internal MySqlTable RealtimeTable;
+		internal MySqlTable MonthlyTable;
+		internal MySqlTable DayfileTable;
+
 		internal int CustomMinutesIntervalIndex;
 
 		private readonly Cumulus cumulus;
@@ -41,7 +45,6 @@ namespace CumulusMX
 		private readonly TokenParser customRolloverTokenParser = new TokenParser();
 
 		internal System.Timers.Timer CustomSecondsTimer;
-
 
 		// Use thread safe queues for the MySQL command lists
 		internal readonly ConcurrentQueue<string> CatchUpList = new ConcurrentQueue<string>();
@@ -94,8 +97,6 @@ namespace CumulusMX
 
 		}
 
-
-
 		internal bool CheckConnection()
 		{
 			try
@@ -132,6 +133,7 @@ namespace CumulusMX
 			await Task.Run(() =>
 			{
 				ConcurrentQueue<string> queue = UseFailedList ? ref FailedList : ref Cmds;
+				var  cmdStr = "";
 
 				try
 				{
@@ -146,7 +148,7 @@ namespace CumulusMX
 							do
 							{
 								// Do not remove the item from the stack until we know the command worked
-								if (queue.TryPeek(out var cmdStr))
+								if (queue.TryPeek(out cmdStr))
 								{
 									using MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn);
 
@@ -183,6 +185,12 @@ namespace CumulusMX
 				}
 				catch (Exception ex)
 				{
+					// if debug logging is disabled, then log the failing statement anyway
+					if (!cumulus.DebuggingEnabled)
+					{
+						Cumulus.LogMessage($"{CallingFunction}: SQL = {cmdStr}");
+					}
+
 					cumulus.LogExceptionMessage(ex, $"{CallingFunction}: Error encountered during MySQL operation");
 
 					cumulus.MySqlUploadAlarm.LastError = ex.Message;
@@ -212,6 +220,7 @@ namespace CumulusMX
 		internal void CommandSync(ConcurrentQueue<string> Cmds, string CallingFunction, bool UseFailedList)
 		{
 			ConcurrentQueue<string> queue = UseFailedList ? ref FailedList : ref Cmds;
+			var cmdStr = "";
 
 			try
 			{
@@ -221,13 +230,12 @@ namespace CumulusMX
 
 					using var transaction = Cmds.Count > 2 ? mySqlConn.BeginTransaction() : null;
 					{
-
 						var updated = 0;
 
 						do
 						{
 							// Do not remove the item from the stack until we know the command worked
-							if (queue.TryPeek(out var cmdStr))
+							if (queue.TryPeek(out cmdStr))
 							{
 								using (MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn))
 								{
@@ -262,7 +270,14 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
+				// if debug logging is disabled, then log the failing statement anyway
+				if (!cumulus.DebuggingEnabled)
+				{
+					Cumulus.LogMessage($"{CallingFunction}: SQL = {cmdStr}");
+				}
+
 				cumulus.LogExceptionMessage(ex, $"{CallingFunction}: Error encountered during MySQL operation");
+
 				cumulus.MySqlUploadAlarm.LastError = ex.Message;
 				cumulus.MySqlUploadAlarm.Triggered = true;
 
@@ -281,16 +296,17 @@ namespace CumulusMX
 		internal void CommandErrorHandler(string CallingFunction, int ErrorCode, ConcurrentQueue<string> Cmds)
 		{
 			var ignore = ErrorCode == (int)MySqlErrorCode.ParseError ||
-			 ErrorCode == (int)MySqlErrorCode.EmptyQuery ||
-			 ErrorCode == (int)MySqlErrorCode.TooBigSelect ||
-			 ErrorCode == (int)MySqlErrorCode.InvalidUseOfNull ||
-			 ErrorCode == (int)MySqlErrorCode.MixOfGroupFunctionAndFields ||
-			 ErrorCode == (int)MySqlErrorCode.SyntaxError ||
-			 ErrorCode == (int)MySqlErrorCode.TooLongString ||
-			 ErrorCode == (int)MySqlErrorCode.WrongColumnName ||
-			 ErrorCode == (int)MySqlErrorCode.DuplicateUnique ||
-			 ErrorCode == (int)MySqlErrorCode.PrimaryCannotHaveNull ||
-			 ErrorCode == (int)MySqlErrorCode.DivisionByZero;
+						 ErrorCode == (int)MySqlErrorCode.EmptyQuery ||
+						 ErrorCode == (int)MySqlErrorCode.TooBigSelect ||
+						 ErrorCode == (int)MySqlErrorCode.InvalidUseOfNull ||
+						 ErrorCode == (int)MySqlErrorCode.MixOfGroupFunctionAndFields ||
+						 ErrorCode == (int)MySqlErrorCode.SyntaxError ||
+						 ErrorCode == (int)MySqlErrorCode.TooLongString ||
+						 ErrorCode == (int)MySqlErrorCode.WrongColumnName ||
+						 ErrorCode == (int)MySqlErrorCode.DuplicateUnique ||
+						 ErrorCode == (int)MySqlErrorCode.PrimaryCannotHaveNull ||
+						 ErrorCode == (int)MySqlErrorCode.DivisionByZero ||
+						 ErrorCode == (int)MySqlErrorCode.DuplicateKeyEntry;
 
 			if (ignore)
 			{
@@ -309,7 +325,6 @@ namespace CumulusMX
 			}
 
 		}
-
 
 		internal async Task CheckMySQLFailedUploads(string callingFunction, string cmd)
 		{
@@ -341,7 +356,11 @@ namespace CumulusMX
 						if (callingFunction.StartsWith("Realtime["))
 						{
 							// don't bother buffering the realtime deletes - if present
-							FailedList.Enqueue(cmds[0]);
+							for (var i = 0; i < cmds.Count; i++)
+							{
+								if (!cmds[i].StartsWith("DELETE"))
+									FailedList.Enqueue(cmds[i]);
+							}
 						}
 						else
 						{
@@ -365,7 +384,6 @@ namespace CumulusMX
 				Cumulus.LogMessage($"{callingFunction}: Error - " + ex.Message);
 			}
 		}
-
 
 		internal void DoRealtimeData(int cycle, bool live, DateTime? logdate = null)
 		{
@@ -513,7 +531,7 @@ namespace CumulusMX
 
 		internal void DoDailyData(DateTime timestamp, double AvgTemp)
 		{
-			StringBuilder queryString = new StringBuilder(StartOfDayfileInsertSQL, 1024);
+			StringBuilder queryString = new StringBuilder(cumulus.MySqlStuff.DayfileTable.StartOfInsert, 1024);
 			queryString.Append(" Values('");
 			queryString.Append(timestamp.AddDays(-1).ToString("yy-MM-dd") + "',");
 			if (station.HiLoToday.HighGust.HasValue)
@@ -523,42 +541,54 @@ namespace CumulusMX
 				queryString.Append(station.HiLoToday.HighGustTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,null,");
+			}
 			if (station.HiLoToday.LowTemp.HasValue)
 			{
 				queryString.Append(station.HiLoToday.LowTemp.Value.ToString(cumulus.TempFormat, invNum) + ",");
 				queryString.Append(station.HiLoToday.LowTempTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			if (station.HiLoToday.HighTemp.HasValue)
 			{
 				queryString.Append(station.HiLoToday.HighTemp.Value.ToString(cumulus.TempFormat, invNum) + ",");
 				queryString.Append(station.HiLoToday.HighTempTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			if (station.HiLoToday.LowPress.HasValue)
 			{
 				queryString.Append(station.HiLoToday.LowPress.Value.ToString(cumulus.PressFormat, invNum) + ",");
 				queryString.Append(station.HiLoToday.LowPressTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			if (station.HiLoToday.HighPress.HasValue)
 			{
 				queryString.Append(station.HiLoToday.HighPress.Value.ToString(cumulus.PressFormat, invNum) + ",");
 				queryString.Append(station.HiLoToday.HighPressTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			if (station.HiLoToday.HighRainRate.HasValue)
 			{
 				queryString.Append(station.HiLoToday.HighRainRate.Value.ToString(cumulus.RainFormat, invNum) + ",");
 				queryString.Append(station.HiLoToday.HighRainRateTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			queryString.Append((station.RainToday.HasValue ? station.RainToday.Value.ToString(cumulus.RainFormat, invNum) : "null") + ",");
 			queryString.Append(AvgTemp.ToString(cumulus.TempFormat, invNum) + ",");
 			queryString.Append(station.WindRunToday.ToString("F1", invNum) + ",");
@@ -568,21 +598,27 @@ namespace CumulusMX
 				queryString.Append(station.HiLoToday.HighWindTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			if (station.HiLoToday.LowHumidity.HasValue)
 			{
 				queryString.Append(station.HiLoToday.LowHumidity + ",");
 				queryString.Append(station.HiLoToday.LowHumidityTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			if (station.HiLoToday.HighHumidity.HasValue)
 			{
 				queryString.Append(station.HiLoToday.HighHumidity + ",");
 				queryString.Append(station.HiLoToday.HighHumidityTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			queryString.Append(station.ET.ToString(cumulus.ETFormat, invNum) + ",");
 			queryString.Append((cumulus.RolloverHour == 0 ? station.SunshineHours.ToString(cumulus.SunFormat, invNum) : station.SunshineToMidnight.ToString(cumulus.SunFormat, invNum)) + ",");
 			if (station.HiLoToday.HighHeatIndex.HasValue)
@@ -591,21 +627,27 @@ namespace CumulusMX
 				queryString.Append(station.HiLoToday.HighHeatIndexTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			if (station.HiLoToday.HighAppTemp.HasValue)
 			{
 				queryString.Append(station.HiLoToday.HighAppTemp.Value.ToString(cumulus.TempFormat, invNum) + ",");
 				queryString.Append(station.HiLoToday.HighAppTempTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			if (station.HiLoToday.LowAppTemp.HasValue)
-			{ 
+			{
 				queryString.Append(station.HiLoToday.LowAppTemp.Value.ToString(cumulus.TempFormat, invNum) + ",");
 				queryString.Append(station.HiLoToday.LowAppTempTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			queryString.Append(station.HiLoToday.HighHourlyRain.ToString(cumulus.RainFormat, invNum) + ",");
 			queryString.Append(station.HiLoToday.HighHourlyRainTime.ToString("\\'HH:mm\\'") + ",");
 			if (station.HiLoToday.LowWindChill.HasValue)
@@ -614,21 +656,27 @@ namespace CumulusMX
 				queryString.Append(station.HiLoToday.LowWindChillTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			if (station.HiLoToday.HighDewPoint.HasValue)
 			{
 				queryString.Append(station.HiLoToday.HighDewPoint.Value.ToString(cumulus.TempFormat, invNum) + ",");
 				queryString.Append(station.HiLoToday.HighDewPointTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			if (station.HiLoToday.LowDewPoint.HasValue)
 			{
 				queryString.Append(station.HiLoToday.LowDewPoint.Value.ToString(cumulus.TempFormat, invNum) + ",");
 				queryString.Append(station.HiLoToday.LowDewPointTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			queryString.Append(station.DominantWindBearing + ",");
 			queryString.Append(station.HeatingDegreeDays.ToString("F1", invNum) + ",");
 			queryString.Append(station.CoolingDegreeDays.ToString("F1", invNum) + ",");
@@ -640,7 +688,9 @@ namespace CumulusMX
 				queryString.Append(station.HiLoToday.HighUvTime.ToString("\\'HH:mm\\'") + ",'");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			queryString.Append(WeatherStation.CompassPoint(station.HiLoToday.HighGustBearing) + "','");
 			queryString.Append(WeatherStation.CompassPoint(station.DominantWindBearing) + "',");
 			if (station.HiLoToday.HighFeelsLike.HasValue)
@@ -649,29 +699,43 @@ namespace CumulusMX
 				queryString.Append(station.HiLoToday.HighFeelsLikeTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			if (station.HiLoToday.LowFeelsLike.HasValue)
 			{
 				queryString.Append(station.HiLoToday.LowFeelsLike.Value.ToString(cumulus.TempFormat, invNum) + ",");
 				queryString.Append(station.HiLoToday.LowFeelsLikeTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
 				queryString.Append("null,null,");
+			}
 			if (station.HiLoToday.HighHumidex.HasValue)
 			{
 				queryString.Append(station.HiLoToday.HighHumidex.Value.ToString(cumulus.TempFormat, invNum) + ",");
-				queryString.Append(station.HiLoToday.HighHumidexTime.ToString("\\'HH:mm\\'"));
+				queryString.Append(station.HiLoToday.HighHumidexTime.ToString("\\'HH:mm\\'") + ",");
 			}
 			else
+			{
+				queryString.Append("null,null,");
+			}
+			queryString.Append(station.ChillHours.ToString(cumulus.TempFormat, invNum) + ",");
+			if (station.HiLoToday.HighRain24h.HasValue)
+			{
+				queryString.Append(station.HiLoToday.HighRain24h.Value.ToString(cumulus.RainFormat, invNum) + ",");
+				queryString.Append(station.HiLoToday.HighRain24hTime.ToString("\\'HH:mm\\'"));
+			}
+			else
+			{
 				queryString.Append("null,null");
+			}
 
 			queryString.Append(')');
 
 			// run the query async so we do not block the main EOD processing
 			_ = CommandAsync(queryString.ToString(), "MySQL Dayfile");
 		}
-
-
 
 		internal async void CustomSecondsTimerTick(object sender, ElapsedEventArgs e)
 		{
@@ -691,15 +755,21 @@ namespace CumulusMX
 			{
 				customSecondsUpdateInProgress = true;
 
-				customSecondsTokenParser.InputText = Settings.CustomSecs.Command;
+				for (var i = 0; i < 10; i++)
+				{
+					try
+					{
+						if (!string.IsNullOrEmpty(Settings.CustomSecs.Commands[i]))
+						{
+							customSecondsTokenParser.InputText = Settings.CustomSecs.Commands[i];
+							await CheckMySQLFailedUploads($"CustomSqlSecs[{i}]", customSecondsTokenParser.ToStringFromString());
+						}
 
-				try
-				{
-					await CheckMySQLFailedUploads("CustomSqlSecs", customSecondsTokenParser.ToStringFromString());
-				}
-				catch (Exception ex)
-				{
-					cumulus.LogExceptionMessage(ex, "CustomSqlSecs: Error - ");
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, $"CustomSqlSecs[{i}]: Error");
+					}
 				}
 
 				customSecondsUpdateInProgress = false;
@@ -718,19 +788,24 @@ namespace CumulusMX
 			{
 				customMinutesUpdateInProgress = true;
 
-				customMinutesTokenParser.InputText = Settings.CustomMins.Command;
-
-				try
+				for (var i = 0; i < 10; i++)
 				{
-					await CheckMySQLFailedUploads("CustomSqlMins", customMinutesTokenParser.ToStringFromString());
-				}
-				catch (Exception ex)
-				{
-					Cumulus.LogMessage("CustomSqlMins: Error - " + ex.Message);
-				}
+					try
+					{
+						if (!string.IsNullOrEmpty(Settings.CustomMins.Commands[i]))
+						{
+							customMinutesTokenParser.InputText = Settings.CustomMins.Commands[i];
+							await CheckMySQLFailedUploads($"CustomSqlMins[{i}]", customMinutesTokenParser.ToStringFromString());
+						}
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, $"CustomSqlMins[{i}]: Error");
+					}
 
-				// now do what we came here to do
-				await CommandAsync(customMinutesTokenParser.ToStringFromString(), "CustomSqlMins");
+					// now do what we came here to do
+					await CommandAsync(customMinutesTokenParser.ToStringFromString(), $"CustomSqlMins[{i}]");
+				}
 
 				customMinutesUpdateInProgress = false;
 			}
@@ -748,22 +823,26 @@ namespace CumulusMX
 			{
 				customRolloverUpdateInProgress = true;
 
-				customRolloverTokenParser.InputText = Settings.CustomRollover.Command;
+				for (var i = 0; i < 10; i++)
+				{
 
-				try
-				{
-					await CheckMySQLFailedUploads("CustomSqlRollover", customRolloverTokenParser.ToStringFromString());
-				}
-				catch (Exception ex)
-				{
-					Cumulus.LogMessage("CustomSqlRollover: Error - " + ex.Message);
+					try
+					{
+						if (!string.IsNullOrEmpty(Settings.CustomRollover.Commands[i]))
+						{
+							customRolloverTokenParser.InputText = Settings.CustomRollover.Commands[i];
+							await CheckMySQLFailedUploads($"CustomSqlRollover[{i}]", customRolloverTokenParser.ToStringFromString());
+						}
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, $"CustomSqlRollover[{i}]: Error");
+					}
 				}
 
 				customRolloverUpdateInProgress = false;
 			}
 		}
-
-
 
 		internal void SetRealtimeCreateString()
 		{
@@ -922,13 +1001,12 @@ namespace CumulusMX
 			strb.Append("TMinFeelsLike varchar(5),");
 			strb.Append("MaxHumidex decimal(5," + cumulus.TempDPlaces + "),");
 			strb.Append("TMaxHumidex varchar(5),");
-			//strb.Append("MinHumidex decimal(5," + TempDPlaces + "),");
-			//strb.Append("TMinHumidex varchar(5),");
+			strb.Append("ChillHours decimal(7," + cumulus.TempDPlaces + "),");
+			strb.Append("HighRain24h decimal(6," + cumulus.RainDPlaces + ")");
+			strb.Append("THighRain24h varchar(5),");
 			strb.Append("PRIMARY KEY(LogDate)) COMMENT = \"Dayfile from Cumulus\"");
 			CreateDayfileSQL = strb.ToString();
 		}
-
-
 
 		internal void SetStartOfRealtimeInsertSQL()
 		{
@@ -953,7 +1031,8 @@ namespace CumulusMX
 				"HighHourRain,THighHourRain,LowWindChill,TLowWindChill,HighDewPoint,THighDewPoint," +
 				"LowDewPoint,TLowDewPoint,DomWindDir,HeatDegDays,CoolDegDays,HighSolarRad," +
 				"THighSolarRad,HighUV,THighUV,HWindGBearSym,DomWindDirSym," +
-				"MaxFeelsLike,TMaxFeelsLike,MinFeelsLike,TMinFeelsLike,MaxHumidex,TMaxHumidex)";
+				"MaxFeelsLike,TMaxFeelsLike,MinFeelsLike,TMinFeelsLike,MaxHumidex,TMaxHumidex," +
+				"HighRain24h, THighRain24h)";
 		}
 
 		internal void SetStartOfMonthlyInsertSQL()
@@ -966,5 +1045,170 @@ namespace CumulusMX
 		}
 
 
+		internal void SetupRealtimeMySqlTable()
+		{
+			RealtimeTable = new MySqlTable(Settings.Realtime.TableName);
+			RealtimeTable.AddColumn("LogDateTime", "DATETIME NOT NULL");
+			RealtimeTable.AddColumn("temp", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("hum", "decimal(4," + cumulus.HumDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("dew", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("wspeed", "decimal(4," + cumulus.WindDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("wlatest", "decimal(4," + cumulus.WindDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("bearing", "VARCHAR(3) NOT NULL");
+			RealtimeTable.AddColumn("rrate", "decimal(4," + cumulus.RainDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("rfall", "decimal(4," + cumulus.RainDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("press", "decimal(6," + cumulus.PressDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("currentwdir", "VARCHAR(3) NOT NULL");
+			RealtimeTable.AddColumn("beaufortnumber", "varchar(2) NOT NULL");
+			RealtimeTable.AddColumn("windunit", "varchar(4) NOT NULL");
+			RealtimeTable.AddColumn("tempunitnodeg", "varchar(1) NOT NULL");
+			RealtimeTable.AddColumn("pressunit", "varchar(3) NOT NULL");
+			RealtimeTable.AddColumn("rainunit", "varchar(2) NOT NULL");
+			RealtimeTable.AddColumn("windrun", "decimal(4," + cumulus.WindRunDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("presstrendval", "varchar(6) NOT NULL");
+			RealtimeTable.AddColumn("rmonth", "decimal(4," + cumulus.RainDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("ryear", "decimal(4," + cumulus.RainDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("rfallY", "decimal(4," + cumulus.RainDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("intemp", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("inhum", "decimal(4," + cumulus.HumDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("wchill", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("temptrend", "varchar(5) NOT NULL");
+			RealtimeTable.AddColumn("tempTH", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("TtempTH", "varchar(5) NOT NULL");
+			RealtimeTable.AddColumn("tempTL", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("TtempTL", "varchar(5) NOT NULL");
+			RealtimeTable.AddColumn("windTM", "decimal(4," + cumulus.WindDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("TwindTM", "varchar(5) NOT NULL");
+			RealtimeTable.AddColumn("wgustTM", "decimal(4," + cumulus.WindDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("TwgustTM", "varchar(5) NOT NULL");
+			RealtimeTable.AddColumn("pressTH", "decimal(6," + cumulus.PressDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("TpressTH", "varchar(5) NOT NULL");
+			RealtimeTable.AddColumn("pressTL", "decimal(6," + cumulus.PressDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("TpressTL", "varchar(5) NOT NULL");
+			RealtimeTable.AddColumn("version", "varchar(8) NOT NULL");
+			RealtimeTable.AddColumn("build", "varchar(5) NOT NULL");
+			RealtimeTable.AddColumn("wgust", "decimal(4," + cumulus.WindDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("heatindex", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("humidex", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("UV", "decimal(3," + cumulus.UVDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("ET", "decimal(4," + cumulus.RainDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("SolarRad", "decimal(5,1) NOT NULL");
+			RealtimeTable.AddColumn("avgbearing", "varchar(3) NOT NULL");
+			RealtimeTable.AddColumn("rhour", "decimal(4," + cumulus.RainDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("forecastnumber", "varchar(2) NOT NULL");
+			RealtimeTable.AddColumn("isdaylight", "varchar(1) NOT NULL");
+			RealtimeTable.AddColumn("SensorContactLost", "varchar(1) NOT NULL");
+			RealtimeTable.AddColumn("wdir", "varchar(3) NOT NULL");
+			RealtimeTable.AddColumn("cloudbasevalue", "varchar(5) NOT NULL");
+			RealtimeTable.AddColumn("cloudbaseunit", "varchar(2) NOT NULL");
+			RealtimeTable.AddColumn("apptemp", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("SunshineHours", "decimal(3," + cumulus.SunshineDPlaces + ") NOT NULL");
+			RealtimeTable.AddColumn("CurrentSolarMax", "decimal(5,1) NOT NULL");
+			RealtimeTable.AddColumn("IsSunny", "varchar(1) NOT NULL");
+			RealtimeTable.AddColumn("FeelsLike", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			RealtimeTable.PrimaryKey = "LogDateTime";
+			RealtimeTable.Comment = "\"Realtime log\"";
+		}
+
+		internal void SetupMonthlyMySqlTable()
+		{
+			MonthlyTable = new MySqlTable(Settings.Monthly.TableName);
+			MonthlyTable.AddColumn("LogDateTime", "DATETIME NOT NULL");
+			MonthlyTable.AddColumn("Temp", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("Humidity", "decimal(4," + cumulus.HumDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("Dewpoint", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("Windspeed", "decimal(4," + cumulus.WindAvgDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("Windgust", "decimal(4," + cumulus.WindDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("Windbearing", "VARCHAR(3) NOT NULL");
+			MonthlyTable.AddColumn("RainRate", "decimal(4," + cumulus.RainDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("TodayRainSoFar", "decimal(4," + cumulus.RainDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("Pressure", "decimal(6," + cumulus.PressDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("Raincounter", "decimal(6," + cumulus.RainDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("InsideTemp", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("InsideHumidity", "decimal(4," + cumulus.HumDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("LatestWindGust", "decimal(5," + cumulus.WindDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("WindChill", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("HeatIndex", "decimal(4," + cumulus.TempDPlaces + ") NOT NULL");
+			MonthlyTable.AddColumn("UVindex", "decimal(4," + cumulus.UVDPlaces + ")");
+			MonthlyTable.AddColumn("SolarRad", "decimal(5,1)");
+			MonthlyTable.AddColumn("Evapotrans", "decimal(4," + cumulus.RainDPlaces + ")");
+			MonthlyTable.AddColumn("AnnualEvapTran", "decimal(5," + cumulus.RainDPlaces + ")");
+			MonthlyTable.AddColumn("ApparentTemp", "decimal(4," + cumulus.TempDPlaces + ")");
+			MonthlyTable.AddColumn("MaxSolarRad", "decimal(5,1)");
+			MonthlyTable.AddColumn("HrsSunShine", "decimal(3," + cumulus.SunshineDPlaces + ")");
+			MonthlyTable.AddColumn("CurrWindBearing", "varchar(3)");
+			MonthlyTable.AddColumn("RG11rain", "decimal(4," + cumulus.RainDPlaces + ")");
+			MonthlyTable.AddColumn("RainSinceMidnight", "decimal(4," + cumulus.RainDPlaces + ")");
+			MonthlyTable.AddColumn("WindbearingSym", "varchar(3)");
+			MonthlyTable.AddColumn("CurrWindBearingSym", "varchar(3)");
+			MonthlyTable.AddColumn("FeelsLike", "decimal(4," + cumulus.TempDPlaces + ")");
+			MonthlyTable.AddColumn("Humidex", "decimal(4," + cumulus.TempDPlaces + ")");
+			MonthlyTable.PrimaryKey = "LogDateTime";
+			MonthlyTable.Comment = "\"Monthly logs from Cumulus\"";
+		}
+
+		internal void SetupDayfileMySqlTable()
+		{
+			DayfileTable = new MySqlTable(Settings.Dayfile.TableName);
+			DayfileTable.AddColumn("LogDate", "date NOT NULL");
+			DayfileTable.AddColumn("HighWindGust", "decimal(4," + cumulus.WindDPlaces + ") NOT NULL");
+			DayfileTable.AddColumn("HWindGBear", "varchar(3) NOT NULL");
+			DayfileTable.AddColumn("THWindG", "varchar(5) NOT NULL");
+			DayfileTable.AddColumn("MinTemp", "decimal(5," + cumulus.TempDPlaces + ") NOT NULL");
+			DayfileTable.AddColumn("TMinTemp", "varchar(5) NOT NULL");
+			DayfileTable.AddColumn("MaxTemp", "decimal(5," + cumulus.TempDPlaces + ") NOT NULL");
+			DayfileTable.AddColumn("TMaxTemp", "varchar(5) NOT NULL");
+			DayfileTable.AddColumn("MinPress", "decimal(6," + cumulus.PressDPlaces + ") NOT NULL");
+			DayfileTable.AddColumn("TMinPress", "varchar(5) NOT NULL");
+			DayfileTable.AddColumn("MaxPress", "decimal(6," + cumulus.PressDPlaces + ") NOT NULL");
+			DayfileTable.AddColumn("TMaxPress", "varchar(5) NOT NULL");
+			DayfileTable.AddColumn("MaxRainRate", "decimal(4," + cumulus.RainDPlaces + ") NOT NULL");
+			DayfileTable.AddColumn("TMaxRR", "varchar(5) NOT NULL");
+			DayfileTable.AddColumn("TotRainFall", "decimal(6," + cumulus.RainDPlaces + ") NOT NULL");
+			DayfileTable.AddColumn("AvgTemp", "decimal(5," + cumulus.TempDPlaces + ") NOT NULL");
+			DayfileTable.AddColumn("TotWindRun", "decimal(5," + cumulus.WindRunDPlaces + ") NOT NULL");
+			DayfileTable.AddColumn("HighAvgWSpeed", "decimal(3," + cumulus.WindAvgDPlaces + ")");
+			DayfileTable.AddColumn("THAvgWSpeed", "varchar(5)");
+			DayfileTable.AddColumn("LowHum", "decimal(4," + cumulus.HumDPlaces + ")");
+			DayfileTable.AddColumn("TLowHum", "varchar(5)");
+			DayfileTable.AddColumn("HighHum", "decimal(4," + cumulus.HumDPlaces + ")");
+			DayfileTable.AddColumn("THighHum", "varchar(5)");
+			DayfileTable.AddColumn("TotalEvap", "decimal(5," + cumulus.RainDPlaces + ")");
+			DayfileTable.AddColumn("HoursSun", "decimal(3," + cumulus.SunshineDPlaces + ")");
+			DayfileTable.AddColumn("HighHeatInd", "decimal(5," + cumulus.TempDPlaces + ")");
+			DayfileTable.AddColumn("THighHeatInd", "varchar(5)");
+			DayfileTable.AddColumn("HighAppTemp", "decimal(5," + cumulus.TempDPlaces + ")");
+			DayfileTable.AddColumn("THighAppTemp", "varchar(5)");
+			DayfileTable.AddColumn("LowAppTemp", "decimal(5," + cumulus.TempDPlaces + ")");
+			DayfileTable.AddColumn("TLowAppTemp", "varchar(5)");
+			DayfileTable.AddColumn("HighHourRain", "decimal(4," + cumulus.RainDPlaces + ")");
+			DayfileTable.AddColumn("THighHourRain", "varchar(5)");
+			DayfileTable.AddColumn("LowWindChill", "decimal(5," + cumulus.TempDPlaces + ")");
+			DayfileTable.AddColumn("TLowWindChill", "varchar(5)");
+			DayfileTable.AddColumn("HighDewPoint", "decimal(5," + cumulus.TempDPlaces + ")");
+			DayfileTable.AddColumn("THighDewPoint", "varchar(5)");
+			DayfileTable.AddColumn("LowDewPoint", "decimal(5," + cumulus.TempDPlaces + ")");
+			DayfileTable.AddColumn("TLowDewPoint", "varchar(5)");
+			DayfileTable.AddColumn("DomWindDir", "varchar(3)");
+			DayfileTable.AddColumn("HeatDegDays", "decimal(4,1)");
+			DayfileTable.AddColumn("CoolDegDays", "decimal(4,1)");
+			DayfileTable.AddColumn("HighSolarRad", "decimal(5,1)");
+			DayfileTable.AddColumn("THighSolarRad", "varchar(5)");
+			DayfileTable.AddColumn("HighUV", "decimal(3," + cumulus.UVDPlaces + ")");
+			DayfileTable.AddColumn("THighUV", "varchar(5)");
+			DayfileTable.AddColumn("HWindGBearSym", "varchar(3)");
+			DayfileTable.AddColumn("DomWindDirSym", "varchar(3)");
+			DayfileTable.AddColumn("MaxFeelsLike", "decimal(5," + cumulus.TempDPlaces + ")");
+			DayfileTable.AddColumn("TMaxFeelsLike", "varchar(5)");
+			DayfileTable.AddColumn("MinFeelsLike", "decimal(5," + cumulus.TempDPlaces + ")");
+			DayfileTable.AddColumn("TMinFeelsLike", "varchar(5)");
+			DayfileTable.AddColumn("MaxHumidex", "decimal(5," + cumulus.TempDPlaces + ")");
+			DayfileTable.AddColumn("TMaxHumidex", "varchar(5)");
+			DayfileTable.AddColumn("ChillHours", "decimal(7," + cumulus.TempDPlaces + ")");
+			DayfileTable.AddColumn("HighRain24h", "decimal(6," + cumulus.RainDPlaces + ")");
+			DayfileTable.AddColumn("THighRain24h", "varchar(5)");
+			DayfileTable.PrimaryKey = "LogDate";
+			DayfileTable.Comment = "\"Dayfile from Cumulus\"";
+		}
 	}
 }

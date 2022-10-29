@@ -88,7 +88,7 @@ namespace CumulusMX
 			json.Append(',');
 			json.Append(alltimejsonformat(station.AllTime.DailyRain, cumulus.Units.RainText, cumulus.RainFormat, "D"));
 			json.Append(',');
-			json.Append(alltimejsonformat(station.AllTime.Rain24Hours, cumulus.Units.RainText, cumulus.RainFormat, "D"));
+			json.Append(alltimejsonformat(station.AllTime.HighRain24Hours, cumulus.Units.RainText, cumulus.RainFormat, "f"));
 			json.Append(',');
 			json.Append(alltimejsonformat(station.AllTime.MonthlyRain, cumulus.Units.RainText, cumulus.RainFormat, "Y"));
 			json.Append(',');
@@ -190,7 +190,7 @@ namespace CumulusMX
 			json.Append(',');
 			json.Append(monthlyjsonformat(station.MonthlyRecs[month].DailyRain, cumulus.Units.RainText, cumulus.RainFormat, "D"));
 			json.Append(',');
-			json.Append(monthlyjsonformat(station.MonthlyRecs[month].Rain24Hours, cumulus.Units.RainText, cumulus.RainFormat, "D"));
+			json.Append(monthlyjsonformat(station.MonthlyRecs[month].HighRain24Hours, cumulus.Units.RainText, cumulus.RainFormat, "f"));
 			json.Append(',');
 			json.Append(monthlyjsonformat(station.MonthlyRecs[month].MonthlyRain, cumulus.Units.RainText, cumulus.RainFormat, "Y"));
 			json.Append(',');
@@ -292,7 +292,7 @@ namespace CumulusMX
 			json.Append(',');
 			json.Append(monthyearjsonformat(station.ThisMonth.DailyRain, cumulus.Units.RainText, cumulus.RainFormat, "D"));
 			json.Append(',');
-			json.Append(monthyearjsonformat(station.ThisMonth.Rain24Hours, cumulus.Units.RainText, cumulus.RainFormat, "D"));
+			json.Append(monthyearjsonformat(station.ThisMonth.HighRain24Hours, cumulus.Units.RainText, cumulus.RainFormat, "f"));
 			json.Append(',');
 			//json.Append(monthyearjsonformat(ThisMonth.WetMonth.Desc, month, cumulus.Units.RainText, cumulus.RainFormat, "Y"));
 			//json.Append(',');
@@ -389,7 +389,7 @@ namespace CumulusMX
 			json.Append(',');
 			json.Append(monthyearjsonformat(station.ThisYear.DailyRain, cumulus.Units.RainText, cumulus.RainFormat, "D"));
 			json.Append(',');
-			json.Append(monthyearjsonformat(station.ThisYear.Rain24Hours, cumulus.Units.RainText, cumulus.RainFormat, "D"));
+			json.Append(monthyearjsonformat(station.ThisYear.HighRain24Hours, cumulus.Units.RainText, cumulus.RainFormat, "f"));
 			json.Append(',');
 			json.Append(monthyearjsonformat(station.ThisYear.MonthlyRain, cumulus.Units.RainText, cumulus.RainFormat, "Y"));
 			json.Append(',');

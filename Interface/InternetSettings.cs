@@ -76,6 +76,7 @@ namespace CumulusMX
 
 						if (cumulus.FtpOptions.FtpMode == Cumulus.FtpProtocols.FTP || cumulus.FtpOptions.FtpMode == Cumulus.FtpProtocols.FTPS)
 						{
+							cumulus.FtpOptions.AutoDetect = settings.website.advanced.autodetect;
 							cumulus.FtpOptions.ActiveMode = settings.website.advanced.activeftp;
 							cumulus.FtpOptions.DisableEPSV = settings.website.advanced.disableftpsepsv;
 						}
@@ -83,6 +84,7 @@ namespace CumulusMX
 						if (cumulus.FtpOptions.FtpMode == Cumulus.FtpProtocols.FTPS)
 						{
 							cumulus.FtpOptions.DisableExplicit = settings.website.advanced.disableftpsexplicit;
+							cumulus.FtpOptions.IgnoreCertErrors = settings.website.advanced.ignorecerts;
 						}
 					}
 
@@ -356,9 +358,11 @@ namespace CumulusMX
 
 			var websettingsadvanced = new WebsiteAdvancedJson()
 			{
+				autodetect = cumulus.FtpOptions.AutoDetect,
 				activeftp = cumulus.FtpOptions.ActiveMode,
 				disableftpsepsv = cumulus.FtpOptions.DisableEPSV,
-				disableftpsexplicit = cumulus.FtpOptions.DisableExplicit
+				disableftpsexplicit = cumulus.FtpOptions.DisableExplicit,
+				ignorecerts = cumulus.FtpOptions.IgnoreCertErrors
 			};
 
 			var websettingsgeneral = new WebSettingsGeneralJson()
@@ -667,9 +671,11 @@ namespace CumulusMX
 
 		private class WebsiteAdvancedJson
 		{
+			public bool autodetect { get; set; }
 			public bool activeftp { get; set; }
 			public bool disableftpsepsv { get; set; }
 			public bool disableftpsexplicit { get; set; }
+			public bool ignorecerts { get; set; }
 		}
 
 		private class WebsiteJson

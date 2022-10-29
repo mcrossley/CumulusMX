@@ -1343,7 +1343,7 @@ namespace CumulusMX
 
 		public override void startReadingHistoryData()
 		{
-			cumulus.CurrentActivity = "Reading archive data";
+			cumulus.NormalRunning = true;
 			Cumulus.LogMessage("WLL history: Reading history data from log files");
 			LoadLastHoursFromDataLogs(cumulus.LastUpdateTime);
 
@@ -1371,7 +1371,7 @@ namespace CumulusMX
 			//{
 			//    UpdateHighsAndLows(dataContext);
 			//}
-			cumulus.CurrentActivity = "Normal running";
+			cumulus.NormalRunning = true;
 
 			// restore settings
 			cumulus.StationOptions.UseSpeedForAvgCalc = savedUseSpeedForAvgCalc;
@@ -1667,8 +1667,8 @@ namespace CumulusMX
 					if ((h == 0) && !midnightraindone)
 					{
 						ResetMidnightRain(timestamp);
-						ResetSunshineHours();
-						ResetMidnightTemperatures();
+						ResetSunshineHours(timestamp);
+						ResetMidnightTemperatures(timestamp);
 						midnightraindone = true;
 					}
 
@@ -3252,7 +3252,11 @@ namespace CumulusMX
 			else
 			{
 				Cumulus.LogMessage($"ERROR: No broadcast data received from the WLL for {tmrBroadcastWatchdog.Interval / 1000} seconds");
-				DataStopped = true;
+				if (!DataStopped)
+				{
+					DataStoppedTime = DateTime.Now;
+					DataStopped = true;
+				}
 				cumulus.DataStoppedAlarm.LastError = $"No broadcast data received from the WLL for {tmrBroadcastWatchdog.Interval / 1000} seconds";
 				cumulus.DataStoppedAlarm.Triggered = true;
 				// Try and give the broadcasts a kick in case the last command did not get through

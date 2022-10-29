@@ -106,12 +106,12 @@ namespace CumulusMX
 			return cumulus.compassp[(((bearing * 100) + 1125) % 36000) / 2250];
 		}
 
-		private static double Frac(double num)
+		private static decimal Frac(decimal num)
 		{
 			return num - Math.Floor(num);
 		}
 
-		private static void DecodeLatLong(double latLong, out int deg, out int min, out int sec)
+		private static void DecodeLatLong(decimal latLong, out int deg, out int min, out int sec)
 		{
 			deg = (int) Math.Floor(latLong);
 			latLong = Frac(latLong) * 60;

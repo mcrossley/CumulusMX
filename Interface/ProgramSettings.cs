@@ -28,6 +28,12 @@ namespace CumulusMX
 				startupdelaymaxuptime = cumulus.ProgramOptions.StartupDelayMaxUptime
 			};
 
+			var shutdown = new ShutdownOptions()
+			{
+				datastoppedexit = cumulus.ProgramOptions.DataStoppedExit,
+				datastoppedmins = cumulus.ProgramOptions.DataStoppedMins
+			};
+
 			var logging = new LoggingOptionsJson()
 			{
 				debuglogging = cumulus.ProgramOptions.DebugLogging,
@@ -55,6 +61,7 @@ namespace CumulusMX
 			{
 				accessible = cumulus.ProgramOptions.EnableAccessibility,
 				startup = startup,
+				shutdown = shutdown,
 				logging = logging,
 				options = options,
 				culture = culture
@@ -100,10 +107,15 @@ namespace CumulusMX
 				cumulus.ProgramOptions.StartupPingEscapeTime = settings.startup.startuppingescape;
 				cumulus.ProgramOptions.StartupDelaySecs = settings.startup.startupdelay;
 				cumulus.ProgramOptions.StartupDelayMaxUptime = settings.startup.startupdelaymaxuptime;
+
+				cumulus.ProgramOptions.DataStoppedExit = settings.shutdown.datastoppedexit;
+				cumulus.ProgramOptions.DataStoppedMins = settings.shutdown.datastoppedmins;
+
 				cumulus.ProgramOptions.DebugLogging = settings.logging.debuglogging;
 				cumulus.ProgramOptions.DataLogging = settings.logging.datalogging;
 				cumulus.SmtpOptions.Logging = settings.logging.emaillogging;
 				cumulus.ErrorLogSpikeRemoval = settings.logging.spikelogging;
+				
 				cumulus.ProgramOptions.WarnMultiple = settings.options.stopsecondinstance;
 				cumulus.ProgramOptions.ListWebTags = settings.options.listwebtags;
 				cumulus.ProgramOptions.DisplayPasswords = settings.options.displaypasswords;
@@ -175,6 +187,7 @@ namespace CumulusMX
 		{
 			public bool accessible { get; set; }
 			public StartupOptionsJson startup { get; set; }
+			public ShutdownOptions shutdown { get; set; }
 			public LoggingOptionsJson logging { get; set; }
 			public GeneralOptionsJson options { get; set; }
 			public CultureOptionsJson culture { get; set; }
@@ -211,5 +224,10 @@ namespace CumulusMX
 			public bool removespacefromdateseparator { get; set; }
 		}
 
+		public class ShutdownOptions
+		{
+			public bool datastoppedexit { get; set; }
+			public int datastoppedmins { get; set; }
+		}
 	}
 }
