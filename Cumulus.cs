@@ -499,10 +499,6 @@ namespace CumulusMX
 		private List<string> WOWList = new List<string>();
 		private List<string> OWMList = new List<string>();
 
-		// Use thread safe queues for the MySQL command lists
-		private ConcurrentQueue<SqlCache> MySqlList = new ConcurrentQueue<SqlCache>();
-		public ConcurrentQueue<SqlCache> MySqlFailedList = new ConcurrentQueue<SqlCache>();
-
 		internal string rawStationDataLogFile = "MXdiags/stationdata.log";
 		internal string rawExtraDataLogFile = "MXdiags/extradata.log";
 
@@ -1367,10 +1363,6 @@ namespace CumulusMX
 			WindRunFormat = "F" + WindRunDPlaces;
 			TempTrendFormat = "+0.0;-0.0;0";
 			AirQualityFormat = "F" + AirQualityDPlaces;
-
-			MySqlStuff.SetupRealtimeMySqlTable();
-			MySqlStuff.SetupMonthlyMySqlTable();
-			MySqlStuff.SetupDayfileMySqlTable();
 
 			ReadStringsFile();
 
@@ -7822,7 +7814,7 @@ namespace CumulusMX
 
 		public async Task DoLocalCopy()
 		{
-			var remotePath = "";
+			var remotePath = FtpOptions.LocalCopyFolder;
 
 			try
 			{
@@ -7833,7 +7825,7 @@ namespace CumulusMX
 
 				if (FtpOptions.LocalCopyFolder.Length > 0)
 				{
-					remotePath = (FtpOptions.LocalCopyFolder[-1] == DirectorySeparator || FtpOptions.LocalCopyFolder[-1] == folderSep2) ? FtpOptions.LocalCopyFolder : FtpOptions.LocalCopyFolder + DirectorySeparator;
+					remotePath = (FtpOptions.LocalCopyFolder.EndsWith(DirectorySeparator.ToString()) || FtpOptions.LocalCopyFolder.EndsWith(folderSep2.ToString())) ? FtpOptions.LocalCopyFolder : FtpOptions.LocalCopyFolder + DirectorySeparator;
 				}
 				else
 				{
@@ -8502,7 +8494,7 @@ namespace CumulusMX
 		// Return False if the connection is disposed, null, or not connected
 		private bool UploadFile(FtpClient conn, string localfile, string remotefile, int cycle = -1)
 		{
-			string remotefilename = FTPRename ? remotefile + "tmp" : remotefile;
+			string remotefiletmp = FTPRename ? remotefile + "tmp" : remotefile;
 			string cycleStr = cycle >= 0 ? cycle.ToString() : "Int";
 
 			if (FtpOptions.Logging)
@@ -8517,13 +8509,36 @@ namespace CumulusMX
 					return true;
 				}
 
+				if (FTPRename)
+				{
+					// delete the existing tmp file
+					try
+					{
+						if (conn.FileExists(remotefiletmp))
+						{
+							conn.DeleteFile(remotefiletmp);
+						}
+					}
+					catch
+					{
+						// continue on error
+					}
+				}
+
 				if (DeleteBeforeUpload)
 				{
 					// delete the existing file
 					try
 					{
 						LogFtpDebugMessage($"FTP[{cycleStr}]: Deleting {remotefile}");
-						conn.DeleteFile(remotefile);
+						if (conn.FileExists(remotefile))
+						{
+							conn.DeleteFile(remotefile);
+						}
+						else
+						{
+							LogFtpDebugMessage($"FTP[{cycleStr}]: Cannot delete remote file {remotefile} as it does not exist");
+						}
 					}
 					catch (Exception ex)
 					{
@@ -8532,13 +8547,13 @@ namespace CumulusMX
 						{
 							LogFtpMessage($"FTP[{cycleStr}]: Inner Exception: {ex.GetBaseException().Message}");
 						}
-						return conn.IsConnected;
+						// continue on error
 					}
 				}
 
-				LogFtpDebugMessage($"FTP[{cycleStr}]: Uploading {localfile} to {remotefilename}");
+				LogFtpDebugMessage($"FTP[{cycleStr}]: Uploading {localfile} to {remotefiletmp}");
 
-				var status = conn.UploadFile(localfile, remotefilename);
+				var status = conn.UploadFile(localfile, remotefiletmp);
 
 				if (status.IsFailure())
 				{
@@ -8547,16 +8562,16 @@ namespace CumulusMX
 				else if (FTPRename)
 				{
 					// rename the file
-					LogFtpDebugMessage($"FTP[{cycleStr}]: Renaming {remotefilename} to {remotefile}");
+					LogFtpDebugMessage($"FTP[{cycleStr}]: Renaming {remotefiletmp} to {remotefile}");
 
 					try
 					{
-						conn.Rename(remotefilename, remotefile);
-						LogFtpDebugMessage($"FTP[{cycleStr}]: Renamed {remotefilename}");
+						conn.Rename(remotefiletmp, remotefile);
+						LogFtpDebugMessage($"FTP[{cycleStr}]: Renamed {remotefiletmp}");
 					}
 					catch (Exception ex)
 					{
-						LogExceptionMessage(ex, $"FTP[{cycleStr}]: Error renaming {remotefilename} to {remotefile}", true);
+						LogExceptionMessage(ex, $"FTP[{cycleStr}]: Error renaming {remotefiletmp} to {remotefile}", true);
 						if (ex.InnerException != null)
 						{
 							LogFtpMessage($"FTP[{cycleStr}]: Inner Exception: {ex.GetBaseException().Message}");
@@ -9078,7 +9093,6 @@ namespace CumulusMX
 			if (MySqlStuff.CatchUpList.IsEmpty)
 			{
 				// No archived entries to upload
-				//MySqlList = null;
 				LogDebugMessage("MySqlList is Empty");
 			}
 			else

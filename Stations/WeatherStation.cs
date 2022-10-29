@@ -301,6 +301,10 @@ namespace CumulusMX
 			_ = Database.CreateTable<LeafWet>();
 			_ = Database.CreateTable<AirQuality>();
 			_ = Database.CreateTable<CO2Data>();
+			_ = Database.CreateTable<SqlCache>();
+
+			// preload the failed sql cache - if any
+			ReloadFailedMySQLCommands();
 
 			// now vacuum the database
 			/*
@@ -330,6 +334,22 @@ namespace CumulusMX
 
 			// rollover/create raw data log files if required
 			cumulus.RollOverDataLogs();
+		}
+
+		public void ReloadFailedMySQLCommands()
+		{
+			while (cumulus.MySqlStuff.FailedList.TryDequeue(out var tmp))
+			{
+				// do nothing
+			};
+
+			// preload the failed sql cache - if any
+			var data = Database.Query<SqlCache>("SELECT * FROM SqlCache ORDER BY key");
+
+			foreach (var rec in data)
+			{
+				cumulus.MySqlStuff.FailedList.Enqueue(rec);
+			}
 		}
 
 		private void GetRainCounter()
@@ -8439,6 +8459,72 @@ namespace CumulusMX
 			return json.ToString();
 		}
 
+		public string GetCachedSqlCommands(string draw, int start, int length, string search)
+		{
+			try
+			{
+				var filtered = 0;
+				var thisDraw = 0;
+
+				var json = new StringBuilder(350 * cumulus.MySqlStuff.FailedList.Count);
+
+				json.Append("{\"data\":[");
+
+				//var lines = File.ReadLines(cumulus.DayFile).Skip(start).Take(length);
+
+				foreach (var rec in cumulus.MySqlStuff.FailedList)
+				{
+					// if we have a search string and no match, skip to next line
+					if (!string.IsNullOrEmpty(search) && !rec.statement.Contains(search))
+					{
+						continue;
+					}
+
+					// this line either matches the search
+					filtered++;
+
+					// skip records until we get to the start entry
+					if (filtered <= start)
+					{
+						continue;
+					}
+
+					// only send the number requested
+					if (thisDraw < length)
+					{
+						// track the number of lines we have to return so far
+						thisDraw++;
+
+						json.Append($"[{rec.key},\"{rec.statement}\"],");
+					}
+					else if (string.IsNullOrEmpty(search))
+					{
+						// no search so we can bail out as we already know the total number of records
+						break;
+					}
+				}
+
+				// trim last ","
+				if (thisDraw > 0)
+					json.Length--;
+				json.Append("],\"recordsTotal\":");
+				json.Append(cumulus.MySqlStuff.FailedList.Count);
+				json.Append(",\"draw\":");
+				json.Append(draw);
+				json.Append(",\"recordsFiltered\":");
+				json.Append(string.IsNullOrEmpty(search) ? cumulus.MySqlStuff.FailedList.Count : filtered);
+				json.Append('}');
+
+				return json.ToString();
+
+			}
+			catch (Exception ex)
+			{
+				cumulus.LogExceptionMessage(ex, "GetCachedSqlCommands: Error occurred");
+			}
+
+			return "";
+		}
 
 		public static string GetUnits()
 		{
@@ -8691,7 +8777,7 @@ namespace CumulusMX
 	public class SqlCache
 	{
 		[AutoIncrement, PrimaryKey]
-		public int? key { get; set; }
+		public long? key { get; set; }
 		public string statement { get; set; }
 	}
 

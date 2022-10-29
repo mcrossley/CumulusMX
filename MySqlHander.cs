@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,14 +17,6 @@ namespace CumulusMX
 		internal MySqlGeneralSettings Settings = new MySqlGeneralSettings();
 
 		internal int RealtimeLastMinute = -1;
-
-		internal string StartOfMonthlyInsertSQL;
-		internal string StartOfDayfileInsertSQL;
-		internal string StartOfRealtimeInsertSQL;
-
-		internal string CreateMonthlySQL;
-		internal string CreateDayfileSQL;
-		internal string CreateRealtimeSQL;
 
 		internal MySqlTable RealtimeTable;
 		internal MySqlTable MonthlyTable;
@@ -47,12 +38,13 @@ namespace CumulusMX
 		internal System.Timers.Timer CustomSecondsTimer;
 
 		// Use thread safe queues for the MySQL command lists
-		internal readonly ConcurrentQueue<string> CatchUpList = new ConcurrentQueue<string>();
-		internal ConcurrentQueue<string> FailedList = new ConcurrentQueue<string>();
+		internal readonly ConcurrentQueue<SqlCache> CatchUpList = new ConcurrentQueue<SqlCache>();
+		internal ConcurrentQueue<SqlCache> FailedList = new ConcurrentQueue<SqlCache>();
 
 		private readonly static DateTimeFormatInfo invDate = CultureInfo.InvariantCulture.DateTimeFormat;
 		private readonly static NumberFormatInfo invNum = CultureInfo.InvariantCulture.NumberFormat;
 
+		private bool SqlCatchingUp;
 
 		internal MySqlHander(Cumulus cuml)
 		{
@@ -63,28 +55,6 @@ namespace CumulusMX
 		{
 			station = stn;
 
-			if (Settings.Monthly.Enabled)
-			{
-				SetStartOfMonthlyInsertSQL();
-			}
-
-			if (Settings.Dayfile.Enabled)
-			{
-				SetStartOfDayfileInsertSQL();
-			}
-
-			if (Settings.Realtime.Enabled)
-			{
-				SetStartOfRealtimeInsertSQL();
-			}
-
-			SetIntervalDataCreateString();
-
-			SetDailyDataCreateString();
-
-			SetRealtimeCreateString();
-
-
 			customSecondsTokenParser.OnToken += cumulus.TokenParserOnToken;
 			CustomSecondsTimer = new System.Timers.Timer { Interval = Settings.CustomSecs.Interval * 1000 };
 			CustomSecondsTimer.Elapsed += CustomSecondsTimerTick;
@@ -94,7 +64,9 @@ namespace CumulusMX
 
 			customRolloverTokenParser.OnToken += cumulus.TokenParserOnToken;
 
-
+			SetupRealtimeTable();
+			SetupMonthlyTable();
+			SetupDayfileTable();
 		}
 
 		internal bool CheckConnection()
@@ -117,23 +89,28 @@ namespace CumulusMX
 
 		internal async Task CommandAsync(string Cmd, string CallingFunction)
 		{
-			var Cmds = new ConcurrentQueue<string>();
-			Cmds.Enqueue(Cmd);
+			var Cmds = new ConcurrentQueue<SqlCache>();
+			Cmds.Enqueue(new SqlCache() { statement = Cmd });
 			await CommandAsync(Cmds, CallingFunction, false);
 		}
 
 		internal async Task CommandAsync(List<string> Cmds, string CallingFunction)
 		{
-			var tempQ = new ConcurrentQueue<string>(Cmds);
+			var tempQ = new ConcurrentQueue<SqlCache>();
+
+			foreach(var cmd in Cmds)
+			{
+				tempQ.Enqueue(new SqlCache() { statement = cmd });
+			}
 			await CommandAsync(tempQ, CallingFunction, false);
 		}
 
-		internal async Task CommandAsync(ConcurrentQueue<string> Cmds, string CallingFunction, bool UseFailedList)
+		internal async Task CommandAsync(ConcurrentQueue<SqlCache> Cmds, string CallingFunction, bool UseFailedList)
 		{
 			await Task.Run(() =>
 			{
-				ConcurrentQueue<string> queue = UseFailedList ? ref FailedList : ref Cmds;
-				var  cmdStr = "";
+				var queue = UseFailedList ? ref FailedList : ref Cmds;
+				SqlCache cmdSql = null;
 
 				try
 				{
@@ -148,11 +125,11 @@ namespace CumulusMX
 							do
 							{
 								// Do not remove the item from the stack until we know the command worked
-								if (queue.TryPeek(out cmdStr))
+								if (queue.TryPeek(out cmdSql))
 								{
-									using MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn);
+									using MySqlCommand cmd = new MySqlCommand(cmdSql.statement, mySqlConn);
 
-									cumulus.LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
+									cumulus.LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdSql}");
 
 									if (transaction != null)
 									{
@@ -163,8 +140,13 @@ namespace CumulusMX
 									
 									cumulus.LogDebugMessage($"{CallingFunction}: MySQL {updated} rows were affected.");
 
-									// Success, pop the value from the queue
-									queue.TryDequeue(out cmdStr);
+									// Success, if using the failed list, delete from the databasec
+									if (UseFailedList)
+									{
+										station.Database.Delete<SqlCache>(cmdSql.key);
+									}
+									// and pop the value from the queue
+									queue.TryDequeue(out cmdSql);
 								}
 							} while (!queue.IsEmpty);
 
@@ -188,7 +170,7 @@ namespace CumulusMX
 					// if debug logging is disabled, then log the failing statement anyway
 					if (!cumulus.DebuggingEnabled)
 					{
-						Cumulus.LogMessage($"{CallingFunction}: SQL = {cmdStr}");
+						Cumulus.LogMessage($"{CallingFunction}: SQL = {cmdSql.statement}");
 					}
 
 					cumulus.LogExceptionMessage(ex, $"{CallingFunction}: Error encountered during MySQL operation");
@@ -212,15 +194,15 @@ namespace CumulusMX
 
 		internal void CommandSync(string Cmd, string CallingFunction)
 		{
-			var Cmds = new ConcurrentQueue<string>();
-			Cmds.Enqueue(Cmd);
+			var Cmds = new ConcurrentQueue<SqlCache>();
+			Cmds.Enqueue(new SqlCache() { statement = Cmd });
 			CommandSync(Cmds, CallingFunction, false);
 		}
 
-		internal void CommandSync(ConcurrentQueue<string> Cmds, string CallingFunction, bool UseFailedList)
+		internal void CommandSync(ConcurrentQueue<SqlCache> Cmds, string CallingFunction, bool UseFailedList)
 		{
-			ConcurrentQueue<string> queue = UseFailedList ? ref FailedList : ref Cmds;
-			var cmdStr = "";
+			var queue = UseFailedList ? ref FailedList : ref Cmds;
+			SqlCache cmdSql = null;
 
 			try
 			{
@@ -235,11 +217,11 @@ namespace CumulusMX
 						do
 						{
 							// Do not remove the item from the stack until we know the command worked
-							if (queue.TryPeek(out cmdStr))
+							if (queue.TryPeek(out cmdSql))
 							{
-								using (MySqlCommand cmd = new MySqlCommand(cmdStr, mySqlConn))
+								using (MySqlCommand cmd = new MySqlCommand(cmdSql.statement, mySqlConn))
 								{
-									cumulus.LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdStr}");
+									cumulus.LogDebugMessage($"{CallingFunction}: MySQL executing - {cmdSql}");
 
 									if (transaction != null)
 									{
@@ -252,6 +234,15 @@ namespace CumulusMX
 								}
 
 								cumulus.MySqlUploadAlarm.Triggered = false;
+
+								// Success, if using the failed list, delete from the databasec
+								if (UseFailedList)
+								{
+									station.Database.Delete<SqlCache>(cmdSql.key);
+								}
+								// and pop the value from the queue
+								queue.TryDequeue(out cmdSql);
+
 							}
 						} while (!queue.IsEmpty);
 
@@ -273,7 +264,7 @@ namespace CumulusMX
 				// if debug logging is disabled, then log the failing statement anyway
 				if (!cumulus.DebuggingEnabled)
 				{
-					Cumulus.LogMessage($"{CallingFunction}: SQL = {cmdStr}");
+					Cumulus.LogMessage($"{CallingFunction}: SQL = {cmdSql}");
 				}
 
 				cumulus.LogExceptionMessage(ex, $"{CallingFunction}: Error encountered during MySQL operation");
@@ -293,7 +284,7 @@ namespace CumulusMX
 			}
 		}
 
-		internal void CommandErrorHandler(string CallingFunction, int ErrorCode, ConcurrentQueue<string> Cmds)
+		internal void CommandErrorHandler(string CallingFunction, int ErrorCode, ConcurrentQueue<SqlCache> Cmds)
 		{
 			var ignore = ErrorCode == (int)MySqlErrorCode.ParseError ||
 						 ErrorCode == (int)MySqlErrorCode.EmptyQuery ||
@@ -316,14 +307,23 @@ namespace CumulusMX
 			{
 				while (!Cmds.IsEmpty)
 				{
-					Cmds.TryDequeue(out var cmd);
-					if (!cmd.StartsWith("DELETE IGNORE FROM"))
+					try
 					{
-						FailedList.Enqueue(cmd);
+						Cmds.TryDequeue(out var cmd);
+						if (!cmd.statement.StartsWith("DELETE IGNORE FROM"))
+						{
+							cumulus.LogDebugMessage($"{CallingFunction}: Buffering command to failed list");
+
+							_ = station.Database.Insert(cmd);
+							FailedList.Enqueue(cmd);
+						}
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, $"{CallingFunction}: Error buffering command");
 					}
 				}
 			}
-
 		}
 
 		internal async Task CheckMySQLFailedUploads(string callingFunction, string cmd)
@@ -339,6 +339,9 @@ namespace CumulusMX
 			{
 				if (!FailedList.IsEmpty)
 				{
+					// flag we are processing the queue so the next task doesn't try as well
+					SqlCatchingUp = true;
+
 					Cumulus.LogMessage($"{callingFunction}: Failed MySQL updates are present");
 
 					if (CheckConnection())
@@ -359,18 +362,33 @@ namespace CumulusMX
 							for (var i = 0; i < cmds.Count; i++)
 							{
 								if (!cmds[i].StartsWith("DELETE"))
-									FailedList.Enqueue(cmds[i]);
+								{
+									var tmp = new SqlCache() { statement = cmds[i] };
+
+									_ = station.Database.Insert(tmp);
+
+									FailedList.Enqueue(tmp);
+								}
 							}
 						}
 						else
 						{
-							FailedList = (ConcurrentQueue<string>)FailedList.Concat<string>(cmds);
+							for (var i = 0; i < cmds.Count; i++)
+							{
+								var tmp = new SqlCache() { statement = cmds[i] };
+
+								_ = station.Database.Insert(tmp);
+
+								FailedList.Enqueue(tmp);
+							}
 						}
 					}
 					else
 					{
 						connectionOK = false;
 					}
+
+					SqlCatchingUp = false;
 				}
 
 				// now do what we came here to do
@@ -382,6 +400,7 @@ namespace CumulusMX
 			catch (Exception ex)
 			{
 				Cumulus.LogMessage($"{callingFunction}: Error - " + ex.Message);
+				SqlCatchingUp = false;
 			}
 		}
 
@@ -397,7 +416,7 @@ namespace CumulusMX
 
 			RealtimeLastMinute = timestamp.Minute;
 
-			StringBuilder values = new StringBuilder(StartOfRealtimeInsertSQL, 1024);
+			StringBuilder values = new StringBuilder(RealtimeTable.StartOfInsert, 1024);
 			values.Append(" Values('");
 			values.Append(timestamp.ToString("yy-MM-dd HH:mm:ss", invDate) + "',");
 			values.Append((station.Temperature.HasValue ? station.Temperature.Value.ToString(cumulus.TempFormat, invNum) : "null") + ',');
@@ -475,13 +494,13 @@ namespace CumulusMX
 			else
 			{
 				// not live, buffer the command for later
-				CatchUpList.Enqueue(cmds[0]);
+				CatchUpList.Enqueue(new SqlCache() { statement = cmds[0] });
 			}
 		}
 
 		internal void DoIntervalData(DateTime timestamp, bool live)
 		{
-			StringBuilder values = new StringBuilder(StartOfMonthlyInsertSQL, 600);
+			StringBuilder values = new StringBuilder(MonthlyTable.StartOfInsert, 600);
 			values.Append(" Values('");
 			values.Append(timestamp.ToString("yy-MM-dd HH:mm", invDate) + "',");
 			values.Append((station.Temperature.HasValue ? station.Temperature.Value.ToString(cumulus.TempFormat, invNum) : "null") + ",");
@@ -525,7 +544,7 @@ namespace CumulusMX
 			else
 			{
 				// save the string for later
-				CatchUpList.Enqueue(queryString);
+				CatchUpList.Enqueue(new SqlCache() { statement = queryString });
 			}
 		}
 
@@ -844,208 +863,7 @@ namespace CumulusMX
 			}
 		}
 
-		internal void SetRealtimeCreateString()
-		{
-			CreateRealtimeSQL = "CREATE TABLE " + Settings.Realtime.TableName + " (LogDateTime DATETIME NOT NULL," +
-				"temp decimal(4," + cumulus.TempDPlaces + ")," +
-				"hum decimal(4," + cumulus.HumDPlaces + ")," +
-				"dew decimal(4," + cumulus.TempDPlaces + ")," +
-				"wspeed decimal(4," + cumulus.WindDPlaces + ")," +
-				"wlatest decimal(4," + cumulus.WindDPlaces + ")," +
-				"bearing VARCHAR(3)," +
-				"rrate decimal(4," + cumulus.RainDPlaces + ")," +
-				"rfall decimal(4," + cumulus.RainDPlaces + ")," +
-				"press decimal(6," + cumulus.PressDPlaces + ")," +
-				"currentwdir varchar(3)," +
-				"beaufortnumber varchar(2)," +
-				"windunit varchar(4)," +
-				"tempunitnodeg varchar(1)," +
-				"pressunit varchar(3)," +
-				"rainunit varchar(2)," +
-				"windrun decimal(4," + cumulus.WindRunDPlaces + ")," +
-				"presstrendval varchar(6)," +
-				"rmonth decimal(4," + cumulus.RainDPlaces + ")," +
-				"ryear decimal(4," + cumulus.RainDPlaces + ")," +
-				"rfallY decimal(4," + cumulus.RainDPlaces + ")," +
-				"intemp decimal(4," + cumulus.TempDPlaces + ")," +
-				"inhum decimal(4," + cumulus.HumDPlaces + ")," +
-				"wchill decimal(4," + cumulus.TempDPlaces + ")," +
-				"temptrend varchar(5)," +
-				"tempTH decimal(4," + cumulus.TempDPlaces + ")," +
-				"TtempTH varchar(5)," +
-				"tempTL decimal(4," + cumulus.TempDPlaces + ")," +
-				"TtempTL varchar(5)," +
-				"windTM decimal(4," + cumulus.WindDPlaces + ")," +
-				"TwindTM varchar(5)," +
-				"wgustTM decimal(4," + cumulus.WindDPlaces + ")," +
-				"TwgustTM varchar(5)," +
-				"pressTH decimal(6," + cumulus.PressDPlaces + ")," +
-				"TpressTH varchar(5)," +
-				"pressTL decimal(6," + cumulus.PressDPlaces + ")," +
-				"TpressTL varchar(5)," +
-				"version varchar(8)," +
-				"build varchar(5)," +
-				"wgust decimal(4," + cumulus.WindDPlaces + ")," +
-				"heatindex decimal(4," + cumulus.TempDPlaces + ")," +
-				"humidex decimal(4," + cumulus.TempDPlaces + ")," +
-				"UV decimal(3," + cumulus.UVDPlaces + ")," +
-				"ET decimal(4," + cumulus.RainDPlaces + ")," +
-				"SolarRad decimal(5,1)," +
-				"avgbearing varchar(3)," +
-				"rhour decimal(4," + cumulus.RainDPlaces + ")," +
-				"forecastnumber varchar(2)," +
-				"isdaylight varchar(1)," +
-				"SensorContactLost varchar(1," +
-				"wdir varchar(3)," +
-				"cloudbasevalue varchar(5)," +
-				"cloudbaseunit varchar(2," +
-				"apptemp decimal(4," + cumulus.TempDPlaces + ")," +
-				"SunshineHours decimal(3," + cumulus.SunshineDPlaces + "," +
-				"CurrentSolarMax decimal(5,1)," +
-				"IsSunny varchar(1)," +
-				"FeelsLike decimal(4," + cumulus.TempDPlaces + ")," +
-				"PRIMARY KEY (LogDateTime)) COMMENT = \"Realtime log\"";
-		}
-
-		internal void SetIntervalDataCreateString()
-				{
-					StringBuilder strb = new StringBuilder("CREATE TABLE " + Settings.Monthly.TableName + " (", 1500);
-					strb.Append("LogDateTime DATETIME NOT NULL,");
-					strb.Append("Temp decimal(4," + cumulus.TempDPlaces + "),");
-					strb.Append("Humidity decimal(4," + cumulus.HumDPlaces + "),");
-					strb.Append("Dewpoint decimal(4," + cumulus.TempDPlaces + "),");
-					strb.Append("Windspeed decimal(4," + cumulus.WindAvgDPlaces + "),");
-					strb.Append("Windgust decimal(4," + cumulus.WindDPlaces + "),");
-					strb.Append("Windbearing VARCHAR(3),");
-					strb.Append("RainRate decimal(4," + cumulus.RainDPlaces + "),");
-					strb.Append("TodayRainSoFar decimal(4," + cumulus.RainDPlaces + "),");
-					strb.Append("Pressure decimal(6," + cumulus.PressDPlaces + "),");
-					strb.Append("Raincounter decimal(6," + cumulus.RainDPlaces + "),");
-					strb.Append("InsideTemp decimal(4," + cumulus.TempDPlaces + "),");
-					strb.Append("InsideHumidity decimal(4," + cumulus.HumDPlaces + "),");
-					strb.Append("LatestWindGust decimal(5," + cumulus.WindDPlaces + "),");
-					strb.Append("WindChill decimal(4," + cumulus.TempDPlaces + "),");
-					strb.Append("HeatIndex decimal(4," + cumulus.TempDPlaces + "),");
-					strb.Append("UVindex decimal(4," + cumulus.UVDPlaces + "),");
-					strb.Append("SolarRad decimal(5,1),");
-					strb.Append("Evapotrans decimal(4," + cumulus.RainDPlaces + "),");
-					strb.Append("AnnualEvapTran decimal(5," + cumulus.RainDPlaces + "),");
-					strb.Append("ApparentTemp decimal(4," + cumulus.TempDPlaces + "),");
-					strb.Append("MaxSolarRad decimal(5,1),");
-					strb.Append("HrsSunShine decimal(3," + cumulus.SunshineDPlaces + "),");
-					strb.Append("CurrWindBearing varchar(3),");
-					strb.Append("RG11rain decimal(4," + cumulus.RainDPlaces + "),");
-					strb.Append("RainSinceMidnight decimal(4," + cumulus.RainDPlaces + "),");
-					strb.Append("WindbearingSym varchar(3),");
-					strb.Append("CurrWindBearingSym varchar(3),");
-					strb.Append("FeelsLike decimal(4," + cumulus.TempDPlaces + "),");
-					strb.Append("Humidex decimal(4," + cumulus.TempDPlaces + "),");
-					strb.Append("PRIMARY KEY (LogDateTime)) COMMENT = \"Monthly logs from Cumulus\"");
-					CreateMonthlySQL = strb.ToString();
-				}
-
-		internal void SetDailyDataCreateString()
-		{
-			StringBuilder strb = new StringBuilder("CREATE TABLE " + Settings.Dayfile.TableName + " (", 2048);
-			strb.Append("LogDate date NOT NULL ,");
-			strb.Append("HighWindGust decimal(4," + cumulus.WindDPlaces + "),");
-			strb.Append("HWindGBear varchar(3),");
-			strb.Append("THWindG varchar(5),");
-			strb.Append("MinTemp decimal(5," + cumulus.TempDPlaces + "),");
-			strb.Append("TMinTemp varchar(5),");
-			strb.Append("MaxTemp decimal(5," + cumulus.TempDPlaces + "),");
-			strb.Append("TMaxTemp varchar(5),");
-			strb.Append("MinPress decimal(6," + cumulus.PressDPlaces + "),");
-			strb.Append("TMinPress varchar(5),");
-			strb.Append("MaxPress decimal(6," + cumulus.PressDPlaces + "),");
-			strb.Append("TMaxPress varchar(5),");
-			strb.Append("MaxRainRate decimal(4," + cumulus.RainDPlaces + "),");
-			strb.Append("TMaxRR varchar(5),");
-			strb.Append("TotRainFall decimal(6," + cumulus.RainDPlaces + "),");
-			strb.Append("AvgTemp decimal(4," + cumulus.TempDPlaces + ") ,");
-			strb.Append("TotWindRun decimal(5," + cumulus.WindRunDPlaces + "),");
-			strb.Append("HighAvgWSpeed decimal(3," + cumulus.WindAvgDPlaces + "),");
-			strb.Append("THAvgWSpeed varchar(5),");
-			strb.Append("LowHum decimal(4," + cumulus.HumDPlaces + "),");
-			strb.Append("TLowHum varchar(5),");
-			strb.Append("HighHum decimal(4," + cumulus.HumDPlaces + "),");
-			strb.Append("THighHum varchar(5),");
-			strb.Append("TotalEvap decimal(5," + cumulus.RainDPlaces + "),");
-			strb.Append("HoursSun decimal(3," + cumulus.SunshineDPlaces + "),");
-			strb.Append("HighHeatInd decimal(4," + cumulus.TempDPlaces + "),");
-			strb.Append("THighHeatInd varchar(5),");
-			strb.Append("HighAppTemp decimal(4," + cumulus.TempDPlaces + "),");
-			strb.Append("THighAppTemp varchar(5),");
-			strb.Append("LowAppTemp decimal(4," + cumulus.TempDPlaces + "),");
-			strb.Append("TLowAppTemp varchar(5),");
-			strb.Append("HighHourRain decimal(4," + cumulus.RainDPlaces + "),");
-			strb.Append("THighHourRain varchar(5),");
-			strb.Append("LowWindChill decimal(4," + cumulus.TempDPlaces + "),");
-			strb.Append("TLowWindChill varchar(5),");
-			strb.Append("HighDewPoint decimal(4," + cumulus.TempDPlaces + "),");
-			strb.Append("THighDewPoint varchar(5),");
-			strb.Append("LowDewPoint decimal(4," + cumulus.TempDPlaces + "),");
-			strb.Append("TLowDewPoint varchar(5),");
-			strb.Append("DomWindDir varchar(3),");
-			strb.Append("HeatDegDays decimal(4,1),");
-			strb.Append("CoolDegDays decimal(4,1),");
-			strb.Append("HighSolarRad decimal(5,1),");
-			strb.Append("THighSolarRad varchar(5),");
-			strb.Append("HighUV decimal(3," + cumulus.UVDPlaces + "),");
-			strb.Append("THighUV varchar(5),");
-			strb.Append("HWindGBearSym varchar(3),");
-			strb.Append("DomWindDirSym varchar(3),");
-			strb.Append("MaxFeelsLike decimal(5," + cumulus.TempDPlaces + "),");
-			strb.Append("TMaxFeelsLike varchar(5),");
-			strb.Append("MinFeelsLike decimal(5," + cumulus.TempDPlaces + "),");
-			strb.Append("TMinFeelsLike varchar(5),");
-			strb.Append("MaxHumidex decimal(5," + cumulus.TempDPlaces + "),");
-			strb.Append("TMaxHumidex varchar(5),");
-			strb.Append("ChillHours decimal(7," + cumulus.TempDPlaces + "),");
-			strb.Append("HighRain24h decimal(6," + cumulus.RainDPlaces + ")");
-			strb.Append("THighRain24h varchar(5),");
-			strb.Append("PRIMARY KEY(LogDate)) COMMENT = \"Dayfile from Cumulus\"");
-			CreateDayfileSQL = strb.ToString();
-		}
-
-		internal void SetStartOfRealtimeInsertSQL()
-		{
-			StartOfRealtimeInsertSQL = "INSERT IGNORE INTO " + Settings.Realtime.TableName + " (" +
-				"LogDateTime,temp,hum,dew,wspeed,wlatest,bearing,rrate,rfall,press," +
-				"currentwdir,beaufortnumber,windunit,tempunitnodeg,pressunit,rainunit," +
-				"windrun,presstrendval,rmonth,ryear,rfallY,intemp,inhum,wchill,temptrend," +
-				"tempTH,TtempTH,tempTL,TtempTL,windTM,TwindTM,wgustTM,TwgustTM," +
-				"pressTH,TpressTH,pressTL,TpressTL,version,build,wgust,heatindex,humidex," +
-				"UV,ET,SolarRad,avgbearing,rhour,forecastnumber,isdaylight,SensorContactLost," +
-				"wdir,cloudbasevalue,cloudbaseunit,apptemp,SunshineHours,CurrentSolarMax,IsSunny," +
-				"FeelsLike)";
-		}
-
-		internal void SetStartOfDayfileInsertSQL()
-		{
-			StartOfDayfileInsertSQL = "INSERT IGNORE INTO " + Settings.Dayfile.TableName + " (" +
-				"LogDate,HighWindGust,HWindGBear,THWindG,MinTemp,TMinTemp,MaxTemp,TMaxTemp," +
-				"MinPress,TMinPress,MaxPress,TMaxPress,MaxRainRate,TMaxRR,TotRainFall,AvgTemp," +
-				"TotWindRun,HighAvgWSpeed,THAvgWSpeed,LowHum,TLowHum,HighHum,THighHum,TotalEvap," +
-				"HoursSun,HighHeatInd,THighHeatInd,HighAppTemp,THighAppTemp,LowAppTemp,TLowAppTemp," +
-				"HighHourRain,THighHourRain,LowWindChill,TLowWindChill,HighDewPoint,THighDewPoint," +
-				"LowDewPoint,TLowDewPoint,DomWindDir,HeatDegDays,CoolDegDays,HighSolarRad," +
-				"THighSolarRad,HighUV,THighUV,HWindGBearSym,DomWindDirSym," +
-				"MaxFeelsLike,TMaxFeelsLike,MinFeelsLike,TMinFeelsLike,MaxHumidex,TMaxHumidex," +
-				"HighRain24h, THighRain24h)";
-		}
-
-		internal void SetStartOfMonthlyInsertSQL()
-		{
-			StartOfMonthlyInsertSQL = "INSERT IGNORE INTO " + Settings.Monthly.TableName + " (" +
-				"LogDateTime,Temp,Humidity,Dewpoint,Windspeed,Windgust,Windbearing,RainRate,TodayRainSoFar," +
-				"Pressure,Raincounter,InsideTemp,InsideHumidity,LatestWindGust,WindChill,HeatIndex,UVindex," +
-				"SolarRad,Evapotrans,AnnualEvapTran,ApparentTemp,MaxSolarRad,HrsSunShine,CurrWindBearing," +
-				"RG11rain,RainSinceMidnight,WindbearingSym,CurrWindBearingSym,FeelsLike,Humidex)";
-		}
-
-
-		internal void SetupRealtimeMySqlTable()
+		internal void SetupRealtimeTable()
 		{
 			RealtimeTable = new MySqlTable(Settings.Realtime.TableName);
 			RealtimeTable.AddColumn("LogDateTime", "DATETIME NOT NULL");
@@ -1110,7 +928,7 @@ namespace CumulusMX
 			RealtimeTable.Comment = "\"Realtime log\"";
 		}
 
-		internal void SetupMonthlyMySqlTable()
+		internal void SetupMonthlyTable()
 		{
 			MonthlyTable = new MySqlTable(Settings.Monthly.TableName);
 			MonthlyTable.AddColumn("LogDateTime", "DATETIME NOT NULL");
@@ -1147,7 +965,7 @@ namespace CumulusMX
 			MonthlyTable.Comment = "\"Monthly logs from Cumulus\"";
 		}
 
-		internal void SetupDayfileMySqlTable()
+		internal void SetupDayfileTable()
 		{
 			DayfileTable = new MySqlTable(Settings.Dayfile.TableName);
 			DayfileTable.AddColumn("LogDate", "date NOT NULL");

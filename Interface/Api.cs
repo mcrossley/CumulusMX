@@ -198,6 +198,9 @@ namespace CumulusMX
 						case "datalogs":
 							await writer.WriteAsync(logfileEditor.EditIntervalData(HttpContext));
 							break;
+						case "mysqlcache":
+							await writer.WriteAsync(dataEditor.EditMySqlCache(HttpContext));
+							break;
 						case "extratemp":
 							await writer.WriteAsync(logfileEditor.EditExtraTemp(HttpContext));
 							break;
@@ -323,6 +326,9 @@ namespace CumulusMX
 							break;
 						case "diarysummary":
 							await writer.WriteAsync(DiaryDataEditor.GetDiarySummary());
+							break;
+						case "mysqlcache.json":
+							await writer.WriteAsync(Station.GetCachedSqlCommands(draw, start, length, search));
 							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
@@ -1336,7 +1342,7 @@ namespace CumulusMX
 								break;
 							case "purgemysql":
 								var cnt = 0;
-								while (Program.cumulus.MySqlFailedList.TryDequeue(out var item))
+								while (Program.cumulus.MySqlStuff.FailedList.TryDequeue(out var item))
 								{
 									cnt++;
 								};

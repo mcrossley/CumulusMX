@@ -342,7 +342,7 @@ namespace CumulusMX
 				}
 				else
 				{
-					res = $"The {table.Name} table already has all the required columns = {table.Columns.Count}";
+					res = $"The {table.Name} table already has all the required columns. Required = {table.Columns.Count}, actual = {currCols.Count}";
 					Cumulus.LogMessage("MySQL Update Table: " + res);
 				}
 			}

@@ -324,7 +324,6 @@ namespace CumulusMX
 			public List<string[]> data { get; set; }
 		}
 
-
 		#endregion Dayfile
 
 		#region Interval Data

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using EmbedIO;
+using ServiceStack;
 using SQLite;
 
 namespace CumulusMX
@@ -3234,7 +3235,7 @@ namespace CumulusMX
 			return json;
 		}
 
-		private void AddLastHoursRainEntry(DateTime ts, double rain, ref Queue<LastHourRainLog> hourQueue, ref Queue<LastHourRainLog> h24Queue)
+		private static void AddLastHoursRainEntry(DateTime ts, double rain, ref Queue<LastHourRainLog> hourQueue, ref Queue<LastHourRainLog> h24Queue)
 		{
 			var lastrain = new LastHourRainLog(ts, rain);
 
@@ -3264,6 +3265,65 @@ namespace CumulusMX
 			var lastrain = new LastHourRainLog(ts, rain);
 			h24Queue.Enqueue(lastrain);
 		}
+
+		internal string EditMySqlCache(IHttpContext context)
+		{
+			var request = context.Request;
+			string text;
+			using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+			{
+				text = reader.ReadToEnd();
+			}
+
+			var newData = text.FromJson<MySqlCacheEditor>();
+
+			var newRec = new SqlCache()
+			{
+				key = newData.key[0],
+				statement = newData.statement[0]
+			};
+
+			if (newData.action == "Edit")
+			{
+				try
+				{
+					station.Database.Update(newRec);
+					station.ReloadFailedMySQLCommands();
+				}
+				catch (Exception ex)
+				{
+					cumulus.LogExceptionMessage(ex, $"EditMySqlCache: Failed, to update MySQL statement");
+					context.Response.StatusCode = 500;
+
+					return "{\"errors\":{\"MySqlCache\":[\"Failed to update MySQL cache\"]}, \"data\":[\"" + newRec.statement + "\"]";
+				}
+			}
+			else if (newData.action == "Delete")
+			{
+				try
+				{
+					station.Database.Delete(newRec);
+					station.ReloadFailedMySQLCommands();
+				}
+				catch (Exception ex)
+				{
+					cumulus.LogExceptionMessage(ex, $"EditMySqlCache: Failed, to delete MySQL statement");
+					context.Response.StatusCode = 500;
+
+					return "{\"errors\":{\"MySqlCache\":[\"Failed to update MySQL cache\"]}, \"data\":[\"" + newRec.statement + "\"]";
+				}
+			}
+			else
+			{
+				Cumulus.LogMessage($"EditMySqlCache: Unrecognised action = " + newData.action);
+				context.Response.StatusCode = 500;
+				return "{\"errors\":{\"SQL cache\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
+			}
+
+			// return the updated record
+			return $"[\"{newRec.statement}\"]";
+		}
+
 
 		private class LastHourRainLog
 		{
@@ -3342,6 +3402,13 @@ namespace CumulusMX
 				else
 					return Ts.ToString(format);
 			}
+		}
+
+		private class MySqlCacheEditor
+		{
+			public string action { get; set; }
+			public long[] key { get; set; }
+			public string[] statement { get; set; }
 		}
 	}
 }
