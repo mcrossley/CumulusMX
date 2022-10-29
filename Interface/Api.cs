@@ -8,7 +8,6 @@ using System.Web;
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
-using Swan.Formatters;
 
 namespace CumulusMX
 {
@@ -24,7 +23,7 @@ namespace CumulusMX
 		internal static CalibrationSettings calibrationSettings { private get; set; }
 		internal static NOAASettings noaaSettings { private get; set; }
 		internal static MysqlSettings mySqlSettings { private get; set; }
-		internal static CustomLogs customLogs {private get; set; }
+		internal static CustomLogsSettings customLogs {private get; set; }
 		internal static Wizard wizard { private get; set; }
 		internal static AlarmSettings alarmSettings { private get; set; }
 		internal static DataEditor dataEditor { get; set; }
@@ -1121,6 +1120,12 @@ namespace CumulusMX
 							Response.ContentType = "text/plain";
 							await writer.WriteAsync(CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern);
 							break;
+						case "customlogsintvl.json":
+							await writer.WriteAsync(customLogs.GetAlpacaFormDataIntvl());
+							break;
+						case "customlogsdaily.json":
+							await writer.WriteAsync(customLogs.GetAlpacaFormDataDaily());
+							break;
 						default:
 							throw new KeyNotFoundException("Key Not Found: " + req);
 					}
@@ -1197,6 +1202,12 @@ namespace CumulusMX
 							break;
 						case "wizard.json":
 							await writer.WriteAsync(wizard.UpdateConfig(HttpContext));
+							break;
+						case "updatecustomlogsintvl.json":
+							await writer.WriteAsync(customLogs.UpdateConfigIntvl(HttpContext));
+							break;
+						case "updatecustomlogsdaily.json":
+							await writer.WriteAsync(customLogs.UpdateConfigDaily(HttpContext));
 							break;
 						case "updatedatalogging.json":
 							await writer.WriteAsync(dataLoggingSettings.UpdateConfig(HttpContext));

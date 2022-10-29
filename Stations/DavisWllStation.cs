@@ -1768,6 +1768,8 @@ namespace CumulusMX
 					Cumulus.LogMessage("GetWlHistoricData: Log file entry written");
 					cumulus.MySqlStuff.DoRealtimeData(999, false, timestamp);
 
+					_ = cumulus.DoCustomIntervalLogs(timestamp);
+
 					_ = cumulus.DoExtraLogFile(timestamp);  // let this run in background
 
 					if (cumulus.airLinkOut != null || cumulus.airLinkIn != null)

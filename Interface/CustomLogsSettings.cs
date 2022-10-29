@@ -7,11 +7,11 @@ using ServiceStack;
 
 namespace CumulusMX
 {
-	public class CustomLogs
+	public class CustomLogsSettings
 	{
 		private readonly Cumulus cumulus;
 
-		public CustomLogs(Cumulus cumulus)
+		public CustomLogsSettings(Cumulus cumulus)
 		{
 			this.cumulus = cumulus;
 		}
@@ -34,7 +34,7 @@ namespace CumulusMX
 				}
 			}
 
-			var settings = new CustomLogsSettings()
+			var settings = new CustomLogsMainSettings()
 			{
 				accessible = cumulus.ProgramOptions.EnableAccessibility,
 				interval = interval
@@ -60,7 +60,7 @@ namespace CumulusMX
 				}
 			}
 
-			var settings = new CustomLogsSettings()
+			var settings = new CustomLogsMainSettings()
 			{
 				accessible = cumulus.ProgramOptions.EnableAccessibility,
 				daily = daily
@@ -71,8 +71,8 @@ namespace CumulusMX
 
 		public string UpdateConfigIntvl(IHttpContext context)
 		{
-			string json = "";
-			CustomLogsSettings settings;
+			var json = "";
+			CustomLogsMainSettings settings;
 			try
 			{
 				var data = new StreamReader(context.Request.InputStream).ReadToEnd();
@@ -81,7 +81,7 @@ namespace CumulusMX
 				json = WebUtility.UrlDecode(data.Substring(5));
 
 				// de-serialize it to the settings structure
-				settings = json.FromJson<CustomLogsSettings>();
+				settings = json.FromJson<CustomLogsMainSettings>();
 			}
 			catch (Exception ex)
 			{
@@ -100,7 +100,7 @@ namespace CumulusMX
 				for (var i = 0; i < 10; i++)
 				{
 					if (i < settings.interval.Count)
-					{	
+					{
 						cumulus.CustomIntvlLogSettings[i].FileName = settings.interval[i].filename ?? null;
 						cumulus.CustomIntvlLogSettings[i].ContentString = settings.interval[i].content.Replace("\n", "").Replace("\r", "") ?? null;
 						cumulus.CustomIntvlLogSettings[i].IntervalIdx = settings.interval[i].intervalidx;
@@ -138,8 +138,8 @@ namespace CumulusMX
 
 		public string UpdateConfigDaily(IHttpContext context)
 		{
-			string json = "";
-			CustomLogsSettings settings;
+			var json = "";
+			CustomLogsMainSettings settings;
 			try
 			{
 				var data = new StreamReader(context.Request.InputStream).ReadToEnd();
@@ -148,7 +148,7 @@ namespace CumulusMX
 				json = WebUtility.UrlDecode(data.Substring(5));
 
 				// de-serialize it to the settings structure
-				settings = json.FromJson<CustomLogsSettings>();
+				settings = json.FromJson<CustomLogsMainSettings>();
 			}
 			catch (Exception ex)
 			{
@@ -201,7 +201,7 @@ namespace CumulusMX
 		}
 	}
 
-	public class CustomLogsSettings
+	public class CustomLogsMainSettings
 	{
 		public bool accessible { get; set; }
 		public List<CustomLogsDailySettings> daily { get; set; }

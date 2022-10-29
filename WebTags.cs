@@ -595,12 +595,12 @@ namespace CumulusMX
 
 		private static string TagTimeJavascript(Dictionary<string, string> tagParams)
 		{
-			return ((ulong)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds).ToString();
+			return (DateTime.Now.ToUnixEpochDate() * 1000).ToString();
 		}
 
 		private static string TagTimeUnix(Dictionary<string, string> tagParams)
 		{
-			return DateTime.UtcNow.ToUnixEpochDate().ToString();
+			return DateTime.Now.ToUnixEpochDate().ToString();
 		}
 
 		private string TagDate(Dictionary<string,string> tagParams)

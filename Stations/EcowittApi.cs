@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Text;
+using Google.Protobuf.WellKnownTypes;
 using ServiceStack;
 using ServiceStack.Text;
 
@@ -1357,6 +1358,8 @@ namespace CumulusMX
 				//UpdateDatabase(timestamp.ToUniversalTime(), historydata.interval, false);
 
 				_ = cumulus.DoLogFile(rec.Key, false);
+
+				_ = cumulus.DoCustomIntervalLogs(rec.Key);
 
 				_ = cumulus.DoExtraLogFile(rec.Key);
 

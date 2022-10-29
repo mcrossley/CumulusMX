@@ -17,6 +17,7 @@ using Timer = System.Timers.Timer;
 using SQLite;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using MySqlX.XDevAPI.Relational;
 
 namespace CumulusMX
 {
@@ -1592,6 +1593,9 @@ namespace CumulusMX
 				{
 					_ = cumulus.CustomHttpMinutesUpdate();  // let this run in background
 				}
+
+				// Custom Log files - interval logs
+				_ = cumulus.DoCustomIntervalLogs(now);
 
 				if (cumulus.WebIntervalEnabled && cumulus.SynchronisedWebUpdate && (now.Minute % cumulus.UpdateInterval == 0))
 				{
@@ -4140,7 +4144,9 @@ namespace CumulusMX
 					_ = cumulus.CustomHttpRolloverUpdate();
 				}
 
-				// First save today"s extremes
+				_ = cumulus.DoCustomIntervalLogs(timestamp);
+
+				// First save today's extremes
 				DoDayfile(timestamp).Wait();
 				Cumulus.LogMessage("Raincounter = " + Raincounter + " Raindaystart = " + raindaystart);
 

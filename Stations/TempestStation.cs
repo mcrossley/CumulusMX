@@ -192,6 +192,7 @@ namespace CumulusMX
 				//UpdateDatabase(timestamp.ToUniversalTime(), historydata.interval, false);
 
 				_ = cumulus.DoLogFile(timestamp, false);  // let this run in background
+				_ = cumulus.DoCustomIntervalLogs(timestamp);
 				_ = cumulus.DoExtraLogFile(timestamp);  // let this run in background
 
 				//AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing,

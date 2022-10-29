@@ -390,6 +390,7 @@ namespace CumulusMX
 				//UpdateDatabase(timestamp.ToUniversalTime(), historydata.interval, false);
 
 				_ = cumulus.DoLogFile(timestamp, false);
+				_ = cumulus.DoCustomIntervalLogs(timestamp);
 				_ = cumulus.DoExtraLogFile(timestamp);
 				cumulus.MySqlStuff.DoRealtimeData(999, false, timestamp);
 
