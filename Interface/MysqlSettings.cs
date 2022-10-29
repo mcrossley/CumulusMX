@@ -63,7 +63,7 @@ namespace CumulusMX
 			};
 
 			var cmdCnt = 1;
-			for (var i = 1; i < 10; i++)
+			for (var i = 0; i < 10; i++)
 			{
 				if (!string.IsNullOrEmpty(cumulus.MySqlStuff.Settings.CustomSecs.Commands[i]))
 					cmdCnt++;
@@ -85,7 +85,7 @@ namespace CumulusMX
 			};
 
 			cmdCnt = 1;
-			for (var i = 1; i < 10; i++)
+			for (var i = 0; i < 10; i++)
 			{
 				if (!string.IsNullOrEmpty(cumulus.MySqlStuff.Settings.CustomMins.Commands[i]))
 					cmdCnt++;
@@ -105,7 +105,7 @@ namespace CumulusMX
 			};
 
 			cmdCnt = 1;
-			for (var i = 1; i < 10; i++)
+			for (var i = 0; i < 10; i++)
 			{
 				if (!string.IsNullOrEmpty(cumulus.MySqlStuff.Settings.CustomRollover.Commands[i]))
 					cmdCnt++;
