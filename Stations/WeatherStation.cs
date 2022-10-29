@@ -5579,14 +5579,14 @@ namespace CumulusMX
 				else
 				{
 					// calculate and display the temp trend
-					if (Temperature.HasValue && retVals[0].OutsideTemp.HasValue)
+					if (TempReadyToPlot && Temperature.HasValue && retVals[0].OutsideTemp.HasValue)
 					{
 						temptrendval = (Temperature.Value - retVals[0].OutsideTemp.Value) / 3.0F;
 						cumulus.TempChangeAlarm.CheckAlarm(temptrendval);
 					}
 
 					// calculate and display the pressure trend
-					if (Pressure.HasValue && retVals[0].Pressure.HasValue)
+					if (PressReadyToPlot && Pressure.HasValue && retVals[0].Pressure.HasValue)
 					{
 						presstrendval = (Pressure.Value - retVals[0].Pressure.Value) / 3.0F;
 						cumulus.PressChangeAlarm.CheckAlarm(presstrendval);
