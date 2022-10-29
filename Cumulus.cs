@@ -2627,7 +2627,7 @@ namespace CumulusMX
 		internal void DoMoonPhase()
 		{
 			DateTime now = DateTime.Now;
-			double[] moonriseset = MoonriseMoonset.MoonRise(now.Year, now.Month, now.Day, TimeZoneInfo.Local.GetUtcOffset(now).TotalHours, (double) Latitude, (double) Longitude);
+			double[] moonriseset = MoonriseMoonset.MoonRise(now.Year, now.Month, now.Day, TimeZoneInfo.Local.GetUtcOffset(now).TotalHours, Latitude, Longitude);
 			MoonRiseTime = TimeSpan.FromHours(moonriseset[0]);
 			MoonSetTime = TimeSpan.FromHours(moonriseset[1]);
 
@@ -4580,6 +4580,7 @@ namespace CumulusMX
 			SmtpOptions.RequiresAuthentication = ini.GetValue("SMTP", "RequiresAuthentication", false);
 			SmtpOptions.User = ini.GetValue("SMTP", "User", "");
 			SmtpOptions.Password = ini.GetValue("SMTP", "Password", "");
+			SmtpOptions.IgnoreCertErrors = ini.GetValue("SMTP", "IgnoreCertErrors", false);
 
 			// Growing Degree Days
 			GrowingBase1 = ini.GetValue("GrowingDD", "BaseTemperature1", (Units.Temp == 0 ? 5.0 : 40.0));
@@ -5593,6 +5594,7 @@ namespace CumulusMX
 			ini.SetValue("SMTP", "User", Crypto.EncryptString(SmtpOptions.User, Program.InstanceId));
 			ini.SetValue("SMTP", "Password", Crypto.EncryptString(SmtpOptions.Password, Program.InstanceId));
 			ini.SetValue("SMTP", "Logging", SmtpOptions.Logging);
+			ini.SetValue("SMTP", "IgnoreCertErrors", SmtpOptions.IgnoreCertErrors);
 
 			// Growing Degree Days
 			ini.SetValue("GrowingDD", "BaseTemperature1", GrowingBase1);
@@ -7821,15 +7823,26 @@ namespace CumulusMX
 		public async Task DoLocalCopy()
 		{
 			var remotePath = "";
-			var folderSep1 = Path.DirectorySeparatorChar.ToString();
-			var folderSep2 = Path.AltDirectorySeparatorChar.ToString();
 
-			if (!FtpOptions.LocalCopyEnabled)
-				return;
-
-			if (FtpOptions.LocalCopyFolder.Length > 0)
+			try
 			{
-				remotePath = (FtpOptions.LocalCopyFolder.EndsWith(folderSep1) || FtpOptions.LocalCopyFolder.EndsWith(folderSep2) ? FtpOptions.LocalCopyFolder : FtpOptions.LocalCopyFolder + folderSep1);
+				var folderSep2 = Path.AltDirectorySeparatorChar;
+
+				if (!FtpOptions.LocalCopyEnabled)
+					return;
+
+				if (FtpOptions.LocalCopyFolder.Length > 0)
+				{
+					remotePath = (FtpOptions.LocalCopyFolder[-1] == DirectorySeparator || FtpOptions.LocalCopyFolder[-1] == folderSep2) ? FtpOptions.LocalCopyFolder : FtpOptions.LocalCopyFolder + DirectorySeparator;
+				}
+				else
+				{
+					return;
+				}
+			}
+			catch (Exception ex)
+			{
+				LogExceptionMessage(ex, "LocalCopy: Error with paths");
 			}
 
 			var srcfile = "";
@@ -7842,19 +7855,25 @@ namespace CumulusMX
 					// upload NOAA reports
 					LogDebugMessage("LocalCopy: Copying NOAA reports");
 
-					var dstPath = string.IsNullOrEmpty(NOAAconf.CopyFolder) ? remotePath : NOAAconf.CopyFolder;
+					try
+					{
+						var dstPath = string.IsNullOrEmpty(NOAAconf.CopyFolder) ? remotePath : NOAAconf.CopyFolder;
+						srcfile = ReportPath + NOAAconf.LatestMonthReport;
+						dstfile = dstPath + DirectorySeparator + NOAAconf.LatestMonthReport;
+						await Utils.CopyFileAsync(srcfile, dstfile);
 
-					srcfile = ReportPath + NOAAconf.LatestMonthReport;
-					dstfile = dstPath + folderSep1 + NOAAconf.LatestMonthReport;
-					await Utils.CopyFileAsync(srcfile, dstfile);
+						srcfile = ReportPath + NOAAconf.LatestYearReport;
+						dstfile = dstPath + DirectorySeparator + NOAAconf.LatestYearReport;
+						await Utils.CopyFileAsync(srcfile, dstfile);
 
-					srcfile = ReportPath + NOAAconf.LatestYearReport;
-					dstfile = dstPath + folderSep1 + NOAAconf.LatestYearReport;
-					await Utils.CopyFileAsync(srcfile, dstfile);
+						NOAAconf.NeedCopy = false;
 
-					NOAAconf.NeedCopy = false;
-
-					LogDebugMessage("LocalCopy: Done copying NOAA reports");
+						LogDebugMessage("LocalCopy: Done copying NOAA reports");
+					}
+					catch (Exception ex)
+					{
+						LogExceptionMessage(ex, "LocalCopy: Error copy NOAA reports");
+					}
 				}
 				catch (Exception ex)
 				{
@@ -7863,7 +7882,7 @@ namespace CumulusMX
 			}
 
 			// standard files
-			LogDebugMessage("LocalCopy: Uploading standard web files");
+			LogDebugMessage("LocalCopy: Copying standard web files");
 			for (var i = 0; i < StdWebFiles.Length; i++)
 			{
 				if (StdWebFiles[i].Copy && StdWebFiles[i].CopyRequired)
@@ -7887,11 +7906,11 @@ namespace CumulusMX
 			{
 				if (GraphDataFiles[i].Copy && GraphDataFiles[i].CopyRequired)
 				{
-					srcfile = GraphDataFiles[i].LocalPath + GraphDataFiles[i].LocalFileName;
-					dstfile = remotePath + GraphDataFiles[i].RemoteFileName;
-
 					try
 					{
+						srcfile = GraphDataFiles[i].LocalPath + GraphDataFiles[i].LocalFileName;
+						dstfile = remotePath + GraphDataFiles[i].RemoteFileName;
+
 						await Utils.CopyFileAsync(srcfile, dstfile);
 						// The config files only need uploading once per change
 						if (GraphDataFiles[i].LocalFileName == "availabledata.json" ||
@@ -7913,10 +7932,11 @@ namespace CumulusMX
 			{
 				if (GraphDataEodFiles[i].Copy && GraphDataEodFiles[i].CopyRequired)
 				{
-					srcfile = GraphDataEodFiles[i].LocalPath + GraphDataEodFiles[i].LocalFileName;
-					dstfile = remotePath + GraphDataEodFiles[i].RemoteFileName;
 					try
 					{
+						srcfile = GraphDataEodFiles[i].LocalPath + GraphDataEodFiles[i].LocalFileName;
+						dstfile = remotePath + GraphDataEodFiles[i].RemoteFileName;
+
 						await Utils.CopyFileAsync(srcfile, dstfile);
 						// Uploaded OK, reset the upload required flag
 						GraphDataEodFiles[i].CopyRequired = false;

@@ -277,6 +277,7 @@ namespace CumulusMX
 						cumulus.SmtpOptions.Port = settings.emailsettings.port;
 						cumulus.SmtpOptions.SslOption = settings.emailsettings.ssloption;
 						cumulus.SmtpOptions.RequiresAuthentication = settings.emailsettings.authenticate;
+						cumulus.SmtpOptions.IgnoreCertErrors = settings.emailsettings.ignorecerterrors;
 						cumulus.SmtpOptions.User = settings.emailsettings.user;
 						if (settings.emailsettings.password != hidden)
 						{
@@ -535,6 +536,7 @@ namespace CumulusMX
 				port = cumulus.SmtpOptions.Port,
 				ssloption = cumulus.SmtpOptions.SslOption,
 				authenticate = cumulus.SmtpOptions.RequiresAuthentication,
+				ignorecerterrors = cumulus.SmtpOptions.IgnoreCertErrors,
 				user = cumulus.SmtpOptions.User,
 				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.SmtpOptions.Password : hidden
 			};
@@ -813,6 +815,7 @@ namespace CumulusMX
 			public bool authenticate { get; set; }
 			public string user { get; set; }
 			public string password { get; set; }
+			public bool ignorecerterrors { get; set; }
 		}
 
 		private class MiscJson

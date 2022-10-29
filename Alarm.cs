@@ -75,7 +75,7 @@ namespace CumulusMX
 							Cumulus.LogMessage($"Alarm ({Name}): Sending email");
 
 							// Construct the message - preamble, plus values
-							var msg = cumulus.AlarmEmailPreamble + "\r\n" + string.Format(EmailMsg, Value, Units);
+							var msg = cumulus.AlarmEmailPreamble + "\n" + string.Format(EmailMsg, Value, Units);
 							if (!string.IsNullOrEmpty(LastError))
 							{
 								msg += "\r\nLast error: " + LastError;
@@ -224,7 +224,7 @@ namespace CumulusMX
 						Cumulus.LogMessage($"Alarm ({Name}): Sending email");
 
 						// Construct the message - preamble, plus values
-						var msg = cumulus.AlarmEmailPreamble + "\r\n" + string.Format(EmailMsgUp, Value, Units);
+						var msg = cumulus.AlarmEmailPreamble + "\n" + string.Format(EmailMsgUp, Value, Units);
 						_ = cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml);
 					}
 					if (!string.IsNullOrEmpty(Action))

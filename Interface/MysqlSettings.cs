@@ -5,6 +5,7 @@ using System.Text;
 using MySql.Data.MySqlClient;
 using ServiceStack;
 using EmbedIO;
+using System.Collections.Generic;
 
 namespace CumulusMX
 {
@@ -295,46 +296,54 @@ namespace CumulusMX
 		private string UpdateMySQLTable(MySqlTable table)
 		{
 			string res;
-			int colsNow;
 			int cnt = 0;
 
 			try
 			{
-				using (var mySqlConn = new MySqlConnection(cumulus.MySqlStuff.ConnSettings.ToString()))
+				using var mySqlConn = new MySqlConnection(cumulus.MySqlStuff.ConnSettings.ToString());
+				mySqlConn.Open();
+
+				// first get a list of the columns the table currenty has
+				var currCols = new List<string>();
+				using (MySqlCommand cmd = new MySqlCommand($"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='{table.Name}' AND TABLE_SCHEMA='{cumulus.MySqlStuff.ConnSettings.Database}'", mySqlConn))
+				using (MySqlDataReader reader = cmd.ExecuteReader())
 				{
-					mySqlConn.Open();
-
-					// first get a count of the columns the table currenty has
-					using (MySqlCommand cmd = new MySqlCommand($"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='{table.Name}' AND TABLE_SCHEMA='{cumulus.MySqlStuff.ConnSettings.Database}'", mySqlConn))
+					if (reader.HasRows)
 					{
-						colsNow = int.Parse(cmd.ExecuteScalar().ToString());
-					}
-
-					if (colsNow < table.Columns.Count)
-					{
-						var update = new StringBuilder("ALTER TABLE " + table.Name, 1024);
-						while (colsNow < table.Columns.Count)
+						while (reader.Read())
 						{
-							update.Append($" ADD COLUMN {table.Columns[colsNow].Name} {table.Columns[colsNow].Attributes},");
-							colsNow++;
-							cnt++;
-						}
-
-						// strip trailing comma
-						update.Length--;
-
-						using (MySqlCommand cmd = new MySqlCommand(update.ToString(), mySqlConn))
-						{
-							int aff = cmd.ExecuteNonQuery();
-							Cumulus.LogMessage($"MySQL Update Table: {aff} items were affected.");
-							res = $"Added {cnt} columns to {table.Name} table";
-
+							var col = reader.GetString(0);
+							currCols.Add(col);
 						}
 					}
-					else
+				}
+
+				var update = new StringBuilder("ALTER TABLE " + table.Name, 1024);
+				foreach (var newCol in table.Columns)
+				{
+					if (!currCols.Contains(newCol.Name))
 					{
-						res = $"The {table.Name} already has the correct number of columns = {table.Columns.Count}";
+						update.Append($" ADD COLUMN {newCol.Name} {newCol.Attributes},");
+						cnt++;
 					}
+				}
+
+				if (cnt > 0)
+				{
+					// strip trailing comma
+					update.Length--;
+
+					using (MySqlCommand cmd = new MySqlCommand(update.ToString(), mySqlConn))
+					{
+						int aff = cmd.ExecuteNonQuery();
+						res = $"Added {cnt} columns to {table.Name} table";
+						Cumulus.LogMessage($"MySQL Update Table: " + res);
+					}
+				}
+				else
+				{
+					res = $"The {table.Name} table already has all the required columns = {table.Columns.Count}";
+					Cumulus.LogMessage("MySQL Update Table: " + res);
 				}
 			}
 			catch (Exception ex)

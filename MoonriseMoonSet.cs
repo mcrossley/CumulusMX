@@ -1113,9 +1113,19 @@ namespace CumulusMX
 			return Math.Sin((angle*Math.PI)/180.0);
 		}
 
+		private static double sind(decimal angle)
+		{
+			return sind((double)angle);
+		}
+
 		private static double cosd(double angle)
 		{
 			return Math.Cos((angle*Math.PI)/180.0);
+		}
+
+		private static double cosd(decimal angle)
+		{
+			return cosd((double)angle);
 		}
 
 		private static double tand(double angle)
@@ -1152,17 +1162,17 @@ namespace CumulusMX
 			return DayNum(year, month, day, hours) + 2451543.5;
 		}
 
-		private static double LocalSidereal(int year,int month,int day,double hours,double lon)
+		private static double LocalSidereal(int year,int month,int day,double hours,decimal lon)
 		{
 			// Compute local sidereal time in degrees
 			// year, month, day and hours are the Greenwich date and time
 			// lon is the observers longitude
 			var d=DayNum(year,month,day,hours);
-			var lst=(98.9818+0.985647352*d+hours*15+lon);
+			var lst=(98.9818+0.985647352*d+hours*15+(double)lon);
 			return rev(lst)/15;
 		}
 
-		private static double[] RaDecToAltAz(double ra,double dec,int year,int month,int day,double hours,double lat,double lon)
+		private static double[] RaDecToAltAz(double ra,double dec,int year,int month,int day,double hours,decimal lat,decimal lon)
 		{
 			// convert ra and dec to altitude and azimuth
 			// year, month, day and hours are the Greenwich date and time
@@ -1242,7 +1252,7 @@ namespace CumulusMX
 			return new double[] {ra, dec, mr};
 		}
 
-		public static double[] MoonRise(int year, int month, int day, double TZ, double latitude, double longitude)
+		public static double[] MoonRise(int year, int month, int day, double TZ, decimal latitude, decimal longitude)
 		{
 			// returns an array containing rise and set times or one of the
 			// following codes.
