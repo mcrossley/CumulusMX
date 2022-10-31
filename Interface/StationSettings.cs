@@ -1316,6 +1316,7 @@ namespace CumulusMX
 				try
 				{
 					cumulus.RecordsBeganStr = settings.general.advanced.recsbegandate;
+					cumulus.RecordsBeganDate = DateTime.Parse(cumulus.RecordsBeganStr);
 				}
 				catch (Exception ex)
 				{

@@ -5563,7 +5563,8 @@ namespace CumulusMX
 		public void DoTrendValues(DateTime ts, bool rollover = false)
 		{
 			List<RecentData> retVals;
-			double trendval, retVal;
+			List<double> retDbl;
+			double trendval;
 			var recTs = ts;
 
 				// if this is the special case of rollover processing, we want the High today record to on the previous day at 23:59 or 08:59
@@ -5689,15 +5690,15 @@ namespace CumulusMX
 				{
 					DateTime fiveminutesago = ts.AddSeconds(-330);
 
-					retVal = Database.ExecuteScalar<double>("select raincounter from RecentData where Timestamp >= ? order by Timestamp limit 1", ts.AddMinutes(-5.5));
+					retDbl = Database.Query<double>("select raincounter from RecentData where Timestamp >= ? order by Timestamp limit 1", ts.AddMinutes(-5.5));
 
-					if (Raincounter < retVal)
+					if (retDbl.Count != 1 || Raincounter < retDbl[0])
 					{
 						RainRate = 0;
 					}
 					else
 					{
-						var raindiff = Math.Round(Raincounter - retVal, cumulus.RainDPlaces);
+						var raindiff = Math.Round(Raincounter - retDbl[0], cumulus.RainDPlaces);
 
 						var timediffhours = 1.0 / 12.0;
 
@@ -5762,15 +5763,15 @@ namespace CumulusMX
 			// calculate and display rainfall in last 24 hour
 			try
 			{
-				retVal = Database.ExecuteScalar<double>("select raincounter from RecentData where Timestamp >= ? order by Timestamp limit 1", ts.AddDays(-1));
+				retDbl = Database.Query<double>("select raincounter from RecentData where Timestamp >= ? order by Timestamp limit 1", ts.AddDays(-1));
 
-				if (Raincounter < retVal)
+				if (retDbl.Count != 1 || Raincounter < retDbl[0])
 				{
 					RainLast24Hour = 0;
 				}
 				else
 				{
-					trendval = Math.Round(Raincounter - retVal, cumulus.RainDPlaces);
+					trendval = Math.Round(Raincounter - retDbl[0], cumulus.RainDPlaces);
 
 					// Round value as some values may have been read from log file and already rounded
 					trendval = Math.Round(trendval, cumulus.RainDPlaces);
