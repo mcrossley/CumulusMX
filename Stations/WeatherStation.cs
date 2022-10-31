@@ -17,7 +17,6 @@ using Timer = System.Timers.Timer;
 using SQLite;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
-using MySqlX.XDevAPI.Relational;
 
 namespace CumulusMX
 {
@@ -5563,7 +5562,6 @@ namespace CumulusMX
 		public void DoTrendValues(DateTime ts, bool rollover = false)
 		{
 			List<RecentData> retVals;
-			List<double> retDbl;
 			double trendval;
 			var recTs = ts;
 
@@ -5690,15 +5688,15 @@ namespace CumulusMX
 				{
 					DateTime fiveminutesago = ts.AddSeconds(-330);
 
-					retDbl = Database.Query<double>("select raincounter from RecentData where Timestamp >= ? order by Timestamp limit 1", ts.AddMinutes(-5.5));
+					retVals = Database.Query<RecentData>("select raincounter from RecentData where Timestamp >= ? order by Timestamp limit 1", ts.AddMinutes(-5.5));
 
-					if (retDbl.Count != 1 || Raincounter < retDbl[0])
+					if (retVals.Count != 1 || !retVals[0].raincounter.HasValue || Raincounter < retVals[0].raincounter)
 					{
 						RainRate = 0;
 					}
 					else
 					{
-						var raindiff = Math.Round(Raincounter - retDbl[0], cumulus.RainDPlaces);
+						var raindiff = Math.Round(Raincounter - retVals[0].raincounter.Value, cumulus.RainDPlaces);
 
 						var timediffhours = 1.0 / 12.0;
 
@@ -5763,15 +5761,15 @@ namespace CumulusMX
 			// calculate and display rainfall in last 24 hour
 			try
 			{
-				retDbl = Database.Query<double>("select raincounter from RecentData where Timestamp >= ? order by Timestamp limit 1", ts.AddDays(-1));
+				retVals = Database.Query<RecentData>("select raincounter from RecentData where Timestamp >= ? order by Timestamp limit 1", ts.AddDays(-1));
 
-				if (retDbl.Count != 1 || Raincounter < retDbl[0])
+				if (retVals.Count != 1 || !retVals[0].raincounter.HasValue || Raincounter < retVals[0].raincounter)
 				{
 					RainLast24Hour = 0;
 				}
 				else
 				{
-					trendval = Math.Round(Raincounter - retDbl[0], cumulus.RainDPlaces);
+					trendval = Math.Round(Raincounter - retVals[0].raincounter.Value, cumulus.RainDPlaces);
 
 					// Round value as some values may have been read from log file and already rounded
 					trendval = Math.Round(trendval, cumulus.RainDPlaces);
