@@ -3283,6 +3283,7 @@ namespace CumulusMX
 			Altitude = ini.GetValue("Station", "Altitude", 0.0);
 			AltitudeInFeet = ini.GetValue("Station", "AltitudeInFeet", false);
 			StationOptions.AnemometerHeightM = ini.GetValue("Station", "AnemometerHeightM", 3);
+			StationOptions.TimeZone = ini.GetValue("Station", "TimeZone", "");
 
 			StationOptions.Humidity98Fix = ini.GetValue("Station", "Humidity98Fix", false);
 			StationOptions.CalcWind10MinAve = ini.GetValue("Station", "Wind10MinAverage", false);
@@ -4738,6 +4739,7 @@ namespace CumulusMX
 			ini.SetValue("Station", "Altitude", Altitude);
 			ini.SetValue("Station", "AltitudeInFeet", AltitudeInFeet);
 			ini.SetValue("Station", "AnemometerHeightM", StationOptions.AnemometerHeightM);
+			ini.SetValue("Station", "TimeZone", StationOptions.TimeZone);
 
 			ini.SetValue("Station", "Humidity98Fix", StationOptions.Humidity98Fix);
 			ini.SetValue("Station", "Wind10MinAverage", StationOptions.CalcWind10MinAve);
@@ -10013,6 +10015,7 @@ namespace CumulusMX
 		public bool UseRainForIsRaining { get; set; }
 		public int LeafWetnessIsRainingIdx { get; set; }
 		public double LeafWetnessIsRainingThrsh { get; set; }
+		public string TimeZone { get; set; }
 	}
 
 	public class FtpOptionsClass

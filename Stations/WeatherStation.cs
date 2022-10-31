@@ -1404,14 +1404,10 @@ namespace CumulusMX
 
 				var ser = new DataContractJsonSerializer(typeof(WebSocketData));
 
-				using (var stream = new MemoryStream())
-				{
-					ser.WriteObject(stream, data);
-
-					stream.Position = 0;
-
-					cumulus.WebSock.SendMessage(new StreamReader(stream).ReadToEnd());
-				}
+				using var stream = new MemoryStream();
+				ser.WriteObject(stream, data);
+				stream.Position = 0;
+				cumulus.WebSock.SendMessage(new StreamReader(stream).ReadToEnd());
 
 				// ** CMX 3 - We can't be sure when the broadcast completes, so the best we can do is wait a short time 
 				// ** CMX 4 - the broadacst is now awaitable, so we can run it synchronously - therefore now no need to add an artifical delay

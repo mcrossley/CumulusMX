@@ -26,6 +26,7 @@ namespace CumulusMX
 				longitude = cumulus.Longitude,
 				altitude = (int)cumulus.Altitude,
 				altitudeunit = cumulus.AltitudeInFeet ? "feet" : "metres",
+				timezone = cumulus.StationOptions.TimeZone
 			};
 
 			var units = new UnitsJson()
@@ -341,14 +342,11 @@ namespace CumulusMX
 					cumulus.AltitudeInFeet = (settings.location.altitudeunit == "feet");
 					cumulus.LocationName = settings.location.sitename ?? string.Empty;
 					cumulus.LocationDesc = settings.location.description ?? string.Empty;
-
 					cumulus.Latitude = settings.location.latitude;
-
 					cumulus.LatTxt = degToString(cumulus.Latitude, true);
-
 					cumulus.Longitude = settings.location.longitude;
-
 					cumulus.LonTxt = degToString(cumulus.Longitude, false);
+					cumulus.StationOptions.TimeZone = settings.location.timezone;
 				}
 				catch (Exception ex)
 				{
@@ -644,6 +642,7 @@ namespace CumulusMX
 			public string altitudeunit { get; set; }
 			public string sitename { get; set; }
 			public string description { get; set; }
+			public string timezone { get; set; }
 		}
 
 

@@ -696,7 +696,8 @@ namespace CumulusMX
 			json.Append($"\"soilmoisture\":{{\"units\":\"{cumulus.Units.SoilMoistureUnitText}\"}},");
 			json.Append($"\"co2\":{{\"units\":\"{cumulus.Units.CO2UnitText}\"}},");
 			json.Append($"\"leafwet\":{{\"units\":\"{cumulus.Units.LeafWetnessUnitText}\",\"decimals\":{cumulus.LeafWetDPlaces}}},");
-			json.Append($"\"aq\":{{\"units\":\"{cumulus.Units.AirQualityUnitText}\"}}");
+			json.Append($"\"aq\":{{\"units\":\"{cumulus.Units.AirQualityUnitText}\"}},");
+			json.Append($"\"timezone\":\"{cumulus.StationOptions.TimeZone}\"");
 			json.Append('}');
 			return json.ToString();
 		}
@@ -743,7 +744,8 @@ namespace CumulusMX
 					}
 
 					// remove trailing comma
-					sb.Length--;
+					if (data.Count > 0)
+						sb.Length--;
 				}
 				sb.Append(']');
 			}

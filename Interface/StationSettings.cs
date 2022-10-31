@@ -244,7 +244,8 @@ namespace CumulusMX
 				Latitude = latitude,
 				Longitude = longitude,
 				sitename = cumulus.LocationName,
-				anemomheight = cumulus.StationOptions.AnemometerHeightM
+				anemomheight = cumulus.StationOptions.AnemometerHeightM,
+				timezone = cumulus.StationOptions.TimeZone
 			};
 
 			var forecast = new ForecastJson()
@@ -718,7 +719,7 @@ namespace CumulusMX
 					cumulus.LocationName = settings.general.Location.sitename ?? string.Empty;
 					cumulus.LocationDesc = settings.general.Location.description ?? string.Empty;
 					cumulus.StationOptions.AnemometerHeightM = settings.general.Location.anemomheight;
-
+					cumulus.StationOptions.TimeZone = settings.general.Location.timezone;
 
 					cumulus.Latitude = (decimal) (settings.general.Location.Latitude.degrees + (settings.general.Location.Latitude.minutes / 60.0) + (settings.general.Location.Latitude.seconds / 3600.0));
 					if (settings.general.Location.Latitude.hemisphere == "South")
@@ -1770,6 +1771,7 @@ namespace CumulusMX
 			public string sitename { get; set; }
 			public string description { get; set; }
 			public double anemomheight { get; set; }
+			public string timezone { get; set; }
 		}
 
 		private class ForecastJson
