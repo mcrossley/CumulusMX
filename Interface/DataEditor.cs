@@ -310,6 +310,7 @@ namespace CumulusMX
 						if (isDryNow)
 						{
 							currentWetPeriod = 1;
+							thisDateWet = rec.Timestamp;
 							isDryNow = false;
 							if (!(dryPeriod.Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod.Value)
 							{
@@ -334,6 +335,7 @@ namespace CumulusMX
 						else
 						{
 							currentDryPeriod = 1;
+							thisDateDry = rec.Timestamp;
 							isDryNow = true;
 							if (!(wetPeriod.Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod.Value)
 							{

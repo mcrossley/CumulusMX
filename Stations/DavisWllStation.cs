@@ -2751,7 +2751,7 @@ namespace CumulusMX
 					string type;
 					if (sensor.sensor_type == 37 || sensor.sensor_type == 84 || sensor.sensor_type == 85)
 						type = "Vue";
-					else 
+					else
 						type = sensor.data_structure_type == 11 ? "ISS" : "Soil/Leaf";
 
 					var data = sensor.data.Last().FromJsv<WlHistoryHealthType11_13>();
@@ -3206,6 +3206,7 @@ namespace CumulusMX
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "GetAvailableSensors: WeatherLink API exception");
+				return;
 			}
 
 			// Sensor types we are interested in...
