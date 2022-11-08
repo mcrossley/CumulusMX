@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using EmbedIO;
+using Org.BouncyCastle.Ocsp;
 using ServiceStack;
 using SQLite;
 
@@ -177,7 +178,6 @@ namespace CumulusMX
 			var isDryNow = false;
 			var thisDateDry = DateTime.MinValue;
 			var thisDateWet = DateTime.MinValue;
-			var firstRec = true;
 
 			var json = new StringBuilder("{", 2048);
 
@@ -200,18 +200,14 @@ namespace CumulusMX
 			}
 
 			// Get all the dayfile records from the Database
-			var data = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and TimeStamp <= ? order by Timestamp", startDate, endDate);
+			var data = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and TimeStamp <= ? order by Timestamp", startDate.ToUniversalTime(), endDate.ToUniversalTime());
 
 			if (data.Count > 0)
 			{
+				thisDate = data[0].Timestamp.Date;
+
 				foreach (var rec in data)
 				{
-					if (firstRec)
-					{
-						thisDate = rec.Timestamp.Date;
-						firstRec = false;
-					}
-
 					// This assumes the day file is in date order!
 					if (thisDate.Month != rec.Timestamp.Month)
 					{
@@ -298,7 +294,7 @@ namespace CumulusMX
 						highRainMonth.Ts = thisDate;
 					}
 					// 24h rain
-					if (rec.HighRain24Hours.Value > highRain24h.Value)
+					if (rec.HighRain24Hours.HasValue && rec.HighRain24Hours.Value > highRain24h.Value)
 					{
 						highRain24h.Value = rec.HighRain24Hours.Value;
 						highRain24h.Ts = rec.Timestamp;
@@ -529,34 +525,32 @@ namespace CumulusMX
 			const string monthFormat = "MMM yyyy";
 
 			var json = new StringBuilder("{", 2048);
-			DateTime datefrom, monthDate;
+			DateTime reqDate;
 
 			switch (recordType)
 			{
 				case "alltime":
-					monthDate = cumulus.RecordsBeganDate;
+					reqDate = new DateTime(1900, 1, 1);
 					break;
 				case "thisyear":
 					var now = DateTime.Now;
 					// subtract a day to calculate 24 rain value
-					monthDate = new DateTime(now.Year, 1, 1).AddDays(-1);
+					reqDate = new DateTime(now.Year, 1, 1, 0, 0, 0, DateTimeKind.Local);
 					break;
 				case "thismonth":
 					now = DateTime.Now;
-
-					monthDate = new DateTime(now.Year, now.Month, 1).AddDays(-1);
+					// subtract a day to calculate 24 rain value
+					reqDate = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Local);
 					break;
 				default:
-					monthDate = new DateTime(cumulus.RecordsBeganDate.Year, cumulus.RecordsBeganDate.Month, 1);
+					reqDate = DateTime.MinValue;
 					break;
 			}
 
 			// subtract a day to calculate 24 rain value
-			datefrom = monthDate.Date.AddDays(-1);
-			var dateto = DateTime.Now.Date;
+			var datefrom = DateTime.SpecifyKind(reqDate.Date.AddDays(-1), DateTimeKind.Local);
 
 			var started = false;
-			var finished = false;
 			var lastentrydate = datefrom;
 			double? lastentryrain = null;
 			var lastentrycounter = 0.0;
@@ -639,301 +633,228 @@ namespace CumulusMX
 			double _day24h = 0;
 			DateTime _dayTs;
 
-			while (!finished)
+			cumulus.LogDebugMessage($"GetAllTimeRecLogFile: Processing - {recordType}");
+
+			try
 			{
-				cumulus.LogDebugMessage($"GetAllTimeRecLogFile: Processing month - {monthDate:yyyy-MM}");
-
-				try
+				var rows = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >= ? order by Timestamp", datefrom.ToUniversalTime());
+				var cnt = 0;
+				foreach (var rec in rows)
 				{
-					var rows = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ?", datefrom, monthDate.AddMonths(1));
+					cnt++;
+					// We need to work in meteo dates not clock dates for day hi/lows
+					var metoDate = rec.Timestamp.ToLocalTime().AddHours(cumulus.GetHourInc());
 
-					foreach (var rec in rows)
+					if (!started)
 					{
-						// We need to work in meteo dates not clock dates for day hi/lows
-						var metoDate = rec.Timestamp.AddHours(cumulus.GetHourInc());
+						lastentrydate = rec.Timestamp.ToLocalTime();
+						currentDay = metoDate;
 
-						if (!started)
+						if (metoDate >= reqDate)
 						{
-								lastentrydate = rec.Timestamp;
-								currentDay = metoDate;
-								
-							if (metoDate >= monthDate)
-							{ 
-								started = true;
-								totalRainfall = lastentryrain ?? 0;
-							}
-							else
-							{
-								// OK we are within 24 hours of the start date, so record rain values
-								AddLastHoursRainEntry(rec.Timestamp, totalRainfall + rec.RainToday ?? 0, ref rain1hLog, ref rain24hLog);
-								lastentryrain = rec.RainToday;
-								lastentrycounter = rec.RainCounter ?? 0;
-								continue;
-							}
+							started = true;
+							totalRainfall = lastentryrain ?? 0;
 						}
-
-						// low chill
-						if (rec.WindChill.HasValue && rec.WindChill.Value < lowWindChill.Value)
+						else
 						{
-							lowWindChill.Value = rec.WindChill.Value;
-							lowWindChill.Ts = rec.Timestamp;
+							// OK we are within 24 hours of the start date, so record rain values
+							AddLastHoursRainEntry(rec.Timestamp, totalRainfall + rec.RainToday ?? 0, ref rain1hLog, ref rain24hLog);
+							lastentryrain = rec.RainToday;
+							lastentrycounter = rec.RainCounter ?? 0;
+							continue;
 						}
-						// hi heat
-						if (rec.HeatIndex.HasValue && rec.HeatIndex.Value > highHeatInd.Value)
+					}
+
+					// low chill
+					if (rec.WindChill.HasValue && rec.WindChill.Value < lowWindChill.Value)
+					{
+						lowWindChill.Value = rec.WindChill.Value;
+						lowWindChill.Ts = rec.Timestamp;
+					}
+					// hi heat
+					if (rec.HeatIndex.HasValue && rec.HeatIndex.Value > highHeatInd.Value)
+					{
+						highHeatInd.Value = rec.HeatIndex.Value;
+						highHeatInd.Ts = rec.Timestamp;
+					}
+					// hi/low appt
+					if (rec.Apparent.HasValue)
+					{
+						if (rec.Apparent.Value > highAppTemp.Value)
 						{
-							highHeatInd.Value = rec.HeatIndex.Value;
-							highHeatInd.Ts = rec.Timestamp;
+							highAppTemp.Value = rec.Apparent.Value;
+							highAppTemp.Ts = rec.Timestamp;
 						}
-						// hi/low appt
-						if (rec.Apparent.HasValue)
+						if (rec.Apparent.Value < lowAppTemp.Value)
 						{
-							if (rec.Apparent.Value > highAppTemp.Value)
-							{
-								highAppTemp.Value = rec.Apparent.Value;
-								highAppTemp.Ts = rec.Timestamp;
-							}
-							if (rec.Apparent.Value < lowAppTemp.Value)
-							{
-								lowAppTemp.Value = rec.Apparent.Value;
-								lowAppTemp.Ts = rec.Timestamp;
-							}
+							lowAppTemp.Value = rec.Apparent.Value;
+							lowAppTemp.Ts = rec.Timestamp;
 						}
-						// hi/low feels like
-						if (rec.FeelsLike.HasValue)
+					}
+					// hi/low feels like
+					if (rec.FeelsLike.HasValue)
+					{
+						if (rec.FeelsLike.Value > highFeelsLike.Value)
 						{
-							if (rec.FeelsLike.Value > highFeelsLike.Value)
-							{
-								highFeelsLike.Value = rec.FeelsLike.Value;
-								highFeelsLike.Ts = rec.Timestamp;
-							}
-							if (rec.FeelsLike.Value < lowFeelsLike.Value)
-							{
-								lowFeelsLike.Value = rec.FeelsLike.Value;
-								lowFeelsLike.Ts = rec.Timestamp;
-							}
+							highFeelsLike.Value = rec.FeelsLike.Value;
+							highFeelsLike.Ts = rec.Timestamp;
 						}
-
-						// hi/low humidex
-						if (rec.Humidex.HasValue)
+						if (rec.FeelsLike.Value < lowFeelsLike.Value)
 						{
-							if (rec.Humidex.Value > highHumidex.Value)
-							{
-								highHumidex.Value = rec.Humidex.Value;
-								highHumidex.Ts = rec.Timestamp;
-							}
+							lowFeelsLike.Value = rec.FeelsLike.Value;
+							lowFeelsLike.Ts = rec.Timestamp;
 						}
+					}
 
-						// hi/low temp
-						if (rec.Temp.HasValue)
+					// hi/low humidex
+					if (rec.Humidex.HasValue)
+					{
+						if (rec.Humidex.Value > highHumidex.Value)
 						{
-							if (rec.Temp.Value > highTemp.Value)
-							{
-								highTemp.Value = rec.Temp.Value;
-								highTemp.Ts = rec.Timestamp;
-							}
-							// lo temp
-							if (rec.Temp.Value < lowTemp.Value)
-							{
-								lowTemp.Value = rec.Temp.Value;
-								lowTemp.Ts = rec.Timestamp;
-							}
+							highHumidex.Value = rec.Humidex.Value;
+							highHumidex.Ts = rec.Timestamp;
 						}
-						// hi/low dewpoint
-						if (rec.DewPoint.HasValue)
+					}
+
+					// hi/low temp
+					if (rec.Temp.HasValue)
+					{
+						if (rec.Temp.Value > highTemp.Value)
 						{
-							if (rec.DewPoint.Value > highDewPt.Value)
-							{
-								highDewPt.Value = rec.DewPoint.Value;
-								highDewPt.Ts = rec.Timestamp;
-							}
-							// low dewpoint
-							if (rec.DewPoint.Value < lowDewPt.Value)
-							{
-								lowDewPt.Value = rec.DewPoint.Value;
-								lowDewPt.Ts = rec.Timestamp;
-							}
+							highTemp.Value = rec.Temp.Value;
+							highTemp.Ts = rec.Timestamp;
 						}
-						// hi/low hum
-						if (rec.Humidity.HasValue)
+						// lo temp
+						if (rec.Temp.Value < lowTemp.Value)
 						{
-							if (rec.Humidity.Value > highHum.Value)
-							{
-								highHum.Value = rec.Humidity.Value;
-								highHum.Ts = rec.Timestamp;
-							}
-							// lo hum
-							if (rec.Humidity.Value < lowHum.Value)
-							{
-								lowHum.Value = rec.Humidity.Value;
-								lowHum.Ts = rec.Timestamp;
-							}
+							lowTemp.Value = rec.Temp.Value;
+							lowTemp.Ts = rec.Timestamp;
 						}
-						// hi/Low baro
-						if (rec.Pressure.HasValue)
+					}
+					// hi/low dewpoint
+					if (rec.DewPoint.HasValue)
+					{
+						if (rec.DewPoint.Value > highDewPt.Value)
 						{
-							if (rec.Pressure.Value > highBaro.Value)
-							{
-								highBaro.Value = rec.Pressure.Value;
-								highBaro.Ts = rec.Timestamp;
-							}
-							// lo hum
-							if (rec.Pressure < lowBaro.Value)
-							{
-								lowBaro.Value = rec.Pressure.Value;
-								lowBaro.Ts = rec.Timestamp;
-							}
+							highDewPt.Value = rec.DewPoint.Value;
+							highDewPt.Ts = rec.Timestamp;
 						}
-						// hi gust
-						if (rec.WindGust10m.HasValue && rec.WindGust10m.Value > highGust.Value)
+						// low dewpoint
+						if (rec.DewPoint.Value < lowDewPt.Value)
 						{
-							highGust.Value = rec.WindGust10m.Value;
-							highGust.Ts = rec.Timestamp;
+							lowDewPt.Value = rec.DewPoint.Value;
+							lowDewPt.Ts = rec.Timestamp;
 						}
-						// hi wind
-						if (rec.WindAvg.HasValue && rec.WindAvg.Value > highWind.Value)
+					}
+					// hi/low hum
+					if (rec.Humidity.HasValue)
+					{
+						if (rec.Humidity.Value > highHum.Value)
 						{
-							highWind.Value = rec.WindAvg.Value;
-							highWind.Ts = rec.Timestamp;
+							highHum.Value = rec.Humidity.Value;
+							highHum.Ts = rec.Timestamp;
 						}
-						// hi rain rate
-						if (rec.RainRate.HasValue && rec.RainRate.Value > highRainRate.Value)
+						// lo hum
+						if (rec.Humidity.Value < lowHum.Value)
 						{
-							highRainRate.Value = rec.RainRate.Value;
-							highRainRate.Ts = rec.Timestamp;
+							lowHum.Value = rec.Humidity.Value;
+							lowHum.Ts = rec.Timestamp;
 						}
-
-						if (rec.Temp.HasValue)
+					}
+					// hi/Low baro
+					if (rec.Pressure.HasValue)
+					{
+						if (rec.Pressure.Value > highBaro.Value)
 						{
-							if (rec.Temp.Value > dayHighTemp.Value)
-							{
-								dayHighTemp.Value = rec.Temp.Value;
-								dayHighTemp.Ts = rec.Timestamp;
-							}
-
-							if (rec.Temp.Value < dayLowTemp.Value)
-							{
-								dayLowTemp.Value = rec.Temp.Value;
-								dayLowTemp.Ts = rec.Timestamp;
-							}
+							highBaro.Value = rec.Pressure.Value;
+							highBaro.Ts = rec.Timestamp;
 						}
-
-						dayWindRun += rec.Timestamp.Subtract(lastentrydate).TotalHours * rec.WindAvg ?? 0;
-
-						if (dayWindRun > highWindRun.Value)
+						// lo hum
+						if (rec.Pressure < lowBaro.Value)
 						{
-							highWindRun.Value = dayWindRun;
-							highWindRun.Ts = currentDay;
+							lowBaro.Value = rec.Pressure.Value;
+							lowBaro.Ts = rec.Timestamp;
 						}
+					}
+					// hi gust
+					if (rec.WindGust10m.HasValue && rec.WindGust10m.Value > highGust.Value)
+					{
+						highGust.Value = rec.WindGust10m.Value;
+						highGust.Ts = rec.Timestamp;
+					}
+					// hi wind
+					if (rec.WindAvg.HasValue && rec.WindAvg.Value > highWind.Value)
+					{
+						highWind.Value = rec.WindAvg.Value;
+						highWind.Ts = rec.Timestamp;
+					}
+					// hi rain rate
+					if (rec.RainRate.HasValue && rec.RainRate.Value > highRainRate.Value)
+					{
+						highRainRate.Value = rec.RainRate.Value;
+						highRainRate.Ts = rec.Timestamp;
+					}
 
-						// new meteo day
-						if (currentDay.Date != metoDate.Date)
+					if (rec.Temp.HasValue)
+					{
+						if (rec.Temp.Value > dayHighTemp.Value)
 						{
-							if (dayHighTemp.Value < lowMaxTemp.Value)
-							{
-								lowMaxTemp.Value = dayHighTemp.Value;
-								lowMaxTemp.Ts = dayHighTemp.Ts;
-							}
-							if (dayLowTemp.Value > highMinTemp.Value)
-							{
-								highMinTemp.Value = dayLowTemp.Value;
-								highMinTemp.Ts = dayLowTemp.Ts;
-							}
-							if (dayHighTemp.Value - dayLowTemp.Value > highTempRange.Value)
-							{
-								highTempRange.Value = dayHighTemp.Value - dayLowTemp.Value;
-								highTempRange.Ts = currentDay;
-							}
-							if (dayHighTemp.Value - dayLowTemp.Value < lowTempRange.Value)
-							{
-								lowTempRange.Value = dayHighTemp.Value - dayLowTemp.Value;
-								lowTempRange.Ts = currentDay;
-							}
-
-							// logging format changed on with C1 v1.9.3 b1055 in Dec 2012
-							// before that date the 00:00 log entry contained the rain total for the day before and the next log entry was reset to zero
-							// after that build the total was reset to zero in the entry
-							// messy!
-							// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
-							var rollovertime = new TimeSpan(-cumulus.GetHourInc(), 0, 0);
-							if (rec.RainToday > 0 && rec.Timestamp.TimeOfDay == rollovertime)
-							{
-								dayRain = rec.RainToday ?? 0;
-							}
-							else if ((rec.RainCounter - lastentrycounter > 0) && (rec.RainCounter - lastentrycounter < counterJumpTooBig))
-							{
-								dayRain += (rec.RainCounter ?? 0 - lastentrycounter) * cumulus.Calib.Rain.Mult;
-							}
-
-							if (dayRain > highRainDay.Value)
-							{
-								highRainDay.Value = dayRain;
-								highRainDay.Ts = currentDay;
-							}
-
-							monthlyRain += dayRain;
-
-							if (monthlyRain > highRainMonth.Value)
-							{
-								highRainMonth.Value = monthlyRain;
-								highRainMonth.Ts = currentDay;
-							}
-
-							if (currentDay.Month != metoDate.Month)
-							{
-								monthlyRain = 0;
-							}
-
-							// dry/wet period
-							if (Convert.ToInt32(dayRain * 1000) >= rainThreshold)
-							{
-								if (isDryNow)
-								{
-									currentWetPeriod = 1;
-									isDryNow = false;
-									if (!(dryPeriod.Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod.Value)
-									{
-										dryPeriod.Value = currentDryPeriod;
-										dryPeriod.Ts = thisDateDry;
-									}
-									currentDryPeriod = 0;
-								}
-								else
-								{
-									currentWetPeriod++;
-									thisDateWet = currentDay;
-								}
-							}
-							else
-							{
-								if (isDryNow)
-								{
-									currentDryPeriod++;
-									thisDateDry = currentDay;
-								}
-								else
-								{
-									currentDryPeriod = 1;
-									isDryNow = true;
-									if (!(wetPeriod.Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod.Value)
-									{
-										wetPeriod.Value = currentWetPeriod;
-										wetPeriod.Ts = thisDateWet;
-									}
-									currentWetPeriod = 0;
-								}
-							}
-
-							currentDay = metoDate;
 							dayHighTemp.Value = rec.Temp.Value;
-							dayLowTemp.Value = rec.Temp.Value;
-							dayWindRun = 0;
-							totalRainfall += dayRain;
-							dayRain = 0;
+							dayHighTemp.Ts = rec.Timestamp;
 						}
 
-						if (rec.RainToday.HasValue && dayRain < rec.RainToday.Value)
+						if (rec.Temp.Value < dayLowTemp.Value)
 						{
-							dayRain = rec.RainToday.Value;
+							dayLowTemp.Value = rec.Temp.Value;
+							dayLowTemp.Ts = rec.Timestamp;
+						}
+					}
+
+					dayWindRun += rec.Timestamp.Subtract(lastentrydate).TotalHours * rec.WindAvg ?? 0;
+
+					if (dayWindRun > highWindRun.Value)
+					{
+						highWindRun.Value = dayWindRun;
+						highWindRun.Ts = currentDay;
+					}
+
+					// new meteo day
+					if (currentDay.Date != metoDate.Date)
+					{
+						if (dayHighTemp.Value != Cumulus.DefaultHiVal && dayHighTemp.Value < lowMaxTemp.Value)
+						{
+							lowMaxTemp.Value = dayHighTemp.Value;
+							lowMaxTemp.Ts = dayHighTemp.Ts;
+						}
+						if (dayLowTemp.Value != Cumulus.DefaultLoVal && dayLowTemp.Value > highMinTemp.Value)
+						{
+							highMinTemp.Value = dayLowTemp.Value;
+							highMinTemp.Ts = dayLowTemp.Ts;
+						}
+						if (dayHighTemp.Value != Cumulus.DefaultHiVal && dayLowTemp.Value != Cumulus.DefaultLoVal && dayHighTemp.Value - dayLowTemp.Value > highTempRange.Value)
+						{
+							highTempRange.Value = dayHighTemp.Value - dayLowTemp.Value;
+							highTempRange.Ts = currentDay;
+						}
+						if (dayHighTemp.Value != Cumulus.DefaultHiVal && dayLowTemp.Value != Cumulus.DefaultLoVal && dayHighTemp.Value - dayLowTemp.Value < lowTempRange.Value)
+						{
+							lowTempRange.Value = dayHighTemp.Value - dayLowTemp.Value;
+							lowTempRange.Ts = currentDay;
+						}
+
+						// logging format changed on with C1 v1.9.3 b1055 in Dec 2012
+						// before that date the 00:00 log entry contained the rain total for the day before and the next log entry was reset to zero
+						// after that build the total was reset to zero in the entry
+						// messy!
+						// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
+						var rollovertime = new TimeSpan(-cumulus.GetHourInc(), 0, 0);
+						if (rec.RainToday.HasValue && rec.RainToday > 0 && rec.Timestamp.TimeOfDay == rollovertime)
+						{
+							dayRain = rec.RainToday ?? 0;
+						}
+						else if (rec.RainCounter.HasValue && (rec.RainCounter - lastentrycounter > 0) && (rec.RainCounter - lastentrycounter < counterJumpTooBig))
+						{
+							dayRain += (rec.RainCounter ?? 0 - lastentrycounter) * cumulus.Calib.Rain.Mult;
 						}
 
 						if (dayRain > highRainDay.Value)
@@ -942,78 +863,139 @@ namespace CumulusMX
 							highRainDay.Ts = currentDay;
 						}
 
-						if (rec.WindAvg.HasValue)
+						monthlyRain += dayRain;
+
+						if (monthlyRain > highRainMonth.Value)
 						{
-							dayWindRun += rec.Timestamp.Subtract(lastentrydate).TotalHours * rec.WindAvg.Value;
+							highRainMonth.Value = monthlyRain;
+							highRainMonth.Ts = currentDay;
 						}
 
-						if (dayWindRun > highWindRun.Value)
+						if (currentDay.Month != metoDate.Month)
 						{
-							highWindRun.Value = dayWindRun;
-							highWindRun.Ts = currentDay;
+							monthlyRain = 0;
 						}
 
-						// hourly rain
-						/*
-						* need to track what the rainfall has been in the last rolling hour and 24 hours
-						* across day rollovers where the count resets
-						*/
-						AddLastHoursRainEntry(rec.Timestamp, totalRainfall + dayRain, ref rain1hLog, ref rain24hLog);
-
-						var rainThisHour = rain1hLog.Last().Raincounter - rain1hLog.Peek().Raincounter;
-						if (rainThisHour > highRainHour.Value)
+						// dry/wet period
+						if (Convert.ToInt32(dayRain * 1000) >= rainThreshold)
 						{
-							highRainHour.Value = rainThisHour;
-							highRainHour.Ts = rec.Timestamp;
+							if (isDryNow)
+							{
+								currentWetPeriod = 1;
+								isDryNow = false;
+								if (!(dryPeriod.Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod.Value)
+								{
+									dryPeriod.Value = currentDryPeriod;
+									dryPeriod.Ts = thisDateDry;
+								}
+								currentDryPeriod = 0;
+							}
+							else
+							{
+								currentWetPeriod++;
+								thisDateWet = currentDay;
+							}
 						}
-
-						var rain24h = rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter;
-						if (rain24h > highRain24h.Value)
+						else
 						{
-							highRain24h.Value = rain24h;
-							highRain24h.Ts = rec.Timestamp;
+							if (isDryNow)
+							{
+								currentDryPeriod++;
+								thisDateDry = currentDay;
+							}
+							else
+							{
+								currentDryPeriod = 1;
+								isDryNow = true;
+								if (!(wetPeriod.Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod.Value)
+								{
+									wetPeriod.Value = currentWetPeriod;
+									wetPeriod.Ts = thisDateWet;
+								}
+								currentWetPeriod = 0;
+							}
 						}
 
-						if (rain24h > _day24h)
-						{
-							_day24h = rain24h;
-							_dayTs = rec.Timestamp;
-							//System.Diagnostics.Debugger.Break();
-						}
+						currentDay = metoDate;
+						dayHighTemp.Value = rec.Temp ?? Cumulus.DefaultHiVal;
+						dayLowTemp.Value = rec.Temp ?? Cumulus.DefaultLoVal;
+						dayWindRun = 0;
+						totalRainfall += dayRain;
+						dayRain = 0;
+					}
 
-						// new meteo day, part 2
-						if (currentDay.Date != metoDate.Date)
-						{
-							currentDay = metoDate;
-							dayHighTemp.Value = rec.Temp ?? Cumulus.DefaultHiVal;
-							dayLowTemp.Value = rec.Temp ?? Cumulus.DefaultLoVal;
-							dayWindRun = 0;
-							totalRainfall += dayRain;
+					if (rec.RainToday.HasValue && dayRain < rec.RainToday.Value)
+					{
+						dayRain = rec.RainToday.Value;
+					}
 
-							_day24h = rain24h;
-							_dayTs = rec.Timestamp;
-						}
+					if (dayRain > highRainDay.Value)
+					{
+						highRainDay.Value = dayRain;
+						highRainDay.Ts = currentDay;
+					}
 
-						lastentrydate = rec.Timestamp;
-						lastentrycounter = rec.RainCounter ?? 0;
-						}
-				}
-				catch (Exception e)
-				{
-					cumulus.LogExceptionMessage(e, $"GetRecordsLogFile: Error");
-				}
+					if (rec.WindAvg.HasValue)
+					{
+						dayWindRun += rec.Timestamp.Subtract(lastentrydate).TotalHours * rec.WindAvg.Value;
+					}
 
-				if (monthDate >= dateto)
-				{
-					finished = true;
-				}
-				else
-				{
-					cumulus.LogDebugMessage($"GetAllTimeRecLogFile: Finished processing month - {monthDate:yyyy-MM}");
-					monthDate = monthDate.AddMonths(1);
-					//logFile = cumulus.GetLogFileName(filedate);
-				}
+					if (dayWindRun > highWindRun.Value)
+					{
+						highWindRun.Value = dayWindRun;
+						highWindRun.Ts = currentDay;
+					}
+
+					// hourly rain
+					/*
+					* need to track what the rainfall has been in the last rolling hour and 24 hours
+					* across day rollovers where the count resets
+					*/
+					AddLastHoursRainEntry(rec.Timestamp, totalRainfall + dayRain, ref rain1hLog, ref rain24hLog);
+
+					var rainThisHour = rain1hLog.Last().Raincounter - rain1hLog.Peek().Raincounter;
+					if (rainThisHour > highRainHour.Value)
+					{
+						highRainHour.Value = rainThisHour;
+						highRainHour.Ts = rec.Timestamp;
+					}
+
+					var rain24h = rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter;
+					if (rain24h > highRain24h.Value)
+					{
+						highRain24h.Value = rain24h;
+						highRain24h.Ts = rec.Timestamp;
+					}
+
+					if (rain24h > _day24h)
+					{
+						_day24h = rain24h;
+						_dayTs = rec.Timestamp;
+					}
+
+					// new meteo day, part 2
+					if (currentDay.Date != metoDate.Date)
+					{
+						currentDay = metoDate;
+						dayHighTemp.Value = rec.Temp ?? Cumulus.DefaultHiVal;
+						dayLowTemp.Value = rec.Temp ?? Cumulus.DefaultLoVal;
+						dayWindRun = 0;
+						totalRainfall += dayRain;
+
+						_day24h = rain24h;
+						_dayTs = rec.Timestamp;
+					}
+
+					lastentrydate = rec.Timestamp;
+					lastentrycounter = rec.RainCounter ?? 0;
+					}
 			}
+			catch (Exception e)
+			{
+				cumulus.LogExceptionMessage(e, $"GetRecordsLogFile: Error");
+			}
+
+			cumulus.LogDebugMessage($"GetAllTimeRecLogFile: Finished processing - {recordType}");
 
 			rain1hLog.Clear();
 			rain24hLog.Clear();
@@ -1699,350 +1681,359 @@ namespace CumulusMX
 				}
 			}
 
-			// get all the data from the database
-			var data = station.Database.Query<DayData>("select * from DayData order by Timestamp");
-
-			if (data.Count > 0)
+			try
 			{
-				for (var i = 0; i < data.Count; i++)
+				// get all the data from the database
+				var data = station.Database.Query<DayData>("select * from DayData order by Timestamp");
+
+				if (data.Count > 0)
 				{
-					var loggedDate = data[i].Timestamp;
-					var monthOffset = loggedDate.Month - 1;
+					for (var i = 0; i < data.Count; i++)
+					{
+						var loggedDate = data[i].Timestamp;
+						var monthOffset = loggedDate.Month - 1;
 
-					// for the very first record we need to record the date
-					if (firstEntry)
-					{
-						thisDate = loggedDate;
-						firstEntry = false;
-						thisDateDry = loggedDate;
-						thisDateWet = loggedDate;
-					}
-					else
-					{
-						if (thisDate.Month != loggedDate.Month)
+						// for the very first record we need to record the date
+						if (firstEntry)
 						{
-							// reset the date and counter for a new month
-							rainThisMonth = 0.0;
 							thisDate = loggedDate;
+							firstEntry = false;
+							thisDateDry = loggedDate;
+							thisDateWet = loggedDate;
 						}
-					}
-					// hi gust
-					if (data[i].HighGust.HasValue && data[i].HighGustTime.HasValue &&
-						(data[i].HighGust.Value > highGust[monthOffset].Value))
-					{
-						highGust[monthOffset].Value = data[i].HighGust.Value;
-						highGust[monthOffset].Ts = data[i].HighGustTime.Value;
-					}
-					if (data[i].LowTemp.HasValue && data[i].LowTempTime.HasValue)
-					{
-						// lo temp
-						if (data[i].LowTemp.Value < lowTemp[monthOffset].Value)
+						else
 						{
-							lowTemp[monthOffset].Value = data[i].LowTemp.Value;
-							lowTemp[monthOffset].Ts = data[i].LowTempTime.Value;
+							if (thisDate.Month != loggedDate.Month)
+							{
+								// reset the date and counter for a new month
+								rainThisMonth = 0.0;
+								thisDate = loggedDate;
+							}
 						}
-						// hi min temp
-						if (data[i].LowTemp.HasValue && data[i].LowTemp.Value > highMinTemp[monthOffset].Value)
+						// hi gust
+						if (data[i].HighGust.HasValue && data[i].HighGustTime.HasValue &&
+							(data[i].HighGust.Value > highGust[monthOffset].Value))
 						{
-							highMinTemp[monthOffset].Value = data[i].LowTemp.Value;
-							highMinTemp[monthOffset].Ts = data[i].LowTempTime.Value;
+							highGust[monthOffset].Value = data[i].HighGust.Value;
+							highGust[monthOffset].Ts = data[i].HighGustTime.Value;
 						}
-					}
-					if (data[i].HighTemp.HasValue && data[i].HighTempTime.HasValue)
-					{
-						// hi temp
-						if (data[i].HighTemp.Value > highTemp[monthOffset].Value)
+						if (data[i].LowTemp.HasValue && data[i].LowTempTime.HasValue)
 						{
-							highTemp[monthOffset].Value = data[i].HighTemp.Value;
-							highTemp[monthOffset].Ts = data[i].HighTempTime.Value;
+							// lo temp
+							if (data[i].LowTemp.Value < lowTemp[monthOffset].Value)
+							{
+								lowTemp[monthOffset].Value = data[i].LowTemp.Value;
+								lowTemp[monthOffset].Ts = data[i].LowTempTime.Value;
+							}
+							// hi min temp
+							if (data[i].LowTemp.Value > highMinTemp[monthOffset].Value)
+							{
+								highMinTemp[monthOffset].Value = data[i].LowTemp.Value;
+								highMinTemp[monthOffset].Ts = data[i].LowTempTime.Value;
+							}
 						}
-						// lo max temp
-						if (data[i].HighTemp.Value < lowMaxTemp[monthOffset].Value)
+						if (data[i].HighTemp.HasValue && data[i].HighTempTime.HasValue)
 						{
-							lowMaxTemp[monthOffset].Value = data[i].HighTemp.Value;
-							lowMaxTemp[monthOffset].Ts = data[i].HighTempTime.Value;
-						}
-					}
-
-					// temp ranges
-					// hi temp range
-					if (data[i].LowTemp.HasValue && data[i].HighTemp.HasValue)
-					{
-						if ((data[i].HighTemp - data[i].LowTemp.Value) > highTempRange[monthOffset].Value)
-						{
-							highTempRange[monthOffset].Value = data[i].HighTemp.Value - data[i].LowTemp.Value;
-							highTempRange[monthOffset].Ts = loggedDate;
-						}
-						// lo temp range
-						if ((data[i].HighTemp - data[i].LowTemp.Value) < lowTempRange[monthOffset].Value)
-						{
-							lowTempRange[monthOffset].Value = data[i].HighTemp.Value - data[i].LowTemp.Value;
-							lowTempRange[monthOffset].Ts = loggedDate;
-						}
-					}
-
-					// lo baro
-					if (data[i].LowPress.HasValue && data[i].LowPressTime.HasValue &&
-						(data[i].LowPress.Value < lowBaro[monthOffset].Value))
-					{
-						lowBaro[monthOffset].Value = data[i].LowPress.Value;
-						lowBaro[monthOffset].Ts = data[i].LowPressTime.Value;
-					}
-					// hi baro
-					if (data[i].HighPress.HasValue && data[i].HighPressTime.HasValue &&
-						(data[i].HighPress.Value > highBaro[monthOffset].Value))
-					{
-						highBaro[monthOffset].Value = data[i].HighPress.Value;
-						highBaro[monthOffset].Ts = data[i].HighPressTime.Value;
-					}
-					// hi rain rate
-					if (data[i].HighRainRate.HasValue && data[i].HighRainRateTime.HasValue &&
-						(data[i].HighRainRate.Value > highRainRate[monthOffset].Value))
-					{
-						highRainRate[monthOffset].Value = data[i].HighRainRate.Value;
-						highRainRate[monthOffset].Ts = data[i].HighRainRateTime.Value;
-					}
-
-					if (data[i].TotalRain.HasValue)
-					{
-						// monthly rain
-						rainThisMonth += data[i].TotalRain.Value;
-
-						if (rainThisMonth > highRainMonth[monthOffset].Value)
-						{
-							highRainMonth[monthOffset].Value = rainThisMonth;
-							highRainMonth[monthOffset].Ts = thisDate;
+							// hi temp
+							if (data[i].HighTemp.Value > highTemp[monthOffset].Value)
+							{
+								highTemp[monthOffset].Value = data[i].HighTemp.Value;
+								highTemp[monthOffset].Ts = data[i].HighTempTime.Value;
+							}
+							// lo max temp
+							if (data[i].HighTemp.Value < lowMaxTemp[monthOffset].Value)
+							{
+								lowMaxTemp[monthOffset].Value = data[i].HighTemp.Value;
+								lowMaxTemp[monthOffset].Ts = data[i].HighTempTime.Value;
+							}
 						}
 
-						// hi rain day
-						if (data[i].TotalRain.Value > highRainDay[monthOffset].Value)
+						// temp ranges
+						// hi temp range
+						if (data[i].LowTemp.HasValue && data[i].HighTemp.HasValue)
 						{
-							highRainDay[monthOffset].Value = data[i].TotalRain.Value;
-							highRainDay[monthOffset].Ts = loggedDate;
+							if ((data[i].HighTemp - data[i].LowTemp.Value) > highTempRange[monthOffset].Value)
+							{
+								highTempRange[monthOffset].Value = data[i].HighTemp.Value - data[i].LowTemp.Value;
+								highTempRange[monthOffset].Ts = loggedDate;
+							}
+							// lo temp range
+							if ((data[i].HighTemp - data[i].LowTemp.Value) < lowTempRange[monthOffset].Value)
+							{
+								lowTempRange[monthOffset].Value = data[i].HighTemp.Value - data[i].LowTemp.Value;
+								lowTempRange[monthOffset].Ts = loggedDate;
+							}
+						}
+
+						// lo baro
+						if (data[i].LowPress.HasValue && data[i].LowPressTime.HasValue &&
+							(data[i].LowPress.Value < lowBaro[monthOffset].Value))
+						{
+							lowBaro[monthOffset].Value = data[i].LowPress.Value;
+							lowBaro[monthOffset].Ts = data[i].LowPressTime.Value;
+						}
+						// hi baro
+						if (data[i].HighPress.HasValue && data[i].HighPressTime.HasValue &&
+							(data[i].HighPress.Value > highBaro[monthOffset].Value))
+						{
+							highBaro[monthOffset].Value = data[i].HighPress.Value;
+							highBaro[monthOffset].Ts = data[i].HighPressTime.Value;
+						}
+						// hi rain rate
+						if (data[i].HighRainRate.HasValue && data[i].HighRainRateTime.HasValue &&
+							(data[i].HighRainRate.Value > highRainRate[monthOffset].Value))
+						{
+							highRainRate[monthOffset].Value = data[i].HighRainRate.Value;
+							highRainRate[monthOffset].Ts = data[i].HighRainRateTime.Value;
 						}
 
 						// hi 24h rain
-						if (data[i].HighRain24Hours.Value > highRain24h[monthOffset].Value)
+						if (data[i].HighRain24Hours.HasValue && data[i].HighRain24Hours.Value > highRain24h[monthOffset].Value)
 						{
 							highRain24h[monthOffset].Value = data[i].HighRain24Hours.Value;
 							highRain24h[monthOffset].Ts = data[i].HighRain24HoursTime.Value;
 						}
 
-						// dry/wet period
-						if (Convert.ToInt32(data[i].TotalRain * 1000) >= rainThreshold)
+
+						if (data[i].TotalRain.HasValue)
 						{
-							if (isDryNow)
+							// monthly rain
+							rainThisMonth += data[i].TotalRain.Value;
+
+							if (rainThisMonth > highRainMonth[monthOffset].Value)
 							{
-								currentWetPeriod = 1;
-								isDryNow = false;
-								var dryMonthOffset = thisDateDry.Month - 1;
-								if (!(dryPeriod[dryMonthOffset].Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod[dryMonthOffset].Value)
+								highRainMonth[monthOffset].Value = rainThisMonth;
+								highRainMonth[monthOffset].Ts = thisDate;
+							}
+
+							// hi rain day
+							if (data[i].TotalRain.Value > highRainDay[monthOffset].Value)
+							{
+								highRainDay[monthOffset].Value = data[i].TotalRain.Value;
+								highRainDay[monthOffset].Ts = loggedDate;
+							}
+
+							// dry/wet period
+							if (Convert.ToInt32(data[i].TotalRain * 1000) >= rainThreshold)
+							{
+								if (isDryNow)
 								{
-									dryPeriod[dryMonthOffset].Value = currentDryPeriod;
-									dryPeriod[dryMonthOffset].Ts = thisDateDry;
+									currentWetPeriod = 1;
+									isDryNow = false;
+									var dryMonthOffset = thisDateDry.Month - 1;
+									if (!(dryPeriod[dryMonthOffset].Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod[dryMonthOffset].Value)
+									{
+										dryPeriod[dryMonthOffset].Value = currentDryPeriod;
+										dryPeriod[dryMonthOffset].Ts = thisDateDry;
+									}
+									currentDryPeriod = 0;
 								}
-								currentDryPeriod = 0;
+								else
+								{
+									currentWetPeriod++;
+									thisDateWet = loggedDate;
+								}
 							}
 							else
 							{
-								currentWetPeriod++;
-								thisDateWet = loggedDate;
-							}
-						}
-						else
-						{
-							if (isDryNow)
-							{
-								currentDryPeriod++;
-								thisDateDry = loggedDate;
-							}
-							else
-							{
-								currentDryPeriod = 1;
-								isDryNow = true;
-								var wetMonthOffset = thisDateWet.Month - 1;
-								if (!(wetPeriod[wetMonthOffset].Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod[wetMonthOffset].Value)
+								if (isDryNow)
 								{
-									wetPeriod[wetMonthOffset].Value = currentWetPeriod;
-									wetPeriod[wetMonthOffset].Ts = thisDateWet;
+									currentDryPeriod++;
+									thisDateDry = loggedDate;
 								}
-								currentWetPeriod = 0;
+								else
+								{
+									currentDryPeriod = 1;
+									isDryNow = true;
+									var wetMonthOffset = thisDateWet.Month - 1;
+									if (!(wetPeriod[wetMonthOffset].Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod[wetMonthOffset].Value)
+									{
+										wetPeriod[wetMonthOffset].Value = currentWetPeriod;
+										wetPeriod[wetMonthOffset].Ts = thisDateWet;
+									}
+									currentWetPeriod = 0;
+								}
 							}
+						}
+
+						// hi wind run
+						if (data[i].WindRun.HasValue && data[i].WindRun.Value > highWindRun[monthOffset].Value)
+						{
+							highWindRun[monthOffset].Value = data[i].WindRun.Value;
+							highWindRun[monthOffset].Ts = loggedDate;
+						}
+						// hi wind
+						if (data[i].HighAvgWind.HasValue && data[i].HighAvgWindTime.HasValue && data[i].HighAvgWind.Value > highWind[monthOffset].Value)
+						{
+							highWind[monthOffset].Value = data[i].HighAvgWind.Value;
+							highWind[monthOffset].Ts = data[i].HighAvgWindTime.Value;
+						}
+
+						// lo humidity
+						if (data[i].LowHumidity.HasValue && data[i].LowHumidityTime.HasValue && data[i].LowHumidity.Value < lowHum[monthOffset].Value)
+						{
+							lowHum[monthOffset].Value = data[i].LowHumidity.Value;
+							lowHum[monthOffset].Ts = data[i].LowHumidityTime.Value;
+						}
+						// hi humidity
+						if (data[i].HighHumidity.HasValue && data[i].HighHumidityTime.HasValue && data[i].HighHumidity > highHum[monthOffset].Value)
+						{
+							highHum[monthOffset].Value = data[i].HighHumidity.Value;
+							highHum[monthOffset].Ts = data[i].HighHumidityTime.Value;
+						}
+
+						// hi heat index
+						if (data[i].HighHeatIndex.HasValue && data[i].HighHeatIndexTime.HasValue && data[i].HighHeatIndex.Value > highHeatInd[monthOffset].Value)
+						{
+							highHeatInd[monthOffset].Value = data[i].HighHeatIndex.Value;
+							highHeatInd[monthOffset].Ts = data[i].HighHeatIndexTime.Value;
+						}
+						// hi app temp
+						if (data[i].HighAppTemp.HasValue && data[i].HighAppTempTime.HasValue && data[i].HighAppTemp.Value > highAppTemp[monthOffset].Value)
+						{
+							highAppTemp[monthOffset].Value = data[i].HighAppTemp.Value;
+							highAppTemp[monthOffset].Ts = data[i].HighAppTempTime.Value;
+						}
+						// lo app temp
+						if (data[i].LowAppTemp.HasValue && data[i].LowAppTempTime.HasValue && data[i].LowAppTemp.Value < lowAppTemp[monthOffset].Value)
+						{
+							lowAppTemp[monthOffset].Value = data[i].LowAppTemp.Value;
+							lowAppTemp[monthOffset].Ts = data[i].LowAppTempTime.Value;
+						}
+
+						// hi rain hour
+						if (data[i].HighHourlyRain.HasValue && data[i].HighHourlyRainTime.HasValue && data[i].HighHourlyRain > highRainHour[monthOffset].Value)
+						{
+							highRainHour[monthOffset].Value = data[i].HighHourlyRain.Value;
+							highRainHour[monthOffset].Ts = data[i].HighHourlyRainTime.Value;
+						}
+
+						// lo wind chill
+						if (data[i].LowWindChill.HasValue && data[i].LowWindChillTime.HasValue && data[i].LowWindChill.Value < lowWindChill[monthOffset].Value)
+						{
+							lowWindChill[monthOffset].Value = data[i].LowWindChill.Value;
+							lowWindChill[monthOffset].Ts = data[i].LowWindChillTime.Value;
+						}
+
+						// hi dewpt
+						if (data[i].HighDewPoint.HasValue && data[i].HighDewPointTime.HasValue && data[i].HighDewPoint.Value > highDewPt[monthOffset].Value)
+						{
+							highDewPt[monthOffset].Value = data[i].HighDewPoint.Value;
+							highDewPt[monthOffset].Ts = data[i].HighDewPointTime.Value;
+						}
+						// lo dewpt
+						if (data[i].LowDewPoint.HasValue && data[i].LowDewPointTime.HasValue && data[i].LowDewPoint.Value < lowDewPt[monthOffset].Value)
+						{
+							lowDewPt[monthOffset].Value = data[i].LowDewPoint.Value;
+							lowDewPt[monthOffset].Ts = data[i].LowDewPointTime.Value;
+						}
+
+						// hi feels like
+						if (data[i].HighFeelsLike.HasValue && data[i].HighFeelsLikeTime.HasValue && data[i].HighFeelsLike.Value > highFeelsLike[monthOffset].Value)
+						{
+							highFeelsLike[monthOffset].Value = data[i].HighFeelsLike.Value;
+							highFeelsLike[monthOffset].Ts = data[i].HighFeelsLikeTime.Value;
+						}
+						// lo feels like
+						if (data[i].LowFeelsLike.HasValue && data[i].LowFeelsLikeTime.HasValue && data[i].LowFeelsLike.Value < lowFeelsLike[monthOffset].Value)
+						{
+							lowFeelsLike[monthOffset].Value = data[i].LowFeelsLike.Value;
+							lowFeelsLike[monthOffset].Ts = data[i].LowFeelsLikeTime.Value;
+						}
+
+						// hi humidex
+						if (data[i].HighHumidex.HasValue && data[i].HighHumidexTime.HasValue && data[i].HighHumidex.Value > highHumidex[monthOffset].Value)
+						{
+							highHumidex[monthOffset].Value = data[i].HighHumidex.Value;
+							highHumidex[monthOffset].Ts = data[i].HighHumidexTime.Value;
 						}
 					}
 
-					// hi wind run
-					if (data[i].WindRun.HasValue && data[i].WindRun.Value > highWindRun[monthOffset].Value)
+					// We need to check if the run or wet/dry days at the end of log exceeds any records
+					if (!(wetPeriod[thisDateWet.Month - 1].Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod[thisDateWet.Month - 1].Value)
 					{
-						highWindRun[monthOffset].Value = data[i].WindRun.Value;
-						highWindRun[monthOffset].Ts = loggedDate;
+						wetPeriod[thisDateWet.Month - 1].Value = currentWetPeriod;
+						wetPeriod[thisDateWet.Month - 1].Ts = thisDateWet;
 					}
-					// hi wind
-					if (data[i].HighAvgWind.HasValue && data[i].HighAvgWindTime.HasValue && data[i].HighAvgWind.Value > highWind[monthOffset].Value)
+					if (!(dryPeriod[thisDateDry.Month - 1].Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod[thisDateDry.Month - 1].Value)
 					{
-						highWind[monthOffset].Value = data[i].HighAvgWind.Value;
-						highWind[monthOffset].Ts = data[i].HighAvgWindTime.Value;
-					}
-
-					// lo humidity
-					if (data[i].LowHumidity.HasValue && data[i].LowHumidityTime.HasValue && data[i].LowHumidity.Value < lowHum[monthOffset].Value)
-					{
-						lowHum[monthOffset].Value = data[i].LowHumidity.Value;
-						lowHum[monthOffset].Ts = data[i].LowHumidityTime.Value;
-					}
-					// hi humidity
-					if (data[i].HighHumidity.HasValue && data[i].HighHumidityTime.HasValue && data[i].HighHumidity > highHum[monthOffset].Value)
-					{
-						highHum[monthOffset].Value = data[i].HighHumidity.Value;
-						highHum[monthOffset].Ts = data[i].HighHumidityTime.Value;
+						dryPeriod[thisDateDry.Month - 1].Value = currentDryPeriod;
+						dryPeriod[thisDateDry.Month - 1].Ts = thisDateDry;
 					}
 
-					// hi heat index
-					if (data[i].HighHeatIndex.HasValue && data[i].HighHeatIndexTime.HasValue && data[i].HighHeatIndex.Value > highHeatInd[monthOffset].Value)
+					for (var i = 0; i < 12; i++)
 					{
-						highHeatInd[monthOffset].Value = data[i].HighHeatIndex.Value;
-						highHeatInd[monthOffset].Ts = data[i].HighHeatIndexTime.Value;
+						var m = i + 1;
+						json.Append($"\"{m}-highTempValDayfile\":\"{highTemp[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-highTempTimeDayfile\":\"{highTemp[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-lowTempValDayfile\":\"{lowTemp[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-lowTempTimeDayfile\":\"{lowTemp[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highDewPointValDayfile\":\"{highDewPt[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-highDewPointTimeDayfile\":\"{highDewPt[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-lowDewPointValDayfile\":\"{lowDewPt[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-lowDewPointTimeDayfile\":\"{lowDewPt[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highApparentTempValDayfile\":\"{highAppTemp[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-highApparentTempTimeDayfile\":\"{highAppTemp[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-lowApparentTempValDayfile\":\"{lowAppTemp[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-lowApparentTempTimeDayfile\":\"{lowAppTemp[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highFeelsLikeValDayfile\":\"{highFeelsLike[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-highFeelsLikeTimeDayfile\":\"{highFeelsLike[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-lowFeelsLikeValDayfile\":\"{lowFeelsLike[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-lowFeelsLikeTimeDayfile\":\"{lowFeelsLike[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highHumidexValDayfile\":\"{highHumidex[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-highHumidexTimeDayfile\":\"{highHumidex[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-lowWindChillValDayfile\":\"{lowWindChill[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-lowWindChillTimeDayfile\":\"{lowWindChill[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highHeatIndexValDayfile\":\"{highHeatInd[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-highHeatIndexTimeDayfile\":\"{highHeatInd[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highMinTempValDayfile\":\"{highMinTemp[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-highMinTempTimeDayfile\":\"{highMinTemp[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-lowMaxTempValDayfile\":\"{lowMaxTemp[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-lowMaxTempTimeDayfile\":\"{lowMaxTemp[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highDailyTempRangeValDayfile\":\"{highTempRange[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-highDailyTempRangeTimeDayfile\":\"{highTempRange[i].GetTsString(dateStampFormat)}\",");
+						json.Append($"\"{m}-lowDailyTempRangeValDayfile\":\"{lowTempRange[i].GetValString(cumulus.TempFormat)}\",");
+						json.Append($"\"{m}-lowDailyTempRangeTimeDayfile\":\"{lowTempRange[i].GetTsString(dateStampFormat)}\",");
+						json.Append($"\"{m}-highHumidityValDayfile\":\"{highHum[i].GetValString(cumulus.HumFormat)}\",");
+						json.Append($"\"{m}-highHumidityTimeDayfile\":\"{highHum[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-lowHumidityValDayfile\":\"{lowHum[i].GetValString(cumulus.HumFormat)}\",");
+						json.Append($"\"{m}-lowHumidityTimeDayfile\":\"{lowHum[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highBarometerValDayfile\":\"{highBaro[i].GetValString(cumulus.PressFormat)}\",");
+						json.Append($"\"{m}-highBarometerTimeDayfile\":\"{highBaro[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-lowBarometerValDayfile\":\"{lowBaro[i].GetValString(cumulus.PressFormat)}\",");
+						json.Append($"\"{m}-lowBarometerTimeDayfile\":\"{lowBaro[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highGustValDayfile\":\"{highGust[i].GetValString(cumulus.WindFormat)}\",");
+						json.Append($"\"{m}-highGustTimeDayfile\":\"{highGust[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highWindValDayfile\":\"{highWind[i].GetValString(cumulus.WindAvgFormat)}\",");
+						json.Append($"\"{m}-highWindTimeDayfile\":\"{highWind[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highWindRunValDayfile\":\"{highWindRun[i].GetValString(cumulus.WindRunFormat)}\",");
+						json.Append($"\"{m}-highWindRunTimeDayfile\":\"{highWindRun[i].GetTsString(dateStampFormat)}\",");
+						json.Append($"\"{m}-highRainRateValDayfile\":\"{highRainRate[i].GetValString(cumulus.RainFormat)}\",");
+						json.Append($"\"{m}-highRainRateTimeDayfile\":\"{highRainRate[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highHourlyRainValDayfile\":\"{highRainHour[i].GetValString(cumulus.RainFormat)}\",");
+						json.Append($"\"{m}-highHourlyRainTimeDayfile\":\"{highRainHour[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highDailyRainValDayfile\":\"{highRainDay[i].GetValString(cumulus.RainFormat)}\",");
+						json.Append($"\"{m}-highDailyRainTimeDayfile\":\"{highRainDay[i].GetTsString(dateStampFormat)}\",");
+						json.Append($"\"{m}-highRain24hValDayfile\":\"{highRain24h[i].GetValString(cumulus.RainFormat)}\",");
+						json.Append($"\"{m}-highRain24hTimeDayfile\":\"{highRain24h[i].GetTsString(timeStampFormat)}\",");
+						json.Append($"\"{m}-highMonthlyRainValDayfile\":\"{highRainMonth[i].GetValString(cumulus.RainFormat)}\",");
+						json.Append($"\"{m}-highMonthlyRainTimeDayfile\":\"{highRainMonth[i].GetTsString(monthFormat)}\",");
+						json.Append($"\"{m}-longestDryPeriodValDayfile\":\"{dryPeriod[i].GetValString()}\",");
+						json.Append($"\"{m}-longestDryPeriodTimeDayfile\":\"{dryPeriod[i].GetTsString(dateStampFormat)}\",");
+						json.Append($"\"{m}-longestWetPeriodValDayfile\":\"{wetPeriod[i].GetValString()}\",");
+						json.Append($"\"{m}-longestWetPeriodTimeDayfile\":\"{wetPeriod[i].GetTsString(dateStampFormat)}\",");
 					}
-					// hi app temp
-					if (data[i].HighAppTemp.HasValue && data[i].HighAppTempTime.HasValue && data[i].HighAppTemp.Value > highAppTemp[monthOffset].Value)
-					{
-						highAppTemp[monthOffset].Value = data[i].HighAppTemp.Value;
-						highAppTemp[monthOffset].Ts = data[i].HighAppTempTime.Value;
-					}
-					// lo app temp
-					if (data[i].LowAppTemp.HasValue && data[i].LowAppTempTime.HasValue && data[i].LowAppTemp.Value < lowAppTemp[monthOffset].Value)
-					{
-						lowAppTemp[monthOffset].Value = data[i].LowAppTemp.Value;
-						lowAppTemp[monthOffset].Ts = data[i].LowAppTempTime.Value;
-					}
-
-					// hi rain hour
-					if (data[i].HighHourlyRain.HasValue && data[i].HighHourlyRainTime.HasValue && data[i].HighHourlyRain > highRainHour[monthOffset].Value)
-					{
-						highRainHour[monthOffset].Value = data[i].HighHourlyRain.Value;
-						highRainHour[monthOffset].Ts = data[i].HighHourlyRainTime.Value;
-					}
-
-					// lo wind chill
-					if (data[i].LowWindChill.HasValue && data[i].LowWindChillTime.HasValue && data[i].LowWindChill.Value < lowWindChill[monthOffset].Value)
-					{
-						lowWindChill[monthOffset].Value = data[i].LowWindChill.Value;
-						lowWindChill[monthOffset].Ts = data[i].LowWindChillTime.Value;
-					}
-
-					// hi dewpt
-					if (data[i].HighDewPoint.HasValue && data[i].HighDewPointTime.HasValue && data[i].HighDewPoint.Value > highDewPt[monthOffset].Value)
-					{
-						highDewPt[monthOffset].Value = data[i].HighDewPoint.Value;
-						highDewPt[monthOffset].Ts = data[i].HighDewPointTime.Value;
-					}
-					// lo dewpt
-					if (data[i].LowDewPoint.HasValue && data[i].LowDewPointTime.HasValue && data[i].LowDewPoint.Value < lowDewPt[monthOffset].Value)
-					{
-						lowDewPt[monthOffset].Value = data[i].LowDewPoint.Value;
-						lowDewPt[monthOffset].Ts = data[i].LowDewPointTime.Value;
-					}
-
-					// hi feels like
-					if (data[i].HighFeelsLike.HasValue && data[i].HighFeelsLikeTime.HasValue && data[i].HighFeelsLike.Value > highFeelsLike[monthOffset].Value)
-					{
-						highFeelsLike[monthOffset].Value = data[i].HighFeelsLike.Value;
-						highFeelsLike[monthOffset].Ts = data[i].HighFeelsLikeTime.Value;
-					}
-					// lo feels like
-					if (data[i].LowFeelsLike.HasValue && data[i].LowFeelsLikeTime.HasValue && data[i].LowFeelsLike.Value < lowFeelsLike[monthOffset].Value)
-					{
-						lowFeelsLike[monthOffset].Value = data[i].LowFeelsLike.Value;
-						lowFeelsLike[monthOffset].Ts = data[i].LowFeelsLikeTime.Value;
-					}
-
-					// hi humidex
-					if (data[i].HighHumidex.HasValue && data[i].HighHumidexTime.HasValue && data[i].HighHumidex.Value > highHumidex[monthOffset].Value)
-					{
-						highHumidex[monthOffset].Value = data[i].HighHumidex.Value;
-						highHumidex[monthOffset].Ts = data[i].HighHumidexTime.Value;
-					}
+					json.Length--;
 				}
-
-				// We need to check if the run or wet/dry days at the end of log exceeds any records
-				if (!(wetPeriod[thisDateWet.Month - 1].Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod[thisDateWet.Month - 1].Value)
+				else
 				{
-					wetPeriod[thisDateWet.Month - 1].Value = currentWetPeriod;
-					wetPeriod[thisDateWet.Month - 1].Ts = thisDateWet;
+					Cumulus.LogMessage("Error failed to find day records");
 				}
-				if (!(dryPeriod[thisDateDry.Month - 1].Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod[thisDateDry.Month - 1].Value)
-				{
-					dryPeriod[thisDateDry.Month - 1].Value = currentDryPeriod;
-					dryPeriod[thisDateDry.Month - 1].Ts = thisDateDry;
-				}
-
-				for (var i = 0; i < 12; i++)
-				{
-					var m = i + 1;
-					json.Append($"\"{m}-highTempValDayfile\":\"{highTemp[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-highTempTimeDayfile\":\"{highTemp[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-lowTempValDayfile\":\"{lowTemp[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-lowTempTimeDayfile\":\"{lowTemp[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highDewPointValDayfile\":\"{highDewPt[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-highDewPointTimeDayfile\":\"{highDewPt[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-lowDewPointValDayfile\":\"{lowDewPt[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-lowDewPointTimeDayfile\":\"{lowDewPt[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highApparentTempValDayfile\":\"{highAppTemp[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-highApparentTempTimeDayfile\":\"{highAppTemp[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-lowApparentTempValDayfile\":\"{lowAppTemp[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-lowApparentTempTimeDayfile\":\"{lowAppTemp[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highFeelsLikeValDayfile\":\"{highFeelsLike[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-highFeelsLikeTimeDayfile\":\"{highFeelsLike[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-lowFeelsLikeValDayfile\":\"{lowFeelsLike[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-lowFeelsLikeTimeDayfile\":\"{lowFeelsLike[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highHumidexValDayfile\":\"{highHumidex[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-highHumidexTimeDayfile\":\"{highHumidex[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-lowWindChillValDayfile\":\"{lowWindChill[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-lowWindChillTimeDayfile\":\"{lowWindChill[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highHeatIndexValDayfile\":\"{highHeatInd[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-highHeatIndexTimeDayfile\":\"{highHeatInd[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highMinTempValDayfile\":\"{highMinTemp[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-highMinTempTimeDayfile\":\"{highMinTemp[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-lowMaxTempValDayfile\":\"{lowMaxTemp[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-lowMaxTempTimeDayfile\":\"{lowMaxTemp[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highDailyTempRangeValDayfile\":\"{highTempRange[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-highDailyTempRangeTimeDayfile\":\"{highTempRange[i].GetTsString(dateStampFormat)}\",");
-					json.Append($"\"{m}-lowDailyTempRangeValDayfile\":\"{lowTempRange[i].GetValString(cumulus.TempFormat)}\",");
-					json.Append($"\"{m}-lowDailyTempRangeTimeDayfile\":\"{lowTempRange[i].GetTsString(dateStampFormat)}\",");
-					json.Append($"\"{m}-highHumidityValDayfile\":\"{highHum[i].GetValString(cumulus.HumFormat)}\",");
-					json.Append($"\"{m}-highHumidityTimeDayfile\":\"{highHum[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-lowHumidityValDayfile\":\"{lowHum[i].GetValString(cumulus.HumFormat)}\",");
-					json.Append($"\"{m}-lowHumidityTimeDayfile\":\"{lowHum[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highBarometerValDayfile\":\"{highBaro[i].GetValString(cumulus.PressFormat)}\",");
-					json.Append($"\"{m}-highBarometerTimeDayfile\":\"{highBaro[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-lowBarometerValDayfile\":\"{lowBaro[i].GetValString(cumulus.PressFormat)}\",");
-					json.Append($"\"{m}-lowBarometerTimeDayfile\":\"{lowBaro[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highGustValDayfile\":\"{highGust[i].GetValString(cumulus.WindFormat)}\",");
-					json.Append($"\"{m}-highGustTimeDayfile\":\"{highGust[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highWindValDayfile\":\"{highWind[i].GetValString(cumulus.WindAvgFormat)}\",");
-					json.Append($"\"{m}-highWindTimeDayfile\":\"{highWind[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highWindRunValDayfile\":\"{highWindRun[i].GetValString(cumulus.WindRunFormat)}\",");
-					json.Append($"\"{m}-highWindRunTimeDayfile\":\"{highWindRun[i].GetTsString(dateStampFormat)}\",");
-					json.Append($"\"{m}-highRainRateValDayfile\":\"{highRainRate[i].GetValString(cumulus.RainFormat)}\",");
-					json.Append($"\"{m}-highRainRateTimeDayfile\":\"{highRainRate[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highHourlyRainValDayfile\":\"{highRainHour[i].GetValString(cumulus.RainFormat)}\",");
-					json.Append($"\"{m}-highHourlyRainTimeDayfile\":\"{highRainHour[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highDailyRainValDayfile\":\"{highRainDay[i].GetValString(cumulus.RainFormat)}\",");
-					json.Append($"\"{m}-highDailyRainTimeDayfile\":\"{highRainDay[i].GetTsString(dateStampFormat)}\",");
-					json.Append($"\"{m}-highRain24hValDayfile\":\"{highRain24h[i].GetValString(cumulus.RainFormat)}\",");
-					json.Append($"\"{m}-highRain24hTimeDayfile\":\"{highRain24h[i].GetTsString(timeStampFormat)}\",");
-					json.Append($"\"{m}-highMonthlyRainValDayfile\":\"{highRainMonth[i].GetValString(cumulus.RainFormat)}\",");
-					json.Append($"\"{m}-highMonthlyRainTimeDayfile\":\"{highRainMonth[i].GetTsString(monthFormat)}\",");
-					json.Append($"\"{m}-longestDryPeriodValDayfile\":\"{dryPeriod[i].GetValString()}\",");
-					json.Append($"\"{m}-longestDryPeriodTimeDayfile\":\"{dryPeriod[i].GetTsString(dateStampFormat)}\",");
-					json.Append($"\"{m}-longestWetPeriodValDayfile\":\"{wetPeriod[i].GetValString()}\",");
-					json.Append($"\"{m}-longestWetPeriodTimeDayfile\":\"{wetPeriod[i].GetTsString(dateStampFormat)}\",");
-				}
-				json.Length--;
 			}
-			else
+			catch (Exception ex)
 			{
-				Cumulus.LogMessage("Error failed to find day records");
+				cumulus.LogExceptionMessage(ex, "Error processing day records");
+				return ex.Message;
 			}
 
 			json.Append('}');
@@ -2170,360 +2161,370 @@ namespace CumulusMX
 
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 
-			while (!finished)
+			try
 			{
-				try
+				var rows = station.Database.Query<IntervalData>("select * from IntervalData order by timestamp");
+				foreach (var row in rows)
 				{
-					var rows = station.Database.Query<IntervalData>("select * from IntervalData order by timestamp");
-					foreach (var row in rows)
+					// We need to work in meteo dates not clock dates for day hi/lows
+					var metoDate = row.Timestamp.AddHours(cumulus.GetHourInc());
+					monthOffset = metoDate.Month - 1;
+
+					if (!started)
 					{
-						// We need to work in meteo dates not clock dates for day hi/lows
-						var metoDate = row.Timestamp.AddHours(cumulus.GetHourInc());
-						monthOffset = metoDate.Month - 1;
+						lastentrydate = row.Timestamp;
+						currentDay = metoDate;
+						started = true;
+					}
 
-						if (!started)
+					// low chill
+					if (row.WindChill.HasValue && row.WindChill.Value < lowWindChill[monthOffset].Value)
+					{
+						lowWindChill[monthOffset].Value = row.WindChill.Value;
+						lowWindChill[monthOffset].Ts = row.Timestamp;
+					}
+					// hi heat
+					if (row.HeatIndex.HasValue && row.HeatIndex.Value > highHeatInd[monthOffset].Value)
+					{
+						highHeatInd[monthOffset].Value = row.HeatIndex.Value;
+						highHeatInd[monthOffset].Ts = row.Timestamp;
+					}
+
+					if (row.Apparent.HasValue)
+					{
+						// hi appt
+						if (row.Apparent.Value > highAppTemp[monthOffset].Value)
 						{
-							lastentrydate = row.Timestamp;
-							currentDay = metoDate;
-							started = true;
+							highAppTemp[monthOffset].Value = row.Apparent.Value;
+							highAppTemp[monthOffset].Ts = row.Timestamp;
+						}
+						// lo appt
+						if (row.Apparent.Value < lowAppTemp[monthOffset].Value)
+						{
+							lowAppTemp[monthOffset].Value = row.Apparent.Value;
+							lowAppTemp[monthOffset].Ts = row.Timestamp;
+						}
+					}
+
+					if (row.FeelsLike.HasValue)
+					{
+						// hi feels like
+						if (row.FeelsLike.Value > highFeelsLike[monthOffset].Value)
+						{
+							highFeelsLike[monthOffset].Value = row.FeelsLike.Value;
+							highFeelsLike[monthOffset].Ts = row.Timestamp;
+						}
+						// lo feels like
+						if (row.FeelsLike.Value < lowFeelsLike[monthOffset].Value)
+						{
+							lowFeelsLike[monthOffset].Value = row.FeelsLike.Value;
+							lowFeelsLike[monthOffset].Ts = row.Timestamp;
+						}
+					}
+
+					// hi humidex
+					if (row.Humidex.HasValue && row.Humidex.Value > highHumidex[monthOffset].Value)
+					{
+						highHumidex[monthOffset].Value = row.Humidex.Value;
+						highHumidex[monthOffset].Ts = row.Timestamp;
+					}
+
+					if (row.Temp.HasValue)
+					{
+						// hi temp
+						if (row.Temp.Value > highTemp[monthOffset].Value)
+						{
+							highTemp[monthOffset].Value = row.Temp.Value;
+							highTemp[monthOffset].Ts = row.Timestamp;
+						}
+						if (row.Temp.Value > dayHighTemp.Value)
+						{
+							dayHighTemp.Value = row.Temp.Value;
+							dayHighTemp.Ts = row.Timestamp;
+						}
+						// lo temp
+						if (row.Temp.Value < lowTemp[monthOffset].Value)
+						{
+							lowTemp[monthOffset].Value = row.Temp.Value;
+							lowTemp[monthOffset].Ts = row.Timestamp;
+						}
+						if (row.Temp.Value < dayLowTemp.Value)
+						{
+							dayLowTemp.Value = row.Temp.Value;
+							dayLowTemp.Ts = row.Timestamp;
 						}
 
-						// low chill
-						if (row.WindChill.HasValue && row.WindChill.Value < lowWindChill[monthOffset].Value)
+					}
+					if (row.DewPoint.HasValue)
+					{
+						// hi dewpoint
+						if (row.DewPoint.Value > highDewPt[monthOffset].Value)
 						{
-							lowWindChill[monthOffset].Value = row.WindChill.Value;
-							lowWindChill[monthOffset].Ts = row.Timestamp;
+							highDewPt[monthOffset].Value = row.DewPoint.Value;
+							highDewPt[monthOffset].Ts = row.Timestamp;
 						}
-						// hi heat
-						if (row.HeatIndex.HasValue && row.HeatIndex.Value > highHeatInd[monthOffset].Value)
+						// low dewpoint
+						if (row.DewPoint.Value < lowDewPt[monthOffset].Value)
 						{
-							highHeatInd[monthOffset].Value = row.HeatIndex.Value;
-							highHeatInd[monthOffset].Ts = row.Timestamp;
+							lowDewPt[monthOffset].Value = row.DewPoint.Value;
+							lowDewPt[monthOffset].Ts = row.Timestamp;
+						}
+					}
+					if (row.Humidity.HasValue)
+					{
+						// hi hum
+						if (row.Humidity.Value > highHum[monthOffset].Value)
+						{
+							highHum[monthOffset].Value = row.Humidity.Value;
+							highHum[monthOffset].Ts = row.Timestamp;
+						}
+						// lo hum
+						if (row.Humidity.Value < lowHum[monthOffset].Value)
+						{
+							lowHum[monthOffset].Value = row.Humidity.Value;
+							lowHum[monthOffset].Ts = row.Timestamp;
+						}
+					}
+					if (row.Pressure.HasValue)
+					{
+						// hi baro
+						if (row.Pressure.Value > highBaro[monthOffset].Value)
+						{
+							highBaro[monthOffset].Value = row.Pressure.Value;
+							highBaro[monthOffset].Ts = row.Timestamp;
+						}
+						// lo baro
+						if (row.Pressure.Value < lowBaro[monthOffset].Value)
+						{
+							lowBaro[monthOffset].Value = row.Pressure.Value;
+							lowBaro[monthOffset].Ts = row.Timestamp;
+						}
+					}
+					// hi gust
+					if (row.WindGust10m.HasValue && row.WindGust10m.Value > highGust[monthOffset].Value)
+					{
+						highGust[monthOffset].Value = row.WindGust10m.Value;
+						highGust[monthOffset].Ts = row.Timestamp;
+					}
+					// hi wind
+					if (row.WindAvg.HasValue && row.WindAvg.Value > highWind[monthOffset].Value)
+					{
+						highWind[monthOffset].Value = row.WindAvg.Value;
+						highWind[monthOffset].Ts = row.Timestamp;
+					}
+					// hi rain rate
+					if (row.RainRate.HasValue && row.RainRate.Value > highRainRate[monthOffset].Value)
+					{
+						highRainRate[monthOffset].Value = row.RainRate.Value;
+						highRainRate[monthOffset].Ts = row.Timestamp;
+					}
+
+					// daily wind run
+					dayWindRun += row.Timestamp.Subtract(lastentrydate).TotalHours * row.WindAvg ?? 0;
+
+					if (dayWindRun > highWindRun[monthOffset].Value)
+					{
+						highWindRun[monthOffset].Value = dayWindRun;
+						highWindRun[monthOffset].Ts = currentDay;
+					}
+
+					// new meteo day
+					if (currentDay.Date != metoDate.Date)
+					{
+						var lastEntryMonthOffset = currentDay.Month - 1;
+						if (dayHighTemp.Value != Cumulus.DefaultHiVal && dayHighTemp.Value < lowMaxTemp[lastEntryMonthOffset].Value)
+						{
+							lowMaxTemp[lastEntryMonthOffset].Value = dayHighTemp.Value;
+							lowMaxTemp[lastEntryMonthOffset].Ts = dayHighTemp.Ts;
+						}
+						if (dayLowTemp.Value != Cumulus.DefaultLoVal && dayLowTemp.Value > highMinTemp[lastEntryMonthOffset].Value)
+						{
+							highMinTemp[lastEntryMonthOffset].Value = dayLowTemp.Value;
+							highMinTemp[lastEntryMonthOffset].Ts = dayLowTemp.Ts;
+						}
+						if (dayHighTemp.Value != Cumulus.DefaultHiVal && dayLowTemp.Value != Cumulus.DefaultLoVal && dayHighTemp.Value - dayLowTemp.Value > highTempRange[lastEntryMonthOffset].Value)
+						{
+							highTempRange[lastEntryMonthOffset].Value = dayHighTemp.Value - dayLowTemp.Value;
+							highTempRange[lastEntryMonthOffset].Ts = currentDay;
+						}
+						if (dayHighTemp.Value != Cumulus.DefaultHiVal && dayLowTemp.Value != Cumulus.DefaultLoVal && dayHighTemp.Value - dayLowTemp.Value < lowTempRange[lastEntryMonthOffset].Value)
+						{
+							lowTempRange[lastEntryMonthOffset].Value = dayHighTemp.Value - dayLowTemp.Value;
+							lowTempRange[lastEntryMonthOffset].Ts = currentDay;
 						}
 
-						if (row.Apparent.HasValue)
+						// logging format changed on with C1 v1.9.3 b1055 in Dec 2012
+						// before that date the 00:00 log entry contained the rain total for the day before and the next log entry was reset to zero
+						// after that build the total was reset to zero in the entry
+						// messy!
+						// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this period
+						var rollovertime = new TimeSpan(-cumulus.GetHourInc(), 0, 0);
+						if (row.RainToday > 0 && row.Timestamp.TimeOfDay == rollovertime)
 						{
-							// hi appt
-							if (row.Apparent.Value > highAppTemp[monthOffset].Value)
+							dayRain = row.RainToday ?? 0;
+						}
+						else if ((row.RainCounter - lastentrycounter > 0) && (row.RainCounter - lastentrycounter < counterJumpTooBig))
+						{
+							dayRain += ((double)row.RainCounter - lastentrycounter) * cumulus.Calib.Rain.Mult;
+						}
+
+						if (dayRain > highRainDay[lastEntryMonthOffset].Value)
+						{
+							highRainDay[lastEntryMonthOffset].Value = dayRain;
+							highRainDay[lastEntryMonthOffset].Ts = currentDay;
+						}
+
+						// new month ?
+						if (currentDay.Month != metoDate.Month)
+						{
+							var offset = currentDay.Month - 1;
+							if (monthlyRain > highRainMonth[offset].Value)
 							{
-								highAppTemp[monthOffset].Value = row.Apparent.Value;
-								highAppTemp[monthOffset].Ts = row.Timestamp;
+								highRainMonth[offset].Value = monthlyRain;
+								highRainMonth[offset].Ts = currentDay;
 							}
-							// lo appt
-							if (row.Apparent.Value < lowAppTemp[monthOffset].Value)
-							{
-								lowAppTemp[monthOffset].Value = row.Apparent.Value;
-								lowAppTemp[monthOffset].Ts = row.Timestamp;
-							}
+							monthlyRain = 0;
 						}
 
-						if (row.FeelsLike.HasValue)
+						monthlyRain += dayRain;
+						totalRainfall += dayRain;
+
+						if (dayWindRun > highWindRun[lastEntryMonthOffset].Value)
 						{
-							// hi feels like
-							if (row.FeelsLike.Value > highFeelsLike[monthOffset].Value)
-							{
-								highFeelsLike[monthOffset].Value = row.FeelsLike.Value;
-								highFeelsLike[monthOffset].Ts = row.Timestamp;
-							}
-							// lo feels like
-							if (row.FeelsLike.Value < lowFeelsLike[monthOffset].Value)
-							{
-								lowFeelsLike[monthOffset].Value = row.FeelsLike.Value;
-								lowFeelsLike[monthOffset].Ts = row.Timestamp;
-							}
+							highWindRun[lastEntryMonthOffset].Value = dayWindRun;
+							highWindRun[lastEntryMonthOffset].Ts = currentDay;
 						}
 
-						// hi humidex
-						if (row.Humidex.HasValue && row.Humidex.Value > highHumidex[monthOffset].Value)
+						// dry/wet period
+						if (Convert.ToInt32(dayRain * 1000) >= rainThreshold)
 						{
-							highHumidex[monthOffset].Value = row.Humidex.Value;
-							highHumidex[monthOffset].Ts = row.Timestamp;
+							if (isDryNow)
+							{
+								currentWetPeriod = 1;
+								isDryNow = false;
+								if (currentDryPeriod > dryPeriod[monthOffset].Value)
+								{
+									dryPeriod[monthOffset].Value = currentDryPeriod;
+									dryPeriod[monthOffset].Ts = thisDateDry;
+								}
+								currentDryPeriod = 0;
+							}
+							else
+							{
+								currentWetPeriod++;
+								thisDateWet = currentDay;
+							}
+						}
+						else
+						{
+							if (isDryNow)
+							{
+								currentDryPeriod++;
+								thisDateDry = currentDay;
+							}
+							else
+							{
+								currentDryPeriod = 1;
+								isDryNow = true;
+								if (currentWetPeriod > wetPeriod[monthOffset].Value)
+								{
+									wetPeriod[monthOffset].Value = currentWetPeriod;
+									wetPeriod[monthOffset].Ts = thisDateWet;
+								}
+								currentWetPeriod = 0;
+							}
 						}
 
 						if (row.Temp.HasValue)
 						{
-							// hi temp
-							if (row.Temp.Value > highTemp[monthOffset].Value)
-							{
-								highTemp[monthOffset].Value = row.Temp.Value;
-								highTemp[monthOffset].Ts = row.Timestamp;
-							}
-							// lo temp
-							if (row.Temp.Value < lowTemp[monthOffset].Value)
-							{
-								lowTemp[monthOffset].Value = row.Temp.Value;
-								lowTemp[monthOffset].Ts = row.Timestamp;
-							}
+							dayHighTemp.Value = row.Temp.Value;
+							dayLowTemp.Value = row.Temp.Value;
 						}
-						if (row.DewPoint.HasValue)
-						{
-							// hi dewpoint
-							if (row.DewPoint.Value > highDewPt[monthOffset].Value)
-							{
-								highDewPt[monthOffset].Value = row.DewPoint.Value;
-								highDewPt[monthOffset].Ts = row.Timestamp;
-							}
-							// low dewpoint
-							if (row.DewPoint.Value < lowDewPt[monthOffset].Value)
-							{
-								lowDewPt[monthOffset].Value = row.DewPoint.Value;
-								lowDewPt[monthOffset].Ts = row.Timestamp;
-							}
-						}
-						if (row.Humidity.HasValue)
-						{
-							// hi hum
-							if (row.Humidity.Value > highHum[monthOffset].Value)
-							{
-								highHum[monthOffset].Value = row.Humidity.Value;
-								highHum[monthOffset].Ts = row.Timestamp;
-							}
-							// lo hum
-							if (row.Humidity.Value < lowHum[monthOffset].Value)
-							{
-								lowHum[monthOffset].Value = row.Humidity.Value;
-								lowHum[monthOffset].Ts = row.Timestamp;
-							}
-						}
-						if (row.Pressure.HasValue)
-						{
-							// hi baro
-							if (row.Pressure.Value > highBaro[monthOffset].Value)
-							{
-								highBaro[monthOffset].Value = row.Pressure.Value;
-								highBaro[monthOffset].Ts = row.Timestamp;
-							}
-							// lo baro
-							if (row.Pressure.Value < lowBaro[monthOffset].Value)
-							{
-								lowBaro[monthOffset].Value = row.Pressure.Value;
-								lowBaro[monthOffset].Ts = row.Timestamp;
-							}
-						}
-						// hi gust
-						if (row.WindGust10m.HasValue && row.WindGust10m.Value > highGust[monthOffset].Value)
-						{
-							highGust[monthOffset].Value = row.WindGust10m.Value;
-							highGust[monthOffset].Ts = row.Timestamp;
-						}
-						// hi wind
-						if (row.WindAvg.HasValue && row.WindAvg.Value > highWind[monthOffset].Value)
-						{
-							highWind[monthOffset].Value = row.WindAvg.Value;
-							highWind[monthOffset].Ts = row.Timestamp;
-						}
-						// hi rain rate
-						if (row.RainRate.HasValue && row.RainRate.Value > highRainRate[monthOffset].Value)
-						{
-							highRainRate[monthOffset].Value = row.RainRate.Value;
-							highRainRate[monthOffset].Ts = row.Timestamp;
-						}
-
-						// daily wind run
-						dayWindRun += row.Timestamp.Subtract(lastentrydate).TotalHours * row.WindAvg ?? 0;
-
-						if (dayWindRun > highWindRun[monthOffset].Value)
-						{
-							highWindRun[monthOffset].Value = dayWindRun;
-							highWindRun[monthOffset].Ts = currentDay;
-						}
-
-						// new meteo day
-						if (currentDay.Date != metoDate.Date)
-						{
-							var lastEntryMonthOffset = currentDay.Month - 1;
-							if (dayHighTemp.Value < lowMaxTemp[lastEntryMonthOffset].Value)
-							{
-								lowMaxTemp[lastEntryMonthOffset].Value = dayHighTemp.Value;
-								lowMaxTemp[lastEntryMonthOffset].Ts = dayHighTemp.Ts;
-							}
-							if (dayLowTemp.Value > highMinTemp[lastEntryMonthOffset].Value)
-							{
-								highMinTemp[lastEntryMonthOffset].Value = dayLowTemp.Value;
-								highMinTemp[lastEntryMonthOffset].Ts = dayLowTemp.Ts;
-							}
-							if (dayHighTemp.Value - dayLowTemp.Value > highTempRange[lastEntryMonthOffset].Value)
-							{
-								highTempRange[lastEntryMonthOffset].Value = dayHighTemp.Value - dayLowTemp.Value;
-								highTempRange[lastEntryMonthOffset].Ts = currentDay;
-							}
-							if (dayHighTemp.Value - dayLowTemp.Value < lowTempRange[lastEntryMonthOffset].Value)
-							{
-								lowTempRange[lastEntryMonthOffset].Value = dayHighTemp.Value - dayLowTemp.Value;
-								lowTempRange[lastEntryMonthOffset].Ts = currentDay;
-							}
-
-							// logging format changed on with C1 v1.9.3 b1055 in Dec 2012
-							// before that date the 00:00 log entry contained the rain total for the day before and the next log entry was reset to zero
-							// after that build the total was reset to zero in the entry
-							// messy!
-							// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this period
-							var rollovertime = new TimeSpan(-cumulus.GetHourInc(), 0, 0);
-							if (row.RainToday > 0 && row.Timestamp.TimeOfDay == rollovertime)
-							{
-								dayRain = row.RainToday ?? 0;
-							}
-							else if ((row.RainCounter - lastentrycounter > 0) && (row.RainCounter - lastentrycounter < counterJumpTooBig))
-							{
-								dayRain += ((double)row.RainCounter - lastentrycounter) * cumulus.Calib.Rain.Mult;
-							}
-
-							if (dayRain > highRainDay[lastEntryMonthOffset].Value)
-							{
-								highRainDay[lastEntryMonthOffset].Value = dayRain;
-								highRainDay[lastEntryMonthOffset].Ts = currentDay;
-							}
-
-							// new month ?
-							if (currentDay.Month != metoDate.Month)
-							{
-								var offset = currentDay.Month - 1;
-								if (monthlyRain > highRainMonth[offset].Value)
-								{
-									highRainMonth[offset].Value = monthlyRain;
-									highRainMonth[offset].Ts = currentDay;
-								}
-								monthlyRain = 0;
-							}
-
-							monthlyRain += dayRain;
-							totalRainfall += dayRain;
-
-							if (dayWindRun > highWindRun[lastEntryMonthOffset].Value)
-							{
-								highWindRun[lastEntryMonthOffset].Value = dayWindRun;
-								highWindRun[lastEntryMonthOffset].Ts = currentDay;
-							}
-
-							// dry/wet period
-							if (Convert.ToInt32(dayRain * 1000) >= rainThreshold)
-							{
-								if (isDryNow)
-								{
-									currentWetPeriod = 1;
-									isDryNow = false;
-									if (currentDryPeriod > dryPeriod[monthOffset].Value)
-									{
-										dryPeriod[monthOffset].Value = currentDryPeriod;
-										dryPeriod[monthOffset].Ts = thisDateDry;
-									}
-									currentDryPeriod = 0;
-								}
-								else
-								{
-									currentWetPeriod++;
-									thisDateWet = currentDay;
-								}
-							}
-							else
-							{
-								if (isDryNow)
-								{
-									currentDryPeriod++;
-									thisDateDry = currentDay;
-								}
-								else
-								{
-									currentDryPeriod = 1;
-									isDryNow = true;
-									if (currentWetPeriod > wetPeriod[monthOffset].Value)
-									{
-										wetPeriod[monthOffset].Value = currentWetPeriod;
-										wetPeriod[monthOffset].Ts = thisDateWet;
-									}
-									currentWetPeriod = 0;
-								}
-							}
-
-							if (row.Temp.HasValue)
-							{
-								dayHighTemp.Value = row.Temp.Value;
-								dayLowTemp.Value = row.Temp.Value;
-							}
-							dayRain = 0;
-						}
-						else
-						{
-							dayRain = row.RainToday ?? 0;
-						}
-						
-
-						if (row.RainToday.HasValue && dayRain < row.RainToday.Value)
-						{
-							dayRain = row.RainToday.Value;
-						}
-
-						if (dayRain > highRainDay[monthOffset].Value)
-						{
-							highRainDay[monthOffset].Value = dayRain;
-							highRainDay[monthOffset].Ts = currentDay;
-						}
-
-						if (monthlyRain > highRainMonth[monthOffset].Value)
-						{
-							highRainMonth[monthOffset].Value = monthlyRain;
-							highRainMonth[monthOffset].Ts = currentDay;
-						}
-
-						dayWindRun += row.Timestamp.Subtract(lastentrydate).TotalHours * row.WindAvg.Value;
-
-						if (dayWindRun > highWindRun[monthOffset].Value)
-						{
-							highWindRun[monthOffset].Value = dayWindRun;
-							highWindRun[monthOffset].Ts = currentDay;
-						}
-
-						// hourly rain
-						/*
-						* need to track what the rainfall has been in the last rolling hour
-						* across day rollovers where the count resets
-						*/
-
-						AddLastHoursRainEntry(row.Timestamp, totalRainfall + dayRain, ref hourRainLog, ref rain24hLog);
-
-						var rainThisHour = hourRainLog.Last().Raincounter - hourRainLog.Peek().Raincounter;
-						if (rainThisHour > highRainHour[monthOffset].Value)
-						{
-							highRainHour[monthOffset].Value = rainThisHour;
-							highRainHour[monthOffset].Ts = row.Timestamp;
-						}
-
-						var rain24h = rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter;
-						if (rain24h > highRain24h[monthOffset].Value)
-						{
-							highRain24h[monthOffset].Value = rain24h;
-							highRain24h[monthOffset].Ts = row.Timestamp;
-						}
-
-						// new meteo day, part 2
-						if (currentDay.Date != metoDate.Date)
-						{
-							currentDay = metoDate;
-							dayHighTemp.Value = row.Temp ?? Cumulus.DefaultHiVal;
-							dayLowTemp.Value = row.Temp ?? Cumulus.DefaultLoVal;
-							dayWindRun = 0;
-							totalRainfall += dayRain;
-						}
-
-						lastentrydate = row.Timestamp;
-						lastentrycounter = row.RainCounter ?? 0;
+						dayRain = 0;
+					}
+					else
+					{
+						dayRain = row.RainToday ?? 0;
 					}
 
-					// for the final entry - check the monthly rain
-					if (rows.Count > 0 && monthlyRain > highRainMonth[monthOffset].Value)
+					if (row.RainToday.HasValue && dayRain < row.RainToday.Value)
+					{
+						dayRain = row.RainToday.Value;
+					}
+
+					if (dayRain > highRainDay[monthOffset].Value)
+					{
+						highRainDay[monthOffset].Value = dayRain;
+						highRainDay[monthOffset].Ts = currentDay;
+					}
+
+					if (monthlyRain > highRainMonth[monthOffset].Value)
 					{
 						highRainMonth[monthOffset].Value = monthlyRain;
 						highRainMonth[monthOffset].Ts = currentDay;
 					}
 
-				}
-				catch (Exception e)
-				{
-					cumulus.LogExceptionMessage(e, "GetMonthlyRecLogFile: Error processing log data");
+					dayWindRun += row.Timestamp.Subtract(lastentrydate).TotalHours * row.WindAvg ?? 0;
+
+					if (dayWindRun > highWindRun[monthOffset].Value)
+					{
+						highWindRun[monthOffset].Value = dayWindRun;
+						highWindRun[monthOffset].Ts = currentDay;
+					}
+
+					// hourly rain
+					/*
+					* need to track what the rainfall has been in the last rolling hour
+					* across day rollovers where the count resets
+					*/
+
+					AddLastHoursRainEntry(row.Timestamp, totalRainfall + dayRain, ref hourRainLog, ref rain24hLog);
+
+					var rainThisHour = hourRainLog.Last().Raincounter - hourRainLog.Peek().Raincounter;
+					if (rainThisHour > highRainHour[monthOffset].Value)
+					{
+						highRainHour[monthOffset].Value = rainThisHour;
+						highRainHour[monthOffset].Ts = row.Timestamp;
+					}
+
+					var rain24h = rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter;
+					if (rain24h > highRain24h[monthOffset].Value)
+					{
+						highRain24h[monthOffset].Value = rain24h;
+						highRain24h[monthOffset].Ts = row.Timestamp;
+					}
+
+					// new meteo day, part 2
+					if (currentDay.Date != metoDate.Date)
+					{
+						currentDay = metoDate;
+						dayHighTemp.Value = row.Temp ?? Cumulus.DefaultHiVal;
+						dayHighTemp.Ts = row.Timestamp;
+						dayLowTemp.Value = row.Temp ?? Cumulus.DefaultLoVal;
+						dayLowTemp.Ts = row.Timestamp;
+						dayWindRun = 0;
+						totalRainfall += dayRain;
+					}
+
+					lastentrydate = row.Timestamp;
+					lastentrycounter = row.RainCounter ?? 0;
 				}
 
-				cumulus.LogDebugMessage("GetMonthlyRecLogFile: Finished processing log data");
+				// for the final entry - check the monthly rain
+				if (rows.Count > 0 && monthlyRain > highRainMonth[monthOffset].Value)
+				{
+					highRainMonth[monthOffset].Value = monthlyRain;
+					highRainMonth[monthOffset].Ts = currentDay;
+				}
+
 			}
+			catch (Exception ex)
+			{
+				cumulus.LogExceptionMessage(ex, "GetMonthlyRecLogFile: Error processing log data");
+				return ex.Message;
+			}
+
+			cumulus.LogDebugMessage("GetMonthlyRecLogFile: Finished processing log data");
 
 			hourRainLog.Clear();
 			rain24hLog.Clear();

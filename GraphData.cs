@@ -158,9 +158,9 @@ namespace CumulusMX
 			var sbSol = new StringBuilder("\"SolarRad\":[");
 			var sbMax = new StringBuilder("\"CurrentSolarMax\":[");
 
-			var dataFrom = ts.AddHours(-cumulus.GraphHours);
+			var dataFrom = DateTime.SpecifyKind(ts, DateTimeKind.Local);
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom.ToUniversalTime().AddHours(-cumulus.GraphHours));
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -214,9 +214,9 @@ namespace CumulusMX
 			var sbRain = new StringBuilder("\"rfall\":[");
 			var sbRate = new StringBuilder("\"rrate\":[");
 
-			var dataFrom = ts.AddHours(-cumulus.GraphHours);
+			var dataFrom = DateTime.SpecifyKind(ts, DateTimeKind.Local);
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom.ToUniversalTime().AddHours(-cumulus.GraphHours));
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -243,9 +243,9 @@ namespace CumulusMX
 			var sbOut = new StringBuilder("\"hum\":[");
 			var sbIn = new StringBuilder("\"inhum\":[");
 
-			var dataFrom = ts.AddHours(-cumulus.GraphHours);
+			var dataFrom = DateTime.SpecifyKind(ts, DateTimeKind.Local);
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom.ToUniversalTime().AddHours(-cumulus.GraphHours));
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -290,9 +290,10 @@ namespace CumulusMX
 		{
 			var sb = new StringBuilder("{\"bearing\":[");
 			var sbAvg = new StringBuilder("\"avgbearing\":[");
-			var dataFrom = ts.AddHours(-cumulus.GraphHours);
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var dataFrom = DateTime.SpecifyKind(ts, DateTimeKind.Local);
+
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom.ToUniversalTime().AddHours(-cumulus.GraphHours));
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -318,9 +319,10 @@ namespace CumulusMX
 		{
 			var sb = new StringBuilder("{\"wgust\":[");
 			var sbSpd = new StringBuilder("\"wspeed\":[");
-			var dataFrom = ts.AddHours(-cumulus.GraphHours);
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var dataFrom = DateTime.SpecifyKind(ts, DateTimeKind.Local);
+
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom.ToUniversalTime().AddHours(-cumulus.GraphHours));
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -344,9 +346,10 @@ namespace CumulusMX
 		internal string GetPressGraphData(DateTime ts)
 		{
 			StringBuilder sb = new StringBuilder("{\"press\":[");
-			var dataFrom = ts.AddHours(-cumulus.GraphHours);
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var dataFrom = DateTime.SpecifyKind(ts, DateTimeKind.Local);
+
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom.ToUniversalTime().AddHours(-cumulus.GraphHours));
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -372,9 +375,10 @@ namespace CumulusMX
 			var sbHeat = new StringBuilder("\"heatindex\":[");
 			var sbTemp = new StringBuilder("\"temp\":[");
 			var sbHumidex = new StringBuilder("\"humidex\":[");
-			var dataFrom = ts.AddHours(-cumulus.GraphHours);
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+			var dataFrom = DateTime.SpecifyKind(ts, DateTimeKind.Local);
+
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom.ToUniversalTime().AddHours(-cumulus.GraphHours));
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -492,14 +496,14 @@ namespace CumulusMX
 			var sb = new StringBuilder("{");
 			var sb2p5 = new StringBuilder("\"pm2p5\":[");
 			var sb10 = new StringBuilder(",\"pm10\":[");
-			var dataFrom = ts.AddHours(-cumulus.GraphHours);
 
+			var dataFrom = DateTime.SpecifyKind(ts, DateTimeKind.Local);
 
 			// Check if we are to generate AQ data at all. Only if a primary sensor is defined and it isn't the Indoor AirLink
 			if (cumulus.StationOptions.PrimaryAqSensor > (int)Cumulus.PrimaryAqSensor.Undefined
 				&& cumulus.StationOptions.PrimaryAqSensor != (int)Cumulus.PrimaryAqSensor.AirLinkIndoor)
 			{
-				var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom);
+				var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dataFrom.ToUniversalTime().AddHours(-cumulus.GraphHours));
 
 				for (var i = 0; i < data.Count; i++)
 				{
@@ -713,7 +717,7 @@ namespace CumulusMX
 
 			StringBuilder sb = new StringBuilder("{\"dailyrain\":[", 10000);
 
-			var data = station.Database.Query<DayData>("select Timestamp, TotalRain from DayData where Timestamp >= ? and TotalRain is not null order by Timestamp", datefrom);
+			var data = station.Database.Query<DayData>("select Timestamp, TotalRain from DayData where Timestamp >= ? and TotalRain is not null order by Timestamp", datefrom.ToUniversalTime());
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -733,7 +737,7 @@ namespace CumulusMX
 			if (cumulus.GraphOptions.SunshineVisible)
 			{
 				var datefrom = DateTime.Now.AddDays(-cumulus.GraphDays - 1);
-				var data = station.Database.Query<DayData>("select Timestamp, SunShineHours from Daydata where Timestamp >= ? and SunShineHours is not null order by Timestamp", datefrom);
+				var data = station.Database.Query<DayData>("select Timestamp, SunShineHours from Daydata where Timestamp >= ? and SunShineHours is not null order by Timestamp", datefrom.ToUniversalTime());
 
 				sb.Append("\"sunhours\":[");
 				if (data.Count > 0)
@@ -756,7 +760,7 @@ namespace CumulusMX
 		internal string GetDailyTempGraphData()
 		{
 			var datefrom = DateTime.Now.AddDays(-cumulus.GraphDays - 1);
-			var data = station.Database.Query<DayData>("select Timestamp, HighTemp, LowTemp, AvgTemp from DayData where Timestamp >= ? order by Timestamp", datefrom);
+			var data = station.Database.Query<DayData>("select Timestamp, HighTemp, LowTemp, AvgTemp from DayData where Timestamp >= ? order by Timestamp", datefrom.ToUniversalTime());
 			var append = false;
 			StringBuilder sb = new StringBuilder("{");
 
@@ -1104,7 +1108,7 @@ namespace CumulusMX
 
 			// Read the database and extract the data from there
 			var data = station.Database.Query<DayData>("select Timestamp, HighRainRate, Totalrain from Daydata order by Timestamp");
-			
+
 			if (data.Count > 0)
 			{
 				for (var i = 0; i < data.Count; i++)

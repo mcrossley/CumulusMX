@@ -30,7 +30,7 @@ namespace CumulusMX
 			var sep = ',';
 
 			var sb = new StringBuilder(350);
-			sb.Append(Timestamp.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Timestamp.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
 			sb.Append(Utils.ToUnixTime(Timestamp)).Append(sep);
 			sb.Append(Hum1.HasValue ? Hum1 : blank);
 			sb.Append(sep);

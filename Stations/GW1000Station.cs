@@ -1,12 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using System.Runtime.InteropServices;
-using System.Net;
-using System.Timers;
-using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Timers;
 using ServiceStack.Text;
 
 namespace CumulusMX
@@ -80,6 +80,16 @@ namespace CumulusMX
 				Cumulus.LogMessage("Overriding the default outdoor temp/hum data with Extra temp/hum sensor #" + cumulus.Gw1000PrimaryTHSensor);
 			}
 
+			if (cumulus.Gw1000PrimaryRainSensor == 0)
+			{
+				// We are using the traditional rain tipper
+				Cumulus.LogMessage("Using the default traditional rain sensor data");
+			}
+			else
+			{
+				Cumulus.LogMessage("Using the piezo rain sensor data");
+			}
+
 			cancellationToken = tokenSource.Token;
 
 			ipaddr = cumulus.Gw1000IpAddress;
@@ -96,7 +106,7 @@ namespace CumulusMX
 		public override void DoStartup()
 		{
 			Cumulus.LogMessage("Starting Ecowitt Local API");
-			historyTask = Task.Run(getAndProcessHistoryData);// grab old data, then start the station
+			historyTask = Task.Run(getAndProcessHistoryData, cancellationToken);// grab old data, then start the station
 		}
 
 
@@ -115,6 +125,10 @@ namespace CumulusMX
 			tmrDataWatchdog.Start();
 
 			Cumulus.LogMessage("Start normal reading loop");
+
+			// just incase we did not catch-up any history
+			DoDayResetIfNeeded();
+			DoTrendValues(DateTime.Now);
 
 			liveTask = Task.Run(() =>
 			{
@@ -143,8 +157,8 @@ namespace CumulusMX
 							{
 								lastMinute = minute;
 
-								// at the start of every 10 minutes to trigger battery status check
-								if ((minute % 10) == 0 && !cancellationToken.IsCancellationRequested)
+								// at the start of every 20 minutes to trigger battery status check
+								if ((minute % 20) == 0 && !cancellationToken.IsCancellationRequested)
 								{
 									GetSensorIdsNew();
 								}
@@ -193,7 +207,7 @@ namespace CumulusMX
 					Api.CloseTcpPort();
 					Cumulus.LogMessage("Local API task ended");
 				}
-			});
+			}, cancellationToken);
 
 			cumulus.StartTimersAndSensors();
 		}
@@ -247,7 +261,7 @@ namespace CumulusMX
 				}
 				catch (Exception ex)
 				{
-					Cumulus.LogMessage("Exception occurred reading archive data: " + ex.Message);
+					cumulus.LogExceptionMessage(ex, "Error occurred reading archive data");
 				}
 			}
 
@@ -668,14 +682,14 @@ namespace CumulusMX
 					case string wh34 when wh34.StartsWith("WH34"):  // ch 1-8
 					case string wh35 when wh35.StartsWith("WH35"):  // ch 1-8
 					case "WH90":
-						// if a WS90 is connected, it has an 8.8 second update rate, so reduce the MX update rate from the default 10 seconds
+						// if a WS90 is connected, it has a 8.8 second update rate, so reduce the MX update rate from the default 10 seconds
 						if (updateRate > 8000 && updateRate != 8000)
 						{
 							Cumulus.LogMessage($"PrintSensorInfoNew: WS90 sensor detected, changing the update rate from {(updateRate / 1000):D} seconds to 8 seconds");
 							updateRate = 8000;
 						}
 						battV = data[battPos] * 0.02;
-						batt = $"{battV:f1}V ({(battV > 2.4 ? "OK" : "Low")})";
+						batt = $"{battV:f2}V ({(battV > 2.4 ? "OK" : "Low")})";
 						break;
 
 					case string wh31 when wh31.StartsWith("WH31"):  // ch 1-8
@@ -684,8 +698,8 @@ namespace CumulusMX
 
 					case "WH68":
 					case string wh51 when wh51.StartsWith("WH51"):  // ch 1-8
-						battV = data[battPos] / 10.0;
-						batt = $"{battV:f1}V ({TestBattery10(data[battPos])})"; // volts/10, low = 1.2V
+						battV = data[battPos] * 0.1;
+						batt = $"{battV:f2}V ({TestBattery10(data[battPos])})"; // volts/10, low = 1.2V
 						break;
 
 					case "WH25":
@@ -705,7 +719,7 @@ namespace CumulusMX
 							updateRate = 4000;
 						}
 						battV = data[battPos] * 0.02;
-						batt = $"{battV:f1}V ({(battV > 2.4 ? "OK": "Low")})";
+						batt = $"{battV:f2}V ({(battV > 2.4 ? "OK": "Low")})";
 						break;
 
 					default:
@@ -999,11 +1013,13 @@ namespace CumulusMX
 								idx += 1;
 								break;
 							case 0x4C: //All sensor lowbatt 16 char
-									   // This has been deprecated since v1.6.5 - now use CMD_READ_SENSOR_ID_NEW
+								// This has been deprecated since v1.6.5 - now use CMD_READ_SENSOR_ID_NEW
+								/*
 								if (tenMinuteChanged && fwVersion.CompareTo(new Version("1.6.5")) >= 0)
 								{
 									batteryLow = batteryLow || DoBatteryStatus(data, idx);
 								}
+								*/
 								idx += 16;
 								break;
 							case 0x2A: //PM2.5 Air Quality Sensor(μg/m³)
@@ -1179,7 +1195,7 @@ namespace CumulusMX
 							case 0x87: // Piezo Gain - doc says size = 2*10 ?
 								idx += 20;
 								break;
-							case 0x88: // Piezo Rain Reset Time 
+							case 0x88: // Piezo Rain Reset Time
 								idx += 3;
 								break;
 							default:
@@ -1238,7 +1254,16 @@ namespace CumulusMX
 					if (outdoortemp > -999)
 					{
 						DoDewpoint(newDewPoint, dateTime);
-						DoWindChill(newWindChill, dateTime);
+						if (ConvertUserWindToMS(WindAverage) < 1.5)
+						{
+							DoWindChill(Temperature, dateTime);
+						}
+						else
+						{
+							// calculate wind chill from calibrated C temp and calibrated wind in KPH
+							DoWindChill(ConvertTempCToUser(MeteoLib.WindChill(ConvertUserTempToC(Temperature), ConvertUserWindToKPH(WindAverage))), dateTime);
+						}
+
 						DoApparentTemp(dateTime);
 						DoFeelsLike(dateTime);
 						DoHumidex(dateTime);
@@ -1342,6 +1367,7 @@ namespace CumulusMX
 				if (!driftOnly)
 					Cumulus.LogMessage($"Gateway Info: frequency: {freq}, main sensor: {mainSensor}, date/time: {date:F}, Automatic DST adjustment: {autoDST}");
 
+				Cumulus.LogMessage($"Gateway Info: Gateway clock is {Math.Abs(clockdiff)} secs {slowfast} compared to Cumulus");
 			}
 			catch (Exception ex)
 			{
@@ -1364,17 +1390,17 @@ namespace CumulusMX
 			// 06-07 - data(2)
 			// 08    - 10 = rain day
 			// 09-12 - data(4)
-			// 13    - 11 = rain week 
+			// 13    - 11 = rain week
 			// 14-17 - data(4)
-			// 18    - 12 = rain month 
+			// 18    - 12 = rain month
 			// 19-22 - data(4)
-			// 23    - 13 = rain year 
+			// 23    - 13 = rain year
 			// 24-27 - data(4)
-			// 28    - 0D = rain event 
+			// 28    - 0D = rain event
 			// 29-30 - data(2)
-			// 31    - 0F = rain hour 
+			// 31    - 0F = rain hour
 			// 32-33 - data(2)
-			// 34    - 80 = piezo rain rate 
+			// 34    - 80 = piezo rain rate
 			// 35-36 - data(2)
 			// 37    - 83 = piezo rain day
 			// 38-41 - data(4)
@@ -1428,7 +1454,7 @@ namespace CumulusMX
 						// all the four byte values we are ignoring
 						case 0x10: // rain day
 						case 0x11: // rain week
-						case 0x12: // rain month 
+						case 0x12: // rain month
 						case 0x13: // rain year
 						case 0x83: // piezo rain day
 						case 0x84: // piezo rain week
@@ -1453,8 +1479,18 @@ namespace CumulusMX
 							idx += 3;
 #endif
 							break;
-						case 0x7A: // Seems to indicate no rain data available?
-							cumulus.LogDebugMessage("No rain data available? 0x7a=" + data[idx++]);
+						case 0x7A: // Preferred rain sensor on station
+							var sensor = data[idx++];
+#if DEBUG
+							if (sensor == 0)
+								cumulus.LogDebugMessage("No rain sensor available");
+							else if (sensor == 1)
+								cumulus.LogDebugMessage("Traditional rain sensor selected");
+							else if (sensor == 2)
+								cumulus.LogDebugMessage("Piezo rain sensor selected");
+							else
+								cumulus.LogDebugMessage("Unkown rain sensor selection value = " + sensor);
+#endif
 							break;
 						default:
 							cumulus.LogDebugMessage($"GetPiezoRainData: Error: Unknown value type found = {data[idx - 1]}, at position = {idx - 1}");
@@ -1532,124 +1568,6 @@ namespace CumulusMX
 			return batteryLow;
 		}
 
-		private static bool DoBatteryStatus(byte[] data, int index)
-		{
-			bool batteryLow = false;
-			var status = (Stations.GW1000Api.BatteryStatus)RawDeserialize(data, index, typeof(Stations.GW1000Api.BatteryStatus));
-			cumulus.LogDebugMessage("battery status...");
-
-			var str = "singles>" +
-				" wh24=" + TestBattery1(status.single, (byte)Stations.GW1000Api.SigSen.Wh24) +
-				" wh25=" + TestBattery1(status.single, (byte)Stations.GW1000Api.SigSen.Wh25) +
-				" wh26=" + TestBattery1(status.single, (byte)Stations.GW1000Api.SigSen.Wh26) +
-				" wh40=" + TestBattery1(status.single, (byte)Stations.GW1000Api.SigSen.Wh40);
-			if (str.Contains("Low"))
-			{
-				batteryLow = true;
-				Cumulus.LogMessage(str);
-			}
-			else
-				cumulus.LogDebugMessage(str);
-
-			str = "wh31>" +
-				" ch1=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh31Ch.Ch1) +
-				" ch2=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh31Ch.Ch2) +
-				" ch3=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh31Ch.Ch3) +
-				" ch4=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh31Ch.Ch4) +
-				" ch5=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh31Ch.Ch5) +
-				" ch6=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh31Ch.Ch6) +
-				" ch7=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh31Ch.Ch7) +
-				" ch8=" + TestBattery1(status.wh31, (byte)Stations.GW1000Api.Wh31Ch.Ch8);
-			if (str.Contains("Low"))
-			{
-				batteryLow = true;
-				Cumulus.LogMessage(str);
-			}
-			else
-				cumulus.LogDebugMessage(str);
-
-			str = "wh41>" +
-				" ch1=" + TestBattery2(status.wh41, 0x0F) +
-				" ch2=" + TestBattery2((UInt16)(status.wh41 >> 4), 0x0F) +
-				" ch3=" + TestBattery2((UInt16)(status.wh41 >> 8), 0x0F) +
-				" ch4=" + TestBattery2((UInt16)(status.wh41 >> 12), 0x0F);
-			if (str.Contains("Low"))
-			{
-				batteryLow = true;
-				Cumulus.LogMessage(str);
-			}
-			else
-				cumulus.LogDebugMessage(str);
-
-			str = "wh51>" +
-				" ch1=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch1) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch1) + 
-				" ch2=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch2) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch2) +
-				" ch3=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch3) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch3) +
-				" ch4=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch4) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch4) +
-				" ch5=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch5) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch5) +
-				" ch6=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch6) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch6) +
-				" ch7=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch7) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch7) +
-				" ch8=" + TestBattery10((byte)Stations.GW1000Api.Wh51Ch.Ch8) + " - " + TestBattery10V((byte)Stations.GW1000Api.Wh51Ch.Ch8);
-			if (str.Contains("Low"))
-			{
-				batteryLow = true;
-				Cumulus.LogMessage(str);
-			}
-			else
-				cumulus.LogDebugMessage(str);
-
-			str = "wh57> " + TestBattery3(status.wh57);
-			if (str.Contains("Low"))
-			{
-				batteryLow = true;
-				Cumulus.LogMessage(str);
-			}
-			else
-				cumulus.LogDebugMessage(str);
-
-			str = "wh68> " + TestBattery10(status.wh68) + " - " + TestBattery10V(status.wh68) + "V";
-			if (str.Contains("Low"))
-			{
-				batteryLow = true;
-				Cumulus.LogMessage(str);
-			}
-			else
-				cumulus.LogDebugMessage(str);
-
-			str = "wh80> " + TestBattery10(status.wh80) + " - " + TestBattery10V(status.wh80) + "V";
-			if (str.Contains("Low"))
-			{
-				batteryLow = true;
-				Cumulus.LogMessage(str);
-			}
-			else
-				cumulus.LogDebugMessage(str);
-
-			str = "wh45> " + TestBattery3(status.wh45);
-			if (str.Contains("Low"))
-			{
-				batteryLow = true;
-				Cumulus.LogMessage(str);
-			}
-			else
-				cumulus.LogDebugMessage(str);
-
-			str = "wh55>" +
-				" ch1=" + TestBattery3(status.wh55_ch1) +
-				" ch2=" + TestBattery3(status.wh55_ch2) +
-				" ch3=" + TestBattery3(status.wh55_ch3) +
-				" ch4=" + TestBattery3(status.wh55_ch4);
-			if (str.Contains("Low"))
-			{
-				batteryLow = true;
-				Cumulus.LogMessage(str);
-			}
-			else
-				cumulus.LogDebugMessage(str);
-
-			return batteryLow;
-		}
-
 		private static bool DoWH34BatteryStatus(byte[] data, int index)
 		{
 			// No longer used in firmware 1.6.0+
@@ -1674,18 +1592,6 @@ namespace CumulusMX
 			return (value & mask) == 0 ? "OK" : "Low";
 		}
 
-		/*
-		private static string TestBattery1(UInt16 value, UInt16 mask)
-		{
-			return (value & mask) == 0 ? "OK" : "Low";
-		}
-		*/
-
-		private static string TestBattery2(UInt16 value, UInt16 mask)
-		{
-			return (value & mask) > 1 ? "OK" : "Low";
-		}
-
 		private static string TestBattery3(byte value)
 		{
 			if (value == 6)
@@ -1695,7 +1601,11 @@ namespace CumulusMX
 
 		private static string TestBattery10(byte value)
 		{
-			return value / 10.0 > 1.2 ? "OK" : "Low";
+			// consider 1.2V as low
+			if (value == 255)
+				return "n/a";
+
+			return value > 12 ? "OK" : "Low";
 		}
 
 		private static double TestBattery10V(byte value)
@@ -1710,26 +1620,6 @@ namespace CumulusMX
 
 			return volts > 1.2 ? "OK" : "Low";
 		}
-
-		/*
-		private static string TestBatteryPct(byte value)
-		{
-			return value >= 20 ? "OK" : "Low";
-		}
-		*/
-
-		private static object RawDeserialize(byte[] rawData, int position, Type anyType)
-		{
-			int rawsize = Marshal.SizeOf(anyType);
-			if (rawsize > rawData.Length)
-				return null;
-			IntPtr buffer = Marshal.AllocHGlobal(rawsize);
-			Marshal.Copy(rawData, position, buffer, rawsize);
-			object retobj = Marshal.PtrToStructure(buffer, anyType);
-			Marshal.FreeHGlobal(buffer);
-			return retobj;
-		}
-
 
 		private class Discovery
 		{
@@ -1763,7 +1653,10 @@ namespace CumulusMX
 				}
 				cumulus.DataStoppedAlarm.LastError = $"No data received from the GW1000 for {tmrDataWatchdog.Interval / 1000} seconds";
 				cumulus.DataStoppedAlarm.Triggered = true;
-				DoDiscovery();
+				if (DoDiscovery())
+				{
+					PostDiscovery(); 
+				}
 			}
 		}
 	}

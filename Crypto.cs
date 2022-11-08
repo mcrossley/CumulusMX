@@ -41,7 +41,7 @@ namespace CumulusMX
 		}
 
 
-		public static string EncryptString(string plainText, byte[] key)
+		public static string EncryptString(string plainText, byte[] key, string description)
 		{
 			try
 			{
@@ -60,13 +60,13 @@ namespace CumulusMX
 			}
 			catch (Exception e)
 			{
-				Cumulus.LogMessage("Data was not encrypted. An error occurred.");
+				Cumulus.LogMessage($"Data was not encrypted. An error occurred processing '{description}'");
 				Cumulus.LogMessage(e.ToString());
 				return null;
 			}
 		}
 
-		public static string DecryptString(string encryptedText, byte[] key)
+		public static string DecryptString(string encryptedText, byte[] key, string description)
 		{
 			try
 			{
@@ -89,7 +89,7 @@ namespace CumulusMX
 			}
 			catch (Exception e)
 			{
-				Cumulus.LogMessage("Data was not decrypted. An error occurred.");
+				Cumulus.LogMessage($"Data was not decrypted. An error occurred processing '{description}'");
 				Cumulus.LogMessage(e.ToString());
 				return null;
 			}
@@ -121,6 +121,5 @@ namespace CumulusMX
 
 			return reader.ReadToEnd();
 		}
-
 	}
 }

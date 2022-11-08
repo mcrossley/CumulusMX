@@ -362,7 +362,7 @@ namespace CumulusMX
 			Cumulus.LogMessage("Finding raintoday from database");
 			try
 			{
-				var rec = Database.Query<IntervalData>("select min(Timestamp) Timestamp, RainCounter from IntervalData where Timestamp >= ?", cumulus.LastUpdateTime.Date);
+				var rec = Database.Query<IntervalData>("select min(Timestamp) Timestamp, RainCounter from IntervalData where Timestamp >= ?", cumulus.LastUpdateTime.Date.ToUniversalTime());
 
 				if (rec[0].RainCounter.HasValue)
 				{
@@ -370,7 +370,7 @@ namespace CumulusMX
 					midnightrainfound = true;
 					Cumulus.LogMessage($"Midnight rain found in the following entry: {rec[0].Timestamp}, RainCounter = {rec[0].RainCounter}");
 					raincount = rec[0].RainCounter.Value;
-					logdate = rec[0].Timestamp;
+					logdate = rec[0].Timestamp.ToLocalTime();
 					RainToday = Raincounter - raindaystart >= 0 ? (Raincounter - raindaystart) * cumulus.Calib.Rain.Mult : 0;
 				}
 			}
@@ -438,12 +438,12 @@ namespace CumulusMX
 			string Today = ModifiedNow.ToString("dd/MM/yy", CultureInfo.InvariantCulture);
 			Cumulus.LogMessage("This Month = " + Today);
 			// get today's date offset by rain season start for year check
-			var yearStartDate = new DateTime(ModifiedNow.Year, cumulus.RainSeasonStart, 1);
+			var yearStartDate = new DateTime(ModifiedNow.Year, cumulus.RainSeasonStart, 1, 0, 0, 0, DateTimeKind.Local);
 			if (yearStartDate > ModifiedNow)
 				yearStartDate = yearStartDate.AddYears(-1);
 
-			rainthisyear = Database.ExecuteScalar<double>("select sum(TotalRain) from DayData where Timestamp >= ?", yearStartDate);
-			rainthismonth = Database.ExecuteScalar<double>("select sum(TotalRain) from DayData where Timestamp >= ?", ModifiedNow);
+			rainthisyear = Database.ExecuteScalar<double>("select sum(TotalRain) from DayData where Timestamp >= ?", yearStartDate.ToUniversalTime());
+			rainthismonth = Database.ExecuteScalar<double>("select sum(TotalRain) from DayData where Timestamp >= ?", ModifiedNow.ToUniversalTime());
 
 			Cumulus.LogMessage("Rainthismonth from daily data: " + rainthismonth);
 			Cumulus.LogMessage("Rainthisyear from daily data: " + rainthisyear);
@@ -1409,7 +1409,7 @@ namespace CumulusMX
 				stream.Position = 0;
 				cumulus.WebSock.SendMessage(new StreamReader(stream).ReadToEnd());
 
-				// ** CMX 3 - We can't be sure when the broadcast completes, so the best we can do is wait a short time 
+				// ** CMX 3 - We can't be sure when the broadcast completes, so the best we can do is wait a short time
 				// ** CMX 4 - the broadacst is now awaitable, so we can run it synchronously - therefore now no need to add an artifical delay
 				//Thread.Sleep(500);
 			}
@@ -1459,7 +1459,7 @@ namespace CumulusMX
 		{
 			var deleteTime = ts.AddDays(-7);
 
-			_ = Database.Execute("delete from RecentData where Timestamp < ?", deleteTime);
+			_ = Database.Execute("delete from RecentData where Timestamp < ?", deleteTime.ToUniversalTime());
 		}
 
 		private static void ClearAlarms()
@@ -1494,7 +1494,7 @@ namespace CumulusMX
 				dataValuesUpdated.CheckDataValuesForUpdate();
 
 			CurrentSolarMax = AstroLib.SolarMax(now, cumulus.Longitude, cumulus.Latitude, AltitudeM(cumulus.Altitude), out SolarElevation, cumulus.SolarOptions);
-			
+
 			if (!DataStopped)
 			{
 				//if (cumulus.StationOptions.NoSensorCheck)
@@ -1947,7 +1947,7 @@ namespace CumulusMX
 				var dateFrom = date.AddHours(-1);
 
 				// get the min and max temps, humidity, pressure, and mean solar rad and wind speed for the last hour
-				var result = Database.Query<EtData>("select avg(OutsideTemp) avgTemp, avg(Humidity) avgHum, avg(Pressure) avgPress, avg(SolarRad) avgSol, avg(SolarMax) avgSolMax, avg(WindSpeed) avgWind from RecentData where Timestamp >= ?", dateFrom);
+				var result = Database.Query<EtData>("select avg(OutsideTemp) avgTemp, avg(Humidity) avgHum, avg(Pressure) avgPress, avg(SolarRad) avgSol, avg(SolarMax) avgSolMax, avg(WindSpeed) avgWind from RecentData where Timestamp >= ?", dateFrom.ToUniversalTime());
 
 				if (result.Count == 0 || !result[0].avgTemp.HasValue || !result[0].avgHum.HasValue || !result[0].avgPress.HasValue || !result[0].avgSol.HasValue || !result[0].avgSolMax.HasValue || !result[0].avgWind.HasValue)
 				{
@@ -3745,6 +3745,9 @@ namespace CumulusMX
 			if (value.HasValue)
 			{
 				SolarRad = (int)Math.Round((value.Value * cumulus.Calib.Solar.Mult) + cumulus.Calib.Solar.Offset);
+				if (SolarRad < 0)
+					SolarRad = 0;
+
 				dataValuesUpdated.Solar = true;
 
 				if (SolarRad > (HiLoToday.HighSolar ?? Cumulus.DefaultHiVal))
@@ -5507,7 +5510,7 @@ namespace CumulusMX
 		{
 			try
 			{
-				Database.Execute("update RecentData set Pm2p5=?, Pm10=? where Timestamp=?", pm2p5, pm10, ts);
+				Database.Execute("update RecentData set Pm2p5=?, Pm10=? where Timestamp=?", pm2p5, pm10, ts.ToUniversalTime());
 			}
 			catch (Exception ex)
 			{
@@ -5570,7 +5573,7 @@ namespace CumulusMX
 			// Do 3 hour trends
 			try
 			{
-				retVals = Database.Query<RecentData>("select OutsideTemp, Pressure from RecentData where Timestamp >=? order by Timestamp limit 1", ts.AddHours(-3));
+				retVals = Database.Query<RecentData>("select OutsideTemp, Pressure from RecentData where Timestamp >=? order by Timestamp limit 1", ts.AddHours(-3).ToUniversalTime());
 
 				if (retVals.Count != 1)
 				{
@@ -5603,7 +5606,7 @@ namespace CumulusMX
 			// Do 1 hour trends
 			try
 			{
-				retVals = Database.Query<RecentData>("select OutsideTemp, raincounter from RecentData where Timestamp >=? order by Timestamp limit 1", ts.AddHours(-1));
+				retVals = Database.Query<RecentData>("select OutsideTemp, raincounter from RecentData where Timestamp >=? order by Timestamp limit 1", ts.AddHours(-1).ToUniversalTime());
 
 				if (retVals.Count != 1)
 				{
@@ -5684,7 +5687,7 @@ namespace CumulusMX
 				{
 					DateTime fiveminutesago = ts.AddSeconds(-330);
 
-					retVals = Database.Query<RecentData>("select raincounter from RecentData where Timestamp >= ? order by Timestamp limit 1", ts.AddMinutes(-5.5));
+					retVals = Database.Query<RecentData>("select raincounter from RecentData where Timestamp >= ? order by Timestamp limit 1", ts.AddMinutes(-5.5).ToUniversalTime());
 
 					if (retVals.Count != 1 || !retVals[0].raincounter.HasValue || Raincounter < retVals[0].raincounter)
 					{
@@ -5757,7 +5760,7 @@ namespace CumulusMX
 			// calculate and display rainfall in last 24 hour
 			try
 			{
-				retVals = Database.Query<RecentData>("select raincounter from RecentData where Timestamp >= ? order by Timestamp limit 1", ts.AddDays(-1));
+				retVals = Database.Query<RecentData>("select raincounter from RecentData where Timestamp >= ? order by Timestamp limit 1", ts.AddDays(-1).ToUniversalTime());
 
 				if (retVals.Count != 1 || !retVals[0].raincounter.HasValue || Raincounter < retVals[0].raincounter)
 				{
@@ -6207,7 +6210,7 @@ namespace CumulusMX
 			// We can now just query the recent data database as it has been populated from the logs
 			var datefrom = DateTime.Now.AddHours(-24);
 
-			var result = Database.Query<RecentData>("select WindGust, WindDir from RecentData where Timestamp >= ? and WindGust is not null and WindDir is not null order by Timestamp", datefrom);
+			var result = Database.Query<RecentData>("select WindGust, WindDir from RecentData where Timestamp >= ? and WindGust is not null and WindDir is not null order by Timestamp", datefrom.ToUniversalTime());
 
 			foreach (var rec in result)
 			{
@@ -6228,7 +6231,7 @@ namespace CumulusMX
 
 			Cumulus.LogMessage($"LoadLast3Hour: Attempting to load 3 hour data list");
 
-			var result = Database.Query<RecentData>("select * from RecentData where Timestamp >= ? and Timestamp <= ? and WindGust is not null and WindSpeed is not null and WindDir is not null order by Timestamp", datefrom, dateto);
+			var result = Database.Query<RecentData>("select * from RecentData where Timestamp >= ? and Timestamp <= ? and WindGust is not null and WindSpeed is not null and WindDir is not null order by Timestamp", datefrom.ToUniversalTime(), dateto.ToUniversalTime());
 
 			foreach (var rec in result)
 			{

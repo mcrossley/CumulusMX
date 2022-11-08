@@ -1,5 +1,6 @@
 ﻿using Swan;
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -235,6 +236,19 @@ namespace CumulusMX
 			{
 				sb.AppendLine("Stack Trace: " + ex.StackTrace);
 			}
+
+			/*
+			var st = new StackTrace(ex, true);
+			foreach (var frame in st.GetFrames())
+			{
+				if (frame.GetFileLineNumber() < 1)
+					continue;
+
+				sb.Append("File: " + frame.GetFileName());
+				sb.AppendLine("  Linenumber: " + frame.GetFileLineNumber());
+			}
+			*/
+
 			if (ex.InnerException != null)
 			{
 				sb.AppendLine("Inner Exception... ");

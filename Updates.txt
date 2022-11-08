@@ -1,5 +1,21 @@
+4.0.0 - b4014
+——————————————
+Fixed
+- Decryption error on blank APRS password
+- Consistent graph hours across DST changes
+- Line numbering error in DailyData viewer across pages
+- Various potential issues with data timestamps across DST changes
+
+
+Changed
+- Adds wind run to the dashboard Now page
+
+
+
 4.0.0 - b4013
 ——————————————
+Incorporates v3 changes up to b3214
+
 Fixed
 - Ecowitt Local API going into an infinite loop on bad response from device
 - Incorrect SSH.Net library

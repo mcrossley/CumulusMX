@@ -340,12 +340,12 @@ namespace CumulusMX
 					}
 					else
 					{
-						s = dt.ToString(dtformat);
+						s = dt.ToLocalTime().ToString(dtformat);
 					}
 				}
 				catch (Exception)
 				{
-					s = dt.ToString();
+					s = dt.ToLocalTime().ToString();
 				}
 			}
 			return s;
@@ -372,7 +372,7 @@ namespace CumulusMX
 				}
 				else
 				{
-					s = dt.ToString(dtformat);
+					s = dt.ToLocalTime().ToString(dtformat);
 				}
 			}
 			return s;
@@ -3398,7 +3398,7 @@ namespace CumulusMX
 				start = new DateTime(end.Year, end.Month, 1);
 			}
 
-			var val = station.Database.ExecuteScalar<double>("select sum(SunShineHours) from DayData where Timestamp >= ? and Timestamp < ?", start, end);
+			var val = station.Database.ExecuteScalar<double>("select sum(SunShineHours) from DayData where Timestamp >= ? and Timestamp < ?", start.ToUniversalTime(), end.ToUniversalTime());
 			return CheckRcDp(val, tagParams, 1);
 		}
 
@@ -3426,7 +3426,7 @@ namespace CumulusMX
 				start = new DateTime(end.Year, 1, 1);
 			}
 
-			var val = station.Database.ExecuteScalar<double>("select sum(SunShineHours) from DayData where Timestamp >= ? and Timestamp < ?", start, end);
+			var val = station.Database.ExecuteScalar<double>("select sum(SunShineHours) from DayData where Timestamp >= ? and Timestamp < ?", start.ToUniversalTime(), end.ToUniversalTime());
 
 			return CheckRcDp(val, tagParams, 1);
 		}
@@ -3463,7 +3463,7 @@ namespace CumulusMX
 			double val;
 			try
 			{
-				val = station.Database.ExecuteScalar<double>("select ChillHours from DayData where Timestamp = ?", dayb4yest);
+				val = station.Database.ExecuteScalar<double>("select ChillHours from DayData where Timestamp = ?", dayb4yest.ToUniversalTime());
 			}
 			catch
 			{
@@ -5168,7 +5168,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<double>("select OutsideTemp from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<double>("select OutsideTemp from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			if (result.Count == 0)
 				return CheckRcDp(station.Temperature, tagParams, cumulus.TempDPlaces);
@@ -5180,7 +5180,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<double>("select WindSpeed from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<double>("select WindSpeed from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return CheckRcDp(result.Count == 0 ? station.WindAverage : result[0], tagParams, cumulus.WindAvgDPlaces);
 		}
@@ -5189,7 +5189,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<double>("select WindGust from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<double>("select WindGust from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return CheckRcDp(result.Count == 0 ? station.RecentMaxGust : result[0], tagParams, cumulus.WindDPlaces);
 		}
@@ -5198,7 +5198,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<double>("select WindLatest from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<double>("select WindLatest from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return CheckRcDp(result.Count == 0 ? station.WindLatest : result[0], tagParams, cumulus.WindDPlaces);
 		}
@@ -5207,7 +5207,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<int>("select WindDir from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<int>("select WindDir from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return result.Count == 0 ? station.Bearing.ToString() : result[0].ToString();
 		}
@@ -5216,7 +5216,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<int>("select WindAvgDir from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<int>("select WindAvgDir from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return result.Count != 0 ? result[0].ToString() : station.AvgBearing.ToString();
 		}
@@ -5225,7 +5225,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<double>("select WindChill from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<double>("select WindChill from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return CheckRcDp(result.Count == 0 ? station.WindChill : result[0], tagParams, cumulus.TempDPlaces);
 		}
@@ -5234,7 +5234,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<double>("select DewPoint from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<double>("select DewPoint from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return CheckRcDp(result.Count == 0 ? station.Dewpoint : result[0], tagParams, cumulus.TempDPlaces);
 		}
@@ -5243,7 +5243,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<double>("select HeatIndex from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<double>("select HeatIndex from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return CheckRcDp(result.Count == 0 ? station.HeatIndex : result[0], tagParams, cumulus.TempDPlaces);
 		}
@@ -5252,7 +5252,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<double>("select FeelsLike from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<double>("select FeelsLike from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return CheckRcDp(result.Count == 0 ? station.FeelsLike : result[0], tagParams, cumulus.TempDPlaces);
 		}
@@ -5261,7 +5261,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<double>("select Humidex from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<double>("select Humidex from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return CheckRcDp(result.Count == 0 ? station.Humidex : result[0], tagParams, cumulus.TempDPlaces);
 		}
@@ -5270,7 +5270,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<int>("select Humidity from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<int>("select Humidity from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			if (result.Count == 0)
 				return station.Humidity.HasValue ? station.Humidity.Value.ToString() : "-";
@@ -5283,7 +5283,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<double>("select Pressure from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<double>("select Pressure from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return CheckRcDp(result.Count == 0 ? station.Pressure : result[0], tagParams, cumulus.PressDPlaces);
 		}
@@ -5292,7 +5292,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<double>("select RainToday from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<double>("select RainToday from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return CheckRcDp(result.Count == 0 ? station.RainToday : result[0], tagParams, cumulus.RainDPlaces);
 		}
@@ -5301,7 +5301,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<int>("select SolarRad from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<int>("select SolarRad from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			if (result.Count == 0 && station.SolarRad.HasValue)
 				return station.SolarRad.Value.ToString();
@@ -5313,7 +5313,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<double>("select UV from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<double>("select UV from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return CheckRcDp(result.Count == 0 ? station.UV : result[0], tagParams, cumulus.UVDPlaces);
 		}
@@ -5322,7 +5322,7 @@ namespace CumulusMX
 		{
 			var recentTs = GetRecentTs(tagParams);
 
-			var result = station.Database.QueryScalars<DateTime>("select Timestamp from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs);
+			var result = station.Database.QueryScalars<DateTime>("select Timestamp from RecentData where Timestamp >= ? order by Timestamp limit 1", recentTs.ToUniversalTime());
 
 			return GetFormattedDateTime(result.Count == 0 ? DateTime.Now : result[0], tagParams);
 		}

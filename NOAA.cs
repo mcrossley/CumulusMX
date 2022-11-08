@@ -132,7 +132,7 @@ namespace CumulusMX
 			var end = start.AddMonths(1);
 			try
 			{
-				var rows = station.Database.Query<DbWindAvgDir>("select WindAvg, WindAvgDir from IntervalData where Timestamp >= ? and Timestamp < ?", start, end);
+				var rows = station.Database.Query<DbWindAvgDir>("select WindAvg, WindAvgDir from IntervalData where Timestamp >= ? and Timestamp < ?", start.ToUniversalTime(), end.ToUniversalTime());
 
 				windsamples = 0;
 
@@ -236,13 +236,13 @@ namespace CumulusMX
 
 			try
 			{
-				var fromDate = thedate.ToDateTime(new TimeOnly());
-				var toDate = fromDate.AddMonths(1);
-				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", fromDate, toDate);
+				var fromDate = DateTime.SpecifyKind(thedate.ToDateTime(new TimeOnly()), DateTimeKind.Local);
+				var toDate = DateTime.SpecifyKind(fromDate.AddMonths(1), DateTimeKind.Local);
+				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", fromDate.ToUniversalTime(), toDate.ToUniversalTime());
 
 				foreach (var row in rows)
 				{
-					int daynumber = row.Timestamp.Day;
+					int daynumber = row.Timestamp.ToLocalTime().Day;
 
 					// max temp
 					dayList[daynumber].maxtemp = row.HighTemp.HasValue ? row.HighTemp.Value : -999;
@@ -638,17 +638,17 @@ namespace CumulusMX
 			//int windsamples = 0;
 			//double totalwindspeed = 0;
 
-			var start = thedate.AddHours(cumulus.GetHourInc(thedate));
-			var end = thedate.AddDays(1);
+			var start = DateTime.SpecifyKind(thedate.AddHours(cumulus.GetHourInc(thedate)), DateTimeKind.Local);
+			var end = DateTime.SpecifyKind(thedate.AddDays(1), DateTimeKind.Local);
 			end = end.AddHours(cumulus.GetHourInc(end));
 
 			try
 			{
-				var rows = station.Database.Query<DbTimeWindAvgDir>("select Timestamp, WindAvg, WindAvgDir from IntervalData where Timestamp >= ? and Timestamp < ?", start, end);
+				var rows = station.Database.Query<DbTimeWindAvgDir>("select Timestamp, WindAvg, WindAvgDir from IntervalData where Timestamp >= ? and Timestamp < ?", start.ToUniversalTime(), end.ToUniversalTime());
 
 				foreach (var row in rows)
 				{
-					var entrydate = row.Timestamp.AddHours(cumulus.GetHourInc(row.Timestamp));
+					var entrydate = row.Timestamp.ToLocalTime().AddHours(cumulus.GetHourInc(row.Timestamp));
 
 					daynumber = entrydate.Day;
 
@@ -760,13 +760,13 @@ namespace CumulusMX
 			string rowDateTime = "";
 			try
 			{
-				var fromDate = thedate.ToDateTime(new TimeOnly());
-				var toDate = fromDate.AddYears(1);
-				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ?", fromDate, toDate);
+				var fromDate = DateTime.SpecifyKind(thedate.ToDateTime(new TimeOnly()), DateTimeKind.Local);
+				var toDate = DateTime.SpecifyKind(fromDate.AddYears(1), DateTimeKind.Local);
+				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ?", fromDate.ToUniversalTime(), toDate.ToUniversalTime());
 
 				foreach (var row in rows)
 				{
-					rowDateTime = row.Timestamp.ToString("yyyy/MM/dd HH:mm");
+					rowDateTime = row.Timestamp.ToLocalTime().ToString("yyyy/MM/dd HH:mm");
 					var day = row.Timestamp.Day;
 					month = row.Timestamp.Month;
 					double meantemp = -999.0;

@@ -3983,7 +3983,7 @@ namespace CumulusMX
 			WOW.CatchUp = ini.GetValue("WOW", "CatchUp", false);
 
 			APRS.ID = ini.GetValue("APRS", "ID", "");
-			APRS.PW = ini.GetValue("APRS", "pass", "-1");
+			APRS.PW = ini.GetValue("APRS", "pass", "");
 			APRS.Server = ini.GetValue("APRS", "server", "cwop.aprs.net");
 			APRS.Port = ini.GetValue("APRS", "port", 14580);
 			APRS.Enabled = ini.GetValue("APRS", "Enabled", false);
@@ -4651,33 +4651,31 @@ namespace CumulusMX
 			// do we need to decrypt creds?
 			if (ProgramOptions.EncryptedCreds)
 			{
-				WllApiKey = Crypto.DecryptString(WllApiKey, Program.InstanceId);
-				WllApiSecret = Crypto.DecryptString(WllApiSecret, Program.InstanceId);
-				AirLinkApiKey = Crypto.DecryptString(AirLinkApiKey, Program.InstanceId);
-				AirLinkApiSecret = Crypto.DecryptString(AirLinkApiSecret, Program.InstanceId);
-				FtpOptions.Username = Crypto.DecryptString(FtpOptions.Username, Program.InstanceId);
-				FtpOptions.Password = Crypto.DecryptString(FtpOptions.Password, Program.InstanceId);
-				Wund.PW = Crypto.DecryptString(Wund.PW, Program.InstanceId);
-				Windy.ApiKey = Crypto.DecryptString(Windy.ApiKey, Program.InstanceId);
-				AWEKAS.PW = Crypto.DecryptString(AWEKAS.PW, Program.InstanceId);
-				WindGuru.PW = Crypto.DecryptString(WindGuru.PW, Program.InstanceId);
-				WCloud.PW = Crypto.DecryptString(WCloud.PW, Program.InstanceId);
-				//Twitter.PW = Crypto.DecryptString(Twitter.PW);
-				//Twitter.OauthTokenSecret =Crypto.DecryptString(Twitter.OauthTokenSecret);
-				PWS.PW = Crypto.DecryptString(PWS.PW, Program.InstanceId);
-				WOW.PW = Crypto.DecryptString(WOW.PW, Program.InstanceId);
-				APRS.PW = Crypto.DecryptString(APRS.PW, Program.InstanceId);
-				OpenWeatherMap.PW = Crypto.DecryptString(OpenWeatherMap.PW, Program.InstanceId);
-				MQTT.Username = Crypto.DecryptString(MQTT.Username, Program.InstanceId);
-				MQTT.Password = Crypto.DecryptString(MQTT.Password, Program.InstanceId);
-				MySqlStuff.ConnSettings.UserID = Crypto.DecryptString(MySqlStuff.ConnSettings.UserID, Program.InstanceId);
-				MySqlStuff.ConnSettings.Password = Crypto.DecryptString(MySqlStuff.ConnSettings.Password, Program.InstanceId);
-				SmtpOptions.User = Crypto.DecryptString(SmtpOptions.User, Program.InstanceId);
-				SmtpOptions.Password = Crypto.DecryptString(SmtpOptions.Password, Program.InstanceId);
-				HTTPProxyUser = Crypto.DecryptString(HTTPProxyUser, Program.InstanceId);
-				HTTPProxyPassword = Crypto.DecryptString(HTTPProxyPassword, Program.InstanceId);
-				EcowittSettings.AppKey = Crypto.DecryptString(EcowittSettings.AppKey, Program.InstanceId);
-				EcowittSettings.UserApiKey = Crypto.DecryptString(EcowittSettings.UserApiKey, Program.InstanceId);
+				WllApiKey = Crypto.DecryptString(WllApiKey, Program.InstanceId, "WllApiKey");
+				WllApiSecret = Crypto.DecryptString(WllApiSecret, Program.InstanceId, "WllApiSecret");
+				AirLinkApiKey = Crypto.DecryptString(AirLinkApiKey, Program.InstanceId, "AirLinkApiKey");
+				AirLinkApiSecret = Crypto.DecryptString(AirLinkApiSecret, Program.InstanceId, "AirLinkApiSecret");
+				FtpOptions.Username = Crypto.DecryptString(FtpOptions.Username, Program.InstanceId, "FtpOptions.Username");
+				FtpOptions.Password = Crypto.DecryptString(FtpOptions.Password, Program.InstanceId, "FtpOptions.Password");
+				Wund.PW = Crypto.DecryptString(Wund.PW, Program.InstanceId, "Wund.PW");
+				Windy.ApiKey = Crypto.DecryptString(Windy.ApiKey, Program.InstanceId, "Windy.ApiKey");
+				AWEKAS.PW = Crypto.DecryptString(AWEKAS.PW, Program.InstanceId, "AWEKAS.PW");
+				WindGuru.PW = Crypto.DecryptString(WindGuru.PW, Program.InstanceId, "WindGuru.PW");
+				WCloud.PW = Crypto.DecryptString(WCloud.PW, Program.InstanceId, "WCloud.PW");
+				PWS.PW = Crypto.DecryptString(PWS.PW, Program.InstanceId, "PWS.PW");
+				WOW.PW = Crypto.DecryptString(WOW.PW, Program.InstanceId, "WOW.PW");
+				APRS.PW = Crypto.DecryptString(APRS.PW, Program.InstanceId, "APRS.PW");
+				OpenWeatherMap.PW = Crypto.DecryptString(OpenWeatherMap.PW, Program.InstanceId, "OpenWeatherMap.PW");
+				MQTT.Username = Crypto.DecryptString(MQTT.Username, Program.InstanceId, "MQTT.Username");
+				MQTT.Password = Crypto.DecryptString(MQTT.Password, Program.InstanceId, "MQTT.Password");
+				MySqlStuff.ConnSettings.UserID = Crypto.DecryptString(MySqlStuff.ConnSettings.UserID, Program.InstanceId, "MySql UserID");
+				MySqlStuff.ConnSettings.Password = Crypto.DecryptString(MySqlStuff.ConnSettings.Password, Program.InstanceId, "MySql Password");
+				SmtpOptions.User = Crypto.DecryptString(SmtpOptions.User, Program.InstanceId, "SmtpOptions.User");
+				SmtpOptions.Password = Crypto.DecryptString(SmtpOptions.Password, Program.InstanceId, "SmtpOptions.Password");
+				HTTPProxyUser = Crypto.DecryptString(HTTPProxyUser, Program.InstanceId, "HTTPProxyUser");
+				HTTPProxyPassword = Crypto.DecryptString(HTTPProxyPassword, Program.InstanceId, "HTTPProxyPassword");
+				EcowittSettings.AppKey = Crypto.DecryptString(EcowittSettings.AppKey, Program.InstanceId, "EcowittSettings.AppKey");
+				EcowittSettings.UserApiKey = Crypto.DecryptString(EcowittSettings.UserApiKey, Program.InstanceId, "EcowittSettings.UserApiKey");
 			}
 			else
 			{
@@ -4710,7 +4708,7 @@ namespace CumulusMX
 
 			ini.SetValue("Program", "StartupDelaySecs", ProgramOptions.StartupDelaySecs);
 			ini.SetValue("Program", "StartupDelayMaxUptime", ProgramOptions.StartupDelayMaxUptime);
-			
+
 			ini.SetValue("Program", "DataStoppedExit", ProgramOptions.DataStoppedExit);
 			ini.SetValue("Program", "DataStoppedMins", ProgramOptions.DataStoppedMins);
 
@@ -4877,8 +4875,8 @@ namespace CumulusMX
 
 			// WeatherLink Live device settings
 			ini.SetValue("WLL", "AutoUpdateIpAddress", WLLAutoUpdateIpAddress);
-			ini.SetValue("WLL", "WLv2ApiKey", Crypto.EncryptString(WllApiKey, Program.InstanceId));
-			ini.SetValue("WLL", "WLv2ApiSecret", Crypto.EncryptString(WllApiSecret, Program.InstanceId));
+			ini.SetValue("WLL", "WLv2ApiKey", Crypto.EncryptString(WllApiKey, Program.InstanceId, "WllApiKey"));
+			ini.SetValue("WLL", "WLv2ApiSecret", Crypto.EncryptString(WllApiSecret, Program.InstanceId, "WllApiSecret"));
 			ini.SetValue("WLL", "WLStationId", WllStationId);
 			ini.SetValue("WLL", "PrimaryRainTxId", WllPrimaryRain);
 			ini.SetValue("WLL", "PrimaryTempHumTxId", WllPrimaryTempHum);
@@ -4939,8 +4937,8 @@ namespace CumulusMX
 			ini.SetValue("GW1000", "EcowittExtraLocalAddr", EcowittSettings.ExtraLocalAddr);
 			ini.SetValue("GW1000", "EcowittExtraCustomInterval", EcowittSettings.ExtraCustomInterval);
 			// api
-			ini.SetValue("GW1000", "EcowittAppKey", Crypto.EncryptString(EcowittSettings.AppKey, Program.InstanceId));
-			ini.SetValue("GW1000", "EcowittUserKey", Crypto.EncryptString(EcowittSettings.UserApiKey, Program.InstanceId));
+			ini.SetValue("GW1000", "EcowittAppKey", Crypto.EncryptString(EcowittSettings.AppKey, Program.InstanceId, "EcowittSettings.AppKey"));
+			ini.SetValue("GW1000", "EcowittUserKey", Crypto.EncryptString(EcowittSettings.UserApiKey, Program.InstanceId, "EcowittSettings.UserApiKey"));
 			ini.SetValue("GW1000", "EcowittMacAddress", EcowittSettings.MacAddress);
 			// WN34 sensor mapping
 			for (int i = 1; i <= 8; i++)
@@ -4964,8 +4962,8 @@ namespace CumulusMX
 
 			// AirLink settings
 			ini.SetValue("AirLink", "IsWllNode", AirLinkIsNode);
-			ini.SetValue("AirLink", "WLv2ApiKey", Crypto.EncryptString(AirLinkApiKey, Program.InstanceId));
-			ini.SetValue("AirLink", "WLv2ApiSecret", Crypto.EncryptString(AirLinkApiSecret, Program.InstanceId));
+			ini.SetValue("AirLink", "WLv2ApiKey", Crypto.EncryptString(AirLinkApiKey, Program.InstanceId, "AirLinkApiKey"));
+			ini.SetValue("AirLink", "WLv2ApiSecret", Crypto.EncryptString(AirLinkApiSecret, Program.InstanceId, "AirLinkApiSecret"));
 			ini.SetValue("AirLink", "AutoUpdateIpAddress", AirLinkAutoUpdateIpAddress);
 			ini.SetValue("AirLink", "In-Enabled", AirLinkInEnabled);
 			ini.SetValue("AirLink", "In-IPAddress", AirLinkInIPAddr);
@@ -4984,8 +4982,8 @@ namespace CumulusMX
 			ini.SetValue("FTP site", "Enabled", FtpOptions.Enabled);
 			ini.SetValue("FTP site", "Host", FtpOptions.Hostname);
 			ini.SetValue("FTP site", "Port", FtpOptions.Port);
-			ini.SetValue("FTP site", "Username", Crypto.EncryptString(FtpOptions.Username, Program.InstanceId));
-			ini.SetValue("FTP site", "Password", Crypto.EncryptString(FtpOptions.Password, Program.InstanceId));
+			ini.SetValue("FTP site", "Username", Crypto.EncryptString(FtpOptions.Username, Program.InstanceId, "FtpOptions.Username"));
+			ini.SetValue("FTP site", "Password", Crypto.EncryptString(FtpOptions.Password, Program.InstanceId, "FtpOptions.Password"));
 			ini.SetValue("FTP site", "Directory", FtpOptions.Directory);
 
 			//ini.SetValue("FTP site", "AutoUpdate", WebAutoUpdate);  // Deprecated - now read-only
@@ -5094,7 +5092,7 @@ namespace CumulusMX
 			ini.SetValue("Station", "CloudBaseInFeet", CloudBaseInFeet);
 
 			ini.SetValue("Wunderground", "ID", Wund.ID);
-			ini.SetValue("Wunderground", "Password", Crypto.EncryptString(Wund.PW, Program.InstanceId));
+			ini.SetValue("Wunderground", "Password", Crypto.EncryptString(Wund.PW, Program.InstanceId, "Wund.PW"));
 			ini.SetValue("Wunderground", "Enabled", Wund.Enabled);
 			ini.SetValue("Wunderground", "RapidFire", Wund.RapidFireEnabled);
 			ini.SetValue("Wunderground", "Interval", Wund.Interval);
@@ -5115,7 +5113,7 @@ namespace CumulusMX
 			ini.SetValue("Wunderground", "SendLeafWetness2", Wund.SendLeafWetness2);
 			ini.SetValue("Wunderground", "SendAirQuality", Wund.SendAirQuality);
 
-			ini.SetValue("Windy", "APIkey", Crypto.EncryptString(Windy.ApiKey, Program.InstanceId));
+			ini.SetValue("Windy", "APIkey", Crypto.EncryptString(Windy.ApiKey, Program.InstanceId, "Windy.ApiKey"));
 			ini.SetValue("Windy", "StationIdx", Windy.StationIdx);
 			ini.SetValue("Windy", "Enabled", Windy.Enabled);
 			ini.SetValue("Windy", "Interval", Windy.Interval);
@@ -5123,7 +5121,7 @@ namespace CumulusMX
 			ini.SetValue("Windy", "CatchUp", Windy.CatchUp);
 
 			ini.SetValue("Awekas", "User", AWEKAS.ID);
-			ini.SetValue("Awekas", "Password", Crypto.EncryptString(AWEKAS.PW, Program.InstanceId));
+			ini.SetValue("Awekas", "Password", Crypto.EncryptString(AWEKAS.PW, Program.InstanceId, "AWEKAS.PW"));
 			ini.SetValue("Awekas", "Language", AWEKAS.Lang);
 			ini.SetValue("Awekas", "Enabled", AWEKAS.Enabled);
 			ini.SetValue("Awekas", "Interval", AWEKAS.Interval);
@@ -5136,7 +5134,7 @@ namespace CumulusMX
 			ini.SetValue("Awekas", "SendAirQuality", AWEKAS.SendAirQuality);
 
 			ini.SetValue("WeatherCloud", "Wid", WCloud.ID);
-			ini.SetValue("WeatherCloud", "Key", Crypto.EncryptString(WCloud.PW, Program.InstanceId));
+			ini.SetValue("WeatherCloud", "Key", Crypto.EncryptString(WCloud.PW, Program.InstanceId, "WCloud.PW"));
 			ini.SetValue("WeatherCloud", "Enabled", WCloud.Enabled);
 			ini.SetValue("WeatherCloud", "Interval", WCloud.Interval);
 			ini.SetValue("WeatherCloud", "SendUV", WCloud.SendUV);
@@ -5156,7 +5154,7 @@ namespace CumulusMX
 			//ini.SetValue("Twitter", "TwitterSendLocation", Twitter.SendLocation);
 
 			ini.SetValue("PWSweather", "ID", PWS.ID);
-			ini.SetValue("PWSweather", "Password", Crypto.EncryptString(PWS.PW, Program.InstanceId));
+			ini.SetValue("PWSweather", "Password", Crypto.EncryptString(PWS.PW, Program.InstanceId, "PWS.PW"));
 			ini.SetValue("PWSweather", "Enabled", PWS.Enabled);
 			ini.SetValue("PWSweather", "Interval", PWS.Interval);
 			ini.SetValue("PWSweather", "SendUV", PWS.SendUV);
@@ -5164,7 +5162,7 @@ namespace CumulusMX
 			ini.SetValue("PWSweather", "CatchUp", PWS.CatchUp);
 
 			ini.SetValue("WOW", "ID", WOW.ID);
-			ini.SetValue("WOW", "Password", Crypto.EncryptString(WOW.PW, Program.InstanceId));
+			ini.SetValue("WOW", "Password", Crypto.EncryptString(WOW.PW, Program.InstanceId, "WOW.PW"));
 			ini.SetValue("WOW", "Enabled", WOW.Enabled);
 			ini.SetValue("WOW", "Interval", WOW.Interval);
 			ini.SetValue("WOW", "SendUV", WOW.SendUV);
@@ -5174,7 +5172,7 @@ namespace CumulusMX
 			ini.SetValue("WOW", "CatchUp", WOW.CatchUp);
 
 			ini.SetValue("APRS", "ID", APRS.ID);
-			ini.SetValue("APRS", "pass", Crypto.EncryptString(APRS.PW, Program.InstanceId));
+			ini.SetValue("APRS", "pass", Crypto.EncryptString(APRS.PW, Program.InstanceId, "APRS.PW"));
 			ini.SetValue("APRS", "server", APRS.Server);
 			ini.SetValue("APRS", "port", APRS.Port);
 			ini.SetValue("APRS", "Enabled", APRS.Enabled);
@@ -5184,21 +5182,21 @@ namespace CumulusMX
 
 			ini.SetValue("OpenWeatherMap", "Enabled", OpenWeatherMap.Enabled);
 			ini.SetValue("OpenWeatherMap", "CatchUp", OpenWeatherMap.CatchUp);
-			ini.SetValue("OpenWeatherMap", "APIkey", Crypto.EncryptString(OpenWeatherMap.PW, Program.InstanceId));
+			ini.SetValue("OpenWeatherMap", "APIkey", Crypto.EncryptString(OpenWeatherMap.PW, Program.InstanceId, "OpenWeatherMap.PW"));
 			ini.SetValue("OpenWeatherMap", "StationId", OpenWeatherMap.ID);
 			ini.SetValue("OpenWeatherMap", "Interval", OpenWeatherMap.Interval);
 
 			ini.SetValue("WindGuru", "Enabled", WindGuru.Enabled);
 			ini.SetValue("WindGuru", "StationUID", WindGuru.ID);
-			ini.SetValue("WindGuru", "Password", Crypto.EncryptString(WindGuru.PW, Program.InstanceId));
+			ini.SetValue("WindGuru", "Password", Crypto.EncryptString(WindGuru.PW, Program.InstanceId, "WindGuru.PW"));
 			ini.SetValue("WindGuru", "Interval", WindGuru.Interval);
 			ini.SetValue("WindGuru", "SendRain", WindGuru.SendRain);
 
 			ini.SetValue("MQTT", "Server", MQTT.Server);
 			ini.SetValue("MQTT", "Port", MQTT.Port);
 			ini.SetValue("MQTT", "UseTLS", MQTT.UseTLS);
-			ini.SetValue("MQTT", "Username", Crypto.EncryptString(MQTT.Username, Program.InstanceId));
-			ini.SetValue("MQTT", "Password", Crypto.EncryptString(MQTT.Password, Program.InstanceId));
+			ini.SetValue("MQTT", "Username", Crypto.EncryptString(MQTT.Username, Program.InstanceId, "MQTT.Username,"));
+			ini.SetValue("MQTT", "Password", Crypto.EncryptString(MQTT.Password, Program.InstanceId, "MQTT.Password"));
 			ini.SetValue("MQTT", "EnableDataUpdate", MQTT.EnableDataUpdate);
 			ini.SetValue("MQTT", "UpdateTemplate", MQTT.UpdateTemplate);
 			ini.SetValue("MQTT", "EnableInterval", MQTT.EnableInterval);
@@ -5503,8 +5501,8 @@ namespace CumulusMX
 
 			ini.SetValue("Proxies", "HTTPProxyName", HTTPProxyName);
 			ini.SetValue("Proxies", "HTTPProxyPort", HTTPProxyPort);
-			ini.SetValue("Proxies", "HTTPProxyUser", Crypto.EncryptString(HTTPProxyUser, Program.InstanceId));
-			ini.SetValue("Proxies", "HTTPProxyPassword", Crypto.EncryptString(HTTPProxyPassword, Program.InstanceId));
+			ini.SetValue("Proxies", "HTTPProxyUser", Crypto.EncryptString(HTTPProxyUser, Program.InstanceId, "HTTPProxyUser"));
+			ini.SetValue("Proxies", "HTTPProxyPassword", Crypto.EncryptString(HTTPProxyPassword, Program.InstanceId, "HTTPProxyPassword"));
 
 			ini.SetValue("Display", "NumWindRosePoints", NumWindRosePoints);
 			ini.SetValue("Display", "UseApparent", DisplayOptions.UseApparent);
@@ -5543,8 +5541,8 @@ namespace CumulusMX
 
 			ini.SetValue("MySQL", "Host", MySqlStuff.ConnSettings.Server);
 			ini.SetValue("MySQL", "Port", (int) MySqlStuff.ConnSettings.Port);
-			ini.SetValue("MySQL", "User", Crypto.EncryptString(MySqlStuff.ConnSettings.UserID, Program.InstanceId));
-			ini.SetValue("MySQL", "Pass", Crypto.EncryptString(MySqlStuff.ConnSettings.Password, Program.InstanceId));
+			ini.SetValue("MySQL", "User", Crypto.EncryptString(MySqlStuff.ConnSettings.UserID, Program.InstanceId, "MySql UserID"));
+			ini.SetValue("MySQL", "Pass", Crypto.EncryptString(MySqlStuff.ConnSettings.Password, Program.InstanceId, "MySql Password"));
 			ini.SetValue("MySQL", "Database", MySqlStuff.ConnSettings.Database);
 			ini.SetValue("MySQL", "MonthlyMySqlEnabled", MySqlStuff.Settings.Monthly.Enabled);
 			ini.SetValue("MySQL", "RealtimeMySqlEnabled", MySqlStuff.Settings.Realtime.Enabled);
@@ -5630,8 +5628,8 @@ namespace CumulusMX
 			ini.SetValue("SMTP", "Port", SmtpOptions.Port);
 			ini.SetValue("SMTP", "SSLOption", SmtpOptions.SslOption);
 			ini.SetValue("SMTP", "RequiresAuthentication", SmtpOptions.RequiresAuthentication);
-			ini.SetValue("SMTP", "User", Crypto.EncryptString(SmtpOptions.User, Program.InstanceId));
-			ini.SetValue("SMTP", "Password", Crypto.EncryptString(SmtpOptions.Password, Program.InstanceId));
+			ini.SetValue("SMTP", "User", Crypto.EncryptString(SmtpOptions.User, Program.InstanceId, "SmtpOptions.User"));
+			ini.SetValue("SMTP", "Password", Crypto.EncryptString(SmtpOptions.Password, Program.InstanceId, "SmtpOptions.Password"));
 			ini.SetValue("SMTP", "Logging", SmtpOptions.Logging);
 			ini.SetValue("SMTP", "IgnoreCertErrors", SmtpOptions.IgnoreCertErrors);
 

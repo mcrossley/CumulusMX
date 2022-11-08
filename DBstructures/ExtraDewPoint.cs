@@ -30,7 +30,7 @@ namespace CumulusMX
 			var sep = ',';
 
 			var sb = new StringBuilder(350);
-			sb.Append(Timestamp.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Timestamp.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
 			sb.Append(Utils.ToUnixTime(Timestamp)).Append(sep);
 			sb.Append(DewPoint1.HasValue ? DewPoint1.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
 			sb.Append(sep);

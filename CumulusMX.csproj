@@ -6,8 +6,8 @@
     <StartupObject>CumulusMX.Program</StartupObject>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <NoWin32Manifest>true</NoWin32Manifest>
-    <AssemblyVersion>4.0.0.4013</AssemblyVersion>
-    <FileVersion>4.0.0.4013</FileVersion>
+    <AssemblyVersion>4.0.0.4014</AssemblyVersion>
+    <FileVersion>4.0.0.4014</FileVersion>
     <PackageIcon>icon.ico</PackageIcon>
     <PackageIconUrl />
     <UserSecretsId>06d97cbf-708b-41a7-b6fa-82bb67d5da0c</UserSecretsId>
@@ -45,8 +45,8 @@
 
   <ItemGroup>
     <PackageReference Include="Core.System.Configuration.Install" Version="1.1.0" />
-    <PackageReference Include="EmbedIO" Version="3.5.0" />
-    <PackageReference Include="FluentFTP" Version="42.0.0" />
+    <PackageReference Include="EmbedIO" Version="3.5.2" />
+    <PackageReference Include="FluentFTP" Version="42.0.1" />
     <PackageReference Include="HidSharp" Version="2.1.0" />
     <PackageReference Include="MailKit" Version="3.4.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />

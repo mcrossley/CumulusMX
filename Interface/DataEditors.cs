@@ -56,8 +56,6 @@ namespace CumulusMX
 				{
 					var text = row.ToCSV();
 
-					lineNum++;
-
 					// if we have a search string and no match, skip to next line
 					if (!string.IsNullOrEmpty(search) && !text.Contains(search))
 					{
@@ -71,6 +69,8 @@ namespace CumulusMX
 					{
 						continue;
 					}
+
+					lineNum++;
 
 					// only send the number requested
 					if (thisDraw < length)
@@ -348,8 +348,8 @@ namespace CumulusMX
 				var thisDraw = 0;  // count of the rows we are returning
 
 				// Get a time stamp, use 15th day to avoid wrap issues
-				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
-				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]), 0, 0, 0, DateTimeKind.Local);
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]), 0, 0, 0, DateTimeKind.Local);
 				ts1 = ts1.AddDays(1);
 
 				if (ts > ts1)
@@ -360,7 +360,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ? order by Timestamp", ts.ToUniversalTime(), ts1.ToUniversalTime());
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -710,8 +710,8 @@ namespace CumulusMX
 				var thisDraw = 0;  // count of the rows we are returning
 
 				// Get a time stamp, use 15th day to avoid wrap issues
-				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
-				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]), 0, 0, 0, DateTimeKind.Local);
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]), 0, 0, 0, DateTimeKind.Local);
 				ts1 = ts1.AddDays(1);
 
 				if (ts > ts1)
@@ -722,7 +722,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = station.Database.Query<ExtraTemp>("select * from ExtraTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<ExtraTemp>("select * from ExtraTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts.ToUniversalTime(), ts1.ToUniversalTime());
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -1005,8 +1005,8 @@ namespace CumulusMX
 				var thisDraw = 0;  // count of the rows we are returning
 
 				// Get a time stamp, use 15th day to avoid wrap issues
-				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
-				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]), 0, 0, 0, DateTimeKind.Local);
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]), 0, 0, 0, DateTimeKind.Local);
 				ts1 = ts1.AddDays(1);
 
 				if (ts > ts1)
@@ -1017,7 +1017,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = station.Database.Query<ExtraHum>("select * from ExtraHum where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<ExtraHum>("select * from ExtraHum where Timestamp >= ? and Timestamp < ? order by Timestamp", ts.ToUniversalTime(), ts1.ToUniversalTime());
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -1296,8 +1296,8 @@ namespace CumulusMX
 				var thisDraw = 0;  // count of the rows we are returning
 
 				// Get a time stamp, use 15th day to avoid wrap issues
-				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
-				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]), 0, 0, 0, DateTimeKind.Local);
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]), 0, 0, 0, DateTimeKind.Local);
 				ts1 = ts1.AddDays(1);
 
 				if (ts > ts1)
@@ -1308,7 +1308,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = station.Database.Query<ExtraDewPoint>("select * from ExtraDewPoint where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<ExtraDewPoint>("select * from ExtraDewPoint where Timestamp >= ? and Timestamp < ? order by Timestamp", ts.ToUniversalTime(), ts1.ToUniversalTime());
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -1585,8 +1585,8 @@ namespace CumulusMX
 				var thisDraw = 0;  // count of the rows we are returning
 
 				// Get a time stamp, use 15th day to avoid wrap issues
-				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
-				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]), 0, 0, 0, DateTimeKind.Local);
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]), 0, 0, 0, DateTimeKind.Local);
 				ts1 = ts1.AddDays(1);
 
 				if (ts > ts1)
@@ -1597,7 +1597,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = station.Database.Query<UserTemp>("select * from UserTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<UserTemp>("select * from UserTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts.ToUniversalTime(), ts1.ToUniversalTime());
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -1874,8 +1874,8 @@ namespace CumulusMX
 				var thisDraw = 0;  // count of the rows we are returning
 
 				// Get a time stamp, use 15th day to avoid wrap issues
-				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
-				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]),	0, 0, 0, DateTimeKind.Local);
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]), 0, 0, 0, DateTimeKind.Local);
 				ts1 = ts1.AddDays(1);
 
 				if (ts > ts1)
@@ -1886,7 +1886,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = station.Database.Query<SoilTemp>("select * from SoilTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<SoilTemp>("select * from SoilTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts.ToUniversalTime(), ts1.ToUniversalTime());
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -2164,8 +2164,8 @@ namespace CumulusMX
 				var thisDraw = 0;  // count of the rows we are returning
 
 				// Get a time stamp, use 15th day to avoid wrap issues
-				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
-				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]), 0, 0, 0, DateTimeKind.Local);
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]), 0, 0, 0, DateTimeKind.Local);
 				ts1 = ts1.AddDays(1);
 
 				if (ts > ts1)
@@ -2176,7 +2176,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = station.Database.Query<SoilMoist>("select * from SoilMoist where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<SoilMoist>("select * from SoilMoist where Timestamp >= ? and Timestamp < ? order by Timestamp", ts.ToUniversalTime(), ts1.ToUniversalTime());
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -2454,8 +2454,8 @@ namespace CumulusMX
 				var thisDraw = 0;  // count of the rows we are returning
 
 				// Get a time stamp, use 15th day to avoid wrap issues
-				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
-				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]), 0, 0, 0, DateTimeKind.Local);
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]), 0, 0, 0, DateTimeKind.Local);
 				ts1 = ts1.AddDays(1);
 
 				if (ts > ts1)
@@ -2466,7 +2466,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = station.Database.Query<LeafTemp>("select * from LeafTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<LeafTemp>("select * from LeafTemp where Timestamp >= ? and Timestamp < ? order by Timestamp", ts.ToUniversalTime(), ts1.ToUniversalTime());
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -2744,8 +2744,8 @@ namespace CumulusMX
 				var thisDraw = 0;  // count of the rows we are returning
 
 				// Get a time stamp, use 15th day to avoid wrap issues
-				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
-				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]), 0, 0, 0, DateTimeKind.Local);
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]), 0, 0, 0, DateTimeKind.Local);
 				ts1 = ts1.AddDays(1);
 
 				if (ts > ts1)
@@ -2756,7 +2756,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = station.Database.Query<LeafWet>("select * from LeafWet where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<LeafWet>("select * from LeafWet where Timestamp >= ? and Timestamp < ? order by Timestamp", ts.ToUniversalTime(), ts1.ToUniversalTime());
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -3034,8 +3034,8 @@ namespace CumulusMX
 				var thisDraw = 0;  // count of the rows we are returning
 
 				// Get a time stamp, use 15th day to avoid wrap issues
-				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
-				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]), 0, 0, 0, DateTimeKind.Local);
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]), 0, 0, 0, DateTimeKind.Local);
 				ts1 = ts1.AddDays(1);
 
 				if (ts > ts1)
@@ -3046,7 +3046,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = station.Database.Query<AirQuality>("select * from AirQuality where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<AirQuality>("select * from AirQuality where Timestamp >= ? and Timestamp < ? order by Timestamp", ts.ToUniversalTime(), ts1.ToUniversalTime());
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -3332,8 +3332,8 @@ namespace CumulusMX
 				var thisDraw = 0;  // count of the rows we are returning
 
 				// Get a time stamp, use 15th day to avoid wrap issues
-				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]));
-				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]));
+				var ts = new DateTime(int.Parse(stDate[0]), int.Parse(stDate[1]), int.Parse(stDate[2]), 0, 0, 0, DateTimeKind.Local);
+				var ts1 = new DateTime(int.Parse(enDate[0]), int.Parse(enDate[1]), int.Parse(enDate[2]), 0, 0, 0, DateTimeKind.Local);
 				ts1 = ts1.AddDays(1);
 
 				if (ts > ts1)
@@ -3344,7 +3344,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = station.Database.Query<CO2Data>("select * from CO2Data where Timestamp >= ? and Timestamp < ? order by Timestamp", ts, ts1);
+				var rows = station.Database.Query<CO2Data>("select * from CO2Data where Timestamp >= ? and Timestamp < ? order by Timestamp", ts.ToUniversalTime(), ts1.ToUniversalTime());
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
