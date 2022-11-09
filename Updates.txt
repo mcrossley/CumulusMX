@@ -13,7 +13,7 @@ Changed
 	- Now logs to the file ftp.log in the MXdiags folder
 	- Log file size is limited to 5 MB, but on rollover 3 archives are kept
 	- The logging level (verbosity) can now be set in Program Settings
-
+	- The source (real-time, interval, CMX) is now logged to aid decoding
 
 
 4.0.0 - b4013
