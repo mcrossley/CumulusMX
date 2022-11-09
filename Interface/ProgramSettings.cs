@@ -39,6 +39,7 @@ namespace CumulusMX
 				debuglogging = cumulus.ProgramOptions.DebugLogging,
 				datalogging = cumulus.ProgramOptions.DataLogging,
 				ftplogging = cumulus.FtpOptions.Logging,
+				ftplogginglevel = cumulus.FtpOptions.LoggingLevel,
 				emaillogging = cumulus.SmtpOptions.Logging,
 				spikelogging = cumulus.ErrorLogSpikeRemoval,
 				rawextralogging = cumulus.ProgramOptions.LogRawExtraData,
@@ -115,7 +116,7 @@ namespace CumulusMX
 				cumulus.ProgramOptions.DataLogging = settings.logging.datalogging;
 				cumulus.SmtpOptions.Logging = settings.logging.emaillogging;
 				cumulus.ErrorLogSpikeRemoval = settings.logging.spikelogging;
-				
+
 				cumulus.ProgramOptions.WarnMultiple = settings.options.stopsecondinstance;
 				cumulus.ProgramOptions.ListWebTags = settings.options.listwebtags;
 				cumulus.ProgramOptions.DisplayPasswords = settings.options.displaypasswords;
@@ -144,6 +145,12 @@ namespace CumulusMX
 						// set the default culture for other threads
 						CultureInfo.DefaultThreadCurrentCulture = newCulture;
 					}
+				}
+				if (settings.logging.ftplogginglevel.HasValue && settings.logging.ftplogginglevel != cumulus.FtpOptions.LoggingLevel)
+				{
+					cumulus.FtpOptions.LoggingLevel = settings.logging.ftplogginglevel.Value;
+					cumulus.SetupFtpLogging();
+					cumulus.SetFtpLogging(settings.logging.ftplogging);
 				}
 
 				if (settings.logging.ftplogging != cumulus.FtpOptions.Logging)
@@ -206,6 +213,7 @@ namespace CumulusMX
 			public bool debuglogging { get; set; }
 			public bool datalogging { get; set; }
 			public bool ftplogging { get; set; }
+			public int? ftplogginglevel { get; set; }
 			public bool emaillogging { get; set; }
 			public bool spikelogging { get; set; }
 			public bool rawstationlogging { get; set; }

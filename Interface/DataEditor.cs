@@ -2049,7 +2049,6 @@ namespace CumulusMX
 			var json = new StringBuilder("{", 25500);
 
 			var started = false;
-			var finished = false;
 			var lastentrydate = DateTime.MinValue;
 
 			var isDryNow = false;

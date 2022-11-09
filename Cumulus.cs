@@ -22,12 +22,11 @@ using EmbedIO.WebApi;
 using EmbedIO.Files;
 using FluentFTP;
 using FluentFTP.Helpers;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 using Renci.SshNet;
 using SQLite;
-using Swan.Logging;
+using NReco.Logging.File;
+using Microsoft.Extensions.Logging;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 //using MQTTnet;
 
@@ -229,8 +228,10 @@ namespace CumulusMX
 		private readonly DateTimeFormatInfo invDate = CultureInfo.InvariantCulture.DateTimeFormat;
 
 		public bool NormalRunning = false;
-
-		private readonly Microsoft.Extensions.Logging.ILogger FtpLogger;
+		private static LoggerFactory loggerFactory = new LoggerFactory();
+		private ILogger FtpLoggerRT;
+		private ILogger FtpLoggerIN;
+		private ILogger FtpLoggerMX;
 
 		public volatile int WebUpdating;
 		public volatile bool SqlCatchingUp;
@@ -751,17 +752,6 @@ namespace CumulusMX
 			TextWriterTraceListener myTextListener = new TextWriterTraceListener(loggingfile, "MXlog");
 			Trace.Listeners.Add(myTextListener);
 			Trace.AutoFlush = true;
-
-			var config = new ConfigurationBuilder()
-				.SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-				.AddJsonFile("appconfig.json").Build();
-
-			var section = config.GetSection("FtpLogging");
-
-			var factory = new LoggerFactory();
-			factory.AddFile(section);
-			FtpLogger = factory.CreateLogger("FTP");
-			factory.Dispose();
 		}
 
 
@@ -1293,6 +1283,8 @@ namespace CumulusMX
 			{
 				LogMessage("No start-up PING");
 			}
+
+			SetupFtpLogging();
 
 			GC.Collect();
 
@@ -1890,7 +1882,7 @@ namespace CumulusMX
 
 			if (isSet)
 			{
-				RealtimeFTP.Logger = FtpLogger;
+				RealtimeFTP.Logger = FtpLoggerRT;
 			}
 			else
 			{
@@ -2416,7 +2408,7 @@ namespace CumulusMX
 
 					if (!doMore)
 					{
-						LogMessage($"Realtime[{cycle}]: Aborting this upload");
+						LogFtpMessage($"Realtime[{cycle}]: Aborting this upload");
 						throw new FtpException("Connection failed.");
 					}
 				}
@@ -3701,6 +3693,7 @@ namespace CumulusMX
 			FtpOptions.DisableEPSV = ini.GetValue("FTP site", "DisableEPSV", false);
 			FtpOptions.DisableExplicit = ini.GetValue("FTP site", "DisableFtpsExplicit", false);
 			FtpOptions.Logging = ini.GetValue("FTP site", "FTPlogging", false);
+			FtpOptions.LoggingLevel = ini.GetValue("FTP site", "FTPloggingLevel", 2);
 			RealtimeIntervalEnabled = ini.GetValue("FTP site", "EnableRealtime", false);
 			FtpOptions.RealtimeEnabled = ini.GetValue("FTP site", "RealtimeFTPEnabled", false);
 
@@ -4995,6 +4988,7 @@ namespace CumulusMX
 			ini.SetValue("FTP site", "IgnoreCertErrors", FtpOptions.IgnoreCertErrors);
 
 			ini.SetValue("FTP site", "FTPlogging", FtpOptions.Logging);
+			ini.SetValue("FTP site", "FTPloggingLevel", FtpOptions.LoggingLevel);
 			ini.SetValue("FTP site", "UTF8encode", UTF8encode);
 			ini.SetValue("FTP site", "EnableRealtime", RealtimeIntervalEnabled);
 			ini.SetValue("FTP site", "RealtimeInterval", RealtimeInterval);
@@ -8500,8 +8494,7 @@ namespace CumulusMX
 				{
 					if (FtpOptions.Logging)
 					{
-						conn.Logger = FtpLogger;
-						FtpLogger.Log(LogLevel.None, ""); // insert a blank line
+						conn.Logger = FtpLoggerIN;
 					}
 					LogFtpDebugMessage($"FTP[Int]: CumulusMX Connecting to " + FtpOptions.Hostname);
 					conn.Host = FtpOptions.Hostname;
@@ -8745,7 +8738,7 @@ namespace CumulusMX
 
 			if (FtpOptions.Logging)
 			{
-				FtpLogger.Log(LogLevel.None, "");
+				FtpLoggerMX.LogInformation("");
 			}
 			try
 			{
@@ -8960,7 +8953,7 @@ namespace CumulusMX
 			LogMessage(message);
 			if (FtpOptions.Logging)
 			{
-				FtpLogger.Log(LogLevel.None, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + message);
+				FtpLoggerMX.LogInformation("CMX: " + message);
 			}
 		}
 
@@ -8969,7 +8962,7 @@ namespace CumulusMX
 			if (FtpOptions.Logging)
 			{
 				LogDebugMessage(message);
-				FtpLogger.Log(LogLevel.None, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + message);
+				FtpLoggerMX.LogInformation("CMX: " + message);
 			}
 		}
 
@@ -9017,7 +9010,7 @@ namespace CumulusMX
 
 			if (ftpLog && FtpOptions.Logging)
 			{
-				FtpLogger.Log(LogLevel.None, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + $"{preamble} - {ex.Message}");
+				FtpLoggerMX.LogCritical($"{preamble} - {ex.Message}");
 			}
 
 			LogMessage(Utils.ExceptionToString(ex));
@@ -9862,6 +9855,68 @@ namespace CumulusMX
 				}
 			}
 		}
+
+		public void SetupFtpLogging()
+		{
+			if (loggerFactory != null)
+				loggerFactory.Dispose();
+
+			loggerFactory = new LoggerFactory();
+			var fileLoggerOptions = new FileLoggerOptions()
+			{
+				Append = true,
+				FileSizeLimitBytes = 5242880,
+				MaxRollingFiles = 3,
+				MinLevel = (LogLevel)FtpOptions.LoggingLevel,
+				FormatLogEntry = (msg) =>
+				{
+					var logBuilder = new StringBuilder();
+					if (!string.IsNullOrEmpty(msg.Message))
+					{
+						var loglevel = "";
+						switch (msg.LogLevel)
+						{
+							case LogLevel.Trace:
+								loglevel = "TRCE";
+								break;
+							case LogLevel.Debug:
+								loglevel = "DBUG";
+								break;
+							case LogLevel.Information:
+								loglevel = "INFO";
+								break;
+							case LogLevel.Warning:
+								loglevel = "WARN";
+								break;
+							case LogLevel.Error:
+								loglevel = "FAIL";
+								break;
+							case LogLevel.Critical:
+								loglevel = "CRIT";
+								break;
+						}
+						DateTime timeStamp = DateTime.Now;
+						logBuilder.Append(timeStamp.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+						logBuilder.Append('\t');
+						logBuilder.Append(loglevel);
+						logBuilder.Append("\t[");
+						logBuilder.Append(msg.LogName);
+						logBuilder.Append("]");
+						//logBuilder.Append("\t[");
+						//logBuilder.Append(ms.EventId.Id);
+						//logBuilder.Append("]\t");
+						logBuilder.Append("\t");
+						logBuilder.Append(msg.Message);
+					}
+					return logBuilder.ToString();
+				}
+			};
+			var fileLogger = new FileLoggerProvider("MXdiags" + Path.DirectorySeparatorChar + "ftp.log", fileLoggerOptions);
+			loggerFactory.AddProvider(fileLogger);
+			FtpLoggerRT = loggerFactory.CreateLogger("R-T");
+			FtpLoggerIN = loggerFactory.CreateLogger("INT");
+			FtpLoggerMX = loggerFactory.CreateLogger("CMX");
+		}
 	}
 
 	/*
@@ -10029,6 +10084,7 @@ namespace CumulusMX
 		public string SshAuthen { get; set; }
 		public string SshPskFile { get; set; }
 		public bool Logging { get; set; }
+		public int LoggingLevel { get; set; }
 		public bool Utf8Encode { get; set; }
 		public bool ActiveMode { get; set; }
 		public bool DisableEPSV { get; set; }
