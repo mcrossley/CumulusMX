@@ -29,6 +29,11 @@ namespace CumulusMX
 			return dateTime.ToUniversalTime().ToUnixEpochDate();
 		}
 
+		public static long ToUnixTime(DateTimeOffset dateTime)
+		{
+			return dateTime.ToUnixTimeSeconds();
+		}
+
 		// The JSON data we generate for HighCharts uses a "pseudo-UTC" timestamp
 		// This is the local time converted to the UTC timestamp *as if it were already UTC*
 		// This gets around TZ issues in HighCharts which by default accepts and displays UTC date.times

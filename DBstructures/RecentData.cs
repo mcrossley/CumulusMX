@@ -1,12 +1,35 @@
 ﻿using System;
+using ServiceStack.Text;
 using SQLite;
 
 namespace CumulusMX
 {
 	internal class RecentData
 	{
+		private DateTime time;
+		private long timestamp;
+
+		[Ignore]
+		public DateTime Time
+		{
+			get { return time; }
+			set
+			{
+				time = value;
+				Timestamp = value.ToUnixTime();
+			}
+		}
+
 		[PrimaryKey]
-		public DateTime Timestamp { get; set; }
+		public long Timestamp
+		{
+			get { return timestamp; }
+			set
+			{
+				timestamp = value;
+				time = value.FromUnixTime();
+			}
+		}
 
 		public double? WindSpeed { get; set; }
 		public double? WindGust { get; set; }

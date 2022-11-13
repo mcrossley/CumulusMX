@@ -6478,7 +6478,7 @@ namespace CumulusMX
 			{
 				var newRec = new IntervalData()
 				{
-					Timestamp = timestamp,
+					StationTime = timestamp,
 					Temp = station.Temperature,
 					Humidity = station.Humidity,
 					DewPoint = station.Dewpoint,
@@ -6718,7 +6718,7 @@ namespace CumulusMX
 			{
 				var newRec = new ExtraTemp()
 				{
-					Timestamp = timestamp,
+					Time = timestamp,
 					Temp1 = station.ExtraTemp[1],
 					Temp2 = station.ExtraTemp[2],
 					Temp3 = station.ExtraTemp[3],
@@ -6737,7 +6737,7 @@ namespace CumulusMX
 			{
 				var newRec = new ExtraHum()
 				{
-					Timestamp = timestamp,
+					Time = timestamp,
 					Hum1 = station.ExtraHum[1],
 					Hum2 = station.ExtraHum[2],
 					Hum3 = station.ExtraHum[3],
@@ -6756,7 +6756,7 @@ namespace CumulusMX
 			{
 				var newRec = new ExtraDewPoint()
 				{
-					Timestamp = timestamp,
+					Time = timestamp,
 					DewPoint1 = station.ExtraDewPoint[1],
 					DewPoint2 = station.ExtraDewPoint[2],
 					DewPoint3 = station.ExtraDewPoint[3],
@@ -6775,7 +6775,7 @@ namespace CumulusMX
 			{
 				var newRec = new UserTemp()
 				{
-					Timestamp = timestamp,
+					Time = timestamp,
 					Temp1 = station.UserTemp[1],
 					Temp2 = station.UserTemp[2],
 					Temp3 = station.UserTemp[3],
@@ -6794,7 +6794,7 @@ namespace CumulusMX
 			{
 				var newRec = new SoilTemp()
 				{
-					Timestamp = timestamp,
+					Time = timestamp,
 					Temp1 = station.SoilTemp[1],
 					Temp2 = station.SoilTemp[2],
 					Temp3 = station.SoilTemp[3],
@@ -6819,7 +6819,7 @@ namespace CumulusMX
 			{
 				var newRec = new SoilMoist()
 				{
-					Timestamp = timestamp,
+					Time = timestamp,
 					Moist1 = station.SoilMoisture[1],
 					Moist2 = station.SoilMoisture[2],
 					Moist3 = station.SoilMoisture[3],
@@ -6844,7 +6844,7 @@ namespace CumulusMX
 			{
 				var newRec = new LeafTemp()
 				{
-					Timestamp = timestamp,
+					Time = timestamp,
 					Temp1 = station.LeafTemp[1],
 					Temp2 = station.LeafTemp[2],
 					Temp3 = station.LeafTemp[3],
@@ -6857,7 +6857,7 @@ namespace CumulusMX
 			{
 				var newRec = new LeafWet()
 				{
-					Timestamp = timestamp,
+					Time = timestamp,
 					Wet1 = station.LeafWetness[1],
 					Wet2 = station.LeafWetness[2],
 					Wet3 = station.LeafWetness[3],
@@ -6874,7 +6874,7 @@ namespace CumulusMX
 			{
 				var newRec = new AirQuality()
 				{
-					Timestamp = timestamp,
+					Time = timestamp,
 					Aq1 = station.AirQuality[1],
 					Aq2 = station.AirQuality[2],
 					Aq3 = station.AirQuality[3],
@@ -6891,7 +6891,7 @@ namespace CumulusMX
 			{
 				var newRec = new CO2Data()
 				{
-					Timestamp = timestamp,
+					Time = timestamp,
 					CO2now = station.CO2,
 					CO2avg = station.CO2_24h,
 					Pm2p5 = station.CO2_pm2p5,

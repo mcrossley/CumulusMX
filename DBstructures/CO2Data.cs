@@ -1,14 +1,37 @@
 ﻿using System;
 using System.Globalization;
 using System.Text;
+using ServiceStack.Text;
 using SQLite;
 
 namespace CumulusMX
 {
 	class CO2Data
 	{
+		private DateTime time;
+		private long timestamp;
+
+		[Ignore]
+		public DateTime Time
+		{
+			get { return time; }
+			set
+			{
+				time = value;
+				Timestamp = value.ToUnixTime();
+			}
+		}
+
 		[PrimaryKey]
-		public DateTime Timestamp { get; set; }
+		public long Timestamp
+		{
+			get { return timestamp; }
+			set
+			{
+				timestamp = value;
+				time = value.FromUnixTime();
+			}
+		}
 		public int? CO2now { get; set; }
 		public int? CO2avg { get; set; }
 		public double? Pm2p5 { get; set; }
@@ -28,8 +51,8 @@ namespace CumulusMX
 			var sep = ',';
 
 			var sb = new StringBuilder(350);
-			sb.Append(Timestamp.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
-			sb.Append(Utils.ToUnixTime(Timestamp)).Append(sep);
+			sb.Append(Time.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Utils.ToUnixTime(Time)).Append(sep);
 			sb.Append(CO2now.HasValue ? CO2now : blank);
 			sb.Append(sep);
 			sb.Append(CO2avg.HasValue ? CO2avg.Value : blank);
@@ -53,7 +76,7 @@ namespace CumulusMX
 			// Make sure we always have the correct number of fields
 
 			// we ignore the date/time string in field zero
-			Timestamp = Utils.FromUnixTime(long.Parse(data[1]));
+			Time = Utils.FromUnixTime(long.Parse(data[1]));
 			CO2now = Utils.TryParseNullInt(data[2]);
 			CO2avg = Utils.TryParseNullInt(data[3]);
 			Pm2p5 = Utils.TryParseNullDouble(data[4]);

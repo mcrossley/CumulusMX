@@ -1,15 +1,37 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Text;
+using ServiceStack.Text;
 using SQLite;
 
 namespace CumulusMX
 {
 	class IntervalData
 	{
+		private DateTime time;
+		private long timestamp;
+
+		[Ignore]
+		public DateTime StationTime                           // 0  DateTime
+		{
+			get { return time; }
+			set
+			{
+				time = value;
+				timestamp = StationTime.ToUnixTime();
+			}
+		}
 		[PrimaryKey]
-		public DateTime Timestamp { get; set; }         // 0  DateTime
-														// N/A 1  Current Unix timestamp
+		public long Timestamp                            // N/A 1  Current Unix timestamp
+		{
+			get { return timestamp; }
+			set
+			{
+				timestamp = value;
+				time = value.FromUnixTime();
+			}
+		}
 		public double? Temp { get; set; }               // 2  Current temperature
 		public int? Humidity { get; set; }              // 3  Current humidity
 		public double? DewPoint { get; set; }           // 4  Current dewpoint
@@ -38,7 +60,6 @@ namespace CumulusMX
 		public double? FeelsLike { get; set; }			// 27  Feels like
 		public double? Humidex { get; set; }            // 28  Humidex
 
-
 		public string ToCSV(bool ToFile=false)
 		{
 			var invNum = CultureInfo.InvariantCulture.NumberFormat;
@@ -49,9 +70,9 @@ namespace CumulusMX
 			var sep = ',';
 
 			var sb = new StringBuilder(350);
-			sb.Append(Timestamp.ToLocalTime().ToString(datetimeformat, invDate)).Append(',');
-			sb.Append(Utils.ToUnixTime(Timestamp)).Append(',');
-			sb.Append(Temp.HasValue ? Temp.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);	
+			sb.Append(StationTime.ToString(datetimeformat, invDate)).Append(',');
+			sb.Append(Timestamp).Append(',');
+			sb.Append(Temp.HasValue ? Temp.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
 			sb.Append(sep);
 			sb.Append(Humidity.HasValue ? Humidity : blank);
 			sb.Append(sep);
@@ -114,7 +135,7 @@ namespace CumulusMX
 			Array.Copy(data, data2, data.Length);
 
 			// we ignore the date/time string in field zero
-			Timestamp = Utils.FromUnixTime(long.Parse(data2[1]));
+			StationTime = Utils.FromUnixTime(long.Parse(data2[1]));
 			Temp = Utils.TryParseNullDouble(data2[2]);
 			Humidity = Utils.TryParseNullInt(data2[3]);
 			DewPoint = Utils.TryParseNullDouble(data2[4]);

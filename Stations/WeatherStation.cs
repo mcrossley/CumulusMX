@@ -17,6 +17,7 @@ using Timer = System.Timers.Timer;
 using SQLite;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using ServiceStack.Text;
 
 namespace CumulusMX
 {
@@ -225,6 +226,9 @@ namespace CumulusMX
 
 		public SQLiteConnection Database;
 		//public SQLiteAsyncConnection DatabaseAsync;
+
+		public StationConfig StationConfigFromDb;
+
 		// Extra sensors
 
 		public GraphData Graphs;
@@ -273,6 +277,8 @@ namespace CumulusMX
 
 			Database = new SQLiteConnection(cumulus.dbfile, true);
 
+			StationConfigFromDb = new StationConfig();
+
 			// We only use the Async connection for reading data
 			//DatabaseAsync = new SQLiteAsyncConnection(cumulus.dbfile, true);
 
@@ -302,6 +308,10 @@ namespace CumulusMX
 			_ = Database.CreateTable<AirQuality>();
 			_ = Database.CreateTable<CO2Data>();
 			_ = Database.CreateTable<SqlCache>();
+			_ = Database.CreateTable<StationConfig>();
+
+			// read the station config from the data base
+			CheckdatabaseTimeZone();
 
 			// preload the failed sql cache - if any
 			ReloadFailedMySQLCommands();
@@ -352,6 +362,34 @@ namespace CumulusMX
 			}
 		}
 
+		private void CheckdatabaseTimeZone()
+		{
+			var cfg = Database.Query<StationConfig>("SELECT * FROM StationConfig LIMIT 1");
+			if (cfg.Count == 0)
+			{
+				Cumulus.LogMessage("Saving station TimeZone to the database");
+				StationConfigFromDb.timezone = TimeZoneInfo.Local.Id;
+				Database.Insert(StationConfigFromDb);
+			}
+			else if (string.IsNullOrEmpty(cfg[0].timezone))
+			{
+				Cumulus.LogMessage("Database TimeZone is blank, updating it");
+				StationConfigFromDb.timezone = TimeZoneInfo.Local.Id;
+				Database.Update(StationConfigFromDb);
+			}
+			else if (cfg[0].timezone != TimeZoneInfo.Local.Id)
+			{
+				Cumulus.LogMessage("Error, the station TimeZone does not match Cumulus MX current TimeZone");
+				Cumulus.LogMessage("Using the TimeZone specified in the database to decode the data");
+				StationConfigFromDb.timezone = cfg[0].timezone;
+			}
+			else
+			{
+				Cumulus.LogMessage("Database TimeZone = " + cfg[0].timezone);
+				StationConfigFromDb.timezone = cfg[0].timezone;
+			}
+		}
+
 		private void GetRainCounter()
 		{
 			// Find today's rain so far from last log record in the database
@@ -362,15 +400,15 @@ namespace CumulusMX
 			Cumulus.LogMessage("Finding raintoday from database");
 			try
 			{
-				var rec = Database.Query<IntervalData>("select min(Timestamp) Timestamp, RainCounter from IntervalData where Timestamp >= ?", cumulus.LastUpdateTime.Date.ToUniversalTime());
+				var rec = Database.Query<IntervalData>("select min(Timestamp) Timestamp, RainCounter from IntervalData where Timestamp >= ?", cumulus.LastUpdateTime.Date.ToUnixTime());
 
 				if (rec[0].RainCounter.HasValue)
 				{
 					// this is the first entry of a new day AND the new day is today
 					midnightrainfound = true;
-					Cumulus.LogMessage($"Midnight rain found in the following entry: {rec[0].Timestamp}, RainCounter = {rec[0].RainCounter}");
+					Cumulus.LogMessage($"Midnight rain found in the following entry: {rec[0].StationTime}, RainCounter = {rec[0].RainCounter}");
 					raincount = rec[0].RainCounter.Value;
-					logdate = rec[0].Timestamp.ToLocalTime();
+					logdate = rec[0].StationTime;
 					RainToday = Raincounter - raindaystart >= 0 ? (Raincounter - raindaystart) * cumulus.Calib.Rain.Mult : 0;
 				}
 			}
@@ -1987,7 +2025,7 @@ namespace CumulusMX
 			{
 				Database.InsertOrReplace(new RecentData()
 				{
-					Timestamp = timestamp,
+					Time = timestamp,
 					DewPoint = dewpoint,
 					HeatIndex = heatIndex,
 					Humidity = humidity,
@@ -4966,61 +5004,61 @@ namespace CumulusMX
 			var tim = timestamp.AddDays(-1);
 			var newRec = new DayData()
 			{
-				Timestamp = tim.Date,
+				Date = tim.Date,
 				HighGust = HiLoToday.HighGust,
 				HighGustBearing = HiLoToday.HighGustBearing,
-				HighGustTime = HiLoToday.HighGust.HasValue ? HiLoToday.HighGustTime : null,
+				HighGustDateTime = HiLoToday.HighGust.HasValue ? HiLoToday.HighGustTime : null,
 				LowTemp = HiLoToday.LowTemp,
-				LowTempTime = HiLoToday.LowTemp.HasValue ? HiLoToday.LowTempTime : null,
+				LowTempDateTime = HiLoToday.LowTemp.HasValue ? HiLoToday.LowTempTime : null,
 				HighTemp = HiLoToday.HighTemp,
-				HighTempTime = HiLoToday.HighTemp.HasValue ? HiLoToday.HighTempTime : null,
+				HighTempDateTime = HiLoToday.HighTemp.HasValue ? HiLoToday.HighTempTime : null,
 				LowPress = HiLoToday.LowPress,
-				LowPressTime = HiLoToday.LowPress.HasValue ? HiLoToday.LowPressTime : null,
+				LowPressDateTime = HiLoToday.LowPress.HasValue ? HiLoToday.LowPressTime : null,
 				HighPress = HiLoToday.HighPress,
-				HighPressTime = HiLoToday.HighPress.HasValue ? HiLoToday.HighPressTime : null,
+				HighPressDateTime = HiLoToday.HighPress.HasValue ? HiLoToday.HighPressTime : null,
 				HighRainRate = HiLoToday.HighRainRate,
-				HighRainRateTime = HiLoToday.HighRainRate.HasValue ? HiLoToday.HighRainRateTime : null,
+				HighRainRateDateTime = HiLoToday.HighRainRate.HasValue ? HiLoToday.HighRainRateTime : null,
 				TotalRain = RainToday,
 				AvgTemp = HiLoToday.LowTemp.HasValue ? AvgTemp : null,
 				WindRun = HiLoToday.HighWind.HasValue ? WindRunToday : null,
 				HighAvgWind = HiLoToday.HighWind,
-				HighAvgWindTime = HiLoToday.HighWind.HasValue ? HiLoToday.HighWindTime : null,
+				HighAvgWindDateTime = HiLoToday.HighWind.HasValue ? HiLoToday.HighWindTime : null,
 				LowHumidity = HiLoToday.LowHumidity,
-				LowHumidityTime = HiLoToday.LowHumidity.HasValue ? HiLoToday.LowHumidityTime : null,
+				LowHumidityDateTime = HiLoToday.LowHumidity.HasValue ? HiLoToday.LowHumidityTime : null,
 				HighHumidity = HiLoToday.HighHumidity,
-				HighHumidityTime = HiLoToday.HighHumidity.HasValue ? HiLoToday.HighHumidityTime : null,
+				HighHumidityDateTime = HiLoToday.HighHumidity.HasValue ? HiLoToday.HighHumidityTime : null,
 				ET = HiLoToday.HighSolar.HasValue ? ET : null,
 				SunShineHours = HiLoToday.HighSolar.HasValue ? (cumulus.RolloverHour == 0 ? SunshineHours : SunshineToMidnight) : null,
 				HighHeatIndex = HiLoToday.HighHeatIndex,
-				HighHeatIndexTime = HiLoToday.HighHeatIndex.HasValue ? HiLoToday.HighHeatIndexTime : null,
+				HighHeatIndexDateTime = HiLoToday.HighHeatIndex.HasValue ? HiLoToday.HighHeatIndexTime : null,
 				HighAppTemp = HiLoToday.HighAppTemp,
-				HighAppTempTime = HiLoToday.HighAppTemp.HasValue ? HiLoToday.HighAppTempTime : null,
+				HighAppTempDateTime = HiLoToday.HighAppTemp.HasValue ? HiLoToday.HighAppTempTime : null,
 				LowAppTemp = HiLoToday.LowAppTemp,
-				LowAppTempTime = HiLoToday.LowAppTemp.HasValue ? HiLoToday.LowAppTempTime : null,
+				LowAppTempDateTime = HiLoToday.LowAppTemp.HasValue ? HiLoToday.LowAppTempTime : null,
 				HighHourlyRain = HiLoToday.HighHourlyRain,
-				HighHourlyRainTime = HiLoToday.HighHourlyRainTime,
+				HighHourlyRainDateTime = HiLoToday.HighHourlyRainTime,
 				LowWindChill = HiLoToday.LowWindChill,
-				LowWindChillTime = HiLoToday.LowWindChill.HasValue ? HiLoToday.LowWindChillTime : null,
+				LowWindChillDateTime = HiLoToday.LowWindChill.HasValue ? HiLoToday.LowWindChillTime : null,
 				HighDewPoint = HiLoToday.HighDewPoint,
-				HighDewPointTime = HiLoToday.HighDewPoint.HasValue ? HiLoToday.HighDewPointTime : null,
+				HighDewPointDateTime = HiLoToday.HighDewPoint.HasValue ? HiLoToday.HighDewPointTime : null,
 				LowDewPoint = HiLoToday.LowDewPoint,
-				LowDewPointTime = HiLoToday.LowDewPoint.HasValue ? HiLoToday.LowDewPointTime : null,
+				LowDewPointDateTime = HiLoToday.LowDewPoint.HasValue ? HiLoToday.LowDewPointTime : null,
 				DominantWindBearing = HiLoToday.HighWind.HasValue ? DominantWindBearing : null,
 				HeatingDegreeDays = HiLoToday.LowTemp.HasValue ? HeatingDegreeDays : null,
 				CoolingDegreeDays = HiLoToday.LowTemp.HasValue ? CoolingDegreeDays : null,
 				HighSolar = HiLoToday.HighSolar,
-				HighSolarTime = HiLoToday.HighSolar.HasValue ? HiLoToday.HighSolarTime : null,
+				HighSolarDateTime = HiLoToday.HighSolar.HasValue ? HiLoToday.HighSolarTime : null,
 				HighUv = HiLoToday.HighUv,
-				HighUvTime = HiLoToday.HighUv.HasValue ? HiLoToday.HighUvTime : null,
+				HighUvDateTime = HiLoToday.HighUv.HasValue ? HiLoToday.HighUvTime : null,
 				HighFeelsLike = HiLoToday.HighFeelsLike,
-				HighFeelsLikeTime = HiLoToday.HighFeelsLike.HasValue ? HiLoToday.HighFeelsLikeTime : null,
+				HighFeelsLikeDateTime = HiLoToday.HighFeelsLike.HasValue ? HiLoToday.HighFeelsLikeTime : null,
 				LowFeelsLike = HiLoToday.LowFeelsLike,
-				LowFeelsLikeTime = HiLoToday.LowFeelsLike.HasValue ? HiLoToday.LowFeelsLikeTime : null,
+				LowFeelsLikeDateTime = HiLoToday.LowFeelsLike.HasValue ? HiLoToday.LowFeelsLikeTime : null,
 				HighHumidex = HiLoToday.HighHumidex,
-				HighHumidexTime = HiLoToday.HighHumidex.HasValue ? HiLoToday.HighHumidexTime : null,
+				HighHumidexDateTime = HiLoToday.HighHumidex.HasValue ? HiLoToday.HighHumidexTime : null,
 				ChillHours = HiLoToday.LowTemp.HasValue ? ChillHours : null,
 				HighRain24Hours = HiLoToday.HighRain24h,
-				HighRain24HoursTime = HiLoToday.HighRain24h.HasValue ? HiLoToday.HighRain24hTime : null
+				HighRain24HrDateTime = HiLoToday.HighRain24h.HasValue ? HiLoToday.HighRain24hTime : null
 			};
 
 			_ = Database.InsertOrReplace(newRec);
@@ -5979,11 +6017,11 @@ namespace CumulusMX
 								var rec = new IntervalData();
 								rec.FromString(fields);
 
-								if (rec.Timestamp >= datefrom && entrydate <= dateto)
+								if (rec.StationTime >= datefrom && entrydate <= dateto)
 								{
 									rowsToAdd.Add(new RecentData()
 									{
-										Timestamp = rec.Timestamp,
+										Time = rec.StationTime,
 										DewPoint = rec.DewPoint,
 										HeatIndex = rec.HeatIndex,
 										Humidity = rec.Humidity,
@@ -6241,14 +6279,14 @@ namespace CumulusMX
 					{
 						WindRecent[nextwind].Gust = rec.WindGust.Value;
 						WindRecent[nextwind].Speed = rec.WindSpeed.Value;
-						WindRecent[nextwind].Timestamp = rec.Timestamp;
+						WindRecent[nextwind].Timestamp = rec.Time;
 						nextwind = (nextwind + 1) % MaxWindRecent;
 					}
 					if (rec.WindGust.HasValue && rec.WindDir.HasValue)
 					{
 						WindVec[nextwindvec].X = rec.WindGust.Value * Math.Sin(Trig.DegToRad(rec.WindDir.Value));
 						WindVec[nextwindvec].Y = rec.WindGust.Value * Math.Cos(Trig.DegToRad(rec.WindDir.Value));
-						WindVec[nextwindvec].Timestamp = rec.Timestamp;
+						WindVec[nextwindvec].Timestamp = rec.Time;
 						WindVec[nextwindvec].Bearing = Bearing ?? 0; // savedBearing;
 						nextwindvec = (nextwindvec + 1) % MaxWindRecent;
 					}
@@ -6264,7 +6302,7 @@ namespace CumulusMX
 		public string LoadDayFileToDb()
 		{
 			int addedEntries = 0;
-			DateTime start;
+			long start;
 
 			var rowsToAdd = new List<DayData>();
 
@@ -6275,12 +6313,12 @@ namespace CumulusMX
 			// try and find the first entry in the database that has a "blank" AQ entry (PM2.5 or PM10 = -1)
 			try
 			{
-				start = Database.ExecuteScalar<DateTime>("select MAX(Timestamp) from DayData");
+				start = Database.ExecuteScalar<long>("select MAX(Timestamp) from DayData");
 			}
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "LoadDayFileToDb: Error querying database for latest record");
-				start = DateTime.MinValue;
+				start = 0;
 			}
 
 
@@ -6373,7 +6411,7 @@ namespace CumulusMX
 			try
 			{
 				// get the last date time from the database - if any
-				lastLogDate = Database.ExecuteScalar<DateTime>("select max(Timestamp) from IntervalData");
+				lastLogDate = Database.ExecuteScalar<long>("select max(Timestamp) from IntervalData").FromUnixTime();
 				Cumulus.LogMessage($"LoadLogFilesToDb: Last data logged in database = {lastLogDate.ToString("yyyy-MM-dd HH:mm", invDate)}");
 			}
 			catch (Exception ex)
@@ -6421,27 +6459,27 @@ namespace CumulusMX
 						{
 							// process each record in the file
 							linenum++;
-							var rec = new IntervalData();
-							rec.FromString(line.Split(','));
-							if (rec.Timestamp >= lastLogDate)
-								dataToLoad.Add(rec);
-						}
+								var rec = new IntervalData();
+								rec.FromString(line.Split(','));
+								if (rec.StationTime >= lastLogDate)
+									dataToLoad.Add(rec);
+							}
 
 						// load the data a month at a time into the database so we do not hold it all in memory
 						// now load the data into the database
 						if (dataToLoad.Count > 0)
-						{
-							try
 							{
+								try
+								{
 								cumulus.LogDebugMessage($"LoadLogFilesToDb: Loading {dataToLoad.Count} rows into the database");
 								var inserted = Database.InsertAll(dataToLoad, "OR IGNORE");
 								totalInserted += inserted;
 								cumulus.LogDebugMessage($"LoadLogFilesToDb: Inserted {inserted} rows into the database");
 							}
 							catch (Exception ex)
-							{
-								cumulus.LogExceptionMessage(ex, "LoadLogFilesToDb: Error inserting the data into the database");
-							}
+								{
+									cumulus.LogExceptionMessage(ex, "LoadLogFilesToDb: Error inserting the data into the database");
+								}
 						}
 
 						// clear the db List
@@ -8783,6 +8821,11 @@ namespace CumulusMX
 		[AutoIncrement, PrimaryKey]
 		public long? key { get; set; }
 		public string statement { get; set; }
+	}
+
+	public class StationConfig
+	{
+		public string? timezone { get; set; }
 	}
 
 	public class AllTimeRecords

@@ -1,14 +1,37 @@
 ﻿using System;
 using System.Globalization;
 using System.Text;
+using ServiceStack.Text;
 using SQLite;
 
 namespace CumulusMX
 {
 	class SoilMoist
 	{
+		private DateTime time;
+		private long timestamp;
+
+		[Ignore]
+		public DateTime Time
+		{
+			get { return time; }
+			set
+			{
+				time = value;
+				Timestamp = value.ToUnixTime();
+			}
+		}
+
 		[PrimaryKey]
-		public DateTime Timestamp { get; set; }
+		public long Timestamp
+		{
+			get { return timestamp; }
+			set
+			{
+				timestamp = value;
+				time = value.FromUnixTime();
+			}
+		}
 		public int? Moist1 { get; set; }
 		public int? Moist2 { get; set; }
 		public int? Moist3 { get; set; }
@@ -35,8 +58,8 @@ namespace CumulusMX
 			var sep = ',';
 
 			var sb = new StringBuilder(350);
-			sb.Append(Timestamp.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
-			sb.Append(Utils.ToUnixTime(Timestamp)).Append(sep);
+			sb.Append(Time.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Utils.ToUnixTime(Time)).Append(sep);
 			sb.Append(Moist1.HasValue ? Moist1 : blank);
 			sb.Append(sep);
 			sb.Append(Moist2.HasValue ? Moist2 : blank);
@@ -76,7 +99,7 @@ namespace CumulusMX
 			// Make sure we always have the correct number of fields
 
 			// we ignore the date/time string in field zero
-			Timestamp = Utils.FromUnixTime(long.Parse(data[1]));
+			Time = Utils.FromUnixTime(long.Parse(data[1]));
 			Moist1 = Utils.TryParseNullInt(data[2]);
 			Moist2 = Utils.TryParseNullInt(data[3]);
 			Moist3 = Utils.TryParseNullInt(data[4]);

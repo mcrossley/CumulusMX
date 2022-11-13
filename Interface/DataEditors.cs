@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using EmbedIO;
 using ServiceStack;
+using ServiceStack.Text;
 
 namespace CumulusMX
 {
@@ -174,57 +175,57 @@ namespace CumulusMX
 						updt.Append($"UPDATE {cumulus.MySqlStuff.Settings.Dayfile.TableName} SET ");
 						if (newRec.HighGust.HasValue) updt.Append($"HighWindGust={newRec.HighGust.Value.ToString(cumulus.WindFormat, invNum)},");
 						if (newRec.HighGustBearing.HasValue) updt.Append($"HWindGBear={newRec.HighGustBearing.Value},");
-						if (newRec.HighGustTime.HasValue) updt.Append($"THWindG={newRec.HighGustTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighGustDateTime.HasValue) updt.Append($"THWindG={newRec.HighGustDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.LowTemp.HasValue) updt.Append($"MinTemp={newRec.LowTemp.Value.ToString(cumulus.TempFormat, invNum)},");
-						if (newRec.LowTempTime.HasValue) updt.Append($"TMinTemp={newRec.LowTempTime.Value:\\'HH:mm\\'},");
+						if (newRec.LowTempDateTime.HasValue) updt.Append($"TMinTemp={newRec.LowTempDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.HighTemp.HasValue) updt.Append($"MaxTemp={newRec.HighTemp.Value.ToString(cumulus.TempFormat, invNum)},");
-						if (newRec.HighTempTime.HasValue) updt.Append($"TMaxTemp={newRec.HighTempTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighTempDateTime.HasValue) updt.Append($"TMaxTemp={newRec.HighTempDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.LowPress.HasValue) updt.Append($"MinPress={newRec.LowPress.Value.ToString(cumulus.PressFormat, invNum)},");
-						if (newRec.LowPressTime.HasValue) updt.Append($"TMinPress={newRec.LowPressTime.Value:\\'HH:mm\\'},");
+						if (newRec.LowPressDateTime.HasValue) updt.Append($"TMinPress={newRec.LowPressDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.HighPress.HasValue) updt.Append($"MaxPress={newRec.HighPress.Value.ToString(cumulus.PressFormat, invNum)},");
-						if (newRec.HighPressTime.HasValue) updt.Append($"TMaxPress={newRec.HighPressTime:\\'HH:mm\\'},");
+						if (newRec.HighPressDateTime.HasValue) updt.Append($"TMaxPress={newRec.HighPressDateTime:\\'HH:mm\\'},");
 						if (newRec.HighRainRate.HasValue) updt.Append($"MaxRainRate={newRec.HighRainRate.Value.ToString(cumulus.RainFormat, invNum)},");
-						if (newRec.HighRainRateTime.HasValue) updt.Append($"TMaxRR={newRec.HighRainRateTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighRainRateDateTime.HasValue) updt.Append($"TMaxRR={newRec.HighRainRateDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.TotalRain.HasValue) updt.Append($"TotRainFall={newRec.TotalRain.Value.ToString(cumulus.RainFormat, invNum)},");
 						if (newRec.AvgTemp.HasValue) updt.Append($"AvgTemp={newRec.AvgTemp.Value.ToString(cumulus.TempFormat, invNum)},");
 						if (newRec.WindRun.HasValue) updt.Append($"TotWindRun={newRec.WindRun.Value.ToString("F1", invNum)},");
 						if (newRec.HighAvgWind.HasValue) updt.Append($"HighAvgWSpeed={newRec.HighAvgWind.Value.ToString(cumulus.WindAvgFormat, invNum)},");
-						if (newRec.HighAvgWindTime.HasValue) updt.Append($"THAvgWSpeed={newRec.HighAvgWindTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighAvgWindDateTime.HasValue) updt.Append($"THAvgWSpeed={newRec.HighAvgWindDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.LowHumidity.HasValue) updt.Append($"LowHum={newRec.LowHumidity.Value},");
-						if (newRec.LowHumidityTime.HasValue) updt.Append($"TLowHum={newRec.LowHumidityTime.Value:\\'HH:mm\\'},");
+						if (newRec.LowHumidityDateTime.HasValue) updt.Append($"TLowHum={newRec.LowHumidityDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.HighHumidity.HasValue) updt.Append($"HighHum={newRec.HighHumidity.Value},");
-						if (newRec.HighHumidityTime.HasValue) updt.Append($"THighHum={newRec.HighHumidityTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighHumidityDateTime.HasValue) updt.Append($"THighHum={newRec.HighHumidityDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.ET.HasValue) updt.Append($"TotalEvap={newRec.ET.Value.ToString(cumulus.ETFormat, invNum)},");
 						if (newRec.SunShineHours.HasValue) updt.Append($"HoursSun={newRec.SunShineHours.Value.ToString(cumulus.SunFormat, invNum)},");
 						if (newRec.HighHeatIndex.HasValue) updt.Append($"HighHeatInd={newRec.HighHeatIndex.Value.ToString(cumulus.TempFormat, invNum)},");
-						if (newRec.HighHeatIndexTime.HasValue) updt.Append($"THighHeatInd={newRec.HighHeatIndexTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighHeatIndexDateTime.HasValue) updt.Append($"THighHeatInd={newRec.HighHeatIndexDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.HighAppTemp.HasValue) updt.Append($"HighAppTemp={newRec.HighAppTemp.Value.ToString(cumulus.TempFormat, invNum)},");
-						if (newRec.HighAppTempTime.HasValue) updt.Append($"THighAppTemp={newRec.HighAppTempTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighAppTempDateTime.HasValue) updt.Append($"THighAppTemp={newRec.HighAppTempDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.LowAppTemp.HasValue) updt.Append($"LowAppTemp={newRec.LowAppTemp.Value.ToString(cumulus.TempFormat, invNum)},");
-						if (newRec.LowAppTempTime.HasValue) updt.Append($"TLowAppTemp={newRec.LowAppTempTime.Value:\\'HH:mm\\'},");
+						if (newRec.LowAppTempDateTime.HasValue) updt.Append($"TLowAppTemp={newRec.LowAppTempDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.HighHourlyRain.HasValue) updt.Append($"HighHourRain={newRec.HighHourlyRain.Value.ToString(cumulus.RainFormat, invNum)},");
-						if (newRec.HighHourlyRainTime.HasValue) updt.Append($"THighHourRain={newRec.HighHourlyRainTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighHourlyRainDateTime.HasValue) updt.Append($"THighHourRain={newRec.HighHourlyRainDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.LowWindChill.HasValue) updt.Append($"LowWindChill={newRec.LowWindChill.Value.ToString(cumulus.TempFormat, invNum)},");
-						if (newRec.LowWindChillTime.HasValue) updt.Append($"TLowWindChill={newRec.LowWindChillTime.Value:\\'HH:mm\\'},");
+						if (newRec.LowWindChillDateTime.HasValue) updt.Append($"TLowWindChill={newRec.LowWindChillDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.HighDewPoint.HasValue) updt.Append($"HighDewPoint={newRec.HighDewPoint.Value.ToString(cumulus.TempFormat, invNum)},");
-						if (newRec.HighDewPointTime.HasValue) updt.Append($"THighDewPoint={newRec.HighDewPointTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighDewPointDateTime.HasValue) updt.Append($"THighDewPoint={newRec.HighDewPointDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.LowDewPoint.HasValue) updt.Append($"LowDewPoint={newRec.LowDewPoint.Value.ToString(cumulus.TempFormat, invNum)},");
-						if (newRec.LowDewPointTime.HasValue) updt.Append($"TLowDewPoint={newRec.LowDewPointTime.Value:\\'HH:mm\\'},");
+						if (newRec.LowDewPointDateTime.HasValue) updt.Append($"TLowDewPoint={newRec.LowDewPointDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.DominantWindBearing.HasValue) updt.Append($"DomWindDir={newRec.DominantWindBearing.Value},");
 						if (newRec.HeatingDegreeDays.HasValue) updt.Append($"HeatDegDays={newRec.HeatingDegreeDays.Value.ToString("F1", invNum)},");
 						if (newRec.CoolingDegreeDays.HasValue) updt.Append($"CoolDegDays={newRec.CoolingDegreeDays.Value.ToString("F1", invNum)},");
 						if (newRec.HighSolar.HasValue) updt.Append($"HighSolarRad={newRec.HighSolar.Value},");
-						if (newRec.HighSolarTime.HasValue) updt.Append($"THighSolarRad={newRec.HighSolarTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighSolarDateTime.HasValue) updt.Append($"THighSolarRad={newRec.HighSolarDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.HighUv.HasValue) updt.Append($"HighUV={newRec.HighUv.Value.ToString(cumulus.UVFormat, invNum)},");
-						if (newRec.HighUvTime.HasValue) updt.Append($"THighUV={newRec.HighUvTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighUvDateTime.HasValue) updt.Append($"THighUV={newRec.HighUvDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.HighGustBearing.HasValue) updt.Append($"HWindGBearSym='{WeatherStation.CompassPoint(newRec.HighGustBearing.Value)}',");
 						if (newRec.DominantWindBearing.HasValue) updt.Append($"DomWindDirSym='{WeatherStation.CompassPoint(newRec.DominantWindBearing.Value)}',");
 						if (newRec.HighFeelsLike.HasValue) updt.Append($"MaxFeelsLike={newRec.HighFeelsLike.Value.ToString(cumulus.TempFormat, invNum)},");
-						if (newRec.HighFeelsLikeTime.HasValue) updt.Append($"TMaxFeelsLike={newRec.HighFeelsLikeTime.Value:\\'HH:mm\\'},");
+						if (newRec.HighFeelsLikeDateTime.HasValue) updt.Append($"TMaxFeelsLike={newRec.HighFeelsLikeDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.LowFeelsLike.HasValue) updt.Append($"MinFeelsLike={newRec.LowFeelsLike.Value.ToString(cumulus.TempFormat, invNum)},");
-						if (newRec.LowFeelsLikeTime.HasValue) updt.Append($"TMinFeelsLike={newRec.LowFeelsLikeTime.Value:\\'HH:mm\\'},");
+						if (newRec.LowFeelsLikeDateTime.HasValue) updt.Append($"TMinFeelsLike={newRec.LowFeelsLikeDateTime.Value:\\'HH:mm\\'},");
 						if (newRec.HighHumidex.HasValue) updt.Append($"MaxHumidex={newRec.HighHumidex.Value.ToString(cumulus.TempFormat, invNum)},");
-						if (newRec.HighHumidexTime.HasValue) updt.Append($"TMaxHumidex={newRec.HighHumidexTime.Value:\\'HH:mm\\'} ");
+						if (newRec.HighHumidexDateTime.HasValue) updt.Append($"TMaxHumidex={newRec.HighHumidexDateTime.Value:\\'HH:mm\\'} ");
 
 						updt.Append($"WHERE LogDate='{newRec.Timestamp:yyyy-MM-dd}';");
 						updateStr = updt.ToString();
@@ -360,7 +361,7 @@ namespace CumulusMX
 
 				var watch = System.Diagnostics.Stopwatch.StartNew();
 
-				var rows = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ? order by Timestamp", ts.ToUniversalTime(), ts1.ToUniversalTime());
+				var rows = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >= ? and Timestamp < ? order by Timestamp", ts.ToUnixTime(), ts1.ToUnixTime());
 				var json = new StringBuilder(350 * length);
 
 				json.Append("{\"recordsTotal\":");
@@ -440,7 +441,6 @@ namespace CumulusMX
 				var logDateStr = newData.data[0][0];
 				var newRec = new IntervalData();
 				newRec.FromString(newData.data[0]);
-				var logDate = Utils.FromUnixTime(newData.dates[0]);
 
 				try
 				{
@@ -469,7 +469,7 @@ namespace CumulusMX
 				// Update the log file
 				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogMainStation)
 				{
-					var logfile = cumulus.GetLogFileName(logDate);
+					var logfile = cumulus.GetLogFileName(newRec.StationTime);
 
 					// read the log file into a List
 					var lines = File.ReadAllLines(logfile).ToList();
@@ -566,7 +566,7 @@ namespace CumulusMX
 						updt.Append($"FeelsLike={(newRec.FeelsLike.HasValue ? newRec.FeelsLike.Value.ToString(cumulus.TempFormat, invNum) : "null")},");
 						updt.Append($"Humidex={(newRec.Humidex.HasValue ? newRec.Humidex.Value.ToString(cumulus.TempFormat, invNum) : "null")} ");
 
-						updt.Append($"WHERE LogDateTime='{newRec.Timestamp:yyyy-MM-dd HH:mm}';");
+						updt.Append($"WHERE LogDateTime='{newRec.StationTime:yyyy-MM-dd HH:mm}';");
 						updateStr = updt.ToString();
 
 
@@ -1123,7 +1123,7 @@ namespace CumulusMX
 				// Update the extralogfile
 				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
-					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+					var logfile = cumulus.GetExtraLogFileName(newRec.Time);
 
 					// read the log file into a List
 					var lines = File.ReadAllLines(logfile).ToList();
@@ -1414,7 +1414,7 @@ namespace CumulusMX
 				// Update the extralogfile
 				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
-					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+					var logfile = cumulus.GetExtraLogFileName(newRec.Time);
 
 					// read the log file into a List
 					var lines = File.ReadAllLines(logfile).ToList();
@@ -1703,7 +1703,7 @@ namespace CumulusMX
 				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
 					// Update the extralogfile
-					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+					var logfile = cumulus.GetExtraLogFileName(newRec.Time);
 
 					// read the log file into a List
 					var lines = File.ReadAllLines(logfile).ToList();
@@ -1993,7 +1993,7 @@ namespace CumulusMX
 				// Update the extralogfile
 				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
-					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+					var logfile = cumulus.GetExtraLogFileName(newRec.Time);
 
 					// read the log file into a List
 					var lines = File.ReadAllLines(logfile).ToList();
@@ -2283,7 +2283,7 @@ namespace CumulusMX
 				// Update the extralogfile
 				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
-					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+					var logfile = cumulus.GetExtraLogFileName(newRec.Time);
 
 					// read the log file into a List
 					var lines = File.ReadAllLines(logfile).ToList();
@@ -2573,7 +2573,7 @@ namespace CumulusMX
 				// Update the extralogfile
 				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
-					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+					var logfile = cumulus.GetExtraLogFileName(newRec.Time);
 
 					// read the log file into a List
 					var lines = File.ReadAllLines(logfile).ToList();
@@ -2863,7 +2863,7 @@ namespace CumulusMX
 				// Update the extralogfile
 				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
-					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+					var logfile = cumulus.GetExtraLogFileName(newRec.Time);
 
 					// read the log file into a List
 					var lines = File.ReadAllLines(logfile).ToList();
@@ -3153,7 +3153,7 @@ namespace CumulusMX
 				// Update the extralogfile
 				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
-					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+					var logfile = cumulus.GetExtraLogFileName(newRec.Time);
 
 					// read the log file into a List
 					var lines = File.ReadAllLines(logfile).ToList();
@@ -3451,7 +3451,7 @@ namespace CumulusMX
 				// Update the extralogfile
 				if (Program.cumulus.ProgramOptions.UpdateLogfile && Program.cumulus.StationOptions.LogExtraSensors)
 				{
-					var logfile = cumulus.GetExtraLogFileName(newRec.Timestamp);
+					var logfile = cumulus.GetExtraLogFileName(newRec.Time);
 
 					// read the log file into a List
 					var lines = File.ReadAllLines(logfile).ToList();

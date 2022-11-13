@@ -1,14 +1,37 @@
 ﻿using System;
 using System.Globalization;
 using System.Text;
+using ServiceStack.Text;
 using SQLite;
 
 namespace CumulusMX
 {
 	class AirQuality
 	{
+		private DateTime time;
+		private long timestamp;
+
+		[Ignore]
+		public DateTime Time
+		{
+			get { return time; }
+			set
+			{
+				time = value;
+				Timestamp = value.ToUnixTime();
+			}
+		}
+
 		[PrimaryKey]
-		public DateTime Timestamp { get; set; }
+		public long Timestamp
+		{
+			get { return timestamp; }
+			set
+			{
+				timestamp = value;
+				time = value.FromUnixTime();
+			}
+		}
 		public double? Aq1 { get; set; }
 		public double? AqAvg1 { get; set; }
 		public double? Aq2 { get; set; }
@@ -28,8 +51,8 @@ namespace CumulusMX
 			var sep = ',';
 
 			var sb = new StringBuilder(350);
-			sb.Append(Timestamp.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
-			sb.Append(Utils.ToUnixTime(Timestamp)).Append(sep);
+			sb.Append(Time.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Timestamp.FromUnixTime()).Append(sep);
 			sb.Append(Aq1.HasValue ? Aq1.Value.ToString("F1", invNum) : blank);
 			sb.Append(sep);
 			sb.Append(AqAvg1.HasValue ? AqAvg1.Value.ToString("F1", invNum) : blank);
@@ -53,7 +76,7 @@ namespace CumulusMX
 			// Make sure we always have the correct number of fields
 
 			// we ignore the date/time string in field zero
-			Timestamp = Utils.FromUnixTime(long.Parse(data[1]));
+			Timestamp = long.Parse(data[1]);
 			Aq1 = Utils.TryParseNullDouble(data[2]);
 			AqAvg1 = Utils.TryParseNullDouble(data[3]);
 			Aq2 = Utils.TryParseNullDouble(data[4]);

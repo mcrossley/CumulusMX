@@ -1,14 +1,37 @@
 ﻿using System;
 using System.Globalization;
 using System.Text;
+using ServiceStack.Text;
 using SQLite;
 
 namespace CumulusMX
 {
 	class LeafWet
 	{
+		private DateTime time;
+		private long timestamp;
+
+		[Ignore]
+		public DateTime Time
+		{
+			get { return time; }
+			set
+			{
+				time = value;
+				Timestamp = value.ToUnixTime();
+			}
+		}
+
 		[PrimaryKey]
-		public DateTime Timestamp { get; set; }
+		public long Timestamp
+		{
+			get { return timestamp; }
+			set
+			{
+				timestamp = value;
+				time = value.FromUnixTime();
+			}
+		}
 		public double? Wet1 { get; set; }
 		public double? Wet2 { get; set; }
 		public double? Wet3 { get; set; }
@@ -27,8 +50,8 @@ namespace CumulusMX
 			var sep = ',';
 
 			var sb = new StringBuilder(350);
-			sb.Append(Timestamp.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
-			sb.Append(Utils.ToUnixTime(Timestamp)).Append(sep);
+			sb.Append(Time.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Utils.ToUnixTime(Time)).Append(sep);
 			sb.Append(Wet1.HasValue ? Wet1.Value.ToString("F1") : blank);
 			sb.Append(sep);
 			sb.Append(Wet2.HasValue ? Wet2.Value.ToString("F1") : blank);
@@ -52,7 +75,7 @@ namespace CumulusMX
 			// Make sure we always have the correct number of fields
 
 			// we ignore the date/time string in field zero
-			Timestamp = Utils.FromUnixTime(long.Parse(data[1]));
+			Time = Utils.FromUnixTime(long.Parse(data[1]));
 			Wet1 = Utils.TryParseNullDouble(data[2]);
 			Wet2 = Utils.TryParseNullDouble(data[3]);
 			Wet3 = Utils.TryParseNullDouble(data[4]);

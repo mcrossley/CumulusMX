@@ -7,6 +7,7 @@ using System.Text;
 using EmbedIO;
 using Org.BouncyCastle.Ocsp;
 using ServiceStack;
+using ServiceStack.Text;
 using SQLite;
 
 namespace CumulusMX
@@ -145,30 +146,30 @@ namespace CumulusMX
 			var wetPeriod = new LocalRec(true);
 
 			var thisDate = DateTime.MinValue;
-			DateTime startDate;
-			DateTime endDate = DateTime.Now;
+			long startDate;
+			long endDate = DateTime.Now.ToUnixTime();
 
 			switch (recordType)
 			{
 				case "alltime":
-					startDate = DateTime.MinValue;
+					startDate = DateTime.MinValue.ToUnixTime();
 					break;
 				case "thisyear":
 					var now = DateTime.Now;
-					startDate = new DateTime(now.Year, 1, 1);
+					startDate = new DateTime(now.Year, 1, 1).ToUnixTime();
 					break;
 				case "thismonth":
 					now = DateTime.Now;
-					startDate = new DateTime(now.Year, now.Month, 1);
+					startDate = new DateTime(now.Year, now.Month, 1).ToUnixTime();
 					break;
 				case "thisperiod":
-					startDate = start.Value;
-					endDate = end.Value;
+					startDate = start.Value.ToUnixTime();
+					endDate = end.Value.ToUnixTime();
 					timeStampFormat = "f";
 					dateStampFormat = "D";
 					break;
 				default:
-					startDate = DateTime.MinValue;
+					startDate = DateTime.MinValue.ToUnixTime();
 					break;
 			}
 
@@ -200,80 +201,80 @@ namespace CumulusMX
 			}
 
 			// Get all the dayfile records from the Database
-			var data = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and TimeStamp <= ? order by Timestamp", startDate.ToUniversalTime(), endDate.ToUniversalTime());
+			var data = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and TimeStamp <= ? order by Timestamp", startDate, endDate);
 
 			if (data.Count > 0)
 			{
-				thisDate = data[0].Timestamp.Date;
+				thisDate = data[0].Date.Date;
 
 				foreach (var rec in data)
 				{
 					// This assumes the day file is in date order!
-					if (thisDate.Month != rec.Timestamp.Month)
+					if (thisDate.Month != rec.Date.Month)
 					{
 						// reset the date and counter for a new month
-						thisDate = rec.Timestamp;
+						thisDate = rec.Date;
 						rainThisMonth = 0;
 					}
 					// hi gust
-					if (rec.HighGust.HasValue && rec.HighGust.Value > highGust.Value && rec.HighGustTime.HasValue)
+					if (rec.HighGust.HasValue && rec.HighGust.Value > highGust.Value && rec.HighGustDateTime.HasValue)
 					{
 						highGust.Value = rec.HighGust.Value;
-						highGust.Ts = rec.HighGustTime.Value;
+						highGust.Ts = rec.HighGustDateTime.Value;
 					}
 					// hi temp
-					if (rec.HighTemp.HasValue && rec.HighTemp.Value > highTemp.Value && rec.HighTempTime.HasValue)
+					if (rec.HighTemp.HasValue && rec.HighTemp.Value > highTemp.Value && rec.HighTempDateTime.HasValue)
 					{
 						highTemp.Value = rec.HighTemp.Value;
-						highTemp.Ts = rec.HighTempTime.Value;
+						highTemp.Ts = rec.HighTempDateTime.Value;
 					}
 					// lo temp
-					if (rec.LowTemp.HasValue && rec.LowTemp.Value < lowTemp.Value && rec.LowTempTime.HasValue)
+					if (rec.LowTemp.HasValue && rec.LowTemp.Value < lowTemp.Value && rec.LowTempDateTime.HasValue)
 					{
 						lowTemp.Value = rec.LowTemp.Value;
-						lowTemp.Ts= rec.LowTempTime.Value;
+						lowTemp.Ts= rec.LowTempDateTime.Value;
 					}
 					// hi min temp
-					if (rec.LowTemp.HasValue && rec.LowTemp.Value > highMinTemp.Value && rec.LowTempTime.HasValue)
+					if (rec.LowTemp.HasValue && rec.LowTemp.Value > highMinTemp.Value && rec.LowTempDateTime.HasValue)
 					{
 						highMinTemp.Value = rec.LowTemp.Value;
-						highMinTemp.Ts = rec.LowTempTime.Value;
+						highMinTemp.Ts = rec.LowTempDateTime.Value;
 					}
 					// lo max temp
-					if (rec.HighTemp.HasValue && rec.HighTemp.Value < lowMaxTemp.Value && rec.HighTempTime.HasValue)
+					if (rec.HighTemp.HasValue && rec.HighTemp.Value < lowMaxTemp.Value && rec.HighTempDateTime.HasValue)
 					{
 						lowMaxTemp.Value = rec.HighTemp.Value;
-						lowMaxTemp.Ts = rec.HighTempTime.Value;
+						lowMaxTemp.Ts = rec.HighTempDateTime.Value;
 					}
 					// hi temp range
 					if (rec.LowTemp.HasValue && rec.HighTemp.HasValue && (rec.HighTemp.Value - rec.LowTemp.Value) > highTempRange.Value)
 					{
 						highTempRange.Value = rec.HighTemp.Value - rec.LowTemp.Value;
-						highTempRange.Ts = rec.Timestamp;
+						highTempRange.Ts = rec.Date;
 					}
 					// lo temp range
 					if (rec.LowTemp.HasValue && rec.HighTemp.HasValue && (rec.HighTemp.Value - rec.LowTemp.Value) < lowTempRange.Value)
 					{
 						lowTempRange.Value = rec.HighTemp.Value - rec.LowTemp.Value;
-						lowTempRange.Ts = rec.Timestamp;
+						lowTempRange.Ts = rec.Date;
 					}
 					// lo baro
-					if (rec.LowPress.HasValue && rec.LowPress.Value < lowBaro.Value && rec.LowPressTime.HasValue)
+					if (rec.LowPress.HasValue && rec.LowPress.Value < lowBaro.Value && rec.LowPressDateTime.HasValue)
 					{
 						lowBaro.Value = rec.LowPress.Value;
-						lowBaro.Ts = rec.LowPressTime.Value;
+						lowBaro.Ts = rec.LowPressDateTime.Value;
 					}
 					// hi baro
-					if (rec.HighPress.HasValue && rec.HighPress.Value > highBaro.Value && rec.HighPressTime.HasValue)
+					if (rec.HighPress.HasValue && rec.HighPress.Value > highBaro.Value && rec.HighPressDateTime.HasValue)
 					{
 						highBaro.Value = rec.HighPress.Value;
-						highBaro.Ts = rec.HighPressTime.Value;
+						highBaro.Ts = rec.HighPressDateTime.Value;
 					}
 					// hi rain rate
-					if (rec.HighRainRate.HasValue && rec.HighRainRate.Value > highRainRate.Value && rec.HighRainRateTime.HasValue)
+					if (rec.HighRainRate.HasValue && rec.HighRainRate.Value > highRainRate.Value && rec.HighRainRateDateTime.HasValue)
 					{
 						highRainRate.Value = rec.HighRainRate.Value;
-						highRainRate.Ts = rec.HighRainRateTime.Value;
+						highRainRate.Ts = rec.HighRainRateDateTime.Value;
 					}
 					// hi rain day
 					if (rec.TotalRain.HasValue)
@@ -281,7 +282,7 @@ namespace CumulusMX
 						if (rec.TotalRain.HasValue && rec.TotalRain.Value > highRainDay.Value)
 						{
 							highRainDay.Value = rec.TotalRain.Value;
-							highRainDay.Ts = rec.Timestamp;
+							highRainDay.Ts = rec.Date;
 						}
 
 						// monthly rain
@@ -297,7 +298,7 @@ namespace CumulusMX
 					if (rec.HighRain24Hours.HasValue && rec.HighRain24Hours.Value > highRain24h.Value)
 					{
 						highRain24h.Value = rec.HighRain24Hours.Value;
-						highRain24h.Ts = rec.Timestamp;
+						highRain24h.Ts = rec.Date;
 					}
 
 					// dry/wet period
@@ -306,7 +307,7 @@ namespace CumulusMX
 						if (isDryNow)
 						{
 							currentWetPeriod = 1;
-							thisDateWet = rec.Timestamp;
+							thisDateWet = rec.Date;
 							isDryNow = false;
 							if (!(dryPeriod.Value == Cumulus.DefaultHiVal && currentDryPeriod == 0) && currentDryPeriod > dryPeriod.Value)
 							{
@@ -318,7 +319,7 @@ namespace CumulusMX
 						else
 						{
 							currentWetPeriod++;
-							thisDateWet = rec.Timestamp;
+							thisDateWet = rec.Date;
 						}
 					}
 					else
@@ -326,12 +327,12 @@ namespace CumulusMX
 						if (isDryNow)
 						{
 							currentDryPeriod++;
-							thisDateDry = rec.Timestamp;
+							thisDateDry = rec.Date;
 						}
 						else
 						{
 							currentDryPeriod = 1;
-							thisDateDry = rec.Timestamp;
+							thisDateDry = rec.Date;
 							isDryNow = true;
 							if (!(wetPeriod.Value == Cumulus.DefaultHiVal && currentWetPeriod == 0) && currentWetPeriod > wetPeriod.Value)
 							{
@@ -346,85 +347,85 @@ namespace CumulusMX
 					if (rec.WindRun.HasValue && rec.WindRun.Value > highWindRun.Value)
 					{
 						highWindRun.Value = rec.WindRun.Value;
-						highWindRun.Ts= rec.Timestamp;
+						highWindRun.Ts= rec.Date;
 					}
 					// hi wind
-					if (rec.HighAvgWind.HasValue && rec.HighAvgWind.Value > highWind.Value && rec.HighAvgWindTime.HasValue)
+					if (rec.HighAvgWind.HasValue && rec.HighAvgWind.Value > highWind.Value && rec.HighAvgWindDateTime.HasValue)
 					{
 						highWind.Value = rec.HighAvgWind.Value;
-						highWind.Ts= rec.HighAvgWindTime.Value;
+						highWind.Ts= rec.HighAvgWindDateTime.Value;
 					}
 					// lo humidity
-					if (rec.LowHumidity.HasValue && rec.LowHumidity.Value < lowHum.Value && rec.LowHumidityTime.HasValue)
+					if (rec.LowHumidity.HasValue && rec.LowHumidity.Value < lowHum.Value && rec.LowHumidityDateTime.HasValue)
 					{
 						lowHum.Value = rec.LowHumidity.Value;
-						lowHum.Ts = rec.LowHumidityTime.Value;
+						lowHum.Ts = rec.LowHumidityDateTime.Value;
 					}
 					// hi humidity
-					if (rec.HighHumidity.HasValue && rec.HighHumidity > highHum.Value && rec.HighHumidityTime.HasValue)
+					if (rec.HighHumidity.HasValue && rec.HighHumidity > highHum.Value && rec.HighHumidityDateTime.HasValue)
 					{
 						highHum.Value = rec.HighHumidity.Value;
-						highHum.Ts = rec.HighHumidityTime.Value;
+						highHum.Ts = rec.HighHumidityDateTime.Value;
 					}
 					// hi heat index
-					if (rec.HighHeatIndex.HasValue && rec.HighHeatIndex.Value > highHeatInd.Value && rec.HighHeatIndexTime.HasValue)
+					if (rec.HighHeatIndex.HasValue && rec.HighHeatIndex.Value > highHeatInd.Value && rec.HighHeatIndexDateTime.HasValue)
 					{
 						highHeatInd.Value = rec.HighHeatIndex.Value;
-						highHeatInd.Ts = rec.HighHeatIndexTime.Value;
+						highHeatInd.Ts = rec.HighHeatIndexDateTime.Value;
 					}
 					// hi app temp
-					if (rec.HighAppTemp.HasValue && rec.HighAppTemp.Value > highAppTemp.Value && rec.HighAppTempTime.HasValue)
+					if (rec.HighAppTemp.HasValue && rec.HighAppTemp.Value > highAppTemp.Value && rec.HighAppTempDateTime.HasValue)
 					{
 						highAppTemp.Value = rec.HighAppTemp.Value;
-						highAppTemp.Ts = rec.HighAppTempTime.Value;
+						highAppTemp.Ts = rec.HighAppTempDateTime.Value;
 					}
 					// lo app temp
-					if (rec.LowAppTemp.HasValue && rec.LowAppTemp < lowAppTemp.Value && rec.LowAppTempTime.HasValue)
+					if (rec.LowAppTemp.HasValue && rec.LowAppTemp < lowAppTemp.Value && rec.LowAppTempDateTime.HasValue)
 					{
 						lowAppTemp.Value = rec.LowAppTemp.Value;
-						lowAppTemp.Ts = rec.LowAppTempTime.Value;
+						lowAppTemp.Ts = rec.LowAppTempDateTime.Value;
 					}
 					// hi rain hour
-					if (rec.HighHourlyRain.HasValue && rec.HighHourlyRain.Value > highRainHour.Value && rec.HighHourlyRainTime.HasValue)
+					if (rec.HighHourlyRain.HasValue && rec.HighHourlyRain.Value > highRainHour.Value && rec.HighHourlyRainDateTime.HasValue)
 					{
 						highRainHour.Value = rec.HighHourlyRain.Value;
-						highRainHour.Ts = rec.HighHourlyRainTime.Value;
+						highRainHour.Ts = rec.HighHourlyRainDateTime.Value;
 					}
 					// lo wind chill
-					if (rec.LowWindChill.HasValue && rec.LowWindChill.Value < lowWindChill.Value && rec.LowWindChillTime.HasValue)
+					if (rec.LowWindChill.HasValue && rec.LowWindChill.Value < lowWindChill.Value && rec.LowWindChillDateTime.HasValue)
 					{
 						lowWindChill.Value = rec.LowWindChill.Value;
-						lowWindChill.Ts = rec.LowWindChillTime.Value;
+						lowWindChill.Ts = rec.LowWindChillDateTime.Value;
 					}
 					// hi dewpt
-					if (rec.HighDewPoint.HasValue && rec.HighDewPoint.Value > highDewPt.Value && rec.HighDewPointTime.HasValue)
+					if (rec.HighDewPoint.HasValue && rec.HighDewPoint.Value > highDewPt.Value && rec.HighDewPointDateTime.HasValue)
 					{
 						highDewPt.Value = rec.HighDewPoint.Value;
-						highDewPt.Ts = rec.HighDewPointTime.Value;
+						highDewPt.Ts = rec.HighDewPointDateTime.Value;
 					}
 					// lo dewpt
-					if (rec.LowDewPoint.HasValue && rec.LowDewPoint.Value < lowDewPt.Value && rec.LowDewPointTime.HasValue)
+					if (rec.LowDewPoint.HasValue && rec.LowDewPoint.Value < lowDewPt.Value && rec.LowDewPointDateTime.HasValue)
 					{
 						lowDewPt.Value = rec.LowDewPoint.Value;
-						lowDewPt.Ts = rec.LowDewPointTime.Value;
+						lowDewPt.Ts = rec.LowDewPointDateTime.Value;
 					}
 					// hi feels like
-					if (rec.HighFeelsLike.HasValue && rec.HighFeelsLike.Value > highFeelsLike.Value && rec.HighFeelsLikeTime.HasValue)
+					if (rec.HighFeelsLike.HasValue && rec.HighFeelsLike.Value > highFeelsLike.Value && rec.HighFeelsLikeDateTime.HasValue)
 					{
 						highFeelsLike.Value = rec.HighFeelsLike.Value;
-						highFeelsLike.Ts = rec.HighFeelsLikeTime.Value;
+						highFeelsLike.Ts = rec.HighFeelsLikeDateTime.Value;
 					}
 					// lo feels like
-					if (rec.LowFeelsLike.HasValue && rec.LowFeelsLike < lowFeelsLike.Value && rec.LowFeelsLikeTime.HasValue)
+					if (rec.LowFeelsLike.HasValue && rec.LowFeelsLike < lowFeelsLike.Value && rec.LowFeelsLikeDateTime.HasValue)
 					{
 						lowFeelsLike.Value = rec.LowFeelsLike.Value;
-						lowFeelsLike.Ts = rec.LowFeelsLikeTime.Value;
+						lowFeelsLike.Ts = rec.LowFeelsLikeDateTime.Value;
 					}
 					// hi humidex
-					if (rec.HighHumidex.HasValue && rec.HighHumidex.Value > highHumidex.Value && rec.HighHumidexTime.HasValue)
+					if (rec.HighHumidex.HasValue && rec.HighHumidex.Value > highHumidex.Value && rec.HighHumidexDateTime.HasValue)
 					{
 						highHumidex.Value = rec.HighHumidex.Value;
-						highHumidex.Ts = rec.HighHumidexTime.Value;
+						highHumidex.Ts = rec.HighHumidexDateTime.Value;
 					}
 				}
 
@@ -637,17 +638,18 @@ namespace CumulusMX
 
 			try
 			{
-				var rows = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >= ? order by Timestamp", datefrom.ToUniversalTime());
+				var rows = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >= ? order by Timestamp", datefrom.ToUnixTime());
 				var cnt = 0;
 				foreach (var rec in rows)
 				{
 					cnt++;
 					// We need to work in meteo dates not clock dates for day hi/lows
-					var metoDate = rec.Timestamp.ToLocalTime().AddHours(cumulus.GetHourInc());
+					var metoDate = rec.StationTime.AddHours(cumulus.GetHourInc());
+					var recTime = rec.StationTime;
 
 					if (!started)
 					{
-						lastentrydate = rec.Timestamp.ToLocalTime();
+						lastentrydate = recTime;
 						currentDay = metoDate;
 
 						if (metoDate >= reqDate)
@@ -658,7 +660,7 @@ namespace CumulusMX
 						else
 						{
 							// OK we are within 24 hours of the start date, so record rain values
-							AddLastHoursRainEntry(rec.Timestamp, totalRainfall + rec.RainToday ?? 0, ref rain1hLog, ref rain24hLog);
+							AddLastHoursRainEntry(recTime, totalRainfall + rec.RainToday ?? 0, ref rain1hLog, ref rain24hLog);
 							lastentryrain = rec.RainToday;
 							lastentrycounter = rec.RainCounter ?? 0;
 							continue;
@@ -669,13 +671,13 @@ namespace CumulusMX
 					if (rec.WindChill.HasValue && rec.WindChill.Value < lowWindChill.Value)
 					{
 						lowWindChill.Value = rec.WindChill.Value;
-						lowWindChill.Ts = rec.Timestamp;
+						lowWindChill.Ts = recTime;
 					}
 					// hi heat
 					if (rec.HeatIndex.HasValue && rec.HeatIndex.Value > highHeatInd.Value)
 					{
 						highHeatInd.Value = rec.HeatIndex.Value;
-						highHeatInd.Ts = rec.Timestamp;
+						highHeatInd.Ts = recTime;
 					}
 					// hi/low appt
 					if (rec.Apparent.HasValue)
@@ -683,12 +685,12 @@ namespace CumulusMX
 						if (rec.Apparent.Value > highAppTemp.Value)
 						{
 							highAppTemp.Value = rec.Apparent.Value;
-							highAppTemp.Ts = rec.Timestamp;
+							highAppTemp.Ts = recTime;
 						}
 						if (rec.Apparent.Value < lowAppTemp.Value)
 						{
 							lowAppTemp.Value = rec.Apparent.Value;
-							lowAppTemp.Ts = rec.Timestamp;
+							lowAppTemp.Ts = recTime;
 						}
 					}
 					// hi/low feels like
@@ -697,12 +699,12 @@ namespace CumulusMX
 						if (rec.FeelsLike.Value > highFeelsLike.Value)
 						{
 							highFeelsLike.Value = rec.FeelsLike.Value;
-							highFeelsLike.Ts = rec.Timestamp;
+							highFeelsLike.Ts = recTime;
 						}
 						if (rec.FeelsLike.Value < lowFeelsLike.Value)
 						{
 							lowFeelsLike.Value = rec.FeelsLike.Value;
-							lowFeelsLike.Ts = rec.Timestamp;
+							lowFeelsLike.Ts = recTime;
 						}
 					}
 
@@ -712,7 +714,7 @@ namespace CumulusMX
 						if (rec.Humidex.Value > highHumidex.Value)
 						{
 							highHumidex.Value = rec.Humidex.Value;
-							highHumidex.Ts = rec.Timestamp;
+							highHumidex.Ts = recTime;
 						}
 					}
 
@@ -722,13 +724,13 @@ namespace CumulusMX
 						if (rec.Temp.Value > highTemp.Value)
 						{
 							highTemp.Value = rec.Temp.Value;
-							highTemp.Ts = rec.Timestamp;
+							highTemp.Ts = recTime;
 						}
 						// lo temp
 						if (rec.Temp.Value < lowTemp.Value)
 						{
 							lowTemp.Value = rec.Temp.Value;
-							lowTemp.Ts = rec.Timestamp;
+							lowTemp.Ts = recTime;
 						}
 					}
 					// hi/low dewpoint
@@ -737,13 +739,13 @@ namespace CumulusMX
 						if (rec.DewPoint.Value > highDewPt.Value)
 						{
 							highDewPt.Value = rec.DewPoint.Value;
-							highDewPt.Ts = rec.Timestamp;
+							highDewPt.Ts = recTime;
 						}
 						// low dewpoint
 						if (rec.DewPoint.Value < lowDewPt.Value)
 						{
 							lowDewPt.Value = rec.DewPoint.Value;
-							lowDewPt.Ts = rec.Timestamp;
+							lowDewPt.Ts = recTime;
 						}
 					}
 					// hi/low hum
@@ -752,13 +754,13 @@ namespace CumulusMX
 						if (rec.Humidity.Value > highHum.Value)
 						{
 							highHum.Value = rec.Humidity.Value;
-							highHum.Ts = rec.Timestamp;
+							highHum.Ts = recTime;
 						}
 						// lo hum
 						if (rec.Humidity.Value < lowHum.Value)
 						{
 							lowHum.Value = rec.Humidity.Value;
-							lowHum.Ts = rec.Timestamp;
+							lowHum.Ts = recTime;
 						}
 					}
 					// hi/Low baro
@@ -767,32 +769,32 @@ namespace CumulusMX
 						if (rec.Pressure.Value > highBaro.Value)
 						{
 							highBaro.Value = rec.Pressure.Value;
-							highBaro.Ts = rec.Timestamp;
+							highBaro.Ts = recTime;
 						}
 						// lo hum
 						if (rec.Pressure < lowBaro.Value)
 						{
 							lowBaro.Value = rec.Pressure.Value;
-							lowBaro.Ts = rec.Timestamp;
+							lowBaro.Ts = recTime;
 						}
 					}
 					// hi gust
 					if (rec.WindGust10m.HasValue && rec.WindGust10m.Value > highGust.Value)
 					{
 						highGust.Value = rec.WindGust10m.Value;
-						highGust.Ts = rec.Timestamp;
+						highGust.Ts = recTime;
 					}
 					// hi wind
 					if (rec.WindAvg.HasValue && rec.WindAvg.Value > highWind.Value)
 					{
 						highWind.Value = rec.WindAvg.Value;
-						highWind.Ts = rec.Timestamp;
+						highWind.Ts = recTime;
 					}
 					// hi rain rate
 					if (rec.RainRate.HasValue && rec.RainRate.Value > highRainRate.Value)
 					{
 						highRainRate.Value = rec.RainRate.Value;
-						highRainRate.Ts = rec.Timestamp;
+						highRainRate.Ts = recTime;
 					}
 
 					if (rec.Temp.HasValue)
@@ -800,17 +802,17 @@ namespace CumulusMX
 						if (rec.Temp.Value > dayHighTemp.Value)
 						{
 							dayHighTemp.Value = rec.Temp.Value;
-							dayHighTemp.Ts = rec.Timestamp;
+							dayHighTemp.Ts = recTime;
 						}
 
 						if (rec.Temp.Value < dayLowTemp.Value)
 						{
 							dayLowTemp.Value = rec.Temp.Value;
-							dayLowTemp.Ts = rec.Timestamp;
+							dayLowTemp.Ts = recTime;
 						}
 					}
 
-					dayWindRun += rec.Timestamp.Subtract(lastentrydate).TotalHours * rec.WindAvg ?? 0;
+					dayWindRun += recTime.Subtract(lastentrydate).TotalHours * rec.WindAvg ?? 0;
 
 					if (dayWindRun > highWindRun.Value)
 					{
@@ -848,7 +850,7 @@ namespace CumulusMX
 						// messy!
 						// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
 						var rollovertime = new TimeSpan(-cumulus.GetHourInc(), 0, 0);
-						if (rec.RainToday.HasValue && rec.RainToday > 0 && rec.Timestamp.TimeOfDay == rollovertime)
+						if (rec.RainToday.HasValue && rec.RainToday > 0 && rec.StationTime.TimeOfDay == rollovertime)
 						{
 							dayRain = rec.RainToday ?? 0;
 						}
@@ -937,7 +939,7 @@ namespace CumulusMX
 
 					if (rec.WindAvg.HasValue)
 					{
-						dayWindRun += rec.Timestamp.Subtract(lastentrydate).TotalHours * rec.WindAvg.Value;
+						dayWindRun += rec.StationTime.Subtract(lastentrydate).TotalHours * rec.WindAvg.Value;
 					}
 
 					if (dayWindRun > highWindRun.Value)
@@ -951,26 +953,26 @@ namespace CumulusMX
 					* need to track what the rainfall has been in the last rolling hour and 24 hours
 					* across day rollovers where the count resets
 					*/
-					AddLastHoursRainEntry(rec.Timestamp, totalRainfall + dayRain, ref rain1hLog, ref rain24hLog);
+					AddLastHoursRainEntry(recTime, totalRainfall + dayRain, ref rain1hLog, ref rain24hLog);
 
 					var rainThisHour = rain1hLog.Last().Raincounter - rain1hLog.Peek().Raincounter;
 					if (rainThisHour > highRainHour.Value)
 					{
 						highRainHour.Value = rainThisHour;
-						highRainHour.Ts = rec.Timestamp;
+						highRainHour.Ts = recTime;
 					}
 
 					var rain24h = rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter;
 					if (rain24h > highRain24h.Value)
 					{
 						highRain24h.Value = rain24h;
-						highRain24h.Ts = rec.Timestamp;
+						highRain24h.Ts = recTime;
 					}
 
 					if (rain24h > _day24h)
 					{
 						_day24h = rain24h;
-						_dayTs = rec.Timestamp;
+						_dayTs = recTime;
 					}
 
 					// new meteo day, part 2
@@ -983,10 +985,10 @@ namespace CumulusMX
 						totalRainfall += dayRain;
 
 						_day24h = rain24h;
-						_dayTs = rec.Timestamp;
+						_dayTs = recTime;
 					}
 
-					lastentrydate = rec.Timestamp;
+					lastentrydate = recTime;
 					lastentrycounter = rec.RainCounter ?? 0;
 					}
 			}
@@ -1690,7 +1692,7 @@ namespace CumulusMX
 				{
 					for (var i = 0; i < data.Count; i++)
 					{
-						var loggedDate = data[i].Timestamp;
+						var loggedDate = data[i].Date;
 						var monthOffset = loggedDate.Month - 1;
 
 						// for the very first record we need to record the date
@@ -1711,40 +1713,40 @@ namespace CumulusMX
 							}
 						}
 						// hi gust
-						if (data[i].HighGust.HasValue && data[i].HighGustTime.HasValue &&
+						if (data[i].HighGust.HasValue && data[i].HighGustDateTime.HasValue &&
 							(data[i].HighGust.Value > highGust[monthOffset].Value))
 						{
 							highGust[monthOffset].Value = data[i].HighGust.Value;
-							highGust[monthOffset].Ts = data[i].HighGustTime.Value;
+							highGust[monthOffset].Ts = data[i].HighGustDateTime.Value;
 						}
-						if (data[i].LowTemp.HasValue && data[i].LowTempTime.HasValue)
+						if (data[i].LowTemp.HasValue && data[i].LowTempDateTime.HasValue)
 						{
 							// lo temp
 							if (data[i].LowTemp.Value < lowTemp[monthOffset].Value)
 							{
 								lowTemp[monthOffset].Value = data[i].LowTemp.Value;
-								lowTemp[monthOffset].Ts = data[i].LowTempTime.Value;
+								lowTemp[monthOffset].Ts = data[i].LowTempDateTime.Value;
 							}
 							// hi min temp
 							if (data[i].LowTemp.Value > highMinTemp[monthOffset].Value)
 							{
 								highMinTemp[monthOffset].Value = data[i].LowTemp.Value;
-								highMinTemp[monthOffset].Ts = data[i].LowTempTime.Value;
+								highMinTemp[monthOffset].Ts = data[i].LowTempDateTime.Value;
 							}
 						}
-						if (data[i].HighTemp.HasValue && data[i].HighTempTime.HasValue)
+						if (data[i].HighTemp.HasValue && data[i].HighTempDateTime.HasValue)
 						{
 							// hi temp
 							if (data[i].HighTemp.Value > highTemp[monthOffset].Value)
 							{
 								highTemp[monthOffset].Value = data[i].HighTemp.Value;
-								highTemp[monthOffset].Ts = data[i].HighTempTime.Value;
+								highTemp[monthOffset].Ts = data[i].HighTempDateTime.Value;
 							}
 							// lo max temp
 							if (data[i].HighTemp.Value < lowMaxTemp[monthOffset].Value)
 							{
 								lowMaxTemp[monthOffset].Value = data[i].HighTemp.Value;
-								lowMaxTemp[monthOffset].Ts = data[i].HighTempTime.Value;
+								lowMaxTemp[monthOffset].Ts = data[i].HighTempDateTime.Value;
 							}
 						}
 
@@ -1766,32 +1768,32 @@ namespace CumulusMX
 						}
 
 						// lo baro
-						if (data[i].LowPress.HasValue && data[i].LowPressTime.HasValue &&
+						if (data[i].LowPress.HasValue && data[i].LowPressDateTime.HasValue &&
 							(data[i].LowPress.Value < lowBaro[monthOffset].Value))
 						{
 							lowBaro[monthOffset].Value = data[i].LowPress.Value;
-							lowBaro[monthOffset].Ts = data[i].LowPressTime.Value;
+							lowBaro[monthOffset].Ts = data[i].LowPressDateTime.Value;
 						}
 						// hi baro
-						if (data[i].HighPress.HasValue && data[i].HighPressTime.HasValue &&
+						if (data[i].HighPress.HasValue && data[i].HighPressDateTime.HasValue &&
 							(data[i].HighPress.Value > highBaro[monthOffset].Value))
 						{
 							highBaro[monthOffset].Value = data[i].HighPress.Value;
-							highBaro[monthOffset].Ts = data[i].HighPressTime.Value;
+							highBaro[monthOffset].Ts = data[i].HighPressDateTime.Value;
 						}
 						// hi rain rate
-						if (data[i].HighRainRate.HasValue && data[i].HighRainRateTime.HasValue &&
+						if (data[i].HighRainRate.HasValue && data[i].HighRainRateDateTime.HasValue &&
 							(data[i].HighRainRate.Value > highRainRate[monthOffset].Value))
 						{
 							highRainRate[monthOffset].Value = data[i].HighRainRate.Value;
-							highRainRate[monthOffset].Ts = data[i].HighRainRateTime.Value;
+							highRainRate[monthOffset].Ts = data[i].HighRainRateDateTime.Value;
 						}
 
 						// hi 24h rain
 						if (data[i].HighRain24Hours.HasValue && data[i].HighRain24Hours.Value > highRain24h[monthOffset].Value)
 						{
 							highRain24h[monthOffset].Value = data[i].HighRain24Hours.Value;
-							highRain24h[monthOffset].Ts = data[i].HighRain24HoursTime.Value;
+							highRain24h[monthOffset].Ts = data[i].HighRain24HrDateTime.Value;
 						}
 
 
@@ -1863,89 +1865,89 @@ namespace CumulusMX
 							highWindRun[monthOffset].Ts = loggedDate;
 						}
 						// hi wind
-						if (data[i].HighAvgWind.HasValue && data[i].HighAvgWindTime.HasValue && data[i].HighAvgWind.Value > highWind[monthOffset].Value)
+						if (data[i].HighAvgWind.HasValue && data[i].HighAvgWindDateTime.HasValue && data[i].HighAvgWind.Value > highWind[monthOffset].Value)
 						{
 							highWind[monthOffset].Value = data[i].HighAvgWind.Value;
-							highWind[monthOffset].Ts = data[i].HighAvgWindTime.Value;
+							highWind[monthOffset].Ts = data[i].HighAvgWindDateTime.Value;
 						}
 
 						// lo humidity
-						if (data[i].LowHumidity.HasValue && data[i].LowHumidityTime.HasValue && data[i].LowHumidity.Value < lowHum[monthOffset].Value)
+						if (data[i].LowHumidity.HasValue && data[i].LowHumidityDateTime.HasValue && data[i].LowHumidity.Value < lowHum[monthOffset].Value)
 						{
 							lowHum[monthOffset].Value = data[i].LowHumidity.Value;
-							lowHum[monthOffset].Ts = data[i].LowHumidityTime.Value;
+							lowHum[monthOffset].Ts = data[i].LowHumidityDateTime.Value;
 						}
 						// hi humidity
-						if (data[i].HighHumidity.HasValue && data[i].HighHumidityTime.HasValue && data[i].HighHumidity > highHum[monthOffset].Value)
+						if (data[i].HighHumidity.HasValue && data[i].HighHumidityDateTime.HasValue && data[i].HighHumidity > highHum[monthOffset].Value)
 						{
 							highHum[monthOffset].Value = data[i].HighHumidity.Value;
-							highHum[monthOffset].Ts = data[i].HighHumidityTime.Value;
+							highHum[monthOffset].Ts = data[i].HighHumidityDateTime.Value;
 						}
 
 						// hi heat index
-						if (data[i].HighHeatIndex.HasValue && data[i].HighHeatIndexTime.HasValue && data[i].HighHeatIndex.Value > highHeatInd[monthOffset].Value)
+						if (data[i].HighHeatIndex.HasValue && data[i].HighHeatIndexDateTime.HasValue && data[i].HighHeatIndex.Value > highHeatInd[monthOffset].Value)
 						{
 							highHeatInd[monthOffset].Value = data[i].HighHeatIndex.Value;
-							highHeatInd[monthOffset].Ts = data[i].HighHeatIndexTime.Value;
+							highHeatInd[monthOffset].Ts = data[i].HighHeatIndexDateTime.Value;
 						}
 						// hi app temp
-						if (data[i].HighAppTemp.HasValue && data[i].HighAppTempTime.HasValue && data[i].HighAppTemp.Value > highAppTemp[monthOffset].Value)
+						if (data[i].HighAppTemp.HasValue && data[i].HighAppTempDateTime.HasValue && data[i].HighAppTemp.Value > highAppTemp[monthOffset].Value)
 						{
 							highAppTemp[monthOffset].Value = data[i].HighAppTemp.Value;
-							highAppTemp[monthOffset].Ts = data[i].HighAppTempTime.Value;
+							highAppTemp[monthOffset].Ts = data[i].HighAppTempDateTime.Value;
 						}
 						// lo app temp
-						if (data[i].LowAppTemp.HasValue && data[i].LowAppTempTime.HasValue && data[i].LowAppTemp.Value < lowAppTemp[monthOffset].Value)
+						if (data[i].LowAppTemp.HasValue && data[i].LowAppTempDateTime.HasValue && data[i].LowAppTemp.Value < lowAppTemp[monthOffset].Value)
 						{
 							lowAppTemp[monthOffset].Value = data[i].LowAppTemp.Value;
-							lowAppTemp[monthOffset].Ts = data[i].LowAppTempTime.Value;
+							lowAppTemp[monthOffset].Ts = data[i].LowAppTempDateTime.Value;
 						}
 
 						// hi rain hour
-						if (data[i].HighHourlyRain.HasValue && data[i].HighHourlyRainTime.HasValue && data[i].HighHourlyRain > highRainHour[monthOffset].Value)
+						if (data[i].HighHourlyRain.HasValue && data[i].HighHourlyRainDateTime.HasValue && data[i].HighHourlyRain > highRainHour[monthOffset].Value)
 						{
 							highRainHour[monthOffset].Value = data[i].HighHourlyRain.Value;
-							highRainHour[monthOffset].Ts = data[i].HighHourlyRainTime.Value;
+							highRainHour[monthOffset].Ts = data[i].HighHourlyRainDateTime.Value;
 						}
 
 						// lo wind chill
-						if (data[i].LowWindChill.HasValue && data[i].LowWindChillTime.HasValue && data[i].LowWindChill.Value < lowWindChill[monthOffset].Value)
+						if (data[i].LowWindChill.HasValue && data[i].LowWindChillDateTime.HasValue && data[i].LowWindChill.Value < lowWindChill[monthOffset].Value)
 						{
 							lowWindChill[monthOffset].Value = data[i].LowWindChill.Value;
-							lowWindChill[monthOffset].Ts = data[i].LowWindChillTime.Value;
+							lowWindChill[monthOffset].Ts = data[i].LowWindChillDateTime.Value;
 						}
 
 						// hi dewpt
-						if (data[i].HighDewPoint.HasValue && data[i].HighDewPointTime.HasValue && data[i].HighDewPoint.Value > highDewPt[monthOffset].Value)
+						if (data[i].HighDewPoint.HasValue && data[i].HighDewPointDateTime.HasValue && data[i].HighDewPoint.Value > highDewPt[monthOffset].Value)
 						{
 							highDewPt[monthOffset].Value = data[i].HighDewPoint.Value;
-							highDewPt[monthOffset].Ts = data[i].HighDewPointTime.Value;
+							highDewPt[monthOffset].Ts = data[i].HighDewPointDateTime.Value;
 						}
 						// lo dewpt
-						if (data[i].LowDewPoint.HasValue && data[i].LowDewPointTime.HasValue && data[i].LowDewPoint.Value < lowDewPt[monthOffset].Value)
+						if (data[i].LowDewPoint.HasValue && data[i].LowDewPointDateTime.HasValue && data[i].LowDewPoint.Value < lowDewPt[monthOffset].Value)
 						{
 							lowDewPt[monthOffset].Value = data[i].LowDewPoint.Value;
-							lowDewPt[monthOffset].Ts = data[i].LowDewPointTime.Value;
+							lowDewPt[monthOffset].Ts = data[i].LowDewPointDateTime.Value;
 						}
 
 						// hi feels like
-						if (data[i].HighFeelsLike.HasValue && data[i].HighFeelsLikeTime.HasValue && data[i].HighFeelsLike.Value > highFeelsLike[monthOffset].Value)
+						if (data[i].HighFeelsLike.HasValue && data[i].HighFeelsLikeDateTime.HasValue && data[i].HighFeelsLike.Value > highFeelsLike[monthOffset].Value)
 						{
 							highFeelsLike[monthOffset].Value = data[i].HighFeelsLike.Value;
-							highFeelsLike[monthOffset].Ts = data[i].HighFeelsLikeTime.Value;
+							highFeelsLike[monthOffset].Ts = data[i].HighFeelsLikeDateTime.Value;
 						}
 						// lo feels like
-						if (data[i].LowFeelsLike.HasValue && data[i].LowFeelsLikeTime.HasValue && data[i].LowFeelsLike.Value < lowFeelsLike[monthOffset].Value)
+						if (data[i].LowFeelsLike.HasValue && data[i].LowFeelsLikeDateTime.HasValue && data[i].LowFeelsLike.Value < lowFeelsLike[monthOffset].Value)
 						{
 							lowFeelsLike[monthOffset].Value = data[i].LowFeelsLike.Value;
-							lowFeelsLike[monthOffset].Ts = data[i].LowFeelsLikeTime.Value;
+							lowFeelsLike[monthOffset].Ts = data[i].LowFeelsLikeDateTime.Value;
 						}
 
 						// hi humidex
-						if (data[i].HighHumidex.HasValue && data[i].HighHumidexTime.HasValue && data[i].HighHumidex.Value > highHumidex[monthOffset].Value)
+						if (data[i].HighHumidex.HasValue && data[i].HighHumidexDateTime.HasValue && data[i].HighHumidex.Value > highHumidex[monthOffset].Value)
 						{
 							highHumidex[monthOffset].Value = data[i].HighHumidex.Value;
-							highHumidex[monthOffset].Ts = data[i].HighHumidexTime.Value;
+							highHumidex[monthOffset].Ts = data[i].HighHumidexDateTime.Value;
 						}
 					}
 
@@ -2166,12 +2168,13 @@ namespace CumulusMX
 				foreach (var row in rows)
 				{
 					// We need to work in meteo dates not clock dates for day hi/lows
-					var metoDate = row.Timestamp.AddHours(cumulus.GetHourInc());
+					var metoDate = row.StationTime.AddHours(cumulus.GetHourInc());
+					var rowTime = row.StationTime;
 					monthOffset = metoDate.Month - 1;
 
 					if (!started)
 					{
-						lastentrydate = row.Timestamp;
+						lastentrydate = row.StationTime;
 						currentDay = metoDate;
 						started = true;
 					}
@@ -2180,13 +2183,13 @@ namespace CumulusMX
 					if (row.WindChill.HasValue && row.WindChill.Value < lowWindChill[monthOffset].Value)
 					{
 						lowWindChill[monthOffset].Value = row.WindChill.Value;
-						lowWindChill[monthOffset].Ts = row.Timestamp;
+						lowWindChill[monthOffset].Ts = rowTime;
 					}
 					// hi heat
 					if (row.HeatIndex.HasValue && row.HeatIndex.Value > highHeatInd[monthOffset].Value)
 					{
 						highHeatInd[monthOffset].Value = row.HeatIndex.Value;
-						highHeatInd[monthOffset].Ts = row.Timestamp;
+						highHeatInd[monthOffset].Ts = rowTime;
 					}
 
 					if (row.Apparent.HasValue)
@@ -2195,13 +2198,13 @@ namespace CumulusMX
 						if (row.Apparent.Value > highAppTemp[monthOffset].Value)
 						{
 							highAppTemp[monthOffset].Value = row.Apparent.Value;
-							highAppTemp[monthOffset].Ts = row.Timestamp;
+							highAppTemp[monthOffset].Ts = rowTime;
 						}
 						// lo appt
 						if (row.Apparent.Value < lowAppTemp[monthOffset].Value)
 						{
 							lowAppTemp[monthOffset].Value = row.Apparent.Value;
-							lowAppTemp[monthOffset].Ts = row.Timestamp;
+							lowAppTemp[monthOffset].Ts = rowTime;
 						}
 					}
 
@@ -2211,13 +2214,13 @@ namespace CumulusMX
 						if (row.FeelsLike.Value > highFeelsLike[monthOffset].Value)
 						{
 							highFeelsLike[monthOffset].Value = row.FeelsLike.Value;
-							highFeelsLike[monthOffset].Ts = row.Timestamp;
+							highFeelsLike[monthOffset].Ts = rowTime;
 						}
 						// lo feels like
 						if (row.FeelsLike.Value < lowFeelsLike[monthOffset].Value)
 						{
 							lowFeelsLike[monthOffset].Value = row.FeelsLike.Value;
-							lowFeelsLike[monthOffset].Ts = row.Timestamp;
+							lowFeelsLike[monthOffset].Ts = rowTime;
 						}
 					}
 
@@ -2225,7 +2228,7 @@ namespace CumulusMX
 					if (row.Humidex.HasValue && row.Humidex.Value > highHumidex[monthOffset].Value)
 					{
 						highHumidex[monthOffset].Value = row.Humidex.Value;
-						highHumidex[monthOffset].Ts = row.Timestamp;
+						highHumidex[monthOffset].Ts = rowTime;
 					}
 
 					if (row.Temp.HasValue)
@@ -2234,23 +2237,23 @@ namespace CumulusMX
 						if (row.Temp.Value > highTemp[monthOffset].Value)
 						{
 							highTemp[monthOffset].Value = row.Temp.Value;
-							highTemp[monthOffset].Ts = row.Timestamp;
+							highTemp[monthOffset].Ts = rowTime;
 						}
 						if (row.Temp.Value > dayHighTemp.Value)
 						{
 							dayHighTemp.Value = row.Temp.Value;
-							dayHighTemp.Ts = row.Timestamp;
+							dayHighTemp.Ts = rowTime;
 						}
 						// lo temp
 						if (row.Temp.Value < lowTemp[monthOffset].Value)
 						{
 							lowTemp[monthOffset].Value = row.Temp.Value;
-							lowTemp[monthOffset].Ts = row.Timestamp;
+							lowTemp[monthOffset].Ts = rowTime;
 						}
 						if (row.Temp.Value < dayLowTemp.Value)
 						{
 							dayLowTemp.Value = row.Temp.Value;
-							dayLowTemp.Ts = row.Timestamp;
+							dayLowTemp.Ts = rowTime;
 						}
 
 					}
@@ -2260,13 +2263,13 @@ namespace CumulusMX
 						if (row.DewPoint.Value > highDewPt[monthOffset].Value)
 						{
 							highDewPt[monthOffset].Value = row.DewPoint.Value;
-							highDewPt[monthOffset].Ts = row.Timestamp;
+							highDewPt[monthOffset].Ts = rowTime;
 						}
 						// low dewpoint
 						if (row.DewPoint.Value < lowDewPt[monthOffset].Value)
 						{
 							lowDewPt[monthOffset].Value = row.DewPoint.Value;
-							lowDewPt[monthOffset].Ts = row.Timestamp;
+							lowDewPt[monthOffset].Ts = rowTime;
 						}
 					}
 					if (row.Humidity.HasValue)
@@ -2275,13 +2278,13 @@ namespace CumulusMX
 						if (row.Humidity.Value > highHum[monthOffset].Value)
 						{
 							highHum[monthOffset].Value = row.Humidity.Value;
-							highHum[monthOffset].Ts = row.Timestamp;
+							highHum[monthOffset].Ts = rowTime;
 						}
 						// lo hum
 						if (row.Humidity.Value < lowHum[monthOffset].Value)
 						{
 							lowHum[monthOffset].Value = row.Humidity.Value;
-							lowHum[monthOffset].Ts = row.Timestamp;
+							lowHum[monthOffset].Ts = rowTime;
 						}
 					}
 					if (row.Pressure.HasValue)
@@ -2290,36 +2293,36 @@ namespace CumulusMX
 						if (row.Pressure.Value > highBaro[monthOffset].Value)
 						{
 							highBaro[monthOffset].Value = row.Pressure.Value;
-							highBaro[monthOffset].Ts = row.Timestamp;
+							highBaro[monthOffset].Ts = rowTime;
 						}
 						// lo baro
 						if (row.Pressure.Value < lowBaro[monthOffset].Value)
 						{
 							lowBaro[monthOffset].Value = row.Pressure.Value;
-							lowBaro[monthOffset].Ts = row.Timestamp;
+							lowBaro[monthOffset].Ts = rowTime;
 						}
 					}
 					// hi gust
 					if (row.WindGust10m.HasValue && row.WindGust10m.Value > highGust[monthOffset].Value)
 					{
 						highGust[monthOffset].Value = row.WindGust10m.Value;
-						highGust[monthOffset].Ts = row.Timestamp;
+						highGust[monthOffset].Ts = rowTime;
 					}
 					// hi wind
 					if (row.WindAvg.HasValue && row.WindAvg.Value > highWind[monthOffset].Value)
 					{
 						highWind[monthOffset].Value = row.WindAvg.Value;
-						highWind[monthOffset].Ts = row.Timestamp;
+						highWind[monthOffset].Ts = rowTime;
 					}
 					// hi rain rate
 					if (row.RainRate.HasValue && row.RainRate.Value > highRainRate[monthOffset].Value)
 					{
 						highRainRate[monthOffset].Value = row.RainRate.Value;
-						highRainRate[monthOffset].Ts = row.Timestamp;
+						highRainRate[monthOffset].Ts = rowTime;
 					}
 
 					// daily wind run
-					dayWindRun += row.Timestamp.Subtract(lastentrydate).TotalHours * row.WindAvg ?? 0;
+					dayWindRun += row.StationTime.Subtract(lastentrydate).TotalHours * row.WindAvg ?? 0;
 
 					if (dayWindRun > highWindRun[monthOffset].Value)
 					{
@@ -2358,7 +2361,7 @@ namespace CumulusMX
 						// messy!
 						// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this period
 						var rollovertime = new TimeSpan(-cumulus.GetHourInc(), 0, 0);
-						if (row.RainToday > 0 && row.Timestamp.TimeOfDay == rollovertime)
+						if (row.RainToday > 0 && row.StationTime.TimeOfDay == rollovertime)
 						{
 							dayRain = row.RainToday ?? 0;
 						}
@@ -2463,7 +2466,7 @@ namespace CumulusMX
 						highRainMonth[monthOffset].Ts = currentDay;
 					}
 
-					dayWindRun += row.Timestamp.Subtract(lastentrydate).TotalHours * row.WindAvg ?? 0;
+					dayWindRun += row.StationTime.Subtract(lastentrydate).TotalHours * row.WindAvg ?? 0;
 
 					if (dayWindRun > highWindRun[monthOffset].Value)
 					{
@@ -2477,20 +2480,20 @@ namespace CumulusMX
 					* across day rollovers where the count resets
 					*/
 
-					AddLastHoursRainEntry(row.Timestamp, totalRainfall + dayRain, ref hourRainLog, ref rain24hLog);
+					AddLastHoursRainEntry(rowTime, totalRainfall + dayRain, ref hourRainLog, ref rain24hLog);
 
 					var rainThisHour = hourRainLog.Last().Raincounter - hourRainLog.Peek().Raincounter;
 					if (rainThisHour > highRainHour[monthOffset].Value)
 					{
 						highRainHour[monthOffset].Value = rainThisHour;
-						highRainHour[monthOffset].Ts = row.Timestamp;
+						highRainHour[monthOffset].Ts = rowTime;
 					}
 
 					var rain24h = rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter;
 					if (rain24h > highRain24h[monthOffset].Value)
 					{
 						highRain24h[monthOffset].Value = rain24h;
-						highRain24h[monthOffset].Ts = row.Timestamp;
+						highRain24h[monthOffset].Ts = rowTime;
 					}
 
 					// new meteo day, part 2
@@ -2498,14 +2501,14 @@ namespace CumulusMX
 					{
 						currentDay = metoDate;
 						dayHighTemp.Value = row.Temp ?? Cumulus.DefaultHiVal;
-						dayHighTemp.Ts = row.Timestamp;
+						dayHighTemp.Ts = rowTime;
 						dayLowTemp.Value = row.Temp ?? Cumulus.DefaultLoVal;
-						dayLowTemp.Ts = row.Timestamp;
+						dayLowTemp.Ts = rowTime;
 						dayWindRun = 0;
 						totalRainfall += dayRain;
 					}
 
-					lastentrydate = row.Timestamp;
+					lastentrydate = rowTime;
 					lastentrycounter = row.RainCounter ?? 0;
 				}
 

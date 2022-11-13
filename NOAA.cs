@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using ServiceStack.Text;
 
 namespace CumulusMX
 {
@@ -236,17 +237,17 @@ namespace CumulusMX
 
 			try
 			{
-				var fromDate = DateTime.SpecifyKind(thedate.ToDateTime(new TimeOnly()), DateTimeKind.Local);
-				var toDate = DateTime.SpecifyKind(fromDate.AddMonths(1), DateTimeKind.Local);
-				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", fromDate.ToUniversalTime(), toDate.ToUniversalTime());
+				var fromDate = thedate.ToUnixTime();
+				var toDate = thedate.AddMonths(1).ToUnixTime();
+				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", fromDate, toDate);
 
 				foreach (var row in rows)
 				{
-					int daynumber = row.Timestamp.ToLocalTime().Day;
+					int daynumber = row.Date.Day;
 
 					// max temp
 					dayList[daynumber].maxtemp = row.HighTemp.HasValue ? row.HighTemp.Value : -999;
-					dayList[daynumber].maxtemptimestamp = row.HighTempTime.HasValue ? row.HighTempTime.Value : DateTime.MinValue;
+					dayList[daynumber].maxtemptimestamp = row.HighTempDateTime.HasValue ? row.HighTempDateTime.Value : DateTime.MinValue;
 					if (dayList[daynumber].maxtemp > maxtemp)
 					{
 						maxtemp = dayList[daynumber].maxtemp;
@@ -263,7 +264,7 @@ namespace CumulusMX
 
 					// min temp
 					dayList[daynumber].mintemp = row.LowTemp.HasValue ? row.LowTemp.Value : 999;
-					dayList[daynumber].mintemptimestamp = row.LowTempTime.HasValue ? row.LowTempTime.Value : DateTime.MinValue;
+					dayList[daynumber].mintemptimestamp = row.LowTempDateTime.HasValue ? row.LowTempDateTime.Value : DateTime.MinValue;
 					if (dayList[daynumber].mintemp < mintemp)
 					{
 						mintemp = dayList[daynumber].mintemp;
@@ -360,7 +361,7 @@ namespace CumulusMX
 
 					// high wind speed
 					dayList[daynumber].highwindspeed = row.HighGust.HasValue ? row.HighGust.Value : 0;
-					dayList[daynumber].highwindtimestamp = row.HighGust.HasValue ? row.HighGustTime.Value : DateTime.MinValue;
+					dayList[daynumber].highwindtimestamp = row.HighGust.HasValue ? row.HighGustDateTime.Value : DateTime.MinValue;
 					if (dayList[daynumber].highwindspeed > highwind)
 					{
 						highwind = dayList[daynumber].highwindspeed;
@@ -374,7 +375,7 @@ namespace CumulusMX
 					}
 
 					// do the wind average for the day...
-					CalculateDayWindAverages(row.Timestamp.Date, ref dayList, ref windsamples, ref totalwindspeed);
+					CalculateDayWindAverages(row.Date, ref dayList, ref windsamples, ref totalwindspeed);
 
 					daycount++;
 					dayList[daynumber].valid = true;
@@ -506,7 +507,7 @@ namespace CumulusMX
 						repLine.Append("    --");
 					else
 						repLine.Append(string.Format(numFormat, "{0,6:F1}",dayList[i].meantemp));
-					
+
 					if (dayList[i].maxtemp <= -999)
 					{
 						repLine.Append("    --   --:--");
@@ -756,19 +757,19 @@ namespace CumulusMX
 				MonthList[m].avgwindspeed = 0;
 				MonthList[m].maxrain = 0;
 			}
-			
+
 			string rowDateTime = "";
 			try
 			{
-				var fromDate = DateTime.SpecifyKind(thedate.ToDateTime(new TimeOnly()), DateTimeKind.Local);
-				var toDate = DateTime.SpecifyKind(fromDate.AddYears(1), DateTimeKind.Local);
-				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ?", fromDate.ToUniversalTime(), toDate.ToUniversalTime());
+				var fromDate = thedate.ToUnixTime();
+				var toDate = thedate.AddYears(1).ToUnixTime();
+				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ?", fromDate, toDate);
 
 				foreach (var row in rows)
 				{
-					rowDateTime = row.Timestamp.ToLocalTime().ToString("yyyy/MM/dd HH:mm");
-					var day = row.Timestamp.Day;
-					month = row.Timestamp.Month;
+					rowDateTime = row.Date.ToString("yyyy/MM/dd");
+					var day = row.Date.Day;
+					month = row.Date.Month;
 					double meantemp = -999.0;
 
 					if (row.HighTemp.HasValue && row.LowTemp.HasValue)
