@@ -13,7 +13,7 @@ namespace CumulusMX
 		private long timestamp;
 
 		[Ignore]
-		public DateTime StationTime                           // 0  DateTime
+		public DateTime StationTime                      // 0  DateTime
 		{
 			get { return time; }
 			set
@@ -29,13 +29,13 @@ namespace CumulusMX
 			set
 			{
 				timestamp = value;
-				time = value.FromUnixTime();
+				time = value.FromUnixTime().ToLocalTime();
 			}
 		}
 		public double? Temp { get; set; }               // 2  Current temperature
 		public int? Humidity { get; set; }              // 3  Current humidity
 		public double? DewPoint { get; set; }           // 4  Current dewpoint
-		public double? WindAvg { get; set; }          // 5  Current wind speed
+		public double? WindAvg { get; set; }            // 5  Current wind speed
 		public double? WindGust10m { get; set; }        // 6  Recent (10-minute) high gust
 		public int? WindAvgDir { get; set; }            // 7  Average wind bearing
 		public double? RainRate { get; set; }           // 8  Current rainfall rate
@@ -135,7 +135,7 @@ namespace CumulusMX
 			Array.Copy(data, data2, data.Length);
 
 			// we ignore the date/time string in field zero
-			StationTime = Utils.FromUnixTime(long.Parse(data2[1]));
+			Timestamp = long.Parse(data2[1]);
 			Temp = Utils.TryParseNullDouble(data2[2]);
 			Humidity = Utils.TryParseNullInt(data2[3]);
 			DewPoint = Utils.TryParseNullDouble(data2[4]);

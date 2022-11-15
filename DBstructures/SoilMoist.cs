@@ -29,7 +29,7 @@ namespace CumulusMX
 			set
 			{
 				timestamp = value;
-				time = value.FromUnixTime();
+				time = value.FromUnixTime().ToLocalTime();
 			}
 		}
 		public int? Moist1 { get; set; }
@@ -49,7 +49,7 @@ namespace CumulusMX
 		public int? Moist15 { get; set; }
 		public int? Moist16 { get; set; }
 
-		public string ToCSV(bool ToFile=false)
+		public string ToCSV(bool ToFile = false)
 		{
 			var invDate = CultureInfo.InvariantCulture.NumberFormat;
 
@@ -58,8 +58,8 @@ namespace CumulusMX
 			var sep = ',';
 
 			var sb = new StringBuilder(350);
-			sb.Append(Time.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
-			sb.Append(Utils.ToUnixTime(Time)).Append(sep);
+			sb.Append(Time.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Timestamp).Append(sep);
 			sb.Append(Moist1.HasValue ? Moist1 : blank);
 			sb.Append(sep);
 			sb.Append(Moist2.HasValue ? Moist2 : blank);
@@ -99,7 +99,7 @@ namespace CumulusMX
 			// Make sure we always have the correct number of fields
 
 			// we ignore the date/time string in field zero
-			Time = Utils.FromUnixTime(long.Parse(data[1]));
+			Timestamp = long.Parse(data[1]);
 			Moist1 = Utils.TryParseNullInt(data[2]);
 			Moist2 = Utils.TryParseNullInt(data[3]);
 			Moist3 = Utils.TryParseNullInt(data[4]);
@@ -118,6 +118,28 @@ namespace CumulusMX
 			Moist16 = Utils.TryParseNullInt(data[17]);
 
 			return true;
+		}
+
+		public void FromExtraLogFile(string[] data)
+		{
+			Timestamp = long.Parse(data[1]);
+			Moist1 = Utils.TryParseNullInt(data[36]);
+			Moist2 = Utils.TryParseNullInt(data[37]);
+			Moist3 = Utils.TryParseNullInt(data[38]);
+			Moist4 = Utils.TryParseNullInt(data[39]);
+
+			Moist5 = Utils.TryParseNullInt(data[56]);
+			Moist6 = Utils.TryParseNullInt(data[57]);
+			Moist7 = Utils.TryParseNullInt(data[58]);
+			Moist8 = Utils.TryParseNullInt(data[59]);
+			Moist9 = Utils.TryParseNullInt(data[60]);
+			Moist10 = Utils.TryParseNullInt(data[61]);
+			Moist11 = Utils.TryParseNullInt(data[62]);
+			Moist12 = Utils.TryParseNullInt(data[63]);
+			Moist13 = Utils.TryParseNullInt(data[64]);
+			Moist14 = Utils.TryParseNullInt(data[65]);
+			Moist15 = Utils.TryParseNullInt(data[66]);
+			Moist16 = Utils.TryParseNullInt(data[66]);
 		}
 	}
 }

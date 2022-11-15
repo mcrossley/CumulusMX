@@ -29,7 +29,7 @@ namespace CumulusMX
 			set
 			{
 				timestamp = value;
-				time = value.FromUnixTime();
+				time = value.FromUnixTime().ToLocalTime();
 			}
 		}
 		public double? Hum1 { get; set; }
@@ -53,8 +53,8 @@ namespace CumulusMX
 			var sep = ',';
 
 			var sb = new StringBuilder(350);
-			sb.Append(Time.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
-			sb.Append(Utils.ToUnixTime(Time)).Append(sep);
+			sb.Append(Time.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Timestamp).Append(sep);
 			sb.Append(Hum1.HasValue ? Hum1 : blank);
 			sb.Append(sep);
 			sb.Append(Hum2.HasValue ? Hum2 : blank);
@@ -82,7 +82,7 @@ namespace CumulusMX
 			// Make sure we always have the correct number of fields
 
 			// we ignore the date/time string in field zero
-			Time = Utils.FromUnixTime(long.Parse(data[1]));
+			Timestamp = long.Parse(data[1]);
 			Hum1 = Utils.TryParseNullDouble(data[2]);
 			Hum2 = Utils.TryParseNullDouble(data[3]);
 			Hum3 = Utils.TryParseNullDouble(data[4]);
@@ -95,6 +95,21 @@ namespace CumulusMX
 			Hum10 = Utils.TryParseNullDouble(data[11]);
 
 			return true;
+		}
+
+		public void FromExtraLogFile(string[] data)
+		{
+			Timestamp = long.Parse(data[1]);
+			Hum1 = Utils.TryParseNullInt(data[12]);
+			Hum2 = Utils.TryParseNullInt(data[13]);
+			Hum3 = Utils.TryParseNullInt(data[14]);
+			Hum4 = Utils.TryParseNullInt(data[15]);
+			Hum5 = Utils.TryParseNullInt(data[16]);
+			Hum6 = Utils.TryParseNullInt(data[17]);
+			Hum7 = Utils.TryParseNullInt(data[18]);
+			Hum8 = Utils.TryParseNullInt(data[19]);
+			Hum9 = Utils.TryParseNullInt(data[20]);
+			Hum10 = Utils.TryParseNullInt(data[21]);
 		}
 	}
 }

@@ -333,8 +333,9 @@ namespace CumulusMX
 			ReadMonthlyAlltimeIniFile();
 			ReadMonthIniFile();
 			ReadYearIniFile();
-			LoadDayFileToDb();
-			LoadLogFilesToDb();
+			LoadDatabase.LoadDayFileToDb(this);
+			LoadDatabase.LoadLogFilesToDb(this);
+			LoadDatabase.LoadExtraFilesToDb(this);
 
 			GetRainCounter();
 			GetRainFallTotals();
@@ -369,6 +370,11 @@ namespace CumulusMX
 			{
 				Cumulus.LogMessage("Saving station TimeZone to the database");
 				StationConfigFromDb.timezone = TimeZoneInfo.Local.Id;
+				//if (TimeZoneInfo.Local.HasIanaId && TimeZoneInfo.TryConvertWindowsIdToIanaId(TimeZoneInfo.Local.Id, out string? ianaid))
+				if (TimeZoneInfo.TryConvertWindowsIdToIanaId(TimeZoneInfo.Local.Id, out string? ianaid))
+				{
+					StationConfigFromDb.iana_id = ianaid;
+				}
 				Database.Insert(StationConfigFromDb);
 			}
 			else if (string.IsNullOrEmpty(cfg[0].timezone))
@@ -381,6 +387,8 @@ namespace CumulusMX
 			{
 				Cumulus.LogMessage("Error, the station TimeZone does not match Cumulus MX current TimeZone");
 				Cumulus.LogMessage("Using the TimeZone specified in the database to decode the data");
+				Cumulus.LogConsoleMessage("Error, the station TimeZone does not match Cumulus MX current TimeZone");
+				Cumulus.LogConsoleMessage("Using the TimeZone specified in the database to decode the data");
 				StationConfigFromDb.timezone = cfg[0].timezone;
 			}
 			else
@@ -6299,218 +6307,6 @@ namespace CumulusMX
 			Cumulus.LogMessage($"LoadLast3Hour: Loaded {result.Count} entries to last 3 hour data list");
 		}
 
-		public string LoadDayFileToDb()
-		{
-			int addedEntries = 0;
-			long start;
-
-			var rowsToAdd = new List<DayData>();
-
-			Cumulus.LogMessage($"LoadDayFileToDb: Attempting to load the daily data");
-
-			var watch = Stopwatch.StartNew();
-
-			// try and find the first entry in the database that has a "blank" AQ entry (PM2.5 or PM10 = -1)
-			try
-			{
-				start = Database.ExecuteScalar<long>("select MAX(Timestamp) from DayData");
-			}
-			catch (Exception ex)
-			{
-				cumulus.LogExceptionMessage(ex, "LoadDayFileToDb: Error querying database for latest record");
-				start = 0;
-			}
-
-
-			if (File.Exists(cumulus.DayFileName))
-			{
-				int linenum = 0;
-				int errorCount = 0;
-
-				try
-				{
-					using var sr = new StreamReader(cumulus.DayFileName);
-					var doMore = true;
-					do
-					{
-						try
-						{
-							// process each record in the file
-
-							linenum++;
-							string Line = sr.ReadLine();
-
-							var newRec = new DayData();
-							var ok = newRec.ParseDayFileRecv4(Line);
-
-							if (ok && newRec.Timestamp > start)
-							{
-								rowsToAdd.Add(newRec);
-								addedEntries++;
-							}
-							else
-							{
-								doMore = false;
-							}
-
-
-						}
-						catch (Exception ex)
-						{
-							cumulus.LogExceptionMessage(ex, $"LoadDayFileToDb: Error at line {linenum} of {cumulus.DayFileName}");
-							Cumulus.LogMessage("Please edit the file to correct the error");
-							errorCount++;
-							if (errorCount >= 20)
-							{
-								Cumulus.LogMessage($"LoadDayFileToDb: Too many errors reading {cumulus.DayFileName} - aborting load of daily data");
-							}
-						}
-					} while (!(sr.EndOfStream || errorCount >= 20) && doMore);
-					sr.Close();
-				}
-				catch (Exception ex)
-				{
-					cumulus.LogExceptionMessage(ex, $"LoadDayFileToDb: Error at line {linenum} of {cumulus.DayFileName}");
-					Cumulus.LogMessage("Please edit the file to correct the error");
-				}
-
-				// Anything to add to the data base?
-				try
-				{
-					Database.InsertAll(rowsToAdd);
-				}
-				catch (Exception ex)
-				{
-					cumulus.LogExceptionMessage(ex, "LoadDayFileToDb: Error inserting daily data into database");
-				}
-
-
-				watch.Stop();
-				cumulus.LogDebugMessage($"LoadDayFileToDb: Dayfile load = {watch.ElapsedMilliseconds} ms");
-				var msg = $"LoadDayFileToDb: Loaded {addedEntries} entries to the daily data table";
-				Cumulus.LogMessage(msg);
-				return msg;
-
-			}
-			else
-			{
-				var msg = "LoadDayFileToDb: No Dayfile found - No entries added to the daily data table";
-				Cumulus.LogMessage(msg);
-				return msg;
-			}
-		}
-
-
-		public void LoadLogFilesToDb()
-		{
-
-			DateTime lastLogDate;
-
-			Cumulus.LogMessage("LoadLogFilesToDb: Starting Process");
-
-			try
-			{
-				// get the last date time from the database - if any
-				lastLogDate = Database.ExecuteScalar<long>("select max(Timestamp) from IntervalData").FromUnixTime();
-				Cumulus.LogMessage($"LoadLogFilesToDb: Last data logged in database = {lastLogDate.ToString("yyyy-MM-dd HH:mm", invDate)}");
-			}
-			catch (Exception ex)
-			{
-				cumulus.LogExceptionMessage(ex, "LoadLogFilesToDb: Error querying the database for the last logged data time");
-				return;
-			}
-
-
-			if (lastLogDate == DateTime.MinValue)
-				lastLogDate = cumulus.RecordsBeganDate;
-
-			// Check the last data time against the time now and see it is within a logging period window
-			if (lastLogDate.AddMinutes(cumulus.logints[cumulus.DataLogInterval]) > cumulus.LastUpdateTime)
-			{
-				// the database is up to date - nothing to do here
-				Cumulus.LogMessage("LoadLogFilesToDb: The database is up to date");
-				return;
-			}
-
-
-			var finished = false;
-			var dataToLoad = new List<IntervalData>();
-			var fileDate = lastLogDate;
-			var logFile = cumulus.GetLogFileName(fileDate);
-			int totalInserted = 0;
-
-			Console.WriteLine();
-
-			while (!finished)
-			{
-				if (File.Exists(logFile))
-				{
-
-					cumulus.LogDebugMessage($"LoadLogFilesToDb: Processing log file - {logFile}");
-
-					Console.Write($"\rLoading log file for {fileDate:yyyy-MM} to the database");
-
-					var linenum = 0;
-					try
-					{
-						var logfile = File.ReadAllLines(logFile);
-
-						foreach (var line in logfile)
-						{
-							// process each record in the file
-							linenum++;
-								var rec = new IntervalData();
-								rec.FromString(line.Split(','));
-								if (rec.StationTime >= lastLogDate)
-									dataToLoad.Add(rec);
-							}
-
-						// load the data a month at a time into the database so we do not hold it all in memory
-						// now load the data into the database
-						if (dataToLoad.Count > 0)
-							{
-								try
-								{
-								cumulus.LogDebugMessage($"LoadLogFilesToDb: Loading {dataToLoad.Count} rows into the database");
-								var inserted = Database.InsertAll(dataToLoad, "OR IGNORE");
-								totalInserted += inserted;
-								cumulus.LogDebugMessage($"LoadLogFilesToDb: Inserted {inserted} rows into the database");
-							}
-							catch (Exception ex)
-								{
-									cumulus.LogExceptionMessage(ex, "LoadLogFilesToDb: Error inserting the data into the database");
-								}
-						}
-
-						// clear the db List
-						dataToLoad.Clear();
-					}
-					catch (Exception ex)
-					{
-						cumulus.LogExceptionMessage(ex, $"LoadLogFilesToDb: Error at line {linenum} of {logFile}");
-						Cumulus.LogMessage("Please edit the file to correct the error");
-					}
-				}
-				else
-				{
-					cumulus.LogDebugMessage($"LoadLogFilesToDb: Log file  not found - {logFile}");
-				}
-				if (fileDate >= DateTime.Now)
-				{
-					finished = true;
-					cumulus.LogDebugMessage("LoadLogFilesToDb: Finished processing the log files");
-				}
-				else
-				{
-					cumulus.LogDebugMessage($"LoadLogFilesToDb: Finished processing log file - {logFile}");
-					fileDate = fileDate.AddMonths(1);
-					logFile = cumulus.GetLogFileName(fileDate);
-				}
-			}
-			Console.WriteLine($"\rCompleted loading the log files to the database. {totalInserted} rows added\n");
-		}
-
-
 		internal void UpdateStatusPanel(DateTime timestamp)
 		{
 			LastDataReadTimestamp = timestamp;
@@ -8826,6 +8622,7 @@ namespace CumulusMX
 	public class StationConfig
 	{
 		public string? timezone { get; set; }
+		public string? iana_id { get; set; }
 	}
 
 	public class AllTimeRecords

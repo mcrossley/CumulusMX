@@ -29,7 +29,7 @@ namespace CumulusMX
 			set
 			{
 				timestamp = value;
-				time = value.FromUnixTime();
+				time = value.FromUnixTime().ToLocalTime();
 			}
 		}
 		public double? Aq1 { get; set; }
@@ -41,7 +41,7 @@ namespace CumulusMX
 		public double? Aq4 { get; set; }
 		public double? AqAvg4 { get; set; }
 
-		public string ToCSV(bool ToFile=false)
+		public string ToCSV(bool ToFile = false)
 		{
 			var invNum = CultureInfo.InvariantCulture.NumberFormat;
 			var invDate = CultureInfo.InvariantCulture.NumberFormat;
@@ -52,7 +52,7 @@ namespace CumulusMX
 
 			var sb = new StringBuilder(350);
 			sb.Append(Time.ToString(dateformat, invDate)).Append(sep);
-			sb.Append(Timestamp.FromUnixTime()).Append(sep);
+			sb.Append(Timestamp).Append(sep);
 			sb.Append(Aq1.HasValue ? Aq1.Value.ToString("F1", invNum) : blank);
 			sb.Append(sep);
 			sb.Append(AqAvg1.HasValue ? AqAvg1.Value.ToString("F1", invNum) : blank);
@@ -87,6 +87,19 @@ namespace CumulusMX
 			AqAvg4 = Utils.TryParseNullDouble(data[9]);
 
 			return true;
+		}
+
+		public void FromExtraLogFile(string[] data)
+		{
+			Timestamp = long.Parse(data[1]);
+			Aq1 = Utils.TryParseNullDouble(data[68]);
+			Aq2 = Utils.TryParseNullDouble(data[69]);
+			Aq3 = Utils.TryParseNullDouble(data[70]);
+			Aq4 = Utils.TryParseNullDouble(data[71]);
+			AqAvg1 = Utils.TryParseNullDouble(data[72]);
+			AqAvg2 = Utils.TryParseNullDouble(data[73]);
+			AqAvg3 = Utils.TryParseNullDouble(data[74]);
+			AqAvg4 = Utils.TryParseNullDouble(data[75]);
 		}
 	}
 }

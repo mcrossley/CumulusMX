@@ -561,7 +561,6 @@ namespace CumulusMX
 			var data = new DataJson()
 			{
 				accessible = cumulus.ProgramOptions.EnableAccessibility,
-				//twitter = twittersettings,
 				wunderground = wusettings,
 				windy = windysettings,
 				awekas = awekassettings,
@@ -581,7 +580,6 @@ namespace CumulusMX
 		private class DataJson
 		{
 			public bool accessible { get; set; }
-			public TwitterJson twitter { get; set; }
 			public WundergroundJson wunderground { get; set; }
 			public WindyJson windy { get; set; }
 			public PWSweatherJson pwsweather { get; set; }
@@ -592,15 +590,6 @@ namespace CumulusMX
 			public OpenweatherMapJson openweathermap { get; set; }
 			public WindGuruJson windguru { get; set; }
 			public JsonThirdPartySettingsCustomHttpSettings customhttp { get; set; }
-		}
-
-		private class TwitterJson
-		{
-			public bool enabled { get; set; }
-			public bool sendlocation { get; set; }
-			public int interval { get; set; }
-			public string user { get; set; }
-			public string password { get; set; }
 		}
 
 		private class WundergroundJson

@@ -29,7 +29,7 @@ namespace CumulusMX
 			set
 			{
 				timestamp = value;
-				time = value.FromUnixTime();
+				time = value.FromUnixTime().ToLocalTime();
 			}
 		}
 		public double? Wet1 { get; set; }
@@ -41,7 +41,7 @@ namespace CumulusMX
 		public double? Wet7 { get; set; }
 		public double? Wet8 { get; set; }
 
-		public string ToCSV(bool ToFile=false)
+		public string ToCSV(bool ToFile = false)
 		{
 			var invDate = CultureInfo.InvariantCulture.NumberFormat;
 
@@ -50,8 +50,8 @@ namespace CumulusMX
 			var sep = ',';
 
 			var sb = new StringBuilder(350);
-			sb.Append(Time.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
-			sb.Append(Utils.ToUnixTime(Time)).Append(sep);
+			sb.Append(Time.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Timestamp).Append(sep);
 			sb.Append(Wet1.HasValue ? Wet1.Value.ToString("F1") : blank);
 			sb.Append(sep);
 			sb.Append(Wet2.HasValue ? Wet2.Value.ToString("F1") : blank);
@@ -75,7 +75,7 @@ namespace CumulusMX
 			// Make sure we always have the correct number of fields
 
 			// we ignore the date/time string in field zero
-			Time = Utils.FromUnixTime(long.Parse(data[1]));
+			Timestamp = long.Parse(data[1]);
 			Wet1 = Utils.TryParseNullDouble(data[2]);
 			Wet2 = Utils.TryParseNullDouble(data[3]);
 			Wet3 = Utils.TryParseNullDouble(data[4]);
@@ -86,6 +86,13 @@ namespace CumulusMX
 			Wet8 = Utils.TryParseNullDouble(data[9]);
 
 			return true;
+		}
+
+		public void FromExtraLogFile(string[] data)
+		{
+			Timestamp = long.Parse(data[1]);
+			Wet1 = Utils.TryParseNullDouble(data[42]);
+			Wet2 = Utils.TryParseNullDouble(data[43]);
 		}
 	}
 }

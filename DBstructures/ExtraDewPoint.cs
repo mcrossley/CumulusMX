@@ -29,7 +29,7 @@ namespace CumulusMX
 			set
 			{
 				timestamp = value;
-				time = value.FromUnixTime();
+				time = value.FromUnixTime().ToLocalTime();
 			}
 		}
 		public double? DewPoint1 { get; set; }
@@ -53,8 +53,8 @@ namespace CumulusMX
 			var sep = ',';
 
 			var sb = new StringBuilder(350);
-			sb.Append(Time.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
-			sb.Append(Utils.ToUnixTime(Time)).Append(sep);
+			sb.Append(Time.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Timestamp).Append(sep);
 			sb.Append(DewPoint1.HasValue ? DewPoint1.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
 			sb.Append(sep);
 			sb.Append(DewPoint2.HasValue ? DewPoint2.Value.ToString(Program.cumulus.TempFormat, invNum) : blank);
@@ -82,7 +82,7 @@ namespace CumulusMX
 			// Make sure we always have the correct number of fields
 
 			// we ignore the date/time string in field zero
-			Time = Utils.FromUnixTime(long.Parse(data[1]));
+			Timestamp = long.Parse(data[1]);
 			DewPoint1 = Utils.TryParseNullDouble(data[2]);
 			DewPoint2 = Utils.TryParseNullDouble(data[3]);
 			DewPoint3 = Utils.TryParseNullDouble(data[4]);
@@ -95,6 +95,21 @@ namespace CumulusMX
 			DewPoint10 = Utils.TryParseNullDouble(data[11]);
 
 			return true;
+		}
+
+		public void FromExtraLogFile(string[] data)
+		{
+			Timestamp = long.Parse(data[1]);
+			DewPoint1 = Utils.TryParseNullDouble(data[22]);
+			DewPoint2 = Utils.TryParseNullDouble(data[23]);
+			DewPoint3 = Utils.TryParseNullDouble(data[24]);
+			DewPoint4 = Utils.TryParseNullDouble(data[25]);
+			DewPoint5 = Utils.TryParseNullDouble(data[26]);
+			DewPoint6 = Utils.TryParseNullDouble(data[27]);
+			DewPoint7 = Utils.TryParseNullDouble(data[28]);
+			DewPoint8 = Utils.TryParseNullDouble(data[29]);
+			DewPoint9 = Utils.TryParseNullDouble(data[30]);
+			DewPoint10 = Utils.TryParseNullDouble(data[31]);
 		}
 	}
 }

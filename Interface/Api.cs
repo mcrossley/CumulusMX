@@ -1349,7 +1349,7 @@ namespace CumulusMX
 						switch (req)
 						{
 							case "reloaddayfile":
-								await writer.WriteAsync(Station.LoadDayFileToDb());
+								await writer.WriteAsync(LoadDatabase.LoadDayFileToDb(Station));
 								break;
 							case "purgemysql":
 								var cnt = 0;

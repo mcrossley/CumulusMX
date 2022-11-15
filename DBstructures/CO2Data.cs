@@ -29,7 +29,7 @@ namespace CumulusMX
 			set
 			{
 				timestamp = value;
-				time = value.FromUnixTime();
+				time = value.FromUnixTime().ToLocalTime();
 			}
 		}
 		public int? CO2now { get; set; }
@@ -41,7 +41,7 @@ namespace CumulusMX
 		public double? Temp { get; set; }
 		public double? Hum { get; set; }
 
-		public string ToCSV(bool ToFile=false)
+		public string ToCSV(bool ToFile = false)
 		{
 			var invNum = CultureInfo.InvariantCulture.NumberFormat;
 			var invDate = CultureInfo.InvariantCulture.NumberFormat;
@@ -51,8 +51,8 @@ namespace CumulusMX
 			var sep = ',';
 
 			var sb = new StringBuilder(350);
-			sb.Append(Time.ToLocalTime().ToString(dateformat, invDate)).Append(sep);
-			sb.Append(Utils.ToUnixTime(Time)).Append(sep);
+			sb.Append(Time.ToString(dateformat, invDate)).Append(sep);
+			sb.Append(Timestamp).Append(sep);
 			sb.Append(CO2now.HasValue ? CO2now : blank);
 			sb.Append(sep);
 			sb.Append(CO2avg.HasValue ? CO2avg.Value : blank);
@@ -76,7 +76,7 @@ namespace CumulusMX
 			// Make sure we always have the correct number of fields
 
 			// we ignore the date/time string in field zero
-			Time = Utils.FromUnixTime(long.Parse(data[1]));
+			Timestamp = long.Parse(data[1]);
 			CO2now = Utils.TryParseNullInt(data[2]);
 			CO2avg = Utils.TryParseNullInt(data[3]);
 			Pm2p5 = Utils.TryParseNullDouble(data[4]);
@@ -87,6 +87,19 @@ namespace CumulusMX
 			Hum = Utils.TryParseNullDouble(data[9]);
 
 			return true;
+		}
+
+		public void FromExtraLogFile(string[] data)
+		{
+			Timestamp = long.Parse(data[1]);
+			CO2now = Utils.TryParseNullInt(data[84]);
+			CO2avg = Utils.TryParseNullInt(data[85]);
+			Pm2p5 = Utils.TryParseNullDouble(data[86]);
+			Pm2p5avg = Utils.TryParseNullDouble(data[87]);
+			Pm10 = Utils.TryParseNullDouble(data[88]);
+			Pm10avg = Utils.TryParseNullDouble(data[89]);
+			Temp = Utils.TryParseNullDouble(data[90]);
+			Hum = Utils.TryParseNullDouble(data[91]);
 		}
 	}
 }

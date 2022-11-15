@@ -86,6 +86,7 @@ namespace CumulusMX
 		public double? HighTemp { get; set; }           // 7  Maximum temperature
 
 		private DateTime? _HighTempDateTime;
+		[Ignore]
 		public DateTime? HighTempDateTime               // 8  Time of maximum temperature
 		{
 			get { return _HighTempDateTime; }
@@ -788,37 +789,31 @@ namespace CumulusMX
 					LowHumidityDateTime = Utils.TryParseNullTimeSpan(Date, st[idx - 1], timeFormat);
 
 				if (st.Count > idx++)
-					HighHumidity = Utils.TryParseNullInt(st[idx - 11]);
+					HighHumidity = Utils.TryParseNullInt(st[idx - 1]);
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
 					HighHumidityDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
 
 				if (st.Count > idx++)
-					ET = Utils.TryParseNullDouble(st[23]);
+					ET = Utils.TryParseNullDouble(st[idx - 1]);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					SunShineHours = varDbl;
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					HighHeatIndex = varDbl;
-				else
-					HighHeatIndex = Cumulus.DefaultHiVal;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
 					HighHeatIndexDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
 
-				if (st.Count > idx++ && double.TryParse(st[27], NumberStyles.Float, invNum, out varDbl))
+				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					HighAppTemp = varDbl;
-				else
-					HighAppTemp = Cumulus.DefaultHiVal;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
 					HighAppTempDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					LowAppTemp = varDbl;
-				else
-					LowAppTemp = Cumulus.DefaultLoVal;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
 					LowAppTempDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
@@ -831,24 +826,18 @@ namespace CumulusMX
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					LowWindChill = varDbl;
-				else
-					LowWindChill = Cumulus.DefaultLoVal;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
 					LowWindChillDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					HighDewPoint = varDbl;
-				else
-					HighDewPoint = Cumulus.DefaultHiVal;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
 					HighDewPointDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					LowDewPoint = varDbl;
-				else
-					LowDewPoint = Cumulus.DefaultLoVal;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
 					LowDewPointDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
@@ -868,32 +857,26 @@ namespace CumulusMX
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
 					HighSolarDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
 
-				if (st.Count > idx++ && double.TryParse(st[44], NumberStyles.Float, invNum, out varDbl))
+				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					HighUv = varDbl;
 
-				if (st.Count > idx++ && st[45].Length == 5)
+				if (st.Count > idx++ && st[idx - 1].Length == 5)
 					HighUvDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					HighFeelsLike = varDbl;
-				else
-					HighFeelsLike = Cumulus.DefaultHiVal;
 
-				if (st.Count > idx++ && st[47].Length == 5)
+				if (st.Count > idx++ && st[idx - 1].Length == 5)
 					HighFeelsLikeDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					LowFeelsLike = varDbl;
-				else
-					LowFeelsLike = Cumulus.DefaultLoVal;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
 					LowFeelsLikeDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					HighHumidex = varDbl;
-				else
-					HighHumidex = Cumulus.DefaultHiVal;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
 					HighHumidexDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
