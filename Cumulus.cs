@@ -7418,7 +7418,7 @@ namespace CumulusMX
 							}
 							catch (Exception ex)
 							{
-								LogExceptionMessage(ex, "Baackup: Error backing up the database files");
+								LogExceptionMessage(ex, "Backup: Error backing up the database files");
 							}
 						}
 
