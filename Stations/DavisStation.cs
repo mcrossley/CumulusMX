@@ -31,6 +31,7 @@ namespace CumulusMX
 		private const int TcpWaitTimeMs = 2500;
 		private int maxArchiveRuns = 2;
 		private bool stop;
+		private int loggerInterval;
 
 		private readonly Stopwatch awakeStopWatch = new Stopwatch();
 
@@ -331,6 +332,9 @@ namespace CumulusMX
 			var bytesRead = 0;
 			byte[] readBuffer = new byte[40];
 
+			// default the logger interval to the CMX interval - change it later if we find different
+			loggerInterval = cumulus.logints[cumulus.DataLogInterval];
+
 			// response should be (5 mins):
 			// ACK  VAL CKS1 CKS2
 			// 0x06-05-50-3F
@@ -424,7 +428,9 @@ namespace CumulusMX
 
 			if (bytesRead > 0 && readBuffer[0] != cumulus.logints[cumulus.DataLogInterval])
 			{
-				var msg = $"** WARNING: Your station logger interval {readBuffer[0]} mins does not match your Cumulus MX logging interval {cumulus.logints[cumulus.DataLogInterval]} mins";
+				// change the logger interval to the value we just discovered
+				loggerInterval = readBuffer[0];
+				var msg = $"** WARNING: Your station logger interval {loggerInterval} mins does not match your Cumulus MX logging interval {cumulus.logints[cumulus.DataLogInterval]} mins";
 				Cumulus.LogConsoleMessage(msg);
 				Cumulus.LogMessage("CheckLoggerInterval: " + msg);
 
@@ -455,6 +461,8 @@ namespace CumulusMX
 							return;
 						}
 
+						// logger updated OK, so change our internal tracking value too
+						loggerInterval = interval;
 						Cumulus.LogMessage("SetLoggerInterval: Logger interval changed OK");
 					}
 					catch (TimeoutException)
@@ -487,6 +495,8 @@ namespace CumulusMX
 							return;
 						}
 
+						// logger updated OK, so change our internal tracking value too
+						loggerInterval = interval;
 						Cumulus.LogMessage("SetLoggerInterval: Logger interval changed OK");
 					}
 					catch (System.IO.IOException ex)
@@ -811,7 +821,7 @@ namespace CumulusMX
 			{
 				cumulus.LogExceptionMessage(ex, "Exception occurred reading archive data");
 			}
-			
+
 			//cumulus.LogDebugMessage("Lock: Station releasing the lock");
 			_ = Cumulus.syncInit.Release();
 		}
@@ -1978,11 +1988,14 @@ namespace CumulusMX
 
 			bool midnightraindone = luhour == 0;
 
-			// construct date and time of last record read
-			int vantageDateStamp = cumulus.LastUpdateTime.Day + cumulus.LastUpdateTime.Month*32 + (cumulus.LastUpdateTime.Year - 2000)*512;
-			int vantageTimeStamp = (100*cumulus.LastUpdateTime.Hour + cumulus.LastUpdateTime.Minute);
+			// work out the next logger interval after the last CMX update
+			var nextLoggerTime = Utils.RoundTimeUpToInterval(cumulus.LastUpdateTime, TimeSpan.FromMinutes(loggerInterval));
 
-			Cumulus.LogMessage($"GetArchiveData: Last Archive Date: {cumulus.LastUpdateTime}");
+			// construct date and time of last record read
+			int vantageDateStamp = nextLoggerTime.Day + nextLoggerTime.Month * 32 + (nextLoggerTime.Year - 2000) * 512;
+			int vantageTimeStamp = (100 * nextLoggerTime.Hour + nextLoggerTime.Minute);
+
+			Cumulus.LogMessage($"GetArchiveData: Last Archive Date: {nextLoggerTime}");
 			cumulus.LogDebugMessage("GetArchiveData: Date: " + vantageDateStamp);
 			cumulus.LogDebugMessage("GetArchiveData: Time: " + vantageTimeStamp);
 

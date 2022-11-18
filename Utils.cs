@@ -29,6 +29,11 @@ namespace CumulusMX
 			return dateTime.ToUniversalTime().ToUnixEpochDate();
 		}
 
+		public static DateTime RoundTimeUpToInterval(DateTime dateTime, TimeSpan intvl)
+		{
+			return new DateTime((dateTime.Ticks + intvl.Ticks - 1) / intvl.Ticks * intvl.Ticks, dateTime.Kind);
+		}
+
 		public static long ToUnixTime(DateTimeOffset dateTime)
 		{
 			return dateTime.ToUnixTimeSeconds();
