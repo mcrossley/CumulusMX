@@ -10,6 +10,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using static Org.BouncyCastle.Bcpg.Attr.ImageAttrib;
 
 // A rag tag of useful functions
 
@@ -106,9 +107,24 @@ namespace CumulusMX
 			return DateTime.ParseExact(dt, "dd/MM/yyyy+HH:mm", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None);
 		}
 
-		public static DateTime AddTimeToDate(DateTime date, string time)
+		public static DateTime? AddTimeToDate(DateTime date, string time, int hrInc)
 		{
-			return date.Add(TimeSpan.ParseExact(time, "hh\\:mm", CultureInfo.InvariantCulture.DateTimeFormat));
+			TimeSpan tim;
+			if (TimeSpan.TryParseExact(time, "hh\\:mm", CultureInfo.InvariantCulture.DateTimeFormat, out tim))
+			{
+				// hrInc is a negative offest to the start of day
+				if (hrInc == 0 || tim.Hours > -hrInc)
+				{
+					// the time is added to the meteo base date
+					return date.Add(tim);
+				}
+				else
+				{
+					// the time is added to the following day
+					return date.AddDays(1).Add(tim);
+				}
+			}
+			return null;
 		}
 
 		/// <summary>
@@ -174,7 +190,6 @@ namespace CumulusMX
 			TimeSpan tim;
 			return TimeSpan.TryParseExact(val, format, CultureInfo.InvariantCulture, out tim) ? baseDate.Add(tim) : null;
 		}
-
 
 		public static IPAddress GetIpWithDefaultGateway()
 		{

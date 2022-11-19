@@ -146,7 +146,7 @@ namespace CumulusMX
 					var orgLine = lines[lineNum];
 
 					// replace the edited line
-					var newLine = string.Join(",", newData.data);
+					var newLine = string.Join(",", newData.data[0]);
 
 					lines[lineNum] = newLine;
 
@@ -248,61 +248,65 @@ namespace CumulusMX
 			{
 				// Update the MX database
 				var newRec = new DayData();
-				newRec.FromString(newData.data[0]);
 
-				station.Database.Delete(newRec);
-
-
-				// Update the dayfile
-				if (Program.cumulus.ProgramOptions.UpdateDayfile && Program.cumulus.StationOptions.LogMainStation)
+				foreach (var entry in newData.data)
 				{
-					// read dayfile into a List
-					var lines = File.ReadAllLines(cumulus.DayFileName).ToList();
-					var lineNum = 0;
+					newRec.FromString(entry);
 
-					// Find the line using the timestamp
-					foreach (var line in lines)
+					station.Database.Delete(newRec);
+
+
+					// Update the dayfile
+					if (Program.cumulus.ProgramOptions.UpdateDayfile && Program.cumulus.StationOptions.LogMainStation)
 					{
-						if (line.Contains(newData.data[0][1]))
-							break;
+						// read dayfile into a List
+						var lines = File.ReadAllLines(cumulus.DayFileName).ToList();
+						var lineNum = 0;
 
-						lineNum++;
+						// Find the line using the date string
+						foreach (var line in lines)
+						{
+							if (line.Contains(newData.data[0][1]))
+								break;
+
+							lineNum++;
+						}
+
+						var orgLine = lines[lineNum];
+
+						// update the dayfile
+						lines.RemoveAt(lineNum);
+
+						// write dayfile back again
+						File.WriteAllLines(cumulus.DayFileName, lines);
+
+						Cumulus.LogMessage($"EditDailyData: Delete line {lineNum + 1}, original = {orgLine}");
 					}
 
-					var orgLine = lines[lineNum];
-
-					// update the dayfile
-					lines.RemoveAt(lineNum);
-
-					// write dayfile back again
-					File.WriteAllLines(cumulus.DayFileName, lines);
-
-					Cumulus.LogMessage($"EditDailyData: Delete line {lineNum + 1}, original = {orgLine}");
-				}
-
-				// Update the MySQL record
-				if (!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Server) &&
-					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.UserID) &&
-					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Password) &&
-					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Database) &&
-					cumulus.MySqlStuff.Settings.UpdateOnEdit
-					)
-				{
-
-					var thisRec = new List<string>(newData.data[0]);
-
-					try
+					// Update the MySQL record
+					if (!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Server) &&
+						!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.UserID) &&
+						!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Password) &&
+						!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Database) &&
+						cumulus.MySqlStuff.Settings.UpdateOnEdit
+						)
 					{
-						// Update the in database  record
-						station.Database.Delete<DayData>(thisRec);
 
-					}
-					catch (Exception ex)
-					{
-						cumulus.LogExceptionMessage(ex, "EditDayFile: Entry deletion failed. Error");
-						Cumulus.LogMessage($"EditDayFile: Entry data = " + thisRec.ToJson());
-						context.Response.StatusCode = 500;
-						return "{\"errors\":{\"Logfile\":[\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+						var thisRec = new List<string>(newData.data[0]);
+
+						try
+						{
+							// Update the in database  record
+							station.Database.Delete<DayData>(thisRec);
+
+						}
+						catch (Exception ex)
+						{
+							cumulus.LogExceptionMessage(ex, "EditDayFile: Entry deletion failed. Error");
+							Cumulus.LogMessage($"EditDayFile: Entry data = " + thisRec.ToJson());
+							context.Response.StatusCode = 500;
+							return "{\"errors\":{\"Logfile\":[\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
+						}
 					}
 				}
 			}

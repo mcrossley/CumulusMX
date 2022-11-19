@@ -12,14 +12,18 @@ namespace CumulusMX
 		private DateTime _Date;
 		private long _Timestamp;
 
+
 		[Ignore]
 		public DateTime Date                            // 0  Date
 		{
 			get { return _Date; }
 			set
 			{
-				_Date = value;
-				_Timestamp = value.ToUnixTime();
+				if (value.Kind == DateTimeKind.Unspecified)
+					_Date = DateTime.SpecifyKind(value, DateTimeKind.Local);
+				else
+					_Date = value;
+				_Timestamp = _Date.ToUnixTime();
 			}
 		}
 
@@ -30,7 +34,7 @@ namespace CumulusMX
 			set
 			{
 				_Timestamp = value;
-				_Date = value.FromUnixTime();
+				_Date = value.FromUnixTime().ToLocalTime();
 			}
 		}
 		public double? HighGust { get; set; }           // 2  Highest wind gust
@@ -44,7 +48,7 @@ namespace CumulusMX
 			set
 			{
 				_HighGustDateTime = value;
-				_HighGustTime = value.HasValue ? value.Value.ToUnixTime() : null;
+				_HighGustTime = _HighGustDateTime.HasValue ? _HighGustDateTime.Value.ToUnixTime() : null;
 			}
 		}
 		private long? _HighGustTime;
@@ -54,7 +58,7 @@ namespace CumulusMX
 			set
 			{
 				_HighGustTime = value;
-				_HighGustDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighGustDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -78,7 +82,7 @@ namespace CumulusMX
 			set
 			{
 				_LowTempTime = value;
-				_LowTempDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_LowTempDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -103,7 +107,7 @@ namespace CumulusMX
 			set
 			{
 				_HighTempTime = value;
-				_HighTempDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighTempDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -126,7 +130,7 @@ namespace CumulusMX
 			set
 			{
 				_LowPressTime = value;
-				_LowPressDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_LowPressDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -149,7 +153,7 @@ namespace CumulusMX
 			set
 			{
 				_HighPressTime = value;
-				_HighPressDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighPressDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -172,7 +176,7 @@ namespace CumulusMX
 			set
 			{
 				_HighRainRateTime = value;
-				_HighRainRateDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighRainRateDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -199,7 +203,7 @@ namespace CumulusMX
 			set
 			{
 				_HighAvgWindTime = value;
-				_HighAvgWindDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighAvgWindDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -222,7 +226,7 @@ namespace CumulusMX
 			set
 			{
 				_LowHumidityTime = value;
-				_LowHumidityDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_LowHumidityDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -245,7 +249,7 @@ namespace CumulusMX
 			set
 			{
 				_HighHumidityTime = value;
-				_HighHumidityDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighHumidityDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -270,7 +274,7 @@ namespace CumulusMX
 			set
 			{
 				_HighHeatIndexTime = value;
-				_HighHeatIndexDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighHeatIndexDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -293,7 +297,7 @@ namespace CumulusMX
 			set
 			{
 				_HighAppTempTime = value;
-				_HighAppTempDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighAppTempDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -316,7 +320,7 @@ namespace CumulusMX
 			set
 			{
 				_LowAppTempTime = value;
-				_LowAppTempDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_LowAppTempDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -339,7 +343,7 @@ namespace CumulusMX
 			set
 			{
 				_HighHourlyRainTime = value;
-				_HighHourlyRainDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighHourlyRainDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -362,7 +366,7 @@ namespace CumulusMX
 			set
 			{
 				_LowWindChillTime = value;
-				_LowWindChillDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_LowWindChillDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -385,7 +389,7 @@ namespace CumulusMX
 			set
 			{
 				_HighDewPointTime = value;
-				_HighDewPointDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighDewPointDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -408,7 +412,7 @@ namespace CumulusMX
 			set
 			{
 				_LowDewPointTime = value;
-				_LowDewPointDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_LowDewPointDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -434,7 +438,7 @@ namespace CumulusMX
 			set
 			{
 				_HighSolarTime = value;
-				_HighSolarDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighSolarDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -457,7 +461,7 @@ namespace CumulusMX
 			set
 			{
 				_HighUvTime = value;
-				_HighUvDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighUvDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -480,7 +484,7 @@ namespace CumulusMX
 			set
 			{
 				_HighFeelsLikeTime = value;
-				_HighFeelsLikeDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighFeelsLikeDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -497,13 +501,13 @@ namespace CumulusMX
 			}
 		}
 		private long? _LowFeelsLikeTime;
-		public long? LowhFeelsLikeTime
+		public long? LowFeelsLikeTime
 		{
 			get { return _LowFeelsLikeTime; }
 			set
 			{
 				_LowFeelsLikeTime = value;
-				_LowFeelsLikeDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_LowFeelsLikeDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -526,7 +530,7 @@ namespace CumulusMX
 			set
 			{
 				_HighHumidexTime = value;
-				_HighHumidexDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighHumidexDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -550,7 +554,7 @@ namespace CumulusMX
 			set
 			{
 				_HighRain24HrTime = value;
-				_HighRain24HrDateTime = value.HasValue ? value.Value.FromUnixTime() : null;
+				_HighRain24HrDateTime = value.HasValue ? value.Value.FromUnixTime().ToLocalTime() : null;
 			}
 		}
 
@@ -566,7 +570,6 @@ namespace CumulusMX
 
 			var sb = new StringBuilder(350);
 			sb.Append(Date.ToString(dateformat, invDate)).Append(sep);
-			sb.Append(Timestamp).Append(sep);
 			sb.Append(HighGust.HasValue ? HighGust.Value.ToString(Program.cumulus.WindFormat, invNum) : blank);
 			sb.Append(sep);
 			sb.Append(HighGustBearing.HasValue ? HighGustBearing.Value : blank);
@@ -680,96 +683,102 @@ namespace CumulusMX
 
 		public bool FromString(string[] data)
 		{
-			var timForm = "hh\\:mm";
+			var invDate = CultureInfo.InvariantCulture.DateTimeFormat;
+			// Add the 9am (or 10am in summer) offset if required
+			var hrInc = Program.cumulus.GetHourInc(Date);
 
 			// Make sure we always have the correct number of fields
 			var data2 = new string[Cumulus.DayfileFields];
 			Array.Copy(data, data2, data.Length);
-			var i = 1;
-			Timestamp = long.Parse(data2[i++]);
+			var i = 0;
+			Date = DateTime.ParseExact(data2[i++], "dd/MM/yy", invDate);
+			Date = DateTime.SpecifyKind(Date, DateTimeKind.Local);
+
 			HighGust = Utils.TryParseNullDouble(data2[i++]);
 			HighGustBearing = Utils.TryParseNullInt(data2[i++]);
-			HighGustDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighGustDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			LowTemp = Utils.TryParseNullDouble(data2[i++]);
-			LowTempDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			LowTempDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			HighTemp = Utils.TryParseNullDouble(data2[i++]);
-			HighTempDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighTempDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			LowPress = Utils.TryParseNullDouble(data2[i++]);
-			LowPressDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			LowPressDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			HighPress = Utils.TryParseNullDouble(data2[i++]);
-			HighPressDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighPressDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			HighRainRate = Utils.TryParseNullDouble(data2[i++]);
-			HighRainRateDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighRainRateDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			TotalRain = Utils.TryParseNullDouble(data2[i++]);
 			AvgTemp = Utils.TryParseNullDouble(data2[i++]);
 			WindRun = Utils.TryParseNullDouble(data2[i++]);
 			HighAvgWind = Utils.TryParseNullDouble(data2[i++]);
-			HighAvgWindDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighAvgWindDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			LowHumidity = Utils.TryParseNullInt(data2[i++]);
-			LowHumidityDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			LowHumidityDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			HighHumidity = Utils.TryParseNullInt(data2[i++]);
-			HighHumidityDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighHumidityDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			ET = Utils.TryParseNullDouble(data2[i++]);
 			SunShineHours = Utils.TryParseNullDouble(data2[i++]);
 			HighHeatIndex = Utils.TryParseNullDouble(data2[i++]);
-			HighHeatIndexDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighHeatIndexDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			HighAppTemp = Utils.TryParseNullDouble(data2[i++]);
-			HighAppTempDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighAppTempDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			LowAppTemp = Utils.TryParseNullDouble(data2[i++]);
-			LowAppTempDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			LowAppTempDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			HighHourlyRain = Utils.TryParseNullDouble(data2[i++]);
-			HighHourlyRainDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighHourlyRainDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			LowWindChill = Utils.TryParseNullDouble(data2[i++]);
-			LowWindChillDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			LowWindChillDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			HighDewPoint = Utils.TryParseNullDouble(data2[i++]);
-			HighDewPointDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighDewPointDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			LowDewPoint = Utils.TryParseNullDouble(data2[i++]);
-			LowDewPointDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			LowDewPointDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			DominantWindBearing = Utils.TryParseNullInt(data2[i++]);
 			HeatingDegreeDays = Utils.TryParseNullDouble(data2[i++]);
 			CoolingDegreeDays = Utils.TryParseNullDouble(data2[i++]);
 			HighSolar = Utils.TryParseNullInt(data2[i++]);
-			HighSolarDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighSolarDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			HighUv = Utils.TryParseNullDouble(data2[i++]);
-			HighUvDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighUvDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			HighFeelsLike = Utils.TryParseNullDouble(data2[i++]);
-			HighFeelsLikeDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighFeelsLikeDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			LowFeelsLike = Utils.TryParseNullDouble(data2[i++]);
-			LowFeelsLikeDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			LowFeelsLikeDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			HighHumidex = Utils.TryParseNullDouble(data2[i++]);
-			HighHumidexDateTime = Utils.TryParseNullTimeSpan(Date, data2[i++], timForm);
+			HighHumidexDateTime = Utils.AddTimeToDate(Date, data2[i++], hrInc);
 			ChillHours = Utils.TryParseNullDouble(data2[i++]);
 			HighRain24Hours = Utils.TryParseNullDouble(data[i++]);
-			HighRain24HrDateTime = Utils.TryParseNullTimeSpan(Date, data[i++], timForm);
+			HighRain24HrDateTime = Utils.AddTimeToDate(Date, data[i++], hrInc);
 
 			return true;
 		}
 
-		public bool ParseDayFileRecv4(string data)
+		public bool ParseDayFileRecV4(string data)
 		{
 			var st = new List<string>(data.Split(','));
 			var invNum = CultureInfo.InvariantCulture.NumberFormat;
 			double varDbl;
 			int varInt;
-			int idx = 1;
-			var timeFormat = "hh\\:mm";
+			int idx = 0;
+			// Add the 9am (or 10am in summer) offset if required
+			var hrInc = Program.cumulus.GetHourInc(Date);
+
 
 			try
 			{
-				Timestamp =Convert.ToInt64(st[idx++]);
+				Date = Utils.ddmmyyStrToDate(st[idx++]);
 				HighGust = Convert.ToDouble(st[idx++], invNum);
 				HighGustBearing = Convert.ToInt32(st[idx++]);
-				HighGustDateTime = Utils.AddTimeToDate(Date, st[idx++]);
+				HighGustDateTime = Utils.AddTimeToDate(Date, st[idx++], hrInc);
 				LowTemp = Convert.ToDouble(st[idx++], invNum);
-				LowTempDateTime = Utils.AddTimeToDate(Date, st[idx++]);
+				LowTempDateTime = Utils.AddTimeToDate(Date, st[idx++], hrInc);
 				HighTemp = Convert.ToDouble(st[idx++], invNum);
-				HighTempDateTime = Utils.AddTimeToDate(Date, st[idx++]);
+				HighTempDateTime = Utils.AddTimeToDate(Date, st[idx++], hrInc);
 				LowPress = Convert.ToDouble(st[idx++], invNum);
-				LowPressDateTime = Utils.AddTimeToDate(Date, st[idx++]);
+				LowPressDateTime = Utils.AddTimeToDate(Date, st[idx++], hrInc);
 				HighPress = Convert.ToDouble(st[idx++], invNum);
-				HighPressDateTime = Utils.AddTimeToDate(Date, st[idx++]);
+				HighPressDateTime = Utils.AddTimeToDate(Date, st[idx++], hrInc);
 				HighRainRate = Convert.ToDouble(st[idx++], invNum);
-				HighRainRateDateTime = Utils.AddTimeToDate(Date, st[idx++]);
+				HighRainRateDateTime = Utils.AddTimeToDate(Date, st[idx++], hrInc);
 				TotalRain = Convert.ToDouble(st[idx++], invNum);
 				AvgTemp = Convert.ToDouble(st[idx++], invNum);
 
@@ -780,19 +789,19 @@ namespace CumulusMX
 					HighAvgWind = Utils.TryParseNullDouble(st[idx - 1]);
 
 				if (st.Count > idx++)
-					HighAvgWindDateTime = Utils.TryParseNullTimeSpan(Date, st[idx - 1], timeFormat);
+					HighAvgWindDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++)
 					LowHumidity = Utils.TryParseNullInt(st[idx - 1]);
 
 				if (st.Count > idx++)
-					LowHumidityDateTime = Utils.TryParseNullTimeSpan(Date, st[idx - 1], timeFormat);
+					LowHumidityDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++)
 					HighHumidity = Utils.TryParseNullInt(st[idx - 1]);
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					HighHumidityDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					HighHumidityDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++)
 					ET = Utils.TryParseNullDouble(st[idx - 1]);
@@ -804,43 +813,43 @@ namespace CumulusMX
 					HighHeatIndex = varDbl;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					HighHeatIndexDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					HighHeatIndexDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					HighAppTemp = varDbl;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					HighAppTempDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					HighAppTempDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					LowAppTemp = varDbl;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					LowAppTempDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					LowAppTempDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					HighHourlyRain = varDbl;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					HighHourlyRainDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					HighHourlyRainDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					LowWindChill = varDbl;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					LowWindChillDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					LowWindChillDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					HighDewPoint = varDbl;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					HighDewPointDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					HighDewPointDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					LowDewPoint = varDbl;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					LowDewPointDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					LowDewPointDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++ && int.TryParse(st[idx - 1], out varInt))
 					DominantWindBearing = varInt;
@@ -855,31 +864,31 @@ namespace CumulusMX
 					HighSolar = varInt;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					HighSolarDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					HighSolarDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					HighUv = varDbl;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					HighUvDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					HighUvDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					HighFeelsLike = varDbl;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					HighFeelsLikeDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					HighFeelsLikeDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					LowFeelsLike = varDbl;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					LowFeelsLikeDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					LowFeelsLikeDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					HighHumidex = varDbl;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					HighHumidexDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					HighHumidexDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 
 				if (st.Count > idx++ && double.TryParse(st[idx - 1], NumberStyles.Float, invNum, out varDbl))
 					ChillHours = varDbl;
@@ -888,7 +897,7 @@ namespace CumulusMX
 					HighRain24Hours = varDbl;
 
 				if (st.Count > idx++ && st[idx - 1].Length == 5)
-					HighRain24HrDateTime = Utils.AddTimeToDate(Date, st[idx - 1]);
+					HighRain24HrDateTime = Utils.AddTimeToDate(Date, st[idx - 1], hrInc);
 			}
 			catch (Exception ex)
 			{

@@ -9,27 +9,30 @@ namespace CumulusMX
 {
 	class IntervalData
 	{
-		private DateTime time;
-		private long timestamp;
+		private DateTime _time;
+		private long _timestamp;
 
 		[Ignore]
 		public DateTime StationTime                      // 0  DateTime
 		{
-			get { return time; }
+			get { return _time; }
 			set
 			{
-				time = value;
-				timestamp = StationTime.ToUnixTime();
+				if (value.Kind == DateTimeKind.Unspecified)
+					_time = DateTime.SpecifyKind(value, DateTimeKind.Local);
+				else
+					_time = value;
+				_timestamp = StationTime.ToUnixTime();
 			}
 		}
 		[PrimaryKey]
 		public long Timestamp                            // N/A 1  Current Unix timestamp
 		{
-			get { return timestamp; }
+			get { return _timestamp; }
 			set
 			{
-				timestamp = value;
-				time = value.FromUnixTime().ToLocalTime();
+				_timestamp = value;
+				_time = value.FromUnixTime().ToLocalTime();
 			}
 		}
 		public double? Temp { get; set; }               // 2  Current temperature

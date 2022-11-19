@@ -6,16 +6,19 @@ namespace CumulusMX
 {
 	internal class RecentData
 	{
-		private DateTime time;
-		private long timestamp;
+		private DateTime _time;
+		private long _timestamp;
 
 		[Ignore]
 		public DateTime Time
 		{
-			get { return time; }
+			get { return _time; }
 			set
 			{
-				time = value;
+				if (value.Kind == DateTimeKind.Unspecified)
+					_time = DateTime.SpecifyKind(value, DateTimeKind.Local);
+				else
+					_time = value;
 				Timestamp = value.ToUnixTime();
 			}
 		}
@@ -23,11 +26,11 @@ namespace CumulusMX
 		[PrimaryKey]
 		public long Timestamp
 		{
-			get { return timestamp; }
+			get { return _timestamp; }
 			set
 			{
-				timestamp = value;
-				time = value.FromUnixTime().ToLocalTime();
+				_timestamp = value;
+				_time = value.FromUnixTime().ToLocalTime();
 			}
 		}
 

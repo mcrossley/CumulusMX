@@ -55,7 +55,7 @@ namespace CumulusMX
 							string Line = sr.ReadLine();
 
 							var newRec = new DayData();
-							var ok = newRec.ParseDayFileRecv4(Line);
+							var ok = newRec.ParseDayFileRecV4(Line);
 
 							if (ok && newRec.Timestamp > start)
 							{
