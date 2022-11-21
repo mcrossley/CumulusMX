@@ -4871,21 +4871,14 @@ namespace CumulusMX
 
 				if (!string.IsNullOrEmpty(cumulus.DailyProgram))
 				{
-					Cumulus.LogMessage("Executing daily program: " + cumulus.DailyProgram + " params: " + cumulus.DailyParams);
 					try
 					{
 						// Prepare the process to run
-						ProcessStartInfo start = new ProcessStartInfo
-						{
-							// Enter in the command line arguments
-							Arguments = cumulus.DailyParams,
-							// Enter the executable to run, including the complete path
-							FileName = cumulus.DailyProgram,
-							// Don't show a console window
-							CreateNoWindow = true
-						};
-						// Run the external process
-						Process.Start(start);
+						var parser = new TokenParser();
+						parser.InputText = cumulus.DailyParams;
+						var args = parser.ToStringFromString();
+						Cumulus.LogMessage("Executing daily program: " + cumulus.DailyProgram + " params: " + args);
+						Utils.RunExternalTask(cumulus.DailyProgram, args, false);
 					}
 					catch (Exception ex)
 					{

@@ -283,5 +283,22 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
+		public static void RunExternalTask(string task, string parameters, bool wait)
+		{
+			var process = new System.Diagnostics.Process();
+			process.StartInfo.FileName = task;
+			process.StartInfo.Arguments = parameters;
+			process.StartInfo.UseShellExecute = false;
+			//process.StartInfo.RedirectStandardOutput = true;
+			//process.StartInfo.RedirectStandardError = true;
+			process.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+			process.StartInfo.CreateNoWindow = true;
+			process.Start();
+
+			if (wait)
+			{
+				process.WaitForExit();
+			}
+		}
 	}
 }

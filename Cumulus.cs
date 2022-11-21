@@ -1284,6 +1284,20 @@ namespace CumulusMX
 				LogMessage("No start-up PING");
 			}
 
+			// do we have a start-up task to run?
+			if (!string.IsNullOrEmpty(ProgramOptions.StartupTask))
+			{
+				LogMessage($"Running start-up task: {ProgramOptions.StartupTask}, arguments: {ProgramOptions.StartupTaskParams}, wait: {ProgramOptions.StartupTaskWait}");
+				try
+				{
+					Utils.RunExternalTask(ProgramOptions.StartupTask, ProgramOptions.StartupTaskParams, ProgramOptions.StartupTaskWait);
+				}
+				catch (Exception ex)
+				{
+					LogMessage($"Error running start-up task: {ex.Message}");
+				}
+			}
+
 			SetupFtpLogging();
 
 			GC.Collect();
@@ -2145,8 +2159,17 @@ namespace CumulusMX
 
 					if (!string.IsNullOrEmpty(RealtimeProgram))
 					{
-						LogDebugMessage($"Realtime[{cycle}]: Execute realtime program - {RealtimeProgram}");
-						ExecuteProgram(RealtimeProgram, RealtimeParams);
+						try
+						{
+							realtimeTokenParser.InputText = RealtimeParams;
+							var args = realtimeTokenParser.ToStringFromString();
+							LogDebugMessage($"Realtime[{cycle}]: Execute realtime program - {RealtimeProgram}, with parameters - {args}");
+							Utils.RunExternalTask(RealtimeProgram, args, false);
+						}
+						catch (Exception ex)
+						{
+							LogDebugMessage($"Realtime[{cycle}]: Error in realtime program - {RealtimeProgram}. Error: {ex.Message}");
+						}
 					}
 				}
 
@@ -3151,10 +3174,20 @@ namespace CumulusMX
 			}
 
 			ProgramOptions.EnableAccessibility = ini.GetValue("Program", "EnableAccessibility", false);
+
 			ProgramOptions.StartupPingHost = ini.GetValue("Program", "StartupPingHost", "");
 			ProgramOptions.StartupPingEscapeTime = ini.GetValue("Program", "StartupPingEscapeTime", 999);
+
 			ProgramOptions.StartupDelaySecs = ini.GetValue("Program", "StartupDelaySecs", 0);
 			ProgramOptions.StartupDelayMaxUptime = ini.GetValue("Program", "StartupDelayMaxUptime", 300);
+
+			ProgramOptions.StartupTask = ini.GetValue("Program", "StartupTask", "");
+			ProgramOptions.StartupTaskParams = ini.GetValue("Program", "StartupTaskParams", "");
+			ProgramOptions.StartupTaskWait = ini.GetValue("Program", "StartupTaskWait", false);
+
+			ProgramOptions.ShutdownTask = ini.GetValue("Program", "ShutdownTask", "");
+			ProgramOptions.ShutdownTaskParams = ini.GetValue("Program", "ShutdownTaskParams", "");
+
 			ProgramOptions.DataStoppedExit = ini.GetValue("Program", "DataStoppedExit", false);
 			ProgramOptions.DataStoppedMins = ini.GetValue("Program", "DataStoppedMins", 10);
 			ProgramOptions.Culture.RemoveSpaceFromDateSeparator = ini.GetValue("Culture", "RemoveSpaceFromDateSeparator", false);
@@ -4701,6 +4734,13 @@ namespace CumulusMX
 
 			ini.SetValue("Program", "StartupDelaySecs", ProgramOptions.StartupDelaySecs);
 			ini.SetValue("Program", "StartupDelayMaxUptime", ProgramOptions.StartupDelayMaxUptime);
+
+			ini.SetValue("Program", "StartupTask", ProgramOptions.StartupTask);
+			ini.SetValue("Program", "StartupTaskParams", ProgramOptions.StartupTaskParams);
+			ini.SetValue("Program", "StartupTaskWait", ProgramOptions.StartupTaskWait);
+
+			ini.SetValue("Program", "ShutdownTask", ProgramOptions.ShutdownTask);
+			ini.SetValue("Program", "ShutdownTaskParams", ProgramOptions.ShutdownTaskParams);
 
 			ini.SetValue("Program", "DataStoppedExit", ProgramOptions.DataStoppedExit);
 			ini.SetValue("Program", "DataStoppedMins", ProgramOptions.DataStoppedMins);
@@ -7933,24 +7973,24 @@ namespace CumulusMX
 				}
 				catch { }
 			}
-			LogMessage("Station shutdown complete");
-		}
 
-		public static void ExecuteProgram(string externalProgram, string externalParams)
-		{
-			// Prepare the process to run
-			ProcessStartInfo start = new ProcessStartInfo()
+			// do we have a shutdown task to run?
+			if (!string.IsNullOrEmpty(ProgramOptions.ShutdownTask))
 			{
-				// Enter in the command line arguments
-				Arguments = externalParams,
-				// Enter the executable to run, including the complete path
-				FileName = externalProgram,
-				// Don't show a console window
-				CreateNoWindow = true
-			};
+				try
+				{
+					tokenParser.InputText = ProgramOptions.ShutdownTaskParams;
+					var args = tokenParser.ToStringFromString();
+					LogMessage($"Running shutdown task: {ProgramOptions.ShutdownTask}, arguments: {args}");
+					Utils.RunExternalTask(ProgramOptions.ShutdownTask, args, false);
+				}
+				catch (Exception ex)
+				{
+					LogMessage($"Error running shutdown task: {ex.Message}");
+				}
+			}
 
-			// Run the external process
-			Process.Start(start);
+			LogMessage("Station shutdown complete");
 		}
 
 		public void DoHTMLFiles(DateTime ts)
@@ -8028,10 +8068,12 @@ namespace CumulusMX
 
 				if (!string.IsNullOrEmpty(ExternalProgram))
 				{
-					LogDebugMessage("Interval: Executing program " + ExternalProgram + " " + ExternalParams);
 					try
 					{
-						ExecuteProgram(ExternalProgram, ExternalParams);
+						tokenParser.InputText = ExternalParams;
+						var args = tokenParser.ToStringFromString();
+						LogDebugMessage("Interval: Executing program " + ExternalProgram + " " + args);
+						Utils.RunExternalTask(ExternalProgram, args, false);
 						LogDebugMessage("Interval: External program started");
 					}
 					catch (Exception ex)
@@ -9984,6 +10026,11 @@ namespace CumulusMX
 		public int StartupPingEscapeTime { get; set; }
 		public int StartupDelaySecs { get; set; }
 		public int StartupDelayMaxUptime { get; set; }
+		public string StartupTask { get; set; }
+		public string StartupTaskParams { get; set; }
+		public bool StartupTaskWait { get; set; }
+		public string ShutdownTask { get; set; }
+		public string ShutdownTaskParams { get; set; }
 		public bool DebugLogging { get; set; }
 		public bool DataLogging { get; set; }
 		public bool WarnMultiple { get; set; }
