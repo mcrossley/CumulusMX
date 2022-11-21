@@ -1190,7 +1190,9 @@ namespace CumulusMX
 		public double previousGust = 999;
 		private double previousWind = 999;
 		private int previousHum = 999;
+		private int previousInHum = 999;
 		private double previousTemp = 999;
+		private double previousInTemp = 999;
 
 
 		public void UpdateDegreeDays(int interval)
@@ -2241,14 +2243,48 @@ namespace CumulusMX
 
 		public void DoIndoorHumidity(int? hum)
 		{
-			IndoorHum = hum;
+			if (!hum.HasValue)
+			{
+				IndoorHum = null;
+				return;
+			}
+
+			// Spike check
+			if ((previousInHum != 999) && (Math.Abs(hum.Value - previousInHum) > cumulus.Spike.InHumDiff))
+			{
+				cumulus.LogSpikeRemoval("Indoor humidity difference greater than specified; reading ignored");
+				cumulus.LogSpikeRemoval($"NewVal={hum} OldVal={previousInHum} SpikeDiff={cumulus.Spike.InHumDiff:F1}");
+				lastSpikeRemoval = DateTime.Now;
+				cumulus.SpikeAlarm.LastError = $"Indoor humidity difference greater than spike value - NewVal={hum} OldVal={previousInHum}";
+				cumulus.SpikeAlarm.Triggered = true;
+				return;
+			}
+
+			IndoorHum = (int)Math.Round((hum.Value * cumulus.Calib.InHum.Mult) + cumulus.Calib.InHum.Offset); ;
 			dataValuesUpdated.IndoorHum = true;
 			HaveReadData = true;
 		}
 
 		public void DoIndoorTemp(double? temp)
 		{
-			IndoorTemp = temp ?? (temp + cumulus.Calib.InTemp.Offset);
+			if (!temp.HasValue)
+			{
+				IndoorTemp = null;
+				return;
+			}
+
+			// Spike check
+			if ((previousInTemp != 999) && (Math.Abs(temp.Value - previousInTemp) > cumulus.Spike.InTempDiff))
+			{
+				cumulus.LogSpikeRemoval("Indoor temperature difference greater than specified; reading ignored");
+				cumulus.LogSpikeRemoval($"NewVal={temp} OldVal={previousInTemp} SpikeDiff={cumulus.Spike.InTempDiff:F1}");
+				lastSpikeRemoval = DateTime.Now;
+				cumulus.SpikeAlarm.LastError = $"Indoor temperature difference greater than spike value - NewVal={temp} OldVal={previousInTemp}";
+				cumulus.SpikeAlarm.Triggered = true;
+				return;
+			}
+
+			IndoorTemp = (temp * cumulus.Calib.InTemp.Mult) + cumulus.Calib.InTemp.Offset;
 			dataValuesUpdated.IndoorTemp = true;
 			HaveReadData = true;
 		}

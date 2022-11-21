@@ -51,6 +51,7 @@ namespace CumulusMX
 				cumulus.Calib.Temp.Offset = Convert.ToDouble(settings.temp.offset, invC);
 				cumulus.Calib.InTemp.Offset = Convert.ToDouble(settings.tempin.offset, invC);
 				cumulus.Calib.Hum.Offset = settings.hum.offset;
+				cumulus.Calib.InHum.Offset = Convert.ToDouble(settings.humin.offset, invC);
 				cumulus.Calib.WindDir.Offset = settings.winddir.offset;
 				cumulus.Calib.Solar.Offset = Convert.ToDouble(settings.solar.offset);
 				cumulus.Calib.UV.Offset = Convert.ToDouble(settings.uv.offset, invC);
@@ -62,8 +63,10 @@ namespace CumulusMX
 				cumulus.Calib.WindGust.Mult = Convert.ToDouble(settings.gust.multiplier, invC);
 				cumulus.Calib.Temp.Mult = Convert.ToDouble(settings.temp.multiplier, invC);
 				cumulus.Calib.Temp.Mult2 = Convert.ToDouble(settings.temp.multiplier2, invC);
+				cumulus.Calib.InTemp.Mult = Convert.ToDouble(settings.tempin.multiplier, invC);
 				cumulus.Calib.Hum.Mult = Convert.ToDouble(settings.hum.multiplier, invC);
 				cumulus.Calib.Hum.Mult2 = Convert.ToDouble(settings.hum.multiplier2, invC);
+				cumulus.Calib.InHum.Mult = Convert.ToDouble(settings.humin.multiplier, invC);
 				cumulus.Calib.Rain.Mult = Convert.ToDouble(settings.rain.multiplier, invC);
 				cumulus.Calib.Solar.Mult = Convert.ToDouble(settings.solar.multiplier, invC);
 				cumulus.Calib.UV.Mult = Convert.ToDouble(settings.uv.multiplier, invC);
@@ -77,6 +80,8 @@ namespace CumulusMX
 				cumulus.Spike.MaxHourlyRain = Convert.ToDouble(settings.rain.spikehour, invC);
 				cumulus.Spike.MaxRainRate = Convert.ToDouble(settings.rain.spikerate, invC);
 				cumulus.Spike.PressDiff = Convert.ToDouble(settings.pressure.spike, invC);
+				cumulus.Spike.InTempDiff = Convert.ToDouble(settings.tempin.spike, invC);
+				cumulus.Spike.InHumDiff = Convert.ToDouble(settings.humin.spike, invC);
 
 				// limits
 				cumulus.Limit.TempHigh = Convert.ToDouble(settings.temp.limitmax, invC);
@@ -111,7 +116,7 @@ namespace CumulusMX
 
 		public string GetAlpacaFormData()
 		{
-			var pressure = new PressJson()
+			var pressure = new Calibrations()
 			{
 				offset = cumulus.Calib.Press.Offset,
 				multiplier = cumulus.Calib.Press.Mult,
@@ -120,7 +125,7 @@ namespace CumulusMX
 				limitmin = cumulus.Limit.PressLow
 			};
 
-			var temp = new TempJson()
+			var temp = new Calibrations()
 			{
 				offset = cumulus.Calib.Temp.Offset,
 				multiplier = cumulus.Calib.Temp.Mult,
@@ -130,12 +135,14 @@ namespace CumulusMX
 				limitmin = cumulus.Limit.TempLow,
 			};
 
-			var tempin = new TempInJson()
+			var tempin = new Calibrations()
 			{
-				offset = cumulus.Calib.InTemp.Offset
+				offset = cumulus.Calib.InTemp.Offset,
+				multiplier = cumulus.Calib.InTemp.Mult,
+				spike = cumulus.Spike.InTempDiff
 			};
 
-			var hum = new HumidityJson()
+			var hum = new Calibrations()
 			{
 				offset = (int)cumulus.Calib.Hum.Offset,
 				multiplier = cumulus.Calib.Hum.Mult,
@@ -143,50 +150,58 @@ namespace CumulusMX
 				spike = cumulus.Spike.HumidityDiff
 			};
 
-			var windspd = new WindSpeedJson()
+			var humin = new Calibrations()
+			{
+				offset = (int)cumulus.Calib.InHum.Offset,
+				multiplier = cumulus.Calib.InHum.Mult,
+				spike = cumulus.Spike.InHumDiff
+			};
+
+
+			var windspd = new Calibrations()
 			{
 				multiplier = cumulus.Calib.WindSpeed.Mult,
 				spike = cumulus.Spike.WindDiff
 			};
 
-			var gust = new GustSpeedJson()
+			var gust = new Calibrations()
 			{
 				multiplier = cumulus.Calib.WindGust.Mult,
 				spike = cumulus.Spike.GustDiff,
 				limitmax = cumulus.Limit.WindHigh
 			};
 
-			var winddir = new DirectionJson()
+			var winddir = new Calibrations()
 			{
 				offset = (int)cumulus.Calib.WindDir.Offset
 			};
 
-			var rain = new Rainjson()
+			var rain = new Calibrations()
 			{
 				multiplier = cumulus.Calib.Rain.Mult,
 				spikehour = cumulus.Spike.MaxHourlyRain,
 				spikerate = cumulus.Spike.MaxRainRate
 			};
 
-			var solar = new OffsetMultJson()
+			var solar = new Calibrations()
 			{
 				offset = cumulus.Calib.Solar.Offset,
 				multiplier = cumulus.Calib.Solar.Mult
 			};
 
-			var uv = new OffsetMultJson()
+			var uv = new Calibrations()
 			{
 				offset = cumulus.Calib.UV.Offset,
 				multiplier = cumulus.Calib.UV.Mult
 			};
 
-			var wetbulb = new OffsetMultJson()
+			var wetbulb = new Calibrations()
 			{
 				offset = cumulus.Calib.WetBulb.Offset,
 				multiplier = cumulus.Calib.WetBulb.Mult
 			};
 
-			var dewpt = new DewpointJson()
+			var dewpt = new Calibrations()
 			{
 				limitmax = cumulus.Limit.DewHigh
 			};
@@ -198,6 +213,7 @@ namespace CumulusMX
 				temp = temp,
 				tempin = tempin,
 				hum = hum,
+				humin = humin,
 				windspd = windspd,
 				gust = gust,
 				winddir = winddir,
@@ -216,17 +232,18 @@ namespace CumulusMX
 		{
 			public bool accessible { get; set; }
 			public PressJson pressure { get; set; }
-			public TempJson temp { get; set; }
-			public TempInJson tempin { get; set; }
-			public HumidityJson hum { get; set; }
-			public WindSpeedJson windspd { get; set; }
-			public GustSpeedJson gust { get; set; }
-			public DirectionJson winddir { get; set; }
-			public Rainjson rain { get; set; }
-			public OffsetMultJson solar { get; set; }
-			public OffsetMultJson uv { get; set; }
-			public OffsetMultJson wetbulb { get; set; }
-			public DewpointJson dewpt { get; set; }
+			public Calibrations temp { get; set; }
+			public Calibrations tempin { get; set; }
+			public Calibrations hum { get; set; }
+			public Calibrations humin { get; set; }
+			public Calibrations windspd { get; set; }
+			public Calibrations gust { get; set; }
+			public Calibrations winddir { get; set; }
+			public Calibrations rain { get; set; }
+			public Calibrations solar { get; set; }
+			public Calibrations uv { get; set; }
+			public Calibrations wetbulb { get; set; }
+			public Calibrations dewpt { get; set; }
 		}
 
 
@@ -239,64 +256,16 @@ namespace CumulusMX
 			public double limitmax { get; set; }
 		}
 
-		private class TempJson
+		private class Calibrations
 		{
 			public double offset { get; set; }
 			public double multiplier { get; set; }
 			public double multiplier2 { get; set; }
 			public double spike { get; set; }
+			public double spikerate { get; set; }
+			public double spikehour { get; set; }
 			public double limitmin { get; set; }
 			public double limitmax { get; set; }
 		}
-
-		private class TempInJson
-		{
-			public double offset { get; set; }
-		}
-
-		private class HumidityJson
-		{
-			public int offset { get; set; }
-			public double multiplier { get; set; }
-			public double multiplier2 { get; set; }
-			public double spike { get; set; }
-		}
-
-		private class WindSpeedJson
-		{
-			public double multiplier { get; set; }
-			public double spike { get; set; }
-		}
-
-		private class GustSpeedJson
-		{
-			public double multiplier { get; set; }
-			public double spike { get; set; }
-			public double limitmax { get; set; }
-		}
-
-		private class DirectionJson
-		{
-			public int offset { get; set; }
-		}
-
-		private class Rainjson
-		{
-			public double multiplier { get; set; }
-			public double spikerate { get; set; }
-			public double spikehour { get; set; }
-		}
-
-		private class DewpointJson
-		{
-			public double limitmax { get; set; }
-		}
-
-		private class OffsetMultJson
-		{
-			public double offset { get; set; }
-			public double multiplier { get; set; }
-		}
-
 	}
 }
