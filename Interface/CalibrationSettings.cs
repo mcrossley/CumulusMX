@@ -231,7 +231,7 @@ namespace CumulusMX
 		private class DataJson
 		{
 			public bool accessible { get; set; }
-			public PressJson pressure { get; set; }
+			public Calibrations pressure { get; set; }
 			public Calibrations temp { get; set; }
 			public Calibrations tempin { get; set; }
 			public Calibrations hum { get; set; }
@@ -246,15 +246,6 @@ namespace CumulusMX
 			public Calibrations dewpt { get; set; }
 		}
 
-
-		private class PressJson
-		{
-			public double offset { get; set; }
-			public double multiplier { get; set; }
-			public double spike { get; set; }
-			public double limitmin { get; set; }
-			public double limitmax { get; set; }
-		}
 
 		private class Calibrations
 		{

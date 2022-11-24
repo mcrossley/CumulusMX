@@ -7,7 +7,6 @@ using System.Text;
 using EmbedIO;
 using ServiceStack;
 using ServiceStack.Text;
-using static ServiceStack.Diagnostics.Events;
 
 namespace CumulusMX
 {
