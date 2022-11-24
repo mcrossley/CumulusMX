@@ -3282,16 +3282,18 @@ namespace CumulusMX
 
 			var newData = text.FromJson<MySqlCacheEditor>();
 
-			var newRec = new SqlCache()
-			{
-				key = newData.key[0],
-				statement = newData.statement[0]
-			};
-
 			if (newData.action == "Edit")
 			{
+				SqlCache newRec = null;
+
 				try
 				{
+					newRec = new SqlCache()
+					{
+						key = newData.keys[0],
+						statement = newData.statements[0]
+					};
+
 					station.Database.Update(newRec);
 					station.ReloadFailedMySQLCommands();
 				}
@@ -3302,12 +3304,24 @@ namespace CumulusMX
 
 					return "{\"errors\":{\"MySqlCache\":[\"Failed to update MySQL cache\"]}, \"data\":[\"" + newRec.statement + "\"]";
 				}
+
+				// return the updated record
+				return $"[{newData.keys[0]},\"{newData.statements[0]}\"]";
 			}
 			else if (newData.action == "Delete")
 			{
+				var newRec = new SqlCache();
+
 				try
 				{
-					station.Database.Delete(newRec);
+					for (var i = 0; i < newData.keys.Length; i++)
+					{
+						newRec.key = newData.keys[i];
+						newRec.statement = newData.statements[i];
+
+						station.Database.Delete(newRec);
+					}
+
 					station.ReloadFailedMySQLCommands();
 				}
 				catch (Exception ex)
@@ -3317,6 +3331,9 @@ namespace CumulusMX
 
 					return "{\"errors\":{\"MySqlCache\":[\"Failed to update MySQL cache\"]}, \"data\":[\"" + newRec.statement + "\"]";
 				}
+
+				return "{\"errors\":null}";
+
 			}
 			else
 			{
@@ -3324,9 +3341,6 @@ namespace CumulusMX
 				context.Response.StatusCode = 500;
 				return "{\"errors\":{\"SQL cache\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
 			}
-
-			// return the updated record
-			return $"[\"{newRec.statement}\"]";
 		}
 
 
@@ -3412,8 +3426,8 @@ namespace CumulusMX
 		private class MySqlCacheEditor
 		{
 			public string action { get; set; }
-			public long[] key { get; set; }
-			public string[] statement { get; set; }
+			public long[] keys { get; set; }
+			public string[] statements { get; set; }
 		}
 	}
 }

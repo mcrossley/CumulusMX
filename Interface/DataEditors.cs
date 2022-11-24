@@ -7,6 +7,7 @@ using System.Text;
 using EmbedIO;
 using ServiceStack;
 using ServiceStack.Text;
+using static ServiceStack.Diagnostics.Events;
 
 namespace CumulusMX
 {
@@ -119,44 +120,65 @@ namespace CumulusMX
 
 			if (newData.action == "Edit")
 			{
+				var newRec = new DayData();
 
 				// Update the MX database
-				var newRec = new DayData();
-				newRec.FromString(newData.data[0]);
-
-				station.Database.Update(newRec);
-
-				// Update the dayfile
-				if (Program.cumulus.ProgramOptions.UpdateDayfile)
+				try
 				{
-					// read dayfile into a List
-					var lines = File.ReadAllLines(cumulus.DayFileName).ToList();
+					newRec.FromString(newData.data[0]);
 
-					var lineNum = 0;
+					var cnt = station.Database.Update(newRec);
+					Cumulus.LogMessage($"EditDailyData: Update SQLite, {cnt} records updated: {newData.data[0][1]}");
 
-					// Find the line using the date string
-					foreach (var line in lines)
-					{
-						if (line.Contains(newData.data[0][0]))
-							break;
+				}
+				catch (Exception ex)
+				{
+					cumulus.LogExceptionMessage(ex, "EditDayFile: Failed, to update SQLite");
+					context.Response.StatusCode = 500;
 
-						lineNum++;
-					}
-
-					var orgLine = lines[lineNum];
-
-					// replace the edited line
-					var newLine = string.Join(",", newData.data[0]);
-
-					lines[lineNum] = newLine;
-
-					// write dayfile back again
-					File.WriteAllLines(cumulus.DayFileName, lines);
-
-					Cumulus.LogMessage($"EditDailyData: Edit line {lineNum + 1}, original = {orgLine}");
-					Cumulus.LogMessage($"EditDailyData: Edit line {lineNum + 1},      new = {newLine}");
+					return "{\"errors\":{\"SQLite\":[\"<br>Failed to update SQLite\"]}, \"data\":" + newRec.ToJson() + "}";
 				}
 
+				// Update the dayfile
+				try
+				{
+					if (Program.cumulus.ProgramOptions.UpdateDayfile)
+					{
+						// read dayfile into a List
+						var lines = File.ReadAllLines(cumulus.DayFileName).ToList();
+
+						var lineNum = 0;
+
+						// Find the line using the date string
+						foreach (var line in lines)
+						{
+							if (line.Contains(newData.data[0][0]))
+								break;
+
+							lineNum++;
+						}
+
+						var orgLine = lines[lineNum];
+
+						// replace the edited line
+						var newLine = string.Join(",", newData.data[0]);
+
+						lines[lineNum] = newLine;
+
+						// write dayfile back again
+						File.WriteAllLines(cumulus.DayFileName, lines);
+
+						Cumulus.LogMessage($"EditDailyData: Edit {cumulus.DayFileName} line {lineNum + 1}, original = {orgLine}");
+						Cumulus.LogMessage($"EditDailyData: Edit {cumulus.DayFileName} line {lineNum + 1},      new = {newLine}");
+					}
+				}
+				catch (Exception ex)
+				{
+					cumulus.LogExceptionMessage(ex, "EditDayFile: Failed, to update Dayfile");
+					context.Response.StatusCode = 501;
+
+					return "{\"errors\":{\"SQLite\":[\"<br>Updated OK\"],\"Dayfile\":[\"Failed:" + ex.Message +"\"]}, \"data\":" + newRec.ToJson() + "}";
+				}
 
 				// Update the MySQL record
 				if (!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Server) &&
@@ -240,7 +262,7 @@ namespace CumulusMX
 						context.Response.StatusCode = 501;  // Use 501 to signal that SQL failed but file update was OK
 						var thisrec = new List<string>(newData.data[0]);
 
-						return "{\"errors\":{\"Dayfile\":[\"<br>Updated the dayfile OK\"], \"MySQL\":[\"<br>Failed to update MySQL\"]}, \"data\":" + thisrec.ToJson() + "}";
+						return "{\"errors\":{\"SQLite\":[\"<br>Updated OK\"], \"MySQL\":[\"<br>Failed to update MySQL: " + ex.Message + "\"]}, \"data\":" + thisrec.ToJson() + "}";
 					}
 				}
 			}
@@ -249,38 +271,63 @@ namespace CumulusMX
 				// Update the MX database
 				var newRec = new DayData();
 
+				// Update the dayfile
+				var lines = new List<string>();
+
+				if (Program.cumulus.ProgramOptions.UpdateDayfile && Program.cumulus.StationOptions.LogMainStation)
+				{
+					// read dayfile into a List
+					lines = File.ReadAllLines(cumulus.DayFileName).ToList();
+				}
+
 				foreach (var entry in newData.data)
 				{
-					newRec.FromString(entry);
+					try
+					{
+						newRec.FromString(entry);
 
-					station.Database.Delete(newRec);
+						station.Database.Delete(newRec);
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "EditDayFile: Failed, to update SQLite");
+						context.Response.StatusCode = 500;
 
+						return "{\"errors\":{\"SQLite\":[\"<br>Failed to update SQLite\"]}, \"data\":" + newRec.ToJson() + "}";
+
+					}
 
 					// Update the dayfile
-					if (Program.cumulus.ProgramOptions.UpdateDayfile && Program.cumulus.StationOptions.LogMainStation)
+					try
 					{
-						// read dayfile into a List
-						var lines = File.ReadAllLines(cumulus.DayFileName).ToList();
-						var lineNum = 0;
-
-						// Find the line using the date string
-						foreach (var line in lines)
+						if (Program.cumulus.ProgramOptions.UpdateDayfile && Program.cumulus.StationOptions.LogMainStation)
 						{
-							if (line.Contains(newData.data[0][1]))
-								break;
+							var lineNum = 0;
 
-							lineNum++;
+							// Find the line using the date string
+							foreach (var line in lines)
+							{
+								if (line.Contains(newData.data[0][1]))
+									break;
+
+								lineNum++;
+							}
+
+							var orgLine = lines[lineNum];
+
+							// update the dayfile
+							lines.RemoveAt(lineNum);
+
+							Cumulus.LogMessage($"EditDailyData: Delete line {lineNum + 1}, original = {orgLine}");
+
 						}
+					}
+					catch (Exception ex)
+					{
+						cumulus.LogExceptionMessage(ex, "EditDayFile: Failed, to update Dayfile");
+						context.Response.StatusCode = 501;
 
-						var orgLine = lines[lineNum];
-
-						// update the dayfile
-						lines.RemoveAt(lineNum);
-
-						// write dayfile back again
-						File.WriteAllLines(cumulus.DayFileName, lines);
-
-						Cumulus.LogMessage($"EditDailyData: Delete line {lineNum + 1}, original = {orgLine}");
+						return "{\"errors\":{\"SQLite\":[\"<br>Updated OK\"],\"Dayfile\":[\"Failed:" + ex.Message + "\"]}, \"data\":" + newRec.ToJson() + "}";
 					}
 
 					// Update the MySQL record
@@ -288,10 +335,8 @@ namespace CumulusMX
 						!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.UserID) &&
 						!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Password) &&
 						!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Database) &&
-						cumulus.MySqlStuff.Settings.UpdateOnEdit
-						)
+						cumulus.MySqlStuff.Settings.UpdateOnEdit)
 					{
-
 						var thisRec = new List<string>(newData.data[0]);
 
 						try
@@ -308,6 +353,23 @@ namespace CumulusMX
 							return "{\"errors\":{\"Logfile\":[\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 						}
 					}
+
+				}
+
+				// write dayfile back again
+				try
+				{
+					if (Program.cumulus.ProgramOptions.UpdateDayfile && Program.cumulus.StationOptions.LogMainStation)
+					{
+						File.WriteAllLines(cumulus.DayFileName, lines);
+					}
+				}
+				catch (Exception ex)
+				{
+					cumulus.LogExceptionMessage(ex, "EditDayFile: Failed, to update Dayfile");
+					context.Response.StatusCode = 501;
+
+					return "{\"errors\":{\"SQLite\":[\"<br>Updated OK\"],\"Dayfile\":[\"Failed:" + ex.Message + "\"]}, \"data\":" + newRec.ToJson() + "}";
 				}
 			}
 			else
