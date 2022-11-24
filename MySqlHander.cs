@@ -16,7 +16,8 @@ namespace CumulusMX
 
 		internal MySqlGeneralSettings Settings = new MySqlGeneralSettings();
 
-		internal int RealtimeLastMinute = -1;
+		internal DateTime MySqlLastRealtimeTime;
+		internal DateTime MySqlLastIntervalTime;
 
 		internal MySqlTable RealtimeTable;
 		internal MySqlTable MonthlyTable;
@@ -137,7 +138,7 @@ namespace CumulusMX
 									}
 
 									updated += cmd.ExecuteNonQuery();
-									
+
 									cumulus.LogDebugMessage($"{CallingFunction}: MySQL {updated} rows were affected.");
 
 									// Success, if using the failed list, delete from the databasec
@@ -411,10 +412,10 @@ namespace CumulusMX
 			if (!Settings.Realtime.Enabled)
 				return;
 
-			if (Settings.RealtimeLimit1Minute && RealtimeLastMinute == timestamp.Minute)
+			if (Settings.RealtimeLimit1Minute && MySqlLastRealtimeTime.Minute == timestamp.Minute)
 				return;
 
-			RealtimeLastMinute = timestamp.Minute;
+			MySqlLastRealtimeTime = timestamp;
 
 			StringBuilder values = new StringBuilder(RealtimeTable.StartOfInsert, 1024);
 			values.Append(" Values('");
@@ -500,6 +501,8 @@ namespace CumulusMX
 
 		internal void DoIntervalData(DateTime timestamp, bool live)
 		{
+			MySqlLastIntervalTime= timestamp;
+
 			StringBuilder values = new StringBuilder(MonthlyTable.StartOfInsert, 600);
 			values.Append(" Values('");
 			values.Append(timestamp.ToString("yy-MM-dd HH:mm", invDate) + "',");

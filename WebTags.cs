@@ -5393,6 +5393,16 @@ namespace CumulusMX
 			return cumulus.DisplayOptions.ShowUV ? "1" : "0";
 		}
 
+		private string TagMySqlRealtimeTime(Dictionary<string, string> tagParams)
+		{
+			return GetFormattedDateTime(cumulus.MySqlStuff.MySqlLastRealtimeTime, "yy-MM-dd HH:mm:ss", tagParams);
+		}
+
+		private string TagMySqlIntervalTime(Dictionary<string, string> tagParams)
+		{
+			return GetFormattedDateTime(cumulus.MySqlStuff.MySqlILastntervalTime, "yy-MM-dd HH:mm", tagParams);
+		}
+
 		public void InitialiseWebtags()
 		{
 			// create the web tag dictionary
@@ -6282,10 +6292,13 @@ namespace CumulusMX
 				{ "ByMonthLongestWetPeriodT", TagByMonthLongestWetPeriodT },
 				{ "ByMonthLowDailyTempRangeT", TagByMonthLowDailyTempRangeT },
 				{ "ByMonthHighDailyTempRangeT", TagByMonthHighDailyTempRangeT },
-				//Options
+				// Options
 				{ "Option_useApparent", TagOption_useApparent },
 				{ "Option_showSolar", TagOption_showSolar },
-				{ "Option_showUV", TagOption_showUV }
+				{ "Option_showUV", TagOption_showUV },
+				// MySQL insert times
+				{ "MySqlRealtimeTime", TagMySqlRealtimeTime },
+				{ "MySqlIntervalTime", TagMySqlIntervalTime }
 			};
 
 			Cumulus.LogMessage(webTagDictionary.Count + " web tags initialised");
