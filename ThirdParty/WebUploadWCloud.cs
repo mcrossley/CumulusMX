@@ -114,10 +114,10 @@ namespace CumulusMX.ThirdParty
 
 			// Wind
 			if (station.WindLatest.HasValue)
-				sb.Append("&wspd=" + (int)Math.Round(station.ConvertUserWindToMS(station.WindLatest).Value * 10));
+				sb.Append("&wspd=" + (int)Math.Round(WeatherStation.ConvertUserWindToMS(station.WindLatest).Value * 10));
 			if (station.RecentMaxGust.HasValue)
-				sb.Append("&wspdhi=" + (int)Math.Round(station.ConvertUserWindToMS(station.RecentMaxGust).Value * 10));
-			sb.Append("&wspdavg=" + (int)Math.Round(station.ConvertUserWindToMS(station.WindAverage).Value * 10));
+				sb.Append("&wspdhi=" + (int)Math.Round(WeatherStation.ConvertUserWindToMS(station.RecentMaxGust).Value * 10));
+			sb.Append("&wspdavg=" + (int)Math.Round(WeatherStation.ConvertUserWindToMS(station.WindAverage).Value * 10));
 
 			// Wind Direction
 			sb.Append("&wdir=" + station.Bearing);
@@ -129,14 +129,14 @@ namespace CumulusMX.ThirdParty
 
 			// rain
 			if (station.RainToday.HasValue)
-				sb.Append("&rain=" + (int)Math.Round(station.ConvertUserRainToMM(station.RainToday).Value * 10));
+				sb.Append("&rain=" + (int)Math.Round(WeatherStation.ConvertUserRainToMM(station.RainToday).Value * 10));
 			if (station.RainRate.HasValue)
-				sb.Append("&rainrate=" + (int)Math.Round(station.ConvertUserRainToMM(station.RainRate).Value * 10));
+				sb.Append("&rainrate=" + (int)Math.Round(WeatherStation.ConvertUserRainToMM(station.RainRate).Value * 10));
 
 			// ET
 			if (SendSolar && cumulus.Manufacturer == cumulus.DAVIS)
 			{
-				sb.Append("&et=" + (int)Math.Round(station.ConvertUserRainToMM(station.ET).Value * 10));
+				sb.Append("&et=" + (int)Math.Round(WeatherStation.ConvertUserRainToMM(station.ET).Value * 10));
 			}
 
 			// solar

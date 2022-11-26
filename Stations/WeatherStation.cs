@@ -2151,8 +2151,11 @@ namespace CumulusMX
 			};
 		}
 
-		public static double ConvertUserWindToKnots(double value)
+		public static double? ConvertUserWindToKnots(double? value)
 		{
+			if (value == null)
+				return null;
+
 			return cumulus.Units.Wind switch
 			{
 				0 => value * 1.943844,
@@ -5283,7 +5286,7 @@ namespace CumulusMX
 				1 => value * 2.23693629,
 				2 => value * 3.6,
 				3 => value * 1.94384449,
-				_ => 0,
+				_ => 0
 			};
 		}
 
@@ -5303,7 +5306,7 @@ namespace CumulusMX
 				1 => value,
 				2 => value * 1.60934,
 				3 => value * 0.868976,
-				_ => 0,
+				_ => 0
 			};
 		}
 
@@ -5312,7 +5315,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		public virtual double? ConvertUserWindToMS(double? value)
+		public static double? ConvertUserWindToMS(double? value)
 		{
 			if (value == null) return null;
 
@@ -5322,7 +5325,7 @@ namespace CumulusMX
 				1 => value / 2.23693629,
 				2 => value / 3.6F,
 				3 => value / 1.94384449,
-				_ => 0,
+				_ => 0
 			};
 		}
 
@@ -5341,7 +5344,7 @@ namespace CumulusMX
 				1 => val * 0.621371,
 				// knots
 				3 => val * 0.539957,
-				_ => val,
+				_ => val
 			};
 		}
 
@@ -5350,17 +5353,55 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">Windrun in configured units</param>
 		/// <returns>Wind in km</returns>
-		public virtual double ConvertWindRunToKm(double value)
+		public static double? ConvertWindRunToKm(double? value)
 		{
+			if (value == null) return null;
+
 			return cumulus.Units.Wind switch
 			{
-				// m/s
+				// m/s or km/h
 				0 or 2 => value,
 				// mph
 				1 => value / 0.621371192,
 				// knots
 				3 => value / 0.539956803,
-				_ => 0,
+				_ => 0
+			};
+		}
+
+		/// <summary>
+		///  Converts windrun supplied in user units to miles
+		/// </summary>
+		/// <param name="value">Windrun in configured units</param>
+		/// <returns>Wind in mi</returns>
+		public static double? ConvertWindRunToMi(double? value)
+		{
+			if (value == null) return null;
+
+			return cumulus.Units.Wind switch
+			{
+				0 or 2 => value * 0.621371192,	// m/s or km/h
+				1 => value,						// mph
+				3 => value / 0.8689762,			// knots
+				_ => 0
+			};
+		}
+
+		/// <summary>
+		///  Converts windrun supplied in user units to nautical miles
+		/// </summary>
+		/// <param name="value">Windrun in configured units</param>
+		/// <returns>Wind in Nm</returns>
+		public static double? ConvertWindRunToNm(double? value)
+		{
+			if (value == null) return null;
+
+			return cumulus.Units.Wind switch
+			{
+				0 or 2 => value * 0.539956803,  // m/s or km/h
+				1 => value * 0.8689762,         // mph
+				3 => value,                     // knots
+				_ => 0
 			};
 		}
 
@@ -5388,7 +5429,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">Rain in mm</param>
 		/// <returns>Rain in configured units</returns>
-		public virtual double ConvertRainMMToUser(double value)
+		public static double ConvertRainMMToUser(double value)
 		{
 			return cumulus.Units.Rain == 1 ? value * 0.0393700787 : value;
 		}
@@ -5398,7 +5439,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">Rain in mm</param>
 		/// <returns>Rain in configured units</returns>
-		public virtual double ConvertRainINToUser(double value)
+		public static double ConvertRainINToUser(double value)
 		{
 			return cumulus.Units.Rain == 1 ? value : value * 25.4;
 		}
@@ -5408,7 +5449,7 @@ namespace CumulusMX
 		/// </summary>
 		/// <param name="value">Rain in configured units</param>
 		/// <returns>Rain in mm</returns>
-		public virtual double? ConvertUserRainToMM(double? value)
+		public static double? ConvertUserRainToMM(double? value)
 		{
 			if (value == null)
 				return null;
@@ -7630,8 +7671,10 @@ namespace CumulusMX
 			return ConvertUserTempToC(temp).Value.ToString("F1", invNum);
 		}
 
-		public static double ConvertUserRainToIN(double rain)
+		public static double? ConvertUserRainToIN(double? rain)
 		{
+			if (rain == null) return null;
+
 			if (cumulus.Units.Rain == 0)
 			{
 				return rain * 0.0393700787;

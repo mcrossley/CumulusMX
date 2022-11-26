@@ -40,7 +40,7 @@ namespace CumulusMX.ThirdParty
 					var responseBodyAsText = await response.Content.ReadAsStringAsync();
 					var status = response.StatusCode == HttpStatusCode.NoContent ? "OK" : "Error";  // Returns a 204 response for OK!
 					cumulus.LogDebugMessage($"OpenWeatherMap: Response code = {status} - {response.StatusCode}");
-					
+
 					if (response.StatusCode != HttpStatusCode.NoContent)
 						cumulus.LogDataMessage($"OpenWeatherMap: Response data = {responseBodyAsText}");
 				}
@@ -121,15 +121,15 @@ namespace CumulusMX.ThirdParty
 			if (station.Temperature.HasValue)
 				sb.Append($"\"temperature\":{Math.Round(WeatherStation.ConvertUserTempToC(station.Temperature).Value, 1).ToString(invC)},");
 			sb.Append($"\"wind_deg\":{station.AvgBearing},");
-			sb.Append($"\"wind_speed\":{Math.Round(station.ConvertUserWindToMS(station.WindAverage).Value, 1).ToString(invC)},");
+			sb.Append($"\"wind_speed\":{Math.Round(WeatherStation.ConvertUserWindToMS(station.WindAverage).Value, 1).ToString(invC)},");
 			if (station.RecentMaxGust.HasValue)
-				sb.Append($"\"wind_gust\":{Math.Round(station.ConvertUserWindToMS(station.RecentMaxGust).Value, 1).ToString(invC)},");
+				sb.Append($"\"wind_gust\":{Math.Round(WeatherStation.ConvertUserWindToMS(station.RecentMaxGust).Value, 1).ToString(invC)},");
 			if (station.Pressure.HasValue)
 				sb.Append($"\"pressure\":{Math.Round(WeatherStation.ConvertUserPressureToHPa(station.Pressure).Value, 1).ToString(invC)},");
 			if (station.Humidity.HasValue)
 				sb.Append($"\"humidity\":{station.Humidity.Value},");
-			sb.Append($"\"rain_1h\":{Math.Round(station.ConvertUserRainToMM(station.RainLastHour).Value, 1).ToString(invC)},");
-			sb.Append($"\"rain_24h\":{Math.Round(station.ConvertUserRainToMM(station.RainLast24Hour).Value, 1).ToString(invC)}");
+			sb.Append($"\"rain_1h\":{Math.Round(WeatherStation.ConvertUserRainToMM(station.RainLastHour).Value, 1).ToString(invC)},");
+			sb.Append($"\"rain_24h\":{Math.Round(WeatherStation.ConvertUserRainToMM(station.RainLast24Hour).Value, 1).ToString(invC)}");
 			sb.Append("}]");
 
 			return sb.ToString();
