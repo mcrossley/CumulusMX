@@ -5505,12 +5505,12 @@ namespace CumulusMX
 
 		private string TagMySqlRealtimeTime(Dictionary<string, string> tagParams)
 		{
-			return GetFormattedDateTime(cumulus.MySqlStuff.MySqlLastRealtimeTime, "yy-MM-dd HH:mm:ss", tagParams);
+			return GetFormattedDateTime(cumulus.MySqlStuff.MySqlLastRealtimeTime, "yyyy-MM-dd HH:mm:ss", tagParams);
 		}
 
 		private string TagMySqlIntervalTime(Dictionary<string, string> tagParams)
 		{
-			return GetFormattedDateTime(cumulus.MySqlStuff.MySqlLastIntervalTime, "yy-MM-dd HH:mm", tagParams);
+			return GetFormattedDateTime(cumulus.MySqlStuff.MySqlLastIntervalTime, "yyyy-MM-dd HH:mm", tagParams);
 		}
 
 		public void InitialiseWebtags()

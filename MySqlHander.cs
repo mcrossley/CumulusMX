@@ -419,7 +419,7 @@ namespace CumulusMX
 
 			StringBuilder values = new StringBuilder(RealtimeTable.StartOfInsert, 1024);
 			values.Append(" Values('");
-			values.Append(timestamp.ToString("yy-MM-dd HH:mm:ss", invDate) + "',");
+			values.Append(timestamp.ToString("yyyy-MM-dd HH:mm:ss", invDate) + "',");
 			values.Append((station.Temperature.HasValue ? station.Temperature.Value.ToString(cumulus.TempFormat, invNum) : "null") + ',');
 			values.Append((station.Humidity.HasValue ? station.Humidity.Value.ToString() : "null") + ',');
 			values.Append((station.Dewpoint.HasValue ? station.Dewpoint.Value.ToString(cumulus.TempFormat, invNum) : "null") + ',');
@@ -505,7 +505,7 @@ namespace CumulusMX
 
 			StringBuilder values = new StringBuilder(MonthlyTable.StartOfInsert, 600);
 			values.Append(" Values('");
-			values.Append(timestamp.ToString("yy-MM-dd HH:mm", invDate) + "',");
+			values.Append(timestamp.ToString("yyyy-MM-dd HH:mm", invDate) + "',");
 			values.Append((station.Temperature.HasValue ? station.Temperature.Value.ToString(cumulus.TempFormat, invNum) : "null") + ",");
 			values.Append((station.Humidity.HasValue ? station.Humidity.Value : "null") + ",");
 			values.Append((station.Dewpoint.HasValue ? station.Dewpoint.Value.ToString(cumulus.TempFormat, invNum) : "null") + ",");
@@ -555,7 +555,7 @@ namespace CumulusMX
 		{
 			StringBuilder queryString = new StringBuilder(cumulus.MySqlStuff.DayfileTable.StartOfInsert, 1024);
 			queryString.Append(" Values('");
-			queryString.Append(timestamp.AddDays(-1).ToString("yy-MM-dd") + "',");
+			queryString.Append(timestamp.AddDays(-1).ToString("yyyy-MM-dd") + "',");
 			if (station.HiLoToday.HighGust.HasValue)
 			{
 				queryString.Append(station.HiLoToday.HighGust.Value.ToString(cumulus.WindFormat, invNum) + ",");
