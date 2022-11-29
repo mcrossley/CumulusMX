@@ -131,9 +131,9 @@ namespace CumulusMX
 
 			var weatherflow = new WeatherFlowJson()
 			{
-				deviceid = cumulus.WeatherFlowOptions.WFDeviceId, 
-				tcpport = cumulus.WeatherFlowOptions.WFTcpPort, 
-				token = cumulus.WeatherFlowOptions.WFToken, 
+				deviceid = cumulus.WeatherFlowOptions.WFDeviceId,
+				tcpport = cumulus.WeatherFlowOptions.WFTcpPort,
+				token = cumulus.WeatherFlowOptions.WFToken,
 				dayshistory = cumulus.WeatherFlowOptions.WFDaysHist
 			};
 
@@ -218,7 +218,7 @@ namespace CumulusMX
 				updatelogpointer = cumulus.ImetOptions.UpdateLogPointer
 			};
 
-			var imet = new JImetJson()
+			var imet = new ImetJson()
 			{
 				comportname = cumulus.ComportName,
 				baudrate = cumulus.ImetOptions.BaudRate,
@@ -338,12 +338,42 @@ namespace CumulusMX
 				graphGrowingDegreeDaysVis2 = cumulus.GraphOptions.GrowingDegreeDaysVisible2
 			};
 
+			var graphDataExtraTemp = new GraphDataExtraSensors()
+			{
+				sensors = cumulus.GraphOptions.ExtraTempVisible
+			};
+
+			var graphDataExtraHum = new GraphDataExtraSensors()
+			{
+				sensors = cumulus.GraphOptions.ExtraHumVisible
+			};
+
+			var graphDataSoilTemp = new GraphDataExtraSensors()
+			{
+				sensors = cumulus.GraphOptions.SoilTempVisible
+			};
+
+			var graphDataSoilMoist = new GraphDataExtraSensors()
+			{
+				sensors = cumulus.GraphOptions.SoilMoistVisible
+			};
+
+			var graphDataUserTemp = new GraphDataExtraSensors()
+			{
+				sensors = cumulus.GraphOptions.UserTempVisible
+			};
+
 			var graphDataVis = new GraphVisibilityJson()
 			{
 				temperature = graphDataTemp,
 				humidity = graphDataHum,
 				solar = graphDataSolar,
-				degreedays = graphDataDegreeDays
+				degreedays = graphDataDegreeDays,
+				extratemp = graphDataExtraTemp,
+				extrahum = graphDataExtraHum,
+				soiltemp = graphDataSoilTemp,
+				soilmoist = graphDataSoilMoist,
+				usertemp = graphDataUserTemp
 			};
 
 			var graphs = new GraphsJson()
@@ -594,10 +624,15 @@ namespace CumulusMX
 					cumulus.GraphOptions.TempSumVisible2 = settings.Graphs.datavisibility.temperature.graphTempSumVis2;
 					cumulus.GraphOptions.GrowingDegreeDaysVisible1 = settings.Graphs.datavisibility.degreedays.graphGrowingDegreeDaysVis1;
 					cumulus.GraphOptions.GrowingDegreeDaysVisible2 = settings.Graphs.datavisibility.degreedays.graphGrowingDegreeDaysVis2;
+					cumulus.GraphOptions.ExtraTempVisible = settings.Graphs.datavisibility.extratemp.sensors;
+					cumulus.GraphOptions.ExtraHumVisible = settings.Graphs.datavisibility.extrahum.sensors;
+					cumulus.GraphOptions.SoilTempVisible = settings.Graphs.datavisibility.soiltemp.sensors;
+					cumulus.GraphOptions.SoilMoistVisible = settings.Graphs.datavisibility.soilmoist.sensors;
+					cumulus.GraphOptions.UserTempVisible = settings.Graphs.datavisibility.usertemp.sensors;
 				}
 				catch (Exception ex)
 				{
-					var msg = "Error processing Graph hours";
+					var msg = "Error processing Graph settings";
 					cumulus.LogExceptionMessage(ex, msg);
 					errorMsg += msg + "\n\n";
 					context.Response.StatusCode = 500;
@@ -1531,7 +1566,7 @@ namespace CumulusMX
 			public WLLJson daviswll { get; set; }
 			public FineOffsetJson fineoffset { get; set; }
 			public EasyWeatherJson easyw { get; set; }
-			public JImetJson imet { get; set; }
+			public ImetJson imet { get; set; }
 			public WMR928Json wmr928 { get; set; }
 			public OptionsJson Options { get; set; }
 			public ForecastJson Forecast { get; set; }
@@ -1731,7 +1766,7 @@ namespace CumulusMX
 			public string comportname { get; set; }
 		}
 
-		private class JImetJson
+		private class ImetJson
 		{
 			public string comportname { get; set; }
 
@@ -1914,6 +1949,11 @@ namespace CumulusMX
 			public GraphDataHumidityJson humidity { get; set; }
 			public GraphDataSolarJson solar { get; set; }
 			public GraphDataDegreeDaysJson degreedays { get; set; }
+			public GraphDataExtraSensors extratemp { get; set; }
+			public GraphDataExtraSensors extrahum { get; set; }
+			public GraphDataExtraSensors soiltemp { get; set; }
+			public GraphDataExtraSensors soilmoist { get; set; }
+			public GraphDataExtraSensors usertemp { get; set; }
 		}
 
 		private class GraphDataTemperatureJson
@@ -1951,6 +1991,11 @@ namespace CumulusMX
 		{
 			public bool graphGrowingDegreeDaysVis1 { get; set; }
 			public bool graphGrowingDegreeDaysVis2 { get; set; }
+		}
+
+		public class GraphDataExtraSensors
+		{
+			public bool[] sensors { get; set; }
 		}
 
 		private class SelectaChartJson

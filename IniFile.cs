@@ -368,6 +368,38 @@ namespace CumulusMX
 			return Result;
 		}
 
+		// *** Encode bool array
+		private string EncodeBoolArray(bool[] Value)
+		{
+			if (Value == null) return null;
+
+			StringBuilder sb = new StringBuilder();
+			foreach (bool b in Value)
+			{
+				string text = b ? "1," : "0,";
+				sb.Append(b ? "1," : "0,");
+			}
+			if (sb[sb.Length - 1] == ',')
+				sb.Length--;
+
+			return sb.ToString();
+		}
+
+		// *** Decode bool array
+		private bool[] DecodeBoolArray(string Value, int Length)
+		{
+			if (Value == null) return null;
+
+			var arr = Value.Split(',');
+			var ret = new bool[Math.Max(arr.Length, Length)];
+			for (var i = 0; i < ret.Length; i++)
+			{
+				ret[i] = Convert.ToBoolean(Convert.ToInt32(arr[i]));
+			}
+
+			return ret;
+		}
+
 		// *** Getters for various types ***
 		internal bool GetValue(string SectionName, string Key, bool DefaultValue)
 		{
@@ -421,7 +453,7 @@ namespace CumulusMX
 			if (double.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value)) return Value;
 			return DefaultValue;
 		}
-		
+
 		internal double? GetValue(string SectionName, string Key, double? DefaultValue)
 		{
 			string defVal = DefaultValue.HasValue ? DefaultValue.Value.ToString(CultureInfo.InvariantCulture) : "null";
@@ -452,6 +484,19 @@ namespace CumulusMX
 			try
 			{
 				return DecodeByteArray(StringValue);
+			}
+			catch (FormatException)
+			{
+				return DefaultValue;
+			}
+		}
+
+		internal bool[] GetValue(string SectionName, string Key, bool[] DefaultValue)
+		{
+			string StringValue = GetValue(SectionName, Key, EncodeBoolArray(DefaultValue));
+			try
+			{
+				return DecodeBoolArray(StringValue, DefaultValue.Length);
 			}
 			catch (FormatException)
 			{
@@ -503,6 +548,11 @@ namespace CumulusMX
 		internal void SetValue(string SectionName, string Key, byte[] Value)
 		{
 			SetValue(SectionName, Key, EncodeByteArray(Value));
+		}
+
+		internal void SetValue(string SectionName, string Key, bool[] Value)
+		{
+			SetValue(SectionName, Key, EncodeBoolArray(Value));
 		}
 
 		internal void SetValue(string SectionName, string Key, DateTime Value)

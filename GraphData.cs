@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ServiceStack.Text;
 
@@ -535,6 +538,238 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
+		internal string GetExtraTempGraphData(DateTime ts)
+		{
+			bool append = false;
+			var InvC = new CultureInfo("");
+			var sb = new StringBuilder("{", 10240);
+
+			StringBuilder[] sbExt = new StringBuilder[cumulus.GraphOptions.ExtraTempVisible.Length];
+
+			for (var i = 0; i < cumulus.GraphOptions.ExtraTempVisible.Length; i++)
+			{
+				if (cumulus.GraphOptions.ExtraTempVisible[i])
+					sbExt[i] = new StringBuilder($"\"{cumulus.ExtraTempCaptions[i + 1]}\":[");
+			}
+
+			var dataFrom = ts.ToUnixTime() - cumulus.GraphHours * 3600;
+
+			var data = station.Database.Query<ExtraTemp>("select * from ExtraTemp where Timestamp >=?", dataFrom);
+
+			foreach (var row in data)
+			{
+				for (var i = 0; i < cumulus.GraphOptions.ExtraTempVisible.Length; i++)
+				{
+					if (cumulus.GraphOptions.ExtraTempVisible[i])
+					{
+						var temp = (double?) row.GetType().GetProperty("Temp" + (i + 1)).GetValue(row);
+						sbExt[i].Append($"[{row.Time.ToUnixTimeMs()},{(temp.HasValue ? temp.Value.ToString(cumulus.TempFormat, InvC) : "null")}],");
+					}
+				}
+			}
+
+			for (var i = 0; i < cumulus.GraphOptions.ExtraTempVisible.Length; i++)
+			{
+				if (cumulus.GraphOptions.ExtraTempVisible[i])
+				{
+					if (sbExt[i][sbExt[i].Length - 1] == ',')
+						sbExt[i].Length--;
+
+					sbExt[i].Append(']');
+					sb.Append((append ? "," : "") + sbExt[i]);
+					append = true;
+				}
+			}
+
+			sb.Append('}');
+			return sb.ToString();
+		}
+
+		internal string GetExtraHumGraphData(DateTime ts)
+		{
+			bool append = false;
+			var InvC = new CultureInfo("");
+			var sb = new StringBuilder("{", 10240);
+
+			StringBuilder[] sbExt = new StringBuilder[cumulus.GraphOptions.ExtraHumVisible.Length];
+
+			for (var i = 0; i < cumulus.GraphOptions.ExtraHumVisible.Length; i++)
+			{
+				if (cumulus.GraphOptions.ExtraHumVisible[i])
+					sbExt[i] = new StringBuilder($"\"{cumulus.ExtraHumCaptions[i + 1]}\":[");
+			}
+
+			var dataFrom = ts.ToUnixTime() - cumulus.GraphHours * 3600;
+
+			var data = station.Database.Query<ExtraHum>("select * from ExtraHum where Timestamp >=?", dataFrom);
+
+			foreach (var row in data)
+			{
+				for (var i = 0; i < cumulus.GraphOptions.ExtraHumVisible.Length; i++)
+				{
+					if (cumulus.GraphOptions.ExtraHumVisible[i])
+					{
+						var temp = (double?)row.GetType().GetProperty("Hum" + (i + 1)).GetValue(row);
+						sbExt[i].Append($"[{row.Time.ToUnixTimeMs()},{(temp.HasValue ? temp.Value.ToString(cumulus.HumFormat, InvC) : "null")}],");
+					}
+				}
+			}
+
+			for (var i = 0; i < cumulus.GraphOptions.ExtraHumVisible.Length; i++)
+			{
+				if (cumulus.GraphOptions.ExtraHumVisible[i])
+				{
+					if (sbExt[i][sbExt[i].Length - 1] == ',')
+						sbExt[i].Length--;
+
+					sbExt[i].Append(']');
+					sb.Append((append ? "," : "") + sbExt[i]);
+					append = true;
+				}
+			}
+
+			sb.Append('}');
+			return sb.ToString();
+		}
+
+		internal string GetSoilTempGraphData(DateTime ts)
+		{
+			bool append = false;
+			var InvC = new CultureInfo("");
+			var sb = new StringBuilder("{", 10240);
+
+			StringBuilder[] sbExt = new StringBuilder[cumulus.GraphOptions.SoilTempVisible.Length];
+
+			for (var i = 0; i < cumulus.GraphOptions.SoilTempVisible.Length; i++)
+			{
+				if (cumulus.GraphOptions.SoilTempVisible[i])
+					sbExt[i] = new StringBuilder($"\"{cumulus.SoilTempCaptions[i + 1]}\":[");
+			}
+
+			var dataFrom = ts.ToUnixTime() - cumulus.GraphHours * 3600;
+
+			var data = station.Database.Query<SoilTemp>("select * from SoilTemp where Timestamp >=?", dataFrom);
+
+			foreach (var row in data)
+			{
+				for (var i = 0; i < 16; i++)
+				{
+					if (cumulus.GraphOptions.SoilTempVisible[i])
+					{
+						var temp = (double?)row.GetType().GetProperty("Temp" + (i + 1)).GetValue(row);
+						sbExt[i].Append($"[{row.Time.ToUnixTimeMs()},{(temp.HasValue ? temp.Value.ToString(cumulus.TempFormat, InvC) : "null")}],");
+					}
+				}
+			}
+
+			for (var i = 0; i < cumulus.GraphOptions.SoilTempVisible.Length; i++)
+			{
+				if (cumulus.GraphOptions.SoilTempVisible[i])
+				{
+					if (sbExt[i][sbExt[i].Length - 1] == ',')
+						sbExt[i].Length--;
+
+					sbExt[i].Append(']');
+					sb.Append((append ? "," : "") + sbExt[i]);
+					append = true;
+				}
+			}
+
+			sb.Append('}');
+			return sb.ToString();
+		}
+
+		internal string GetSoilMoistGraphData(DateTime ts)
+		{
+			bool append = false;
+			var InvC = new CultureInfo("");
+			var sb = new StringBuilder("{", 10240);
+
+			StringBuilder[] sbExt = new StringBuilder[cumulus.GraphOptions.SoilMoistVisible.Length];
+
+			for (var i = 0; i < cumulus.GraphOptions.SoilMoistVisible.Length; i++)
+			{
+				if (cumulus.GraphOptions.SoilMoistVisible[i])
+					sbExt[i] = new StringBuilder($"\"{cumulus.SoilMoistureCaptions[i + 1]}\":[");
+			}
+
+			var dataFrom = ts.ToUnixTime() - cumulus.GraphHours * 3600;
+
+			var data = station.Database.Query<SoilMoist>("select * from SoilMoist where Timestamp >=?", dataFrom);
+
+			foreach (var row in data)
+			{
+				for (var i = 0; i < 16; i++)
+				{
+					var temp = (int?)row.GetType().GetProperty("Moist" + (i + 1)).GetValue(row);
+					sbExt[i].Append($"[{row.Time.ToUnixTimeMs()},{(temp.HasValue ? temp.Value : "null")}],");
+				}
+			}
+
+			for (var i = 0; i < cumulus.GraphOptions.SoilMoistVisible.Length; i++)
+			{
+				if (cumulus.GraphOptions.SoilMoistVisible[i])
+				{
+					if (sbExt[i][sbExt[i].Length - 1] == ',')
+						sbExt[i].Length--;
+
+					sbExt[i].Append(']');
+					sb.Append((append ? "," : "") + sbExt[i]);
+					append = true;
+				}
+			}
+
+			sb.Append('}');
+			return sb.ToString();
+		}
+
+		internal string GetUserTempGraphData(DateTime ts)
+		{
+			bool append = false;
+			var InvC = new CultureInfo("");
+			var sb = new StringBuilder("{", 10240);
+
+			StringBuilder[] sbExt = new StringBuilder[cumulus.GraphOptions.UserTempVisible.Length];
+
+			for (var i = 0; i < cumulus.GraphOptions.UserTempVisible.Length; i++)
+			{
+				if (cumulus.GraphOptions.UserTempVisible[i])
+					sbExt[i] = new StringBuilder($"\"{cumulus.UserTempCaptions[i + 1]}\":[");
+			}
+
+			var dataFrom = ts.ToUnixTime() - cumulus.GraphHours * 3600;
+
+			var data = station.Database.Query<UserTemp>("select * from UserTemp where Timestamp >=?", dataFrom);
+
+			foreach (var row in data)
+			{
+				for (var i = 0; i < cumulus.GraphOptions.UserTempVisible.Length; i++)
+				{
+					if (cumulus.GraphOptions.UserTempVisible[i])
+					{
+						var temp = (double?)row.GetType().GetProperty("Temp" + (i + 1)).GetValue(row);
+						sbExt[i].Append($"[{row.Time.ToUnixTimeMs()},{(temp.HasValue ? temp.Value.ToString(cumulus.TempFormat, InvC) : "null")}],");
+					}
+				}
+			}
+
+			for (var i = 0; i < cumulus.GraphOptions.UserTempVisible.Length; i++)
+			{
+				if (cumulus.GraphOptions.UserTempVisible[i])
+				{
+					if (sbExt[i][sbExt[i].Length - 1] == ',')
+						sbExt[i].Length--;
+
+					sbExt[i].Append(']');
+					sb.Append((append ? "," : "") + sbExt[i]);
+					append = true;
+				}
+			}
+
+			sb.Append('}');
+			return sb.ToString();
+		}
+
 		internal string GetAvailGraphData()
 		{
 			var json = new StringBuilder(200);
@@ -608,7 +843,6 @@ namespace CumulusMX
 				json.Append(']');
 			}
 
-
 			// solar values
 			if (cumulus.GraphOptions.SolarVisible || cumulus.GraphOptions.UVVisible)
 			{
@@ -678,6 +912,81 @@ namespace CumulusMX
 					json.Append("\"Sum2\"");
 
 				if (json[^1] == ',')
+					json.Length--;
+
+				json.Append(']');
+			}
+
+			// Extra temperature
+			if (cumulus.GraphOptions.ExtraTempVisible.Contains(true))
+			{
+				json.Append(",\"ExtraTemp\":[");
+				for (var i = 0; i < cumulus.GraphOptions.ExtraTempVisible.Length; i++)
+				{
+					if (cumulus.GraphOptions.ExtraTempVisible[i])
+						json.Append($"\"{cumulus.ExtraTempCaptions[i + 1]}\",");
+				}
+				if (json[json.Length - 1] == ',')
+					json.Length--;
+
+				json.Append(']');
+			}
+
+			// Extra humidity
+			if (cumulus.GraphOptions.ExtraHumVisible.Contains(true))
+			{
+				json.Append(",\"ExtraHum\":[");
+				for (var i = 0; i < cumulus.GraphOptions.ExtraHumVisible.Length; i++)
+				{
+					if (cumulus.GraphOptions.ExtraHumVisible[i])
+						json.Append($"\"{cumulus.ExtraHumCaptions[i + 1]}\",");
+				}
+				if (json[json.Length - 1] == ',')
+					json.Length--;
+
+				json.Append(']');
+			}
+
+			// Soil Temp
+			if (cumulus.GraphOptions.SoilTempVisible.Contains(true))
+			{
+				json.Append(",\"SoilTemp\":[");
+				for (var i = 0; i < cumulus.GraphOptions.SoilTempVisible.Length; i++)
+				{
+					if (cumulus.GraphOptions.SoilTempVisible[i])
+						json.Append($"\"{cumulus.SoilTempCaptions[i + 1]}\",");
+				}
+				if (json[json.Length - 1] == ',')
+					json.Length--;
+
+				json.Append(']');
+			}
+
+			// Soil Moisture
+			if (cumulus.GraphOptions.SoilMoistVisible.Contains(true))
+			{
+				json.Append(",\"SoilMoist\":[");
+				for (var i = 0; i < cumulus.GraphOptions.SoilMoistVisible.Length; i++)
+				{
+					if (cumulus.GraphOptions.SoilMoistVisible[i])
+						json.Append($"\"{cumulus.SoilMoistureCaptions[i + 1]}\",");
+				}
+				if (json[json.Length - 1] == ',')
+					json.Length--;
+
+				json.Append(']');
+			}
+
+			// User Temp
+			if (cumulus.GraphOptions.UserTempVisible.Contains(true))
+			{
+				json.Append(",\"UserTemp\":[");
+				for (var i = 0; i < cumulus.GraphOptions.UserTempVisible.Length; i++)
+				{
+					if (cumulus.GraphOptions.UserTempVisible[i])
+						json.Append($"\"{cumulus.UserTempCaptions[i + 1]}\",");
+				}
+				if (json[json.Length - 1] == ',')
 					json.Length--;
 
 				json.Append(']');

@@ -478,6 +478,21 @@ namespace CumulusMX
 						case "airqualitydata.json":
 							await writer.WriteAsync(Station.Graphs.GetAqGraphData(DateTime.Now));
 							break;
+						case "extratemp.json":
+							await writer.WriteAsync(Station.Graphs.GetExtraTempGraphData(DateTime.Now));
+							break;
+						case "extrahum.json":
+							await writer.WriteAsync(Station.Graphs.GetExtraHumGraphData(DateTime.Now));
+							break;
+						case "soiltemp.json":
+							await writer.WriteAsync(Station.Graphs.GetSoilTempGraphData(DateTime.Now));
+							break;
+						case "soilmoist.json":
+							await writer.WriteAsync(Station.Graphs.GetSoilMoistGraphData(DateTime.Now));
+							break;
+						case "usertemp.json":
+							await writer.WriteAsync(Station.Graphs.GetUserTempGraphData(DateTime.Now));
+							break;
 						case "availabledata.json":
 							await writer.WriteAsync(Station.Graphs.GetAvailGraphData());
 							break;
