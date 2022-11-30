@@ -668,6 +668,7 @@ namespace CumulusMX
 					multicastsBad++;
 					var msg = string.Format("WLL broadcast: Invalid payload in message. Percentage good packets {0:F2}% - ({1},{2})", (multicastsGood / (float)(multicastsBad + multicastsGood) * 100), multicastsBad, multicastsGood);
 					Cumulus.LogMessage(msg);
+					Cumulus.LogMessage("WLL broadcast: Received: " + broadcastJson);
 				}
 			}
 			catch (Exception ex)
@@ -1281,7 +1282,7 @@ namespace CumulusMX
 			}
 		}
 
-		private double ConvertRainClicksToUser(double clicks, int size)
+		private static double ConvertRainClicksToUser(double clicks, int size)
 		{
 			// 0: Reserved, 1: 0.01", 2: 0.2mm, 3: 0.1mm, 4: 0.001"
 			return size switch
@@ -1603,7 +1604,7 @@ namespace CumulusMX
 				else // No idea what we got, dump it to the log
 				{
 					Cumulus.LogMessage("GetWlHistoricData: Invalid historic message received");
-					cumulus.LogDataMessage("GetWlHistoricData: Received: " + responseBody);
+					Cumulus.LogMessage("GetWlHistoricData: Received: " + responseBody);
 					LogRawStationData(responseBody, false);
 					cumulus.LastUpdateTime = Utils.FromUnixTime(endTime);
 					return;
