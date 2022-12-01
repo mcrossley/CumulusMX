@@ -770,6 +770,138 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
+		public string GetCo2SensorGraphData(DateTime ts)
+		{
+			bool append = false;
+			var InvC = new CultureInfo("");
+			var sb = new StringBuilder("{", 10240);
+
+			var sbCo2 = new StringBuilder("\"CO2\":[");
+			var sbCo2Avg = new StringBuilder("\"CO2 Average\":[");
+			var sbPm25 = new StringBuilder("\"PM2.5\":[");
+			var sbPm25Avg = new StringBuilder("\"PM 2.5 Average\":[");
+			var sbPm10 = new StringBuilder("\"PM 10\":[");
+			var sbPm10Avg = new StringBuilder("\"PM 10 Average\":[");
+			var sbTemp = new StringBuilder("\"Temperature\":[");
+			var sbHum = new StringBuilder("\"Humidity\":[");
+
+
+			var dataFrom = ts.ToUnixTime() - cumulus.GraphHours * 3600;
+
+			var data = station.Database.Query<CO2Data>("select * from CO2Data where Timestamp >=?", dataFrom);
+
+			foreach (var row in data)
+			{
+				if (cumulus.GraphOptions.CO2Sensor.CO2)
+					sbCo2.Append($"[{row.Time.ToUnixTimeMs()},{(row.CO2now.HasValue ? row.CO2now : "null")}],");
+
+				if (cumulus.GraphOptions.CO2Sensor.CO2Avg)
+					sbCo2Avg.Append($"[{row.Time.ToUnixTimeMs()},{(row.CO2avg.HasValue ? row.CO2avg : "null")}],");
+
+				if (cumulus.GraphOptions.CO2Sensor.Pm25)
+					sbPm25.Append($"[{row.Time.ToUnixTimeMs()},{(row.Pm2p5.HasValue ? row.Pm2p5.Value.ToString("F1", InvC) : "null")}],");
+
+				if (cumulus.GraphOptions.CO2Sensor.Pm25Avg)
+					sbPm25Avg.Append($"[{row.Time.ToUnixTimeMs()},{(row.Pm2p5avg.HasValue ? row.Pm2p5avg.Value.ToString("F1", InvC) : "null")}],");
+
+				if (cumulus.GraphOptions.CO2Sensor.Pm10)
+					sbPm10.Append($"[{row.Time.ToUnixTimeMs()},{(row.Pm10.HasValue ? row.Pm10.Value.ToString("F1", InvC) : "null")}],");
+
+				if (cumulus.GraphOptions.CO2Sensor.Pm10Avg)
+					sbPm10Avg.Append($"[{row.Time.ToUnixTimeMs()},{(row.Pm10avg.HasValue ? row.Pm10avg.Value.ToString("F1", InvC) : "null")}],");
+
+				if (cumulus.GraphOptions.CO2Sensor.Temp)
+					sbTemp.Append($"[{row.Time.ToUnixTimeMs()},{(row.Temp.HasValue ? row.Temp.Value.ToString(cumulus.TempFormat, InvC) : "null")}],");
+
+				if (cumulus.GraphOptions.CO2Sensor.Hum)
+					sbHum.Append($"[{row.Time.ToUnixTimeMs()},{(row.Hum.HasValue ? row.Hum.Value.ToString(cumulus.HumFormat, InvC) : "null")}],");
+			}
+
+
+			if (cumulus.GraphOptions.CO2Sensor.CO2)
+			{
+				if (sbCo2[sbCo2.Length - 1] == ',')
+					sbCo2.Length--;
+
+				sbCo2.Append(']');
+				sb.Append(sbCo2);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.CO2Sensor.CO2Avg)
+			{
+				if (sbCo2Avg[sbCo2Avg.Length - 1] == ',')
+					sbCo2Avg.Length--;
+
+				sbCo2Avg.Append(']');
+				sb.Append((append ? "," : "") + sbCo2Avg);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.CO2Sensor.Pm25)
+			{
+				if (sbPm25[sbPm25.Length - 1] == ',')
+					sbPm25.Length--;
+
+				sbPm25.Append(']');
+				sb.Append((append ? "," : "") + sbPm25);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.CO2Sensor.Pm25Avg)
+			{
+				if (sbPm25Avg[sbPm25Avg.Length - 1] == ',')
+					sbPm25Avg.Length--;
+
+				sbPm25Avg.Append(']');
+				sb.Append((append ? "," : "") + sbPm25Avg);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.CO2Sensor.Pm10)
+			{
+				if (sbPm10[sbPm10.Length - 1] == ',')
+					sbPm10.Length--;
+
+				sbPm10.Append(']');
+				sb.Append((append ? "," : "") + sbPm10);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.CO2Sensor.Pm10Avg)
+			{
+				if (sbPm10Avg[sbPm10Avg.Length - 1] == ',')
+					sbPm10Avg.Length--;
+
+				sbPm10Avg.Append(']');
+				sb.Append((append ? "," : "") + sbPm10Avg);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.CO2Sensor.Temp)
+			{
+				if (sbTemp[sbTemp.Length - 1] == ',')
+					sbTemp.Length--;
+
+				sbTemp.Append(']');
+				sb.Append((append ? "," : "") + sbTemp);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.CO2Sensor.Hum)
+			{
+				if (sbHum[sbHum.Length - 1] == ',')
+					sbHum.Length--;
+
+				sbHum.Append(']');
+				sb.Append((append ? "," : "") + sbHum);
+				append = true;
+			}
+
+			sb.Append('}');
+			return sb.ToString();
+		}
+
 		internal string GetAvailGraphData()
 		{
 			var json = new StringBuilder(200);
@@ -986,6 +1118,34 @@ namespace CumulusMX
 					if (cumulus.GraphOptions.UserTempVisible[i])
 						json.Append($"\"{cumulus.UserTempCaptions[i + 1]}\",");
 				}
+				if (json[json.Length - 1] == ',')
+					json.Length--;
+
+				json.Append(']');
+			}
+
+			// CO2
+			if (cumulus.GraphOptions.CO2Sensor.CO2 || cumulus.GraphOptions.CO2Sensor.CO2Avg || cumulus.GraphOptions.CO2Sensor.Pm25 || cumulus.GraphOptions.CO2Sensor.Pm25Avg ||
+				cumulus.GraphOptions.CO2Sensor.Pm10 || cumulus.GraphOptions.CO2Sensor.Pm10Avg || cumulus.GraphOptions.CO2Sensor.Temp || cumulus.GraphOptions.CO2Sensor.Hum)
+			{
+				json.Append(",\"CO2\":[");
+				if (cumulus.GraphOptions.CO2Sensor.CO2)
+					json.Append("\"CO2\",");
+				if (cumulus.GraphOptions.CO2Sensor.CO2Avg)
+					json.Append("\"CO2Avg\",");
+				if (cumulus.GraphOptions.CO2Sensor.Pm25)
+					json.Append("\"PM25\",");
+				if (cumulus.GraphOptions.CO2Sensor.Pm25Avg)
+					json.Append("\"PM25Avg\",");
+				if (cumulus.GraphOptions.CO2Sensor.Pm10)
+					json.Append("\"PM10\",");
+				if (cumulus.GraphOptions.CO2Sensor.Pm10Avg)
+					json.Append("\"PM10Avg\",");
+				if (cumulus.GraphOptions.CO2Sensor.Temp)
+					json.Append("\"Temp\",");
+				if (cumulus.GraphOptions.CO2Sensor.Hum)
+					json.Append("\"Hum\"");
+
 				if (json[json.Length - 1] == ',')
 					json.Length--;
 

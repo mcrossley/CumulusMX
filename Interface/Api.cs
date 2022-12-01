@@ -493,6 +493,9 @@ namespace CumulusMX
 						case "usertemp.json":
 							await writer.WriteAsync(Station.Graphs.GetUserTempGraphData(DateTime.Now));
 							break;
+						case "co2sensor.json":
+							await writer.WriteAsync(Station.Graphs.GetCo2SensorGraphData(DateTime.Now));
+							break;
 						case "availabledata.json":
 							await writer.WriteAsync(Station.Graphs.GetAvailGraphData());
 							break;
