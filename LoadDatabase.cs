@@ -136,8 +136,8 @@ namespace CumulusMX
 				return;
 			}
 
-
-			if (lastLogDate == DateTime.MinValue)
+			// Unix timestamp zero value is 1/1/1970
+			if (lastLogDate.Year == 1970)
 				lastLogDate = cumulus.RecordsBeganDate;
 
 			// Check the last data time against the time now and see it is within a logging period window
@@ -159,9 +159,11 @@ namespace CumulusMX
 
 			while (!finished)
 			{
+				if (Program.exitSystem)
+					return;
+
 				if (File.Exists(logFile))
 				{
-
 					cumulus.LogDebugMessage($"LoadLogFilesToDb: Processing log file - {logFile}");
 
 					Console.Write($"\rLoading log file for {fileDate:yyyy-MM} to the database");
@@ -268,7 +270,8 @@ namespace CumulusMX
 			}
 
 
-			if (lastLogDate == DateTime.MinValue)
+			// Unix timestamp zero value is 1/1/1970
+			if (lastLogDate.Year == 1970)
 			{
 				lastLogDate = cumulus.RecordsBeganDate;
 				lastLogTimestamp = 0;
@@ -292,9 +295,11 @@ namespace CumulusMX
 
 			while (!finished)
 			{
+				if (Program.exitSystem)
+					return;
+
 				if (File.Exists(logFile))
 				{
-
 					cumulus.LogDebugMessage($"LoadExtraFilesToDb: Processing log file - {logFile}");
 
 					Console.Write($"\rLoading Extra log file for {fileDate:yyyy-MM} to the database");
@@ -448,12 +453,10 @@ namespace CumulusMX
 				{
 					cumulus.LogDebugMessage($"LoadExtraFilesToDb: Finished processing log file - {logFile}");
 					fileDate = fileDate.AddMonths(1);
-					logFile = cumulus.GetLogFileName(fileDate);
+					logFile = cumulus.GetExtraLogFileName(fileDate);
 				}
 			}
 			Console.WriteLine($"\rCompleted loading the Extra files to the database. {totalInserted} rows added\n");
 		}
-
-
 	}
 }

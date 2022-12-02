@@ -1,3 +1,12 @@
+4.0.0 - b4016
+——————————————
+Fixed
+- Loading the log files from Jan 1970!
+- Loading Extra log files using incorrect files name for the second file onwards
+- Adds escape to the log loading process when ctrl-c pressed
+- Updates MigrateData3to4 executable to the correct version
+
+
 4.0.0 - b4015
 ——————————————
 Changed
