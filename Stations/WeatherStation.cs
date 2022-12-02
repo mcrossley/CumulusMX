@@ -7871,8 +7871,8 @@ namespace CumulusMX
 		{
 			var json = new StringBuilder("{\"data\":[", 256);
 
-			json.Append($"[\"{cumulus.LeafTempCaptions[1]}\",\"{(LeafTemp[1].HasValue ? LeafTemp[1].Value.ToString(cumulus.TempFormat) : "-")}\",\"&deg;{cumulus.Units.TempText[1]}\"],");
-			json.Append($"[\"{cumulus.LeafTempCaptions[2]}\",\"{(LeafTemp[2].HasValue ? LeafTemp[2].Value.ToString(cumulus.TempFormat) : "-")}\",\"&deg;{cumulus.Units.TempText[1]}\"],");
+			//json.Append($"[\"{cumulus.LeafTempCaptions[1]}\",\"{(LeafTemp[1].HasValue ? LeafTemp[1].Value.ToString(cumulus.TempFormat) : "-")}\",\"&deg;{cumulus.Units.TempText[1]}\"],");
+			//json.Append($"[\"{cumulus.LeafTempCaptions[2]}\",\"{(LeafTemp[2].HasValue ? LeafTemp[2].Value.ToString(cumulus.TempFormat) : "-")}\",\"&deg;{cumulus.Units.TempText[1]}\"],");
 			json.Append($"[\"{cumulus.LeafWetnessCaptions[1]}\",\"{(LeafWetness[1].HasValue ? LeafWetness[1].Value.ToString(cumulus.LeafWetFormat) : "-")}\",\"{cumulus.Units.LeafWetnessUnitText}\"],");
 			json.Append($"[\"{cumulus.LeafWetnessCaptions[2]}\",\"{(LeafWetness[2].HasValue ? LeafWetness[2].Value.ToString(cumulus.LeafWetFormat) : "-")}\",\"{cumulus.Units.LeafWetnessUnitText}\"]");
 			json.Append("]}");
@@ -7883,8 +7883,8 @@ namespace CumulusMX
 		{
 			var json = new StringBuilder("{\"data\":[", 256);
 
-			json.Append($"[\"{cumulus.LeafTempCaptions[1]}\",\"{(LeafTemp[1].HasValue ? LeafTemp[1].Value.ToString(cumulus.TempFormat) : "-")}\",\"&deg;{cumulus.Units.TempText[1]}\"],");
-			json.Append($"[\"{cumulus.LeafTempCaptions[2]}\",\"{(LeafTemp[2].HasValue ? LeafTemp[2].Value.ToString(cumulus.TempFormat) : "-")}\",\"&deg;{cumulus.Units.TempText[1]}\"],");
+			//json.Append($"[\"{cumulus.LeafTempCaptions[1]}\",\"{(LeafTemp[1].HasValue ? LeafTemp[1].Value.ToString(cumulus.TempFormat) : "-")}\",\"&deg;{cumulus.Units.TempText[1]}\"],");
+			//json.Append($"[\"{cumulus.LeafTempCaptions[2]}\",\"{(LeafTemp[2].HasValue ? LeafTemp[2].Value.ToString(cumulus.TempFormat) : "-")}\",\"&deg;{cumulus.Units.TempText[1]}\"],");
 			json.Append($"[\"{cumulus.LeafWetnessCaptions[1]}\",\"{(LeafWetness[1].HasValue ? LeafWetness[1].Value.ToString(cumulus.LeafWetFormat) : "-")}\",\"{cumulus.Units.LeafWetnessUnitText}\"],");
 			json.Append($"[\"{cumulus.LeafWetnessCaptions[2]}\",\"{(LeafWetness[2].HasValue ? LeafWetness[2].Value.ToString(cumulus.LeafWetFormat) : "-")}\",\"{cumulus.Units.LeafWetnessUnitText}\"],");
 			json.Append($"[\"{cumulus.LeafWetnessCaptions[3]}\",\"{(LeafWetness[3].HasValue ? LeafWetness[3].Value.ToString(cumulus.LeafWetFormat) : "-")}\",\"{cumulus.Units.LeafWetnessUnitText}\"],");
@@ -7897,8 +7897,8 @@ namespace CumulusMX
 		{
 			var json = new StringBuilder("{\"data\":[", 256);
 
-			json.Append($"[\"{cumulus.LeafTempCaptions[1]}\",\"{(LeafTemp[1].HasValue ? LeafTemp[1].Value.ToString(cumulus.TempFormat) : "-")}\",\"&deg;{cumulus.Units.TempText[1]}\"],");
-			json.Append($"[\"{cumulus.LeafTempCaptions[2]}\",\"{(LeafTemp[2].HasValue ? LeafTemp[2].Value.ToString(cumulus.TempFormat) : "-")}\",\"&deg;{cumulus.Units.TempText[1]}\"],");
+			//json.Append($"[\"{cumulus.LeafTempCaptions[1]}\",\"{(LeafTemp[1].HasValue ? LeafTemp[1].Value.ToString(cumulus.TempFormat) : "-")}\",\"&deg;{cumulus.Units.TempText[1]}\"],");
+			//json.Append($"[\"{cumulus.LeafTempCaptions[2]}\",\"{(LeafTemp[2].HasValue ? LeafTemp[2].Value.ToString(cumulus.TempFormat) : "-")}\",\"&deg;{cumulus.Units.TempText[1]}\"],");
 			json.Append($"[\"{cumulus.LeafWetnessCaptions[1]}\",\"{(LeafWetness[1].HasValue ? LeafWetness[1].Value.ToString(cumulus.LeafWetFormat) : "-")}\",\"{cumulus.Units.LeafWetnessUnitText}\"],");
 			json.Append($"[\"{cumulus.LeafWetnessCaptions[2]}\",\"{(LeafWetness[2].HasValue ? LeafWetness[2].Value.ToString(cumulus.LeafWetFormat) : "-")}\",\"{cumulus.Units.LeafWetnessUnitText}\"],");
 			json.Append($"[\"{cumulus.LeafWetnessCaptions[3]}\",\"{(LeafWetness[3].HasValue ? LeafWetness[3].Value.ToString(cumulus.LeafWetFormat) : "-")}\",\"{cumulus.Units.LeafWetnessUnitText}\"],");

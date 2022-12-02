@@ -8,7 +8,6 @@ Changed
 	- Has been updated and now understands the swap from DST to standard time when an hours data is repeated in the log files.
 	- It also now loads all the extra sensor data to the database (previously just the dayfile and monthly log files were loaded). This is pretty untested as
 	  I do not have historic files with any data in them, and I only tested a tiny bit of manually created data.
-- The v4 dayfile has an added field of Unix Timestamp, I have added this as the second field, this will break any existing dayfile parsers. I could add it at the end but that offends my sense of order!
 
 - The MigrateData3to4 utility has been updated. This now also understands (I hope!) the swap from DST to standard time when an hours data is repeated in the v3 log files.
 	- If this is robust, then I will look to add this to v3 as well
