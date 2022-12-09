@@ -663,6 +663,12 @@ namespace CumulusMX
 					cumulus.DataStoppedAlarm.Triggered = false;
 					multicastsGood++;
 				}
+				else if (broadcastJson.StartsWith("STR_BCAST"))
+				{
+					var msg = broadcastJson.Replace(((char)0x00), '.').Replace(((char) 0x1c), '.');
+					Cumulus.LogMessage("WLL broadcast: Received spurious message from printer utility(?) starting with \"STR_BCAST\"");
+					cumulus.LogDataMessage("WLL broadcast: Message = " + msg);
+				}
 				else
 				{
 					multicastsBad++;
