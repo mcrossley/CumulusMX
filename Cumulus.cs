@@ -27,6 +27,7 @@ using SQLite;
 using NReco.Logging.File;
 using Microsoft.Extensions.Logging;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
+using ServiceStack;
 
 //using MQTTnet;
 
@@ -195,6 +196,7 @@ namespace CumulusMX
 		//public Dataunits Units;
 
 		private FileStream _linuxLockFile;
+		private static string _linuxLockFilename = "/tmp/" + Program.AppGuid + ".lock";
 
 		public const double DefaultHiVal = -9999.0;
 		public const double DefaultLoVal = 9999.0;
@@ -1137,15 +1139,21 @@ namespace CumulusMX
 			{
 				try
 				{
-					// .Lock() is not supported on MacOS :(
 					if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
 					{
 						// must include Write access in order to lock file - /tmp seems to be universal across Linux and Mac
-						_linuxLockFile = new FileStream("/tmp/" + Program.AppGuid + ".lock", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+						_linuxLockFile = new FileStream(_linuxLockFilename, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
 						_linuxLockFile.Lock(0, 0); // 0,0 has special meaning to lock entire file regardless of length
-					}
 
-					LogMessage("Stop second instance: No other running instances of Cumulus found");
+						using (var thisProcess = System.Diagnostics.Process.GetCurrentProcess())
+						{
+							var procId = thisProcess.Id.ToString().ToAsciiBytes();
+							_linuxLockFile.Write(procId, 0, procId.Length);
+							_linuxLockFile.Flush();
+						}
+
+						LogMessage("Stop second instance: No other running instances of Cumulus found");
+					}
 				}
 				catch (IOException ex) when ((ex.HResult & 0x0000FFFF) == 32 || (ex.HResult & 0x0000FFFF) == 33)
 				{
@@ -7973,8 +7981,10 @@ namespace CumulusMX
 				if (null != _linuxLockFile)
 				{
 					LogMessage("Releasing lock file...");
+					_linuxLockFile.SetLength(0);
 					_linuxLockFile.Close();
 					_linuxLockFile.Dispose();
+					File.Delete(_linuxLockFilename);
 				}
 			}
 			catch { }

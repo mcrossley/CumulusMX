@@ -1995,7 +1995,7 @@ namespace CumulusMX
 			if (nextLoggerTime > DateTime.Now)
 			{
 				// nothing to do, presumably we were just restarted
-				cumulus.LogMessage($"GetArchiveData: Last logger entry is later than our last update time, skipping logger download");
+				Cumulus.LogMessage($"GetArchiveData: Last logger entry is later than our last update time, skipping logger download");
 				return;
 			}
 
