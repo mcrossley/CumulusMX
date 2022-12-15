@@ -9715,13 +9715,16 @@ namespace CumulusMX
 				{
 					try
 					{
-						customHttpMinutesTokenParser.InputText = CustomHttpMinutesStrings[i];
-						var processedString = customHttpMinutesTokenParser.ToStringFromString();
-						LogDebugMessage($"CustomHttpMinutes[{i}]: Querying - {processedString}");
-						var response = await customHttpMinutesClient.GetAsync(processedString);
-						var responseBodyAsText = await response.Content.ReadAsStringAsync();
-						LogDebugMessage($"CustomHttpMinutes[{i}]: Response code - {response.StatusCode}");
-						LogDataMessage($"CustomHttpMinutes[{i}]: Response text - {responseBodyAsText}");
+						if (!string.IsNullOrEmpty(CustomHttpMinutesStrings[i]))
+						{
+							customHttpMinutesTokenParser.InputText = CustomHttpMinutesStrings[i];
+							var processedString = customHttpMinutesTokenParser.ToStringFromString();
+							LogDebugMessage($"CustomHttpMinutes[{i}]: Querying - {processedString}");
+							var response = await customHttpMinutesClient.GetAsync(processedString);
+							var responseBodyAsText = await response.Content.ReadAsStringAsync();
+							LogDebugMessage($"CustomHttpMinutes[{i}]: Response code - {response.StatusCode}");
+							LogDataMessage($"CustomHttpMinutes[{i}]: Response text - {responseBodyAsText}");
+						}
 					}
 					catch (Exception ex)
 					{
@@ -9743,13 +9746,16 @@ namespace CumulusMX
 				{
 					try
 					{
-						customHttpRolloverTokenParser.InputText = CustomHttpRolloverStrings[i];
-						var processedString = customHttpRolloverTokenParser.ToStringFromString();
-						LogDebugMessage($"CustomHttpRollover[{i}]: Querying - {processedString}");
-						var response = await customHttpRolloverClient.GetAsync(processedString);
-						var responseBodyAsText = await response.Content.ReadAsStringAsync();
-						LogDebugMessage($"CustomHttpRollover[{i}]: Response code - {response.StatusCode}");
-						LogDataMessage($"CustomHttpRollover[{i}]: Response text - {responseBodyAsText}");
+						if (!string.IsNullOrEmpty(CustomHttpRolloverStrings[i]))
+						{
+							customHttpRolloverTokenParser.InputText = CustomHttpRolloverStrings[i];
+							var processedString = customHttpRolloverTokenParser.ToStringFromString();
+							LogDebugMessage($"CustomHttpRollover[{i}]: Querying - {processedString}");
+							var response = await customHttpRolloverClient.GetAsync(processedString);
+							var responseBodyAsText = await response.Content.ReadAsStringAsync();
+							LogDebugMessage($"CustomHttpRollover[{i}]: Response code - {response.StatusCode}");
+							LogDataMessage($"CustomHttpRollover[{i}]: Response text - {responseBodyAsText}");
+						}
 					}
 					catch (Exception ex)
 					{
