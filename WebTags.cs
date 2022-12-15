@@ -28,13 +28,6 @@ namespace CumulusMX
 		}
 
 		/*
-		private void FreeWebTagDictionary()
-		{
-			WebTagDictionary.Clear();
-		}
-		*/
-
-		/*
 		private string FormatByteSize(long bytes)
 		{
 			string sign = (bytes < 0 ? "-" : "");
@@ -165,10 +158,10 @@ namespace CumulusMX
 		{
 			if (tagParams.ContainsKey("unit"))
 			{
-				var unit = tagParams.Get("unit");
-				if (unit == "C")
+				var unit = tagParams.Get("unit").ToLower();
+				if (unit == "c")
 					return WeatherStation.ConvertUserTempToC(val);
-				else if (unit == "F")
+				else if (unit == "f")
 					return WeatherStation.ConvertUserTempToF(val);
 			}
 			return val;
@@ -178,10 +171,10 @@ namespace CumulusMX
 		{
 			if (tagParams.ContainsKey("unit"))
 			{
-				var unit = tagParams.Get("unit");
-				if (unit == "C" && cumulus.Units.Temp == 1)
+				var unit = tagParams.Get("unit").ToLower();
+				if (unit == "c" && cumulus.Units.Temp == 1)
 					return val.Value / 1.8;
-				else if (unit == "F" && cumulus.Units.Temp == 0)
+				else if (unit == "f" && cumulus.Units.Temp == 0)
 					return val.Value * 1.8;
 			}
 			return val;
@@ -191,12 +184,12 @@ namespace CumulusMX
 		{
 			if (tagParams.ContainsKey("unit"))
 			{
-				var unit = tagParams.Get("unit");
-				if (unit == "hPa" || unit == "mb")
+				var unit = tagParams.Get("unit").ToLower();
+				if (unit == "hpa" || unit == "mb")
 					return WeatherStation.ConvertUserPressureToHPa(val);
-				else if (unit == "kPa")
+				else if (unit == "kpa")
 					return WeatherStation.ConvertUserPressureToHPa(val) / 10;
-				else if (unit == "inHg")
+				else if (unit == "inhg")
 					return WeatherStation.ConvertUserPressToIN(val);
 			}
 			return val;
@@ -206,7 +199,7 @@ namespace CumulusMX
 		{
 			if (tagParams.ContainsKey("unit"))
 			{
-				var unit = tagParams.Get("unit");
+				var unit = tagParams.Get("unit").ToLower();
 				if (unit == "mm")
 					return WeatherStation.ConvertUserRainToMM(val);
 				else if (unit == "in")
@@ -219,7 +212,7 @@ namespace CumulusMX
 		{
 			if (tagParams.ContainsKey("unit"))
 			{
-				var unit = tagParams.Get("unit");
+				var unit = tagParams.Get("unit").ToLower();
 				if (unit == "mph")
 					return WeatherStation.ConvertUserWindToMPH(val);
 				else if (unit == "kph")
@@ -236,7 +229,7 @@ namespace CumulusMX
 		{
 			if (tagParams.ContainsKey("unit"))
 			{
-				var unit = tagParams.Get("unit");
+				var unit = tagParams.Get("unit").ToLower();
 				if (unit == "mi")
 					return WeatherStation.ConvertWindRunToMi(val);
 				else if (unit == "km")
