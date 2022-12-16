@@ -172,7 +172,7 @@ namespace CumulusMX
 				Cumulus.LogMessage("Updating MySQL settings");
 
 				// server
-				cumulus.MySqlStuff.ConnSettings.Server = settings.server.host;
+				cumulus.MySqlStuff.ConnSettings.Server = String.IsNullOrWhiteSpace(settings.server.host) ? null : settings.server.host.Trim();
 				if (settings.server.port > 0 && settings.server.port < 65536)
 				{
 					cumulus.MySqlStuff.ConnSettings.Port = settings.server.port;
@@ -181,10 +181,10 @@ namespace CumulusMX
 				{
 					cumulus.MySqlStuff.ConnSettings.Port = 3306;
 				}
-				cumulus.MySqlStuff.ConnSettings.Database = settings.server.database;
-				cumulus.MySqlStuff.ConnSettings.UserID = settings.server.user;
+				cumulus.MySqlStuff.ConnSettings.Database = String.IsNullOrWhiteSpace(settings.server.database) ? null : settings.server.database.Trim();
+				cumulus.MySqlStuff.ConnSettings.UserID = String.IsNullOrWhiteSpace(settings.server.user) ? null : settings.server.user.Trim();
 				if (settings.server.pass != hidden)
-					cumulus.MySqlStuff.ConnSettings.Password = settings.server.pass;
+					cumulus.MySqlStuff.ConnSettings.Password = String.IsNullOrWhiteSpace(settings.server.pass) ? null : settings.server.pass.Trim();
 
 				// options
 				cumulus.MySqlStuff.Settings.UpdateOnEdit = settings.options.updateonedit;
@@ -194,10 +194,10 @@ namespace CumulusMX
 				cumulus.MySqlStuff.Settings.Monthly.Enabled = settings.monthly.enabled;
 				if (cumulus.MySqlStuff.Settings.Monthly.Enabled)
 				{
-					cumulus.MySqlStuff.Settings.Monthly.TableName = String.IsNullOrWhiteSpace(settings.monthly.table) ? "Monthly" : settings.monthly.table;
-					if (settings.monthly.table != cumulus.MySqlStuff.Settings.Monthly.TableName)
+					cumulus.MySqlStuff.Settings.Monthly.TableName = String.IsNullOrWhiteSpace(settings.monthly.table) ? "Monthly" : settings.monthly.table.Trim();
+					if (cumulus.MySqlStuff.MonthlyTable.Name != cumulus.MySqlStuff.Settings.Monthly.TableName)
 					{
-						cumulus.MySqlStuff.MonthlyTable.Name = settings.monthly.table;
+						cumulus.MySqlStuff.MonthlyTable.Name = cumulus.MySqlStuff.Settings.Monthly.TableName;
 						cumulus.MySqlStuff.MonthlyTable.Rebuild();
 					}
 				}
@@ -205,12 +205,12 @@ namespace CumulusMX
 				cumulus.MySqlStuff.Settings.Realtime.Enabled = settings.realtime.enabled;
 				if (cumulus.MySqlStuff.Settings.Realtime.Enabled)
 				{
-					cumulus.MySqlStuff.Settings.RealtimeRetention = settings.realtime.retentionVal + " " + settings.realtime.retentionUnit;
-					cumulus.MySqlStuff.Settings.Realtime.TableName = String.IsNullOrWhiteSpace(settings.realtime.table) ? "Realtime" : settings.realtime.table;
+					cumulus.MySqlStuff.Settings.RealtimeRetention = settings.realtime.retentionVal + " " + settings.realtime.retentionUnit.Trim();
 					cumulus.MySqlStuff.Settings.RealtimeLimit1Minute = settings.realtime.limit1min;
-					if (settings.realtime.table != cumulus.MySqlStuff.Settings.Realtime.TableName)
+					cumulus.MySqlStuff.Settings.Realtime.TableName = String.IsNullOrWhiteSpace(settings.realtime.table) ? "Realtime" : settings.realtime.table.Trim();
+					if (cumulus.MySqlStuff.RealtimeTable.Name != cumulus.MySqlStuff.Settings.Realtime.TableName)
 					{
-						cumulus.MySqlStuff.RealtimeTable.Name = settings.realtime.table;
+						cumulus.MySqlStuff.RealtimeTable.Name = cumulus.MySqlStuff.Settings.Realtime.TableName;
 						cumulus.MySqlStuff.RealtimeTable.Rebuild();
 					}
 				}
@@ -218,10 +218,10 @@ namespace CumulusMX
 				cumulus.MySqlStuff.Settings.Dayfile.Enabled = settings.dayfile.enabled;
 				if (cumulus.MySqlStuff.Settings.Dayfile.Enabled)
 				{
-					cumulus.MySqlStuff.Settings.Dayfile.TableName = String.IsNullOrWhiteSpace(settings.dayfile.table) ? "Dayfile" : settings.dayfile.table;
-					if (settings.dayfile.table != cumulus.MySqlStuff.Settings.Dayfile.TableName)
+					cumulus.MySqlStuff.Settings.Dayfile.TableName = String.IsNullOrWhiteSpace(settings.dayfile.table) ? "Dayfile" : settings.dayfile.table.Trim();
+					if (cumulus.MySqlStuff.DayfileTable.Name != cumulus.MySqlStuff.Settings.Dayfile.TableName)
 					{
-						cumulus.MySqlStuff.DayfileTable.Name = settings.dayfile.table;
+						cumulus.MySqlStuff.DayfileTable.Name = cumulus.MySqlStuff.Settings.Dayfile.TableName;
 						cumulus.MySqlStuff.DayfileTable.Rebuild();
 					}
 				}
@@ -232,7 +232,7 @@ namespace CumulusMX
 					for (var i = 0; i < 10; i++)
 					{
 						if (i < settings.customseconds.command.Length)
-							cumulus.MySqlStuff.Settings.CustomSecs.Commands[i] = settings.customseconds.command[i] ?? null;
+							cumulus.MySqlStuff.Settings.CustomSecs.Commands[i] = String.IsNullOrWhiteSpace(settings.customseconds.command[i]) ? null : settings.customseconds.command[i].Trim();
 						else
 							cumulus.MySqlStuff.Settings.CustomSecs.Commands[i] = null;
 					}
@@ -245,7 +245,7 @@ namespace CumulusMX
 					for (var i = 0; i < 10; i++)
 					{
 						if (i < settings.customminutes.command.Length)
-							cumulus.MySqlStuff.Settings.CustomMins.Commands[i] = settings.customminutes.command[i] ?? null;
+							cumulus.MySqlStuff.Settings.CustomMins.Commands[i] = String.IsNullOrWhiteSpace(settings.customminutes.command[i]) ? null : settings.customminutes.command[i].Trim();
 						else
 							cumulus.MySqlStuff.Settings.CustomMins.Commands[i] = null;
 					}
@@ -266,7 +266,7 @@ namespace CumulusMX
 					for (var i = 0; i < 10; i++)
 					{
 						if (i < settings.customrollover.command.Length)
-							cumulus.MySqlStuff.Settings.CustomRollover.Commands[i] = settings.customrollover.command[i] ?? null;
+							cumulus.MySqlStuff.Settings.CustomRollover.Commands[i] = String.IsNullOrWhiteSpace(settings.customrollover.command[i]) ? null : settings.customrollover.command[i].Trim();
 						else
 							cumulus.MySqlStuff.Settings.CustomRollover.Commands[i] = null;
 					}
