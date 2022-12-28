@@ -45,8 +45,6 @@ namespace CumulusMX
 		private readonly List<WlSensor> sensorList = new List<WlSensor>();
 		private readonly bool useWeatherLinkDotCom = true;
 
-		private static byte[] broadcastBuffer = new byte[8192];
-
 		public DavisWllStation(Cumulus cumulus) : base(cumulus)
 		{
 			Cumulus.LogMessage("Station type = Davis WLL");
@@ -282,43 +280,40 @@ namespace CumulusMX
 				}
 
 				// Create a broadcast listener
-				_ = Task.Run(() =>
+				_ = Task.Run(async () =>
 				{
+					byte[] lastMessage = null;
+					var endPoint = new IPEndPoint(IPAddress.Any, port);
 					using var udpClient = new UdpClient();
 					udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-					udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, port));
-					udpClient.Client.ReceiveTimeout = 4000;  // We should get a message every 2.5 seconds
-					var from = new IPEndPoint(0, 0);
 
 					while (!cancellationToken.IsCancellationRequested)
 					{
 						try
 						{
-							// test is any data is available
-							if (udpClient.Client.Available > 0)
+							var broadcastTask = udpClient.ReceiveAsync();
+							var timeoutTask = Task.Delay(3000, cancellationToken); // We should get a message every 2.5 seconds
+
+							// wait for a broadcast message, a timeout, or a cancellation request
+							await Task.WhenAny(broadcastTask, timeoutTask);
+
+							// we get duplicate packets over IPv4 and IPv6, plus if the host has multiple interfaces to the local LAN
+							if (broadcastTask.Status == TaskStatus.RanToCompletion && !Utils.ByteArraysEqual(lastMessage, broadcastTask.Result.Buffer))
 							{
-								broadcastBuffer = udpClient.Receive(ref from);
-								var jsonStr = Encoding.UTF8.GetString(broadcastBuffer);
-								DecodeBroadcast(jsonStr);
+								var jsonStr = Encoding.UTF8.GetString(broadcastTask.Result.Buffer);
+								DecodeBroadcast(jsonStr, broadcastTask.Result.RemoteEndPoint);
+								lastMessage = broadcastTask.Result.Buffer.ToArray();
 							}
-							else if (cancellationToken.WaitHandle.WaitOne(100))
-							{
-								Cumulus.LogMessage("WLL broadcast listener stop requested");
-								break;
-							}
-						}
-						catch (SocketException ex)
-						{
-							if (ex.SocketErrorCode == SocketError.TimedOut)
+							else if (timeoutTask.Status == TaskStatus.RanToCompletion)
 							{
 								multicastsBad++;
 								var msg = string.Format("WLL: Missed a WLL broadcast message. Percentage good packets {0:F2}% - ({1},{2})", (multicastsGood / (float)(multicastsBad + multicastsGood) * 100), multicastsBad, multicastsGood);
 								cumulus.LogDebugMessage(msg);
 							}
-							else
-							{
-								cumulus.LogExceptionMessage(ex, "WLL: UDP socket error");
-							}
+						}
+						catch (SocketException ex)
+						{
+							cumulus.LogExceptionMessage(ex, "WLL: UDP socket error");
 						}
 					}
 					udpClient.Close();
@@ -473,11 +468,15 @@ namespace CumulusMX
 			{
 				var urlCurrent = $"http://{ip}/v1/current_conditions";
 
-				if (DateTime.Now.Subtract(LastDataReadTimestamp).TotalSeconds > 2.1)
+				var timeSinceLastMessage = (int)DateTime.Now.Subtract(LastDataReadTimestamp).TotalMilliseconds;
+				if (timeSinceLastMessage > 1500)
 				{
-					// Another brodcast is due, half a second or so
-					cumulus.LogDebugMessage("GetWllCurrent: Delaying");
-					await Task.Delay(600);
+					// Another broadcast is due, half a second or so
+					var delay = Math.Max(200, 2500 - timeSinceLastMessage);
+					cumulus.LogDebugMessage($"GetWllCurrent: Delaying {delay} ms");
+					tmrCurrent.Stop();
+					await Task.Delay(delay);
+					tmrCurrent.Start();
 				}
 
 				//cumulus.LogDebugMessage("GetWllCurrent: Waiting for lock");
@@ -546,7 +545,7 @@ namespace CumulusMX
 			}
 		}
 
-		private void DecodeBroadcast(string broadcastJson)
+		private void DecodeBroadcast(string broadcastJson, IPEndPoint from)
 		{
 			try
 			{
@@ -666,15 +665,15 @@ namespace CumulusMX
 				else if (broadcastJson.StartsWith("STR_BCAST"))
 				{
 					var msg = broadcastJson.Replace(((char)0x00), '.').Replace(((char) 0x1c), '.');
-					Cumulus.LogMessage("WLL broadcast: Received spurious message from printer utility(?) starting with \"STR_BCAST\"");
+					Cumulus.LogMessage($"WLL broadcast: Received spurious message from printer utility(?) at IP address {from.Address} starting with \"STR_BCAST\"");
 					cumulus.LogDataMessage("WLL broadcast: Message = " + msg);
 				}
 				else
 				{
 					multicastsBad++;
-					var msg = string.Format("WLL broadcast: Invalid payload in message. Percentage good packets {0:F2}% - ({1},{2})", (multicastsGood / (float)(multicastsBad + multicastsGood) * 100), multicastsBad, multicastsGood);
+					var msg = string.Format("WLL broadcast: Invalid payload in message from {3}. Percentage good packets {0:F2}% - ({1},{2})", (multicastsGood / (float)(multicastsBad + multicastsGood) * 100), multicastsBad, multicastsGood, from.Address.ToString());
 					Cumulus.LogMessage(msg);
-					Cumulus.LogMessage("WLL broadcast: Received: " + broadcastJson);
+					Cumulus.LogMessage($"WLL broadcast: Received from {from.Address}: " + broadcastJson);
 				}
 			}
 			catch (Exception ex)
