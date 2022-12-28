@@ -144,6 +144,8 @@ namespace CumulusMX
 		public override void Stop()
 		{
 			stopping = true;
+			HttpStations.stationEcowitt = null;
+			HttpStations.stationEcowittExtra = null;
 			if (station == null)
 			{
 				StopMinuteTimer();

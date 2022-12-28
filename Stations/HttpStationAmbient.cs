@@ -75,6 +75,8 @@ namespace CumulusMX
 		public override void Stop()
 		{
 			stopping = true;
+			HttpStations.stationAmbient = null;
+			HttpStations.stationAmbientExtra = null;
 			if (station == null)
 			{
 				StopMinuteTimer();
@@ -290,7 +292,7 @@ namespace CumulusMX
 						// 24hourrainin
 						// weeklyrainin
 						// monthlyrainin
-						// yearlyrainin - missing on some stations, they supply totalrainin 
+						// yearlyrainin - missing on some stations, they supply totalrainin
 						// eventrainin
 						// totalrainin - only some stations
 

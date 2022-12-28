@@ -41,6 +41,7 @@ namespace CumulusMX
 		public override void Stop()
 		{
 			stopping = true;
+			HttpStations.stationWund = null;
 			StopMinuteTimer();
 
 			// Call the common code in the base class
