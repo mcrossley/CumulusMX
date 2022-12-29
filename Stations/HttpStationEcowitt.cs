@@ -149,6 +149,10 @@ namespace CumulusMX
 			stopping = true;
 			HttpStations.stationEcowitt = null;
 			HttpStations.stationEcowittExtra = null;
+			if (tokenSource != null)
+			{
+				tokenSource.Cancel();
+			}
 			if (station == null)
 			{
 				StopMinuteTimer();
@@ -212,7 +216,7 @@ namespace CumulusMX
 				maxArchiveRuns++;
 			}
 
-			api.GetHistoricData(startTime, endTime);
+			api.GetHistoricData(startTime, endTime, cancellationToken);
 
 		}
 
