@@ -292,7 +292,7 @@ namespace CumulusMX
 				maxArchiveRuns++;
 			}
 
-			api.GetHistoricData(startTime, endTime);
+			api.GetHistoricData(startTime, endTime, cancellationToken);
 		}
 
 
@@ -1655,7 +1655,7 @@ namespace CumulusMX
 				cumulus.DataStoppedAlarm.Triggered = true;
 				if (DoDiscovery())
 				{
-					PostDiscovery(); 
+					PostDiscovery();
 				}
 			}
 		}
