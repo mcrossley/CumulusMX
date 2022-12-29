@@ -40,7 +40,7 @@ namespace CumulusMX
 			}
 
 			// Let's decode the Unix ts to DateTime
-			JsConfig.Init(new Config { 
+			JsConfig.Init(new Config {
 				DateHandler = DateHandler.UnixTime
 			});
 
@@ -219,7 +219,7 @@ namespace CumulusMX
 						// get the sensor data
 						histObj = responseBody.FromJson<EcowittHistoricResp>();
 
-						if (histObj != null) 
+						if (histObj != null)
 						{
 							// success
 							if (histObj.code == 0)
@@ -598,7 +598,7 @@ namespace CumulusMX
 								{
 									var rain = entry.Value.FromJsv<EcowittHistoricDataRainfall>();
 
-									// rain rate 
+									// rain rate
 									if (rain.rain_rate != null && rain.rain_rate.list != null)
 									{
 										foreach (var item in rain.rain_rate.list)
@@ -663,7 +663,7 @@ namespace CumulusMX
 								{
 									var rain = entry.Value.FromJsv<EcowittHistoricDataRainfall>();
 
-									// rain rate 
+									// rain rate
 									if (rain.rain_rate != null && rain.rain_rate.list != null)
 									{
 										foreach (var item in rain.rain_rate.list)
@@ -1338,12 +1338,21 @@ namespace CumulusMX
 					cumulus.LogDebugMessage("Adding 5 minutes to Sunshine Hours");
 				}
 
+				// add in archive period minutes worth of temperature to the temp samples
+				if (station.Temperature.HasValue)
+				{
+					station.tempsamplestoday += 5;
+					station.TempTotalToday += (station.Temperature.Value * 5);
+				}
 
 				// add in 'following interval' minutes worth of wind speed to windrun
-				Cumulus.LogMessage("Windrun: " + station.WindAverage.Value.ToString(cumulus.WindFormat) + cumulus.Units.WindText + " for " + 5 + " minutes = " +
-								(station.WindAverage.Value * station.WindRunHourMult[cumulus.Units.Wind] * 5 / 60.0).ToString(cumulus.WindRunFormat) + cumulus.Units.WindRunText);
+				if (station.WindAverage.HasValue)
+				{
+					Cumulus.LogMessage("Windrun: " + station.WindAverage.Value.ToString(cumulus.WindFormat) + cumulus.Units.WindText + " for " + 5 + " minutes = " +
+									(station.WindAverage.Value * station.WindRunHourMult[cumulus.Units.Wind] * 5 / 60.0).ToString(cumulus.WindRunFormat) + cumulus.Units.WindRunText);
 
-				station.WindRunToday += station.WindAverage.Value * station.WindRunHourMult[cumulus.Units.Wind] * 5 / 60.0;
+					station.WindRunToday += station.WindAverage.Value * station.WindRunHourMult[cumulus.Units.Wind] * 5 / 60.0;
+				}
 
 				// update heating/cooling degree days
 				station.UpdateDegreeDays(5);
@@ -1811,7 +1820,7 @@ namespace CumulusMX
 		{
 			public EcowittHistoricDataTypeInt soilmoisture { get; set; }
 		}
-		
+
 		internal class EcowittHistoricDataTemp
 		{
 			public EcowittHistoricDataTypeDbl temperature { get; set; }
@@ -1825,7 +1834,7 @@ namespace CumulusMX
 		internal class EcowittHistoricDataLightning
 		{
 			public EcowittHistoricDataTypeDbl distance { get; set; }
-			public EcowittHistoricDataTypeInt count	{ get; set; }	
+			public EcowittHistoricDataTypeInt count	{ get; set; }
 		}
 
 		[DataContract]
