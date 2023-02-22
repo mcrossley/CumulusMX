@@ -348,6 +348,11 @@ namespace CumulusMX
 				sensors = cumulus.GraphOptions.ExtraHumVisible
 			};
 
+			var graphDataExtraDP = new GraphDataExtraSensors()
+			{
+				sensors = cumulus.GraphOptions.ExtraDewPointVisible
+			};
+
 			var graphDataSoilTemp = new GraphDataExtraSensors()
 			{
 				sensors = cumulus.GraphOptions.SoilTempVisible
@@ -383,6 +388,7 @@ namespace CumulusMX
 				degreedays = graphDataDegreeDays,
 				extratemp = graphDataExtraTemp,
 				extrahum = graphDataExtraHum,
+				extradew = graphDataExtraDP,
 				soiltemp = graphDataSoilTemp,
 				soilmoist = graphDataSoilMoist,
 				usertemp = graphDataUserTemp,
@@ -639,6 +645,7 @@ namespace CumulusMX
 					cumulus.GraphOptions.GrowingDegreeDaysVisible2 = settings.Graphs.datavisibility.degreedays.graphGrowingDegreeDaysVis2;
 					cumulus.GraphOptions.ExtraTempVisible = settings.Graphs.datavisibility.extratemp.sensors;
 					cumulus.GraphOptions.ExtraHumVisible = settings.Graphs.datavisibility.extrahum.sensors;
+					cumulus.GraphOptions.ExtraDewPointVisible = settings.Graphs.datavisibility.extradew.sensors;
 					cumulus.GraphOptions.SoilTempVisible = settings.Graphs.datavisibility.soiltemp.sensors;
 					cumulus.GraphOptions.SoilMoistVisible = settings.Graphs.datavisibility.soilmoist.sensors;
 					cumulus.GraphOptions.UserTempVisible = settings.Graphs.datavisibility.usertemp.sensors;
@@ -1064,8 +1071,8 @@ namespace CumulusMX
 					if (settings.ecowitt != null)
 					{
 						cumulus.EcowittSettings.SetCustomServer = settings.ecowitt.setcustom;
-						cumulus.EcowittGatewayAddr = string.IsNullOrWhiteSpace(settings.ecowitt.gwaddr) ? null : settings.ecowitt.gwaddr.Trim();
-						cumulus.EcowittLocalAddr = string.IsNullOrWhiteSpace(settings.ecowitt.localaddr) ? null : settings.ecowitt.localaddr.Trim();
+						cumulus.EcowittSettings.GatewayAddr = string.IsNullOrWhiteSpace(settings.ecowitt.gwaddr) ? null : settings.ecowitt.gwaddr.Trim();
+						cumulus.EcowittSettings.LocalAddr = string.IsNullOrWhiteSpace(settings.ecowitt.localaddr) ? null : settings.ecowitt.localaddr.Trim();
 						cumulus.EcowittSettings.CustomInterval = settings.ecowitt.interval;
 					}
 				}
@@ -1972,6 +1979,7 @@ namespace CumulusMX
 			public GraphDataDegreeDaysJson degreedays { get; set; }
 			public GraphDataExtraSensors extratemp { get; set; }
 			public GraphDataExtraSensors extrahum { get; set; }
+			public GraphDataExtraSensors extradew { get; set; }
 			public GraphDataExtraSensors soiltemp { get; set; }
 			public GraphDataExtraSensors soilmoist { get; set; }
 			public GraphDataExtraSensors usertemp { get; set; }
