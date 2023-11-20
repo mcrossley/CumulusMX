@@ -21,8 +21,9 @@ namespace CumulusMX
 		}
 
 
-		public async Task SendEmail(string[] to, string from, string subject, string message, bool isHTML)
+		public async Task<bool> SendEmail(string[] to, string from, string subject, string message, bool isHTML)
 		{
+			bool retVal = false;
 			try
 			{
 				//cumulus.LogDebugMessage($"SendEmail: Waiting for lock...");
@@ -71,6 +72,8 @@ namespace CumulusMX
 
 				await client.SendAsync(m);
 				client.Disconnect(true);
+
+				retVal = true;
 			}
 			catch (Exception e)
 			{
@@ -82,6 +85,8 @@ namespace CumulusMX
 				//cumulus.LogDebugMessage($"SendEmail: Releasing lock...");
 				_writeLock.Release();
 			}
+			return retVal;
+
 		}
 
 		public string SendTestEmail(string[] to, string from, string subject, string message, bool isHTML)

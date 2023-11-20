@@ -72,7 +72,8 @@ namespace CumulusMX
 
 			var culture = new CultureOptionsJson()
 			{
-				removespacefromdateseparator = cumulus.ProgramOptions.Culture.RemoveSpaceFromDateSeparator
+				removespacefromdateseparator = cumulus.ProgramOptions.Culture.RemoveSpaceFromDateSeparator,
+				timeFormat = cumulus.ProgramOptions.TimeFormat
 			};
 
 			var settings = new SettingsJson()
@@ -143,9 +144,18 @@ namespace CumulusMX
 
 				cumulus.ProgramOptions.WarnMultiple = settings.options.stopsecondinstance;
 				cumulus.ProgramOptions.ListWebTags = settings.options.listwebtags;
+				cumulus.ProgramOptions.TimeFormat = settings.culture.timeFormat;
 				cumulus.ProgramOptions.DisplayPasswords = settings.options.displaypasswords;
 
 				cumulus.ProgramOptions.Culture.RemoveSpaceFromDateSeparator = settings.culture.removespacefromdateseparator;
+
+				if (cumulus.ProgramOptions.TimeFormat == "t")
+					cumulus.ProgramOptions.TimeFormatLong = "T";
+				else if (cumulus.ProgramOptions.TimeFormat == "h:mm tt")
+					cumulus.ProgramOptions.TimeFormatLong = "h:mm:ss tt";
+				else
+					cumulus.ProgramOptions.TimeFormatLong = "HH:mm:ss";
+
 
 				if (cumulus.ProgramOptions.Culture.RemoveSpaceFromDateSeparator && CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(' '))
 				{
@@ -263,6 +273,7 @@ namespace CumulusMX
 		private class CultureOptionsJson
 		{
 			public bool removespacefromdateseparator { get; set; }
+			public string timeFormat { get; set; }
 		}
 
 		public class ShutdownOptions

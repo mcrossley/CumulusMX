@@ -790,7 +790,7 @@ namespace CumulusMX
 
 							_ = cumulus.DoLogFile(timestamp, false);
 							_ = cumulus.DoCustomIntervalLogs(timestamp);
-							cumulus.MySqlStuff.DoRealtimeData(999, false, timestamp);
+							cumulus.MySqlSettings.DoRealtimeData(999, false, timestamp);
 
 							AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex,
 								Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate, -1, -1);

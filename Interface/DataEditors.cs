@@ -180,11 +180,11 @@ namespace CumulusMX
 				}
 
 				// Update the MySQL record
-				if (!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Server) &&
-					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.UserID) &&
-					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Password) &&
-					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Database) &&
-					cumulus.MySqlStuff.Settings.UpdateOnEdit
+				if (!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Server) &&
+					!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.UserID) &&
+					!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Password) &&
+					!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Database) &&
+					cumulus.MySqlSettings.Settings.UpdateOnEdit
 					)
 				{
 					var updateStr = "";
@@ -193,7 +193,7 @@ namespace CumulusMX
 					{
 						var updt = new StringBuilder(1024);
 
-						updt.Append($"UPDATE {cumulus.MySqlStuff.Settings.Dayfile.TableName} SET ");
+						updt.Append($"UPDATE {cumulus.MySqlSettings.Settings.Dayfile.TableName} SET ");
 						if (newRec.HighGust.HasValue) updt.Append($"HighWindGust={newRec.HighGust.Value.ToString(cumulus.WindFormat, invNum)},");
 						if (newRec.HighGustBearing.HasValue) updt.Append($"HWindGBear={newRec.HighGustBearing.Value},");
 						if (newRec.HighGustDateTime.HasValue) updt.Append($"THWindG={newRec.HighGustDateTime.Value:\\'HH:mm\\'},");
@@ -251,7 +251,7 @@ namespace CumulusMX
 						updt.Append($"WHERE LogDate='{newRec.Timestamp:yyyy-MM-dd}';");
 						updateStr = updt.ToString();
 
-						cumulus.MySqlStuff.CommandSync(updateStr, "EditDayFile");
+						cumulus.MySqlSettings.CommandSync(updateStr, "EditDayFile");
 						Cumulus.LogMessage($"EditDayFile: SQL Updated");
 					}
 					catch (Exception ex)
@@ -330,11 +330,11 @@ namespace CumulusMX
 					}
 
 					// Update the MySQL record
-					if (!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Server) &&
-						!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.UserID) &&
-						!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Password) &&
-						!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Database) &&
-						cumulus.MySqlStuff.Settings.UpdateOnEdit)
+					if (!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Server) &&
+						!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.UserID) &&
+						!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Password) &&
+						!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Database) &&
+						cumulus.MySqlSettings.Settings.UpdateOnEdit)
 					{
 						var thisRec = new List<string>(newData.data[0]);
 
@@ -585,11 +585,11 @@ namespace CumulusMX
 
 
 				// Update the MySQL record
-				if (!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Server) &&
-					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.UserID) &&
-					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Password) &&
-					!string.IsNullOrEmpty(cumulus.MySqlStuff.ConnSettings.Database) &&
-					cumulus.MySqlStuff.Settings.UpdateOnEdit
+				if (!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Server) &&
+					!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.UserID) &&
+					!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Password) &&
+					!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Database) &&
+					cumulus.MySqlSettings.Settings.UpdateOnEdit
 					)
 				{
 					// Only the monthly log file is stored in MySQL
@@ -600,7 +600,7 @@ namespace CumulusMX
 					{
 						var updt = new StringBuilder(1024);
 
-						updt.Append($"UPDATE {cumulus.MySqlStuff.Settings.Monthly.TableName} SET ");
+						updt.Append($"UPDATE {cumulus.MySqlSettings.Settings.Monthly.TableName} SET ");
 						updt.Append($"Temp={(newRec.Temp.HasValue ? newRec.Temp.Value.ToString(cumulus.TempFormat, invNum) : "null")},");
 						updt.Append($"Humidity={(newRec.Humidity.HasValue ? newRec.Humidity.Value : "null")},");
 						updt.Append($"Dewpoint={(newRec.DewPoint.HasValue ? newRec.DewPoint.Value.ToString(cumulus.TempFormat, invNum) : "null")},");
@@ -635,7 +635,7 @@ namespace CumulusMX
 						updateStr = updt.ToString();
 
 
-						cumulus.MySqlStuff.CommandSync(updateStr, "EditLogFile");
+						cumulus.MySqlSettings.CommandSync(updateStr, "EditLogFile");
 						Cumulus.LogMessage($"EditIntervalData: SQL Updated");
 					}
 					catch (Exception ex)
@@ -2506,7 +2506,7 @@ namespace CumulusMX
 		#endregion SoilMoist
 
 		#region LeafTemp
-
+		/*
 		internal string GetLeafTempData(string from, string to, string draw, int start, int length, string search)
 		{
 			try
@@ -2792,7 +2792,7 @@ namespace CumulusMX
 			return rec.ToJson();
 		}
 
-
+		*/
 		#endregion LeafTemp
 
 		#region LeafWet

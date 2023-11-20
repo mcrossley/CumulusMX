@@ -339,7 +339,7 @@ namespace CumulusMX
 				// Dewpoint ====================================================================
 				if (historydata.dewpoint < 60)
 				{
-					DoDewpoint(CalibrateTemp(historydata.dewpoint), timestamp);
+					DoDewpoint(cumulus.Calib.Temp.Calibrate(historydata.dewpoint), timestamp);
 				}
 				else
 				{
@@ -392,7 +392,7 @@ namespace CumulusMX
 				_ = cumulus.DoLogFile(timestamp, false);
 				_ = cumulus.DoCustomIntervalLogs(timestamp);
 				_ = cumulus.DoExtraLogFile(timestamp);
-				cumulus.MySqlStuff.DoRealtimeData(999, false, timestamp);
+				cumulus.MySqlSettings.DoRealtimeData(999, false, timestamp);
 
 				AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex, Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, rainrate, -1, -1);
 				UpdatePressureTrendString();
@@ -689,7 +689,7 @@ namespace CumulusMX
 
 				if ((Pressure > 850) && (Pressure < 1200))
 				{
-					StationPressure = pressure * cumulus.Calib.Press.Mult + cumulus.Calib.Press.Offset;
+					StationPressure = cumulus.Calib.Press.Calibrate(pressure);
 					// AltimeterPressure := ConvertOregonPress(StationToAltimeter(PressureHPa(StationPressure),AltitudeM(Altitude)));
 				}
 				else

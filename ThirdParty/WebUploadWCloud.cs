@@ -44,32 +44,32 @@ namespace CumulusMX.ThirdParty
 				{
 					case 200:
 						msg = "Success";
-						cumulus.HttpUploadAlarm.Triggered = false;
+						cumulus.ThirdPartyUploadAlarm.Triggered = false;
 						break;
 					case 400:
 						msg = "Bad request";
-						cumulus.HttpUploadAlarm.LastError = "WeatherCloud: " + msg;
-						cumulus.HttpUploadAlarm.Triggered = true;
+						cumulus.ThirdPartyUploadAlarm.LastError = "WeatherCloud: " + msg;
+						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 						break;
 					case 401:
 						msg = "Incorrect WID or Key";
-						cumulus.HttpUploadAlarm.LastError = "WeatherCloud: " + msg;
-						cumulus.HttpUploadAlarm.Triggered = true;
+						cumulus.ThirdPartyUploadAlarm.LastError = "WeatherCloud: " + msg;
+						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 						break;
 					case 429:
 						msg = "Too many requests";
-						cumulus.HttpUploadAlarm.LastError = "WeatherCloud: " + msg;
-						cumulus.HttpUploadAlarm.Triggered = true;
+						cumulus.ThirdPartyUploadAlarm.LastError = "WeatherCloud: " + msg;
+						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 						break;
 					case 500:
 						msg = "Server error";
-						cumulus.HttpUploadAlarm.LastError = "WeatherCloud: " + msg;
-						cumulus.HttpUploadAlarm.Triggered = true;
+						cumulus.ThirdPartyUploadAlarm.LastError = "WeatherCloud: " + msg;
+						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 						break;
 					default:
 						msg = "Unknown error";
-						cumulus.HttpUploadAlarm.LastError = "WeatherCloud: " + msg;
-						cumulus.HttpUploadAlarm.Triggered = true;
+						cumulus.ThirdPartyUploadAlarm.LastError = "WeatherCloud: " + msg;
+						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 						break;
 				}
 				if ((int)response.StatusCode == 200)
@@ -80,8 +80,8 @@ namespace CumulusMX.ThirdParty
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "WeatherCloud: ERROR");
-				cumulus.HttpUploadAlarm.LastError = "WeatherCloud: " + ex.Message;
-				cumulus.HttpUploadAlarm.Triggered = true;
+				cumulus.ThirdPartyUploadAlarm.LastError = "WeatherCloud: " + ex.Message;
+				cumulus.ThirdPartyUploadAlarm.Triggered = true;
 			}
 			finally
 			{

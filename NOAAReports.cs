@@ -6,12 +6,10 @@ using System.Threading.Tasks;
 
 namespace CumulusMX
 {
-	public class NOAAReports
+	internal class NOAAReports
 	{
 		private readonly Cumulus cumulus;
 		private readonly WeatherStation station;
-		private List<string> report;
-		//private string[] report;
 		private string noaafile;
 
 		internal NOAAReports(Cumulus cumulus, WeatherStation station)
@@ -20,13 +18,13 @@ namespace CumulusMX
 			this.station = station;
 		}
 
-		public List<string> GenerateNoaaYearReport(int year)
+		public string GenerateNoaaYearReport(int year)
 		{
 			NOAA noaa = new NOAA(cumulus, station);
 			var noaats = new DateOnly(year, 1, 1);
 
 			Cumulus.LogMessage("Creating NOAA yearly report");
-			report = noaa.CreateYearlyReport(noaats);
+			var report = noaa.CreateYearlyReport(noaats);
 			try
 			{
 				// If not using UTF, then we have to convert the character set
@@ -35,7 +33,7 @@ namespace CumulusMX
 				var reportName = noaats.ToString(cumulus.NOAAconf.YearFile);
 				noaafile = cumulus.ReportPath + reportName;
 				Cumulus.LogMessage("Saving yearly NOAA report as " + noaafile);
-				File.WriteAllLines(noaafile, report, encoding);
+				File.WriteAllText(noaafile, report, encoding);
 			}
 			catch (Exception ex)
 			{
@@ -45,7 +43,7 @@ namespace CumulusMX
 			return report;
 		}
 
-		public List<string> GenerateNoaaMonthReport(int year, int month)
+		public string GenerateNoaaMonthReport(int year, int month)
 		{
 			NOAA noaa = new NOAA(cumulus, station);
 			var noaats = new DateOnly(year, month, 1);
@@ -61,7 +59,7 @@ namespace CumulusMX
 				reportName = noaats.ToString(cumulus.NOAAconf.MonthFile);
 				noaafile = cumulus.ReportPath + reportName;
 				Cumulus.LogMessage("Saving monthly NOAA report as " + noaafile);
-				File.WriteAllLines(noaafile, report, encoding);
+				File.WriteAllText(noaafile, report, encoding);
 			}
 			catch (Exception ex)
 			{
@@ -71,39 +69,41 @@ namespace CumulusMX
 			return report;
 		}
 
-		public List<string> GetNoaaYearReport(int year)
+		public string GetNoaaYearReport(int year)
 		{
 			var noaats = new DateOnly(year, 1, 1);
-			var reportName = String.Empty;
+			var reportName = string.Empty;
+			var report = string.Empty;
 			try
 			{
 				reportName = noaats.ToString(cumulus.NOAAconf.YearFile);
 				noaafile = cumulus.ReportPath + reportName;
-				report = File.Exists(noaafile) ? new List<string>(File.ReadAllLines(noaafile)) : new List<String> { "That report does not exist" };
+				report = File.Exists(noaafile) ? File.ReadAllText(noaafile) : "That report does not exist";
 			}
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, $"Error getting NOAA yearly report '{reportName}'");
-				report = new List<string> { "Something went wrong!" };
+				report = "Something went wrong!";
 			}
 			return report;
 		}
 
-		public List<string> GetNoaaMonthReport(int year, int month)
+		public string GetNoaaMonthReport(int year, int month)
 		{
 			var noaats = new DateOnly(year, month, 1);
-			var reportName = String.Empty;
+			var reportName = string.Empty;
+			var report = string.Empty;
 			try
 			{
 				reportName = noaats.ToString(cumulus.NOAAconf.MonthFile);
 				noaafile = cumulus.ReportPath + reportName;
 				var encoding = cumulus.NOAAconf.UseUtf8 ? Encoding.GetEncoding("utf-8") : Encoding.GetEncoding("iso-8859-1");
-				report = File.Exists(noaafile) ? new List<string>(File.ReadAllLines(noaafile, encoding)) : new List<string> { "That report does not exist" };
+				report = File.Exists(noaafile) ? File.ReadAllText(noaafile, encoding) : "That report does not exist";
 			}
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, $"Error getting NOAA monthly report '{reportName}'");
-				report = new List<string> { "Something went wrong!" };
+				report = "Something went wrong!";
 			}
 			return report;
 		}

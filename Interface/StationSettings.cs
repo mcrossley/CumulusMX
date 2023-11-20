@@ -5,6 +5,9 @@ using System.Threading;
 using ServiceStack.Text;
 using System.Reflection;
 using EmbedIO;
+using System.Collections.Generic;
+using System.Globalization;
+using ServiceStack;
 
 namespace CumulusMX
 {
@@ -40,8 +43,7 @@ namespace CumulusMX
 				maxwind = cumulus.LCMaxWind,
 				recordtimeout = cumulus.RecordSetTimeoutHrs,
 				snowdepthhour = cumulus.SnowDepthHour,
-				raindaythreshold = cumulus.RainDayThreshold,
-				userainforisraining = cumulus.StationOptions.UseRainForIsRaining
+				raindaythreshold = cumulus.RainDayThreshold
 			};
 
 			// Common Settings
@@ -58,16 +60,8 @@ namespace CumulusMX
 				nosensorcheck = cumulus.StationOptions.NoSensorCheck,
 				leafwetisrainingidx = cumulus.StationOptions.LeafWetnessIsRainingIdx,
 				leafwetisrainingthrsh = cumulus.StationOptions.LeafWetnessIsRainingThrsh,
+				userainforisraining = cumulus.StationOptions.UseRainForIsRaining,
 				advanced = optionsAdv
-			};
-
-			// Display Options
-			var displayOptions = new DisplayOptionsJson()
-			{
-				windrosepoints = cumulus.NumWindRosePoints,
-				useapparent = cumulus.DisplayOptions.UseApparent,
-				displaysolar = cumulus.DisplayOptions.ShowSolar,
-				displayuv = cumulus.DisplayOptions.ShowUV
 			};
 
 			// Units > Advanced
@@ -165,6 +159,16 @@ namespace CumulusMX
 				localaddr = cumulus.EcowittSettings.LocalAddr,
 				interval = cumulus.EcowittSettings.CustomInterval,
 			};
+
+			ecowitt.forward = new List<JsonEcowittForward>();
+
+			for (var i = 0; i < 10; i++)
+			{
+				if (!string.IsNullOrEmpty(cumulus.EcowittSettings.EcowittForwarders[i]))
+				{
+					ecowitt.forward.Add(new JsonEcowittForward() { url = cumulus.EcowittSettings.EcowittForwarders[i] });
+				}
+			}
 
 			var ecowittapi = new EcowittApi()
 			{
@@ -301,107 +305,6 @@ namespace CumulusMX
 				month = cumulus.ChillHourSeasonStart
 			};
 
-			var graphDataTemp = new GraphDataTemperatureJson()
-			{
-				graphTempVis = cumulus.GraphOptions.TempVisible,
-				graphInTempVis = cumulus.GraphOptions.InTempVisible,
-				graphHeatIndexVis = cumulus.GraphOptions.HIVisible,
-				graphDewPointVis = cumulus.GraphOptions.DPVisible,
-				graphWindChillVis = cumulus.GraphOptions.WCVisible,
-				graphAppTempVis = cumulus.GraphOptions.AppTempVisible,
-				graphFeelsLikeVis = cumulus.GraphOptions.FeelsLikeVisible,
-				graphHumidexVis = cumulus.GraphOptions.HumidexVisible,
-				graphDailyAvgTempVis = cumulus.GraphOptions.DailyAvgTempVisible,
-				graphDailyMaxTempVis = cumulus.GraphOptions.DailyMaxTempVisible,
-				graphDailyMinTempVis = cumulus.GraphOptions.DailyMinTempVisible,
-				graphTempSumVis0 = cumulus.GraphOptions.TempSumVisible0,
-				graphTempSumVis1 = cumulus.GraphOptions.TempSumVisible1,
-				graphTempSumVis2 = cumulus.GraphOptions.TempSumVisible2
-			};
-
-			var graphDataHum = new GraphDataHumidityJson()
-			{
-				graphHumVis = cumulus.GraphOptions.OutHumVisible,
-				graphInHumVis = cumulus.GraphOptions.InHumVisible
-			};
-
-			var graphDataSolar = new GraphDataSolarJson()
-			{
-				graphUvVis = cumulus.GraphOptions.UVVisible,
-				graphSolarVis = cumulus.GraphOptions.SolarVisible,
-				graphSunshineVis = cumulus.GraphOptions.SunshineVisible
-			};
-
-			var graphDataDegreeDays = new GraphDataDegreeDaysJson()
-			{
-				graphGrowingDegreeDaysVis1 = cumulus.GraphOptions.GrowingDegreeDaysVisible1,
-				graphGrowingDegreeDaysVis2 = cumulus.GraphOptions.GrowingDegreeDaysVisible2
-			};
-
-			var graphDataExtraTemp = new GraphDataExtraSensors()
-			{
-				sensors = cumulus.GraphOptions.ExtraTempVisible
-			};
-
-			var graphDataExtraHum = new GraphDataExtraSensors()
-			{
-				sensors = cumulus.GraphOptions.ExtraHumVisible
-			};
-
-			var graphDataExtraDP = new GraphDataExtraSensors()
-			{
-				sensors = cumulus.GraphOptions.ExtraDewPointVisible
-			};
-
-			var graphDataSoilTemp = new GraphDataExtraSensors()
-			{
-				sensors = cumulus.GraphOptions.SoilTempVisible
-			};
-
-			var graphDataSoilMoist = new GraphDataExtraSensors()
-			{
-				sensors = cumulus.GraphOptions.SoilMoistVisible
-			};
-
-			var graphDataUserTemp = new GraphDataExtraSensors()
-			{
-				sensors = cumulus.GraphOptions.UserTempVisible
-			};
-
-			var graphDataCo2 = new GraphDataCo2()
-			{
-				co2 = cumulus.GraphOptions.CO2Sensor.CO2,
-				co2avg = cumulus.GraphOptions.CO2Sensor.CO2Avg,
-				pm25 = cumulus.GraphOptions.CO2Sensor.Pm25,
-				pm25avg = cumulus.GraphOptions.CO2Sensor.Pm25Avg,
-				pm10 = cumulus.GraphOptions.CO2Sensor.Pm10,
-				pm10avg = cumulus.GraphOptions.CO2Sensor.Pm10Avg,
-				temp = cumulus.GraphOptions.CO2Sensor.Temp,
-				hum = cumulus.GraphOptions.CO2Sensor.Hum
-			};
-
-			var graphDataVis = new GraphVisibilityJson()
-			{
-				temperature = graphDataTemp,
-				humidity = graphDataHum,
-				solar = graphDataSolar,
-				degreedays = graphDataDegreeDays,
-				extratemp = graphDataExtraTemp,
-				extrahum = graphDataExtraHum,
-				extradew = graphDataExtraDP,
-				soiltemp = graphDataSoilTemp,
-				soilmoist = graphDataSoilMoist,
-				usertemp = graphDataUserTemp,
-				co2 = graphDataCo2
-			};
-
-			var graphs = new GraphsJson()
-			{
-				graphdays = cumulus.GraphDays,
-				graphhours = cumulus.GraphHours,
-				datavisibility = graphDataVis
-			};
-
 			var wllNetwork = new WLLNetworkJson()
 			{
 				autoDiscover = cumulus.WLLAutoUpdateIpAddress,
@@ -492,7 +395,7 @@ namespace CumulusMX
 
 			var generalAdvanced = new AdvancedJson()
 			{
-				recsbegandate = cumulus.RecordsBeganStr
+				recsbegandate = cumulus.RecordsBeganDateTime.ToString("yyyy-MM-dd")
 			};
 
 			var general = new GeneralJson()
@@ -528,9 +431,7 @@ namespace CumulusMX
 				AnnualRainfall = annualrainfall,
 				GrowingDD = growingdd,
 				TempSum = tempsum,
-				ChillHrs = chillhrs,
-				Graphs = graphs,
-				DisplayOptions = displayOptions
+				ChillHrs = chillhrs
 			};
 
 			//return JsonConvert.SerializeObject(data);
@@ -616,56 +517,6 @@ namespace CumulusMX
 			// process the settings
 			try
 			{
-				// Graph Config
-				try
-				{
-					cumulus.GraphHours = settings.Graphs.graphhours;
-					cumulus.RecentDataDays = (int)Math.Ceiling(Math.Max(7, cumulus.GraphHours / 24.0));
-					cumulus.GraphDays = settings.Graphs.graphdays;
-					cumulus.GraphOptions.TempVisible = settings.Graphs.datavisibility.temperature.graphTempVis;
-					cumulus.GraphOptions.InTempVisible = settings.Graphs.datavisibility.temperature.graphInTempVis;
-					cumulus.GraphOptions.HIVisible = settings.Graphs.datavisibility.temperature.graphHeatIndexVis;
-					cumulus.GraphOptions.DPVisible = settings.Graphs.datavisibility.temperature.graphDewPointVis;
-					cumulus.GraphOptions.WCVisible = settings.Graphs.datavisibility.temperature.graphWindChillVis;
-					cumulus.GraphOptions.AppTempVisible = settings.Graphs.datavisibility.temperature.graphAppTempVis;
-					cumulus.GraphOptions.FeelsLikeVisible = settings.Graphs.datavisibility.temperature.graphFeelsLikeVis;
-					cumulus.GraphOptions.HumidexVisible = settings.Graphs.datavisibility.temperature.graphHumidexVis;
-					cumulus.GraphOptions.OutHumVisible = settings.Graphs.datavisibility.humidity.graphHumVis;
-					cumulus.GraphOptions.InHumVisible = settings.Graphs.datavisibility.humidity.graphInHumVis;
-					cumulus.GraphOptions.UVVisible = settings.Graphs.datavisibility.solar.graphUvVis;
-					cumulus.GraphOptions.SolarVisible = settings.Graphs.datavisibility.solar.graphSolarVis;
-					cumulus.GraphOptions.SunshineVisible = settings.Graphs.datavisibility.solar.graphSunshineVis;
-					cumulus.GraphOptions.DailyAvgTempVisible = settings.Graphs.datavisibility.temperature.graphDailyAvgTempVis;
-					cumulus.GraphOptions.DailyMaxTempVisible = settings.Graphs.datavisibility.temperature.graphDailyMaxTempVis;
-					cumulus.GraphOptions.DailyMinTempVisible = settings.Graphs.datavisibility.temperature.graphDailyMinTempVis;
-					cumulus.GraphOptions.TempSumVisible0 = settings.Graphs.datavisibility.temperature.graphTempSumVis0;
-					cumulus.GraphOptions.TempSumVisible1 = settings.Graphs.datavisibility.temperature.graphTempSumVis1;
-					cumulus.GraphOptions.TempSumVisible2 = settings.Graphs.datavisibility.temperature.graphTempSumVis2;
-					cumulus.GraphOptions.GrowingDegreeDaysVisible1 = settings.Graphs.datavisibility.degreedays.graphGrowingDegreeDaysVis1;
-					cumulus.GraphOptions.GrowingDegreeDaysVisible2 = settings.Graphs.datavisibility.degreedays.graphGrowingDegreeDaysVis2;
-					cumulus.GraphOptions.ExtraTempVisible = settings.Graphs.datavisibility.extratemp.sensors;
-					cumulus.GraphOptions.ExtraHumVisible = settings.Graphs.datavisibility.extrahum.sensors;
-					cumulus.GraphOptions.ExtraDewPointVisible = settings.Graphs.datavisibility.extradew.sensors;
-					cumulus.GraphOptions.SoilTempVisible = settings.Graphs.datavisibility.soiltemp.sensors;
-					cumulus.GraphOptions.SoilMoistVisible = settings.Graphs.datavisibility.soilmoist.sensors;
-					cumulus.GraphOptions.UserTempVisible = settings.Graphs.datavisibility.usertemp.sensors;
-					cumulus.GraphOptions.CO2Sensor.CO2 = settings.Graphs.datavisibility.co2.co2;
-					cumulus.GraphOptions.CO2Sensor.CO2Avg = settings.Graphs.datavisibility.co2.co2avg;
-					cumulus.GraphOptions.CO2Sensor.Pm25 = settings.Graphs.datavisibility.co2.pm25;
-					cumulus.GraphOptions.CO2Sensor.Pm25Avg = settings.Graphs.datavisibility.co2.pm25avg;
-					cumulus.GraphOptions.CO2Sensor.Pm10 = settings.Graphs.datavisibility.co2.pm10;
-					cumulus.GraphOptions.CO2Sensor.Pm10Avg = settings.Graphs.datavisibility.co2.pm10avg;
-					cumulus.GraphOptions.CO2Sensor.Temp = settings.Graphs.datavisibility.co2.temp;
-					cumulus.GraphOptions.CO2Sensor.Hum = settings.Graphs.datavisibility.co2.hum;
-				}
-				catch (Exception ex)
-				{
-					var msg = "Error processing Graph settings";
-					cumulus.LogExceptionMessage(ex, msg);
-					errorMsg += msg + "\n\n";
-					context.Response.StatusCode = 500;
-				}
-
 				// Annual Rainfall
 				try
 				{
@@ -824,6 +675,7 @@ namespace CumulusMX
 					cumulus.StationOptions.NoSensorCheck = settings.Options.nosensorcheck;
 					cumulus.StationOptions.LeafWetnessIsRainingIdx = settings.Options.leafwetisrainingidx;
 					cumulus.StationOptions.LeafWetnessIsRainingThrsh = settings.Options.leafwetisrainingthrsh;
+					cumulus.StationOptions.UseRainForIsRaining = settings.Options.userainforisraining;
 
 					cumulus.StationOptions.UseSpeedForAvgCalc = settings.Options.advanced.usespeedforavg;
 					cumulus.StationOptions.UseZeroBearing = settings.Options.advanced.usezerobearing;
@@ -834,34 +686,10 @@ namespace CumulusMX
 					cumulus.RecordSetTimeoutHrs = settings.Options.advanced.recordtimeout;
 					cumulus.SnowDepthHour = settings.Options.advanced.snowdepthhour;
 					cumulus.RainDayThreshold = settings.Options.advanced.raindaythreshold;
-					cumulus.StationOptions.UseRainForIsRaining = settings.Options.advanced.userainforisraining;
 				}
 				catch (Exception ex)
 				{
 					var msg = "Error processing Options settings";
-					cumulus.LogExceptionMessage(ex, msg);
-					errorMsg += msg + "\n\n";
-					context.Response.StatusCode = 500;
-				}
-
-				// Display Options
-				try
-				{
-					// bug catch in case user has the old JSON config files that do not work.
-					if (settings.DisplayOptions.windrosepoints == 0)
-						settings.DisplayOptions.windrosepoints = 8;
-					else if (settings.DisplayOptions.windrosepoints == 1)
-						settings.DisplayOptions.windrosepoints = 16;
-
-					cumulus.NumWindRosePoints = settings.DisplayOptions.windrosepoints;
-					cumulus.WindRoseAngle = 360.0 / cumulus.NumWindRosePoints;
-					cumulus.DisplayOptions.UseApparent = settings.DisplayOptions.useapparent;
-					cumulus.DisplayOptions.ShowSolar = settings.DisplayOptions.displaysolar;
-					cumulus.DisplayOptions.ShowUV = settings.DisplayOptions.displayuv;
-				}
-				catch (Exception ex)
-				{
-					var msg = "Error processing Display Options settings";
 					cumulus.LogExceptionMessage(ex, msg);
 					errorMsg += msg + "\n\n";
 					context.Response.StatusCode = 500;
@@ -1074,6 +902,18 @@ namespace CumulusMX
 						cumulus.EcowittSettings.GatewayAddr = string.IsNullOrWhiteSpace(settings.ecowitt.gwaddr) ? null : settings.ecowitt.gwaddr.Trim();
 						cumulus.EcowittSettings.LocalAddr = string.IsNullOrWhiteSpace(settings.ecowitt.localaddr) ? null : settings.ecowitt.localaddr.Trim();
 						cumulus.EcowittSettings.CustomInterval = settings.ecowitt.interval;
+
+						for (var i = 0; i < 10; i++)
+						{
+							if (i < settings.ecowitt.forward.Count)
+							{
+								cumulus.EcowittSettings.EcowittForwarders[i] = string.IsNullOrWhiteSpace(settings.ecowitt.forward[i].url) ? null : settings.ecowitt.forward[i].url.Trim();
+							}
+							else
+							{
+								cumulus.EcowittSettings.EcowittForwarders[i] = null;
+							}
+						}
 					}
 				}
 				catch (Exception ex)
@@ -1379,8 +1219,7 @@ namespace CumulusMX
 				// General Advanced
 				try
 				{
-					cumulus.RecordsBeganStr = settings.general.advanced.recsbegandate.Trim();
-					cumulus.RecordsBeganDate = DateTime.Parse(cumulus.RecordsBeganStr);
+					cumulus.RecordsBeganDateTime = DateTime.ParseExact(settings.general.advanced.recsbegandate.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture);
 				}
 				catch (Exception ex)
 				{
@@ -1424,14 +1263,6 @@ namespace CumulusMX
 
 				// Save the settings
 				cumulus.WriteIniFile();
-
-				// Graph configs may have changed, so re-create and upload the json files - just flag everything!
-				for (var i = 0; i < cumulus.GraphDataFiles.Length; i++)
-				{
-					cumulus.GraphDataFiles[i].CreateRequired = true;
-					cumulus.GraphDataFiles[i].FtpRequired = true;
-					cumulus.GraphDataFiles[i].CopyRequired = true;
-				}
 			}
 			catch (Exception ex)
 			{
@@ -1445,10 +1276,13 @@ namespace CumulusMX
 			return context.Response.StatusCode == 200 ? "success" : errorMsg;
 		}
 
-		internal string FtpNow(IHttpContext context)
+		internal string UploadNow(IHttpContext context)
 		{
+			cumulus.LogDebugMessage("Upload Now: Starting process");
+
 			if (station == null)
 			{
+				cumulus.LogDebugMessage("Upload Now: Not possible, station is not initialised}");
 				return "Not possible, station is not initialised}";
 			}
 
@@ -1458,71 +1292,104 @@ namespace CumulusMX
 				var json = WebUtility.UrlDecode(data);
 				var now = DateTime.Now;
 
-				// Dead simple (dirty), there is only one setting at present!
-				var includeGraphs = json.Contains("true");
+				var options = json.FromJson<UploadNowData>();
 
 				if (!cumulus.FtpOptions.Enabled && !cumulus.FtpOptions.LocalCopyEnabled)
-					return "FTP/local copy is not enabled!";
+					return "Upload/local copy is not enabled!";
 
 
 				if (cumulus.WebUpdating == 1)
 				{
-					Cumulus.LogMessage("FTP Now: Warning, a previous web update is still in progress, first chance, skipping attempt");
+					Cumulus.LogMessage("Upload Now: Warning, a previous web update is still in progress, first chance, skipping attempt");
 					return "A web update is already in progress";
 				}
 
+				var returnMsg = "Upload process invoked";
+
 				if (cumulus.WebUpdating >= 2)
 				{
-					Cumulus.LogMessage("FTP Now: Warning, a previous web update is still in progress, second chance, aborting connection");
-					if (cumulus.ftpThread.ThreadState == ThreadState.Running)
-						cumulus.ftpThread.Interrupt();
-
-					// Graph configs may have changed, so force re-create and upload the json files - just flag everything!
-					for (var i = 0; i < cumulus.GraphDataFiles.Length; i++)
+					try
 					{
-						cumulus.GraphDataFiles[i].CreateRequired = true;
-						cumulus.GraphDataFiles[i].FtpRequired = true;
-						cumulus.GraphDataFiles[i].CopyRequired = true;
+						Cumulus.LogMessage("Upload Now: Warning, a previous web update is still in progress, second chance, aborting connection");
+						if (cumulus.ftpThread.ThreadState == ThreadState.Running)
+							cumulus.ftpThread.Interrupt();
+
+						returnMsg = "An existing upload process was aborted, and a new FTP process invoked";
 					}
-					cumulus.LogDebugMessage("FTP Now: Re-Generating the graph data files, if required");
-					station.Graphs.CreateGraphDataFiles(now).Wait();
-
-					// (re)generate the daily graph data files, and upload if required
-					cumulus.LogDebugMessage("FTP Now: Generating the daily graph data files, if required");
-					station.Graphs.CreateEodGraphDataFiles();
-
-					Cumulus.LogMessage("FTP Now: Trying new web update");
-					cumulus.WebUpdating = 1;
-					cumulus.ftpThread = new Thread(() => cumulus.DoHTMLFiles(now)) { IsBackground = true };
-					cumulus.ftpThread.Start();
-					return "An existing FTP process was aborted, and a new FTP process invoked";
+					catch (Exception ex)
+					{
+						returnMsg = "Error aborting a currently running upload";
+						cumulus.LogExceptionMessage(ex, $"Upload Now: {returnMsg}");
+						return returnMsg;
+					}
 				}
 
+
 				// Graph configs may have changed, so force re-create and upload the json files - just flag everything!
+				cumulus.LogDebugMessage("Upload Now: Flagging the graph data files for recreation and upload/copy");
+				if (options.graphs)
+					cumulus.LogDebugMessage("Upload Now: Flagging graph data files for full upload rather than incremental");
+
 				for (var i = 0; i < cumulus.GraphDataFiles.Length; i++)
 				{
 					cumulus.GraphDataFiles[i].CreateRequired = true;
 					cumulus.GraphDataFiles[i].FtpRequired = true;
 					cumulus.GraphDataFiles[i].CopyRequired = true;
+					if (options.graphs)
+						cumulus.GraphDataFiles[i].Incremental = false;
+					cumulus.GraphDataFiles[i].LastDataTime = DateTime.MinValue;
 				}
-				cumulus.LogDebugMessage("FTP Now: Re-Generating the graph data files, if required");
-				station.Graphs.CreateGraphDataFiles(now).Wait();
 
 				// (re)generate the daily graph data files, and upload if required
-				cumulus.LogDebugMessage("FTP Now: Generating the daily graph data files, if required");
-				station.Graphs.CreateEodGraphDataFiles();
+				if (options.dailygraphs)
+				{
+					cumulus.LogDebugMessage("Upload Now: Flagging the daily graph data files for recreation and upload/copy");
+					for (var i = 0; i < cumulus.GraphDataEodFiles.Length; i++)
+					{
+						cumulus.GraphDataEodFiles[i].CreateRequired = true;
+						cumulus.GraphDataEodFiles[i].FtpRequired = true;
+						cumulus.GraphDataEodFiles[i].CopyRequired = true;
+						cumulus.GraphDataEodFiles[i].Incremental = false;
+						cumulus.GraphDataEodFiles[i].LastDataTime = DateTime.MinValue;
+					}
+				}
 
-				cumulus.WebUpdating = 1;
-				cumulus.ftpThread = new Thread(() => cumulus.DoHTMLFiles(now)) { IsBackground = true };
-				cumulus.ftpThread.Start();
-				return "FTP process invoked";
+				// flag the latest NOAA files for upload
+				if (options.noaa)
+				{
+					cumulus.LogDebugMessage("Upload Now: Flagging the latest NOAA report files for upload/copy");
+					cumulus.NOAAconf.NeedFtp = true;
+					cumulus.NOAAconf.NeedCopy = true;
+				}
+
+				try
+				{
+					cumulus.WebUpdating = 1;
+					cumulus.ftpThread = new Thread(() => cumulus.DoHTMLFiles()) { IsBackground = true };
+					cumulus.ftpThread.Start();
+				}
+				catch (Exception ex)
+				{
+					returnMsg = "Error starting a new upload";
+					cumulus.LogExceptionMessage(ex, "Error starting a new upload");
+				}
+
+				cumulus.LogDebugMessage("Upload Now: Process complete");
+				return returnMsg;
 			}
 			catch (Exception ex)
 			{
-				cumulus.LogExceptionMessage(ex, "FTP Now: Error");
+				cumulus.LogExceptionMessage(ex, "Upload Now: Error");
 				context.Response.StatusCode = 500;
 				return $"Error: {ex.Message}";
 			}
+		}
+
+		private class UploadNowData
+		{
+			public bool dailygraphs { get; set; }
+			public bool noaa { get; set; }
+			public bool graphs { get; set; }
 		}
 
 		internal string SetSelectaChartOptions(IHttpContext context)
@@ -1603,8 +1470,6 @@ namespace CumulusMX
 			public GrowingDDSettingsJson GrowingDD { get; set; }
 			public TempSumSettingsJson TempSum { get; set; }
 			public ChillHoursJson ChillHrs { get; set; }
-			public GraphsJson Graphs { get; set; }
-			public DisplayOptionsJson DisplayOptions { get; set; }
 		}
 
 		private class GeneralJson
@@ -1659,7 +1524,6 @@ namespace CumulusMX
 			public int recordtimeout { get; set; }
 			public int snowdepthhour { get; set; }
 			public double raindaythreshold { get; set; }
-			public bool userainforisraining { get; set; }
 		}
 
 		private class OptionsJson
@@ -1676,6 +1540,7 @@ namespace CumulusMX
 			public bool nosensorcheck { get; set; }
 			public int leafwetisrainingidx { get; set; }
 			public double leafwetisrainingthrsh { get; set; }
+			public int userainforisraining { get; set; }
 			public OptionsAdvancedJson advanced { get; set; }
 		}
 
@@ -1763,8 +1628,14 @@ namespace CumulusMX
 			public string gwaddr { get; set; }
 			public string localaddr { get; set; }
 			public int interval { get; set; }
+			public List<JsonEcowittForward> forward { get; set; }
 			public int primaryTHsensor { get; set; }
 			public int primaryRainSensor { get; set; }
+		}
+
+		internal class JsonEcowittForward
+		{
+			public string url { get; set; }
 		}
 
 		public class EcowittApi
@@ -1963,82 +1834,6 @@ namespace CumulusMX
 			public int rainseasonstart { get; set; }
 		}
 
-		private class GraphsJson
-		{
-			public int graphhours { get; set; }
-			public int graphdays { get; set; }
-
-			public GraphVisibilityJson datavisibility { get; set; }
-		}
-
-		private class GraphVisibilityJson
-		{
-			public GraphDataTemperatureJson temperature { get; set; }
-			public GraphDataHumidityJson humidity { get; set; }
-			public GraphDataSolarJson solar { get; set; }
-			public GraphDataDegreeDaysJson degreedays { get; set; }
-			public GraphDataExtraSensors extratemp { get; set; }
-			public GraphDataExtraSensors extrahum { get; set; }
-			public GraphDataExtraSensors extradew { get; set; }
-			public GraphDataExtraSensors soiltemp { get; set; }
-			public GraphDataExtraSensors soilmoist { get; set; }
-			public GraphDataExtraSensors usertemp { get; set; }
-			public GraphDataCo2 co2 { get; set; }
-		}
-
-		private class GraphDataTemperatureJson
-		{
-			public bool graphTempVis { get; set; }
-			public bool graphInTempVis { get; set; }
-			public bool graphHeatIndexVis { get; set; }
-			public bool graphDewPointVis { get; set; }
-			public bool graphWindChillVis { get; set; }
-			public bool graphAppTempVis { get; set; }
-			public bool graphFeelsLikeVis { get; set; }
-			public bool graphHumidexVis { get; set; }
-			public bool graphDailyAvgTempVis { get; set; }
-			public bool graphDailyMaxTempVis { get; set; }
-			public bool graphDailyMinTempVis { get; set; }
-			public bool graphTempSumVis0 { get; set; }
-			public bool graphTempSumVis1 { get; set; }
-			public bool graphTempSumVis2 { get; set; }
-		}
-
-		private class GraphDataHumidityJson
-		{
-			public bool graphHumVis { get; set; }
-			public bool graphInHumVis { get; set; }
-		}
-
-		private class GraphDataSolarJson
-		{
-			public bool graphUvVis { get; set; }
-			public bool graphSolarVis { get; set; }
-			public bool graphSunshineVis { get; set; }
-		}
-
-		private class GraphDataDegreeDaysJson
-		{
-			public bool graphGrowingDegreeDaysVis1 { get; set; }
-			public bool graphGrowingDegreeDaysVis2 { get; set; }
-		}
-
-		private class GraphDataExtraSensors
-		{
-			public bool[] sensors { get; set; }
-		}
-
-		private class GraphDataCo2
-		{
-			public bool co2 { get; set; }
-			public bool co2avg { get; set; }
-			public bool pm25 { get; set; }
-			public bool pm25avg { get; set; }
-			public bool pm10 { get; set; }
-			public bool pm10avg { get; set; }
-			public bool temp { get; set; }
-			public bool hum { get; set; }
-		}
 
 		private class SelectaChartJson
 		{

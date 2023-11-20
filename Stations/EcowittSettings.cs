@@ -26,5 +26,6 @@
 		public string ExtraLocalAddr { get; set; }
 		public int ExtraCustomInterval { get; set; }
 		public int[] MapWN34 = new int[9];
+		public string[] EcowittForwarders = new string[10];
 	}
 }

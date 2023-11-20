@@ -1,4 +1,8 @@
-﻿namespace CumulusMX
+﻿using System;
+using System.Diagnostics.Eventing.Reader;
+using MySqlX.XDevAPI.Relational;
+
+namespace CumulusMX
 {
 	public class Calibrations
 	{
@@ -35,6 +39,27 @@
 		public double Offset = 0;
 		public double Mult = 1;
 		public double Mult2 = 0;
+
+		public double? Calibrate(double? value)
+		{
+			if (value.HasValue)
+				return value * value * Mult2 + value * Mult + Offset;
+			else
+				return null;
+		}
+
+		public double? UnCalibrate(double? value)
+		{
+			if (value.HasValue)
+			{
+				var part1 = Math.Sqrt(Mult * Mult - 4 * Mult2 * Offset + 4 * Mult2 * value.Value);
+				var soln1 = (Mult - part1) / 2 * Mult2;
+				var soln2 = (Mult + part1) / 2 * Mult2;
+				return Math.Max(soln1, soln2);
+			}
+			else
+				return null;
+		}
 	}
 
 	public class Limits

@@ -593,7 +593,7 @@ namespace CumulusMX
 				_ = cumulus.DoLogFile(timestamp,false);
 				_ = cumulus.DoCustomIntervalLogs(timestamp);
 				_ = cumulus.DoExtraLogFile(timestamp);
-				cumulus.MySqlStuff.DoRealtimeData(999, false, timestamp);
+				cumulus.MySqlSettings.DoRealtimeData(999, false, timestamp);
 
 				AddRecentDataWithAq(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex,
 					Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate);
@@ -1217,7 +1217,8 @@ namespace CumulusMX
 					// Get station pressure in hPa by subtracting offset and calibrating
 					// EWpressure offset is difference between rel and abs in hPa
 					// PressOffset is user calibration in user units.
-					pressure = (pressure - pressureOffset) * ConvertUserPressureToHPa(cumulus.Calib.Press.Mult).Value + ConvertUserPressureToHPa(cumulus.Calib.Press.Offset).Value;
+					var offsetPress = pressure - pressureOffset;
+					pressure = offsetPress * offsetPress * cumulus.Calib.Press.Mult2 + offsetPress * cumulus.Calib.Press.Mult + ConvertUserPressureToHPa(cumulus.Calib.Press.Offset).Value;
 					StationPressure = ConvertPressMBToUser(pressure);
 
 					UpdatePressureTrendString();

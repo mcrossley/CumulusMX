@@ -44,19 +44,19 @@ namespace CumulusMX.ThirdParty
 				if (response.StatusCode != HttpStatusCode.OK)
 				{
 					Cumulus.LogMessage("WindGuru: ERROR - " + response.StatusCode + ": " + responseBodyAsText);
-					cumulus.HttpUploadAlarm.LastError = "WindGuru: HTTP response - " + response.StatusCode;
-					cumulus.HttpUploadAlarm.Triggered = true;
+					cumulus.ThirdPartyUploadAlarm.LastError = "WindGuru: HTTP response - " + response.StatusCode;
+					cumulus.ThirdPartyUploadAlarm.Triggered = true;
 				}
 				else
 				{
-					cumulus.HttpUploadAlarm.Triggered = false;
+					cumulus.ThirdPartyUploadAlarm.Triggered = false;
 				}
 			}
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "WindGuru: ERROR");
-				cumulus.HttpUploadAlarm.LastError = "WindGuru: " + ex.Message;
-				cumulus.HttpUploadAlarm.Triggered = true;
+				cumulus.ThirdPartyUploadAlarm.LastError = "WindGuru: " + ex.Message;
+				cumulus.ThirdPartyUploadAlarm.Triggered = true;
 			}
 			finally
 			{
@@ -96,11 +96,7 @@ namespace CumulusMX.ThirdParty
 				}
 			}
 			// average the values
-			double avgwind = totalwind / numvalues * cumulus.Calib.WindSpeed.Mult;
-
-			maxwind *= cumulus.Calib.WindGust.Mult;
-			minwind *= cumulus.Calib.WindGust.Mult;
-
+			double avgwind = totalwind / numvalues;
 
 			StringBuilder URL = new StringBuilder("http://www.windguru.cz/upload/api.php?", 1024);
 

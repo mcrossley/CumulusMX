@@ -85,19 +85,19 @@ namespace CumulusMX.ThirdParty
 				if (response.StatusCode != HttpStatusCode.NoContent)
 				{
 					Cumulus.LogMessage($"OpenWeatherMap: ERROR - Response code = {response.StatusCode}, Response data = {responseBodyAsText}");
-					cumulus.HttpUploadAlarm.LastError = $"OpenWeatherMap: HTTP response - {response.StatusCode}, Response data = {responseBodyAsText}";
-					cumulus.HttpUploadAlarm.Triggered = true;
+					cumulus.ThirdPartyUploadAlarm.LastError = $"OpenWeatherMap: HTTP response - {response.StatusCode}, Response data = {responseBodyAsText}";
+					cumulus.ThirdPartyUploadAlarm.Triggered = true;
 				}
 				else
 				{
-					cumulus.HttpUploadAlarm.Triggered = false;
+					cumulus.ThirdPartyUploadAlarm.Triggered = false;
 				}
 			}
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "OpenWeatherMap: ERROR");
-				cumulus.HttpUploadAlarm.LastError = "OpenWeatherMap: " + ex.Message;
-				cumulus.HttpUploadAlarm.Triggered = true;
+				cumulus.ThirdPartyUploadAlarm.LastError = "OpenWeatherMap: " + ex.Message;
+				cumulus.ThirdPartyUploadAlarm.Triggered = true;
 			}
 			finally
 			{

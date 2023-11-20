@@ -46,6 +46,7 @@ namespace CumulusMX.ThirdParty
 			this.cumulus = cumulus;
 			Name = name;
 			httpClient = new HttpClient(httpHandler);
+			httpClient.DefaultRequestHeaders.ConnectionClose = true;
 		}
 
 		internal void CatchUpIfRequired()

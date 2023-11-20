@@ -15,10 +15,9 @@ namespace CumulusMX
 	{
 		private readonly Cumulus cumulus;
 		private readonly WeatherStation station;
-		//private readonly NumberFormatInfo invNum = CultureInfo.InvariantCulture.NumberFormat;
 
-		private static readonly HttpClientHandler httpHandler = new HttpClientHandler();
-		private readonly HttpClient httpClient = new HttpClient(httpHandler);
+		private static readonly HttpClientHandler httpHandler = new HttpClientHandler() { SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13 };
+		private static readonly HttpClient httpClient = new HttpClient(httpHandler);
 
 		private static readonly string historyUrl = "https://api.ecowitt.net/api/v3/device/history?";
 
@@ -39,6 +38,8 @@ namespace CumulusMX
 					httpHandler.Credentials = new NetworkCredential(cumulus.HTTPProxyUser, cumulus.HTTPProxyPassword);
 				}
 			}
+
+			httpClient.DefaultRequestHeaders.ConnectionClose = true;
 
 			// Let's decode the Unix ts to DateTime
 			JsConfig.Init(new Config {

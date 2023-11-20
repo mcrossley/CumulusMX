@@ -24,6 +24,10 @@ namespace CumulusMX.ThirdParty
 		public bool SendSoilMoisture4;
 		public bool SendLeafWetness1;
 		public bool SendLeafWetness2;
+		public int SendExtraTemp1;
+		public int SendExtraTemp2;
+		public int SendExtraTemp3;
+		public int SendExtraTemp4;
 		public int ErrorFlagCount;
 
 		public WebUploadWund(Cumulus cumulus, string name) : base (cumulus, name)
@@ -65,22 +69,22 @@ namespace CumulusMX.ThirdParty
 					if (!RapidFireEnabled || ErrorFlagCount >= 12)
 					{
 						Cumulus.LogMessage("Wunderground: Response = " + response.StatusCode + ": " + responseBodyAsText);
-						cumulus.HttpUploadAlarm.LastError = "Wunderground: HTTP response - " + response.StatusCode;
-						cumulus.HttpUploadAlarm.Triggered = true;
+						cumulus.ThirdPartyUploadAlarm.LastError = "Wunderground: HTTP response - " + response.StatusCode;
+						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 						ErrorFlagCount = 0;
 					}
 				}
 				else
 				{
-					cumulus.HttpUploadAlarm.Triggered = false;
+					cumulus.ThirdPartyUploadAlarm.Triggered = false;
 					ErrorFlagCount = 0;
 				}
 			}
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "Wunderground: ERROR");
-				cumulus.HttpUploadAlarm.LastError = "Wunderground: " + ex.Message;
-				cumulus.HttpUploadAlarm.Triggered = true;
+				cumulus.ThirdPartyUploadAlarm.LastError = "Wunderground: " + ex.Message;
+				cumulus.ThirdPartyUploadAlarm.Triggered = true;
 			}
 			finally
 			{
@@ -210,6 +214,23 @@ namespace CumulusMX.ThirdParty
 							Data.Append($"&AqPM2.5={station.AirQuality[4].Value.ToString("F1", invC)}");
 						break;
 				}
+			}
+
+			if (cumulus.Wund.SendExtraTemp1 > 0 && cumulus.Wund.SendExtraTemp1 <= 10)
+			{
+				Data.Append($"&temp2f={station.TempFstr(station.ExtraTemp[cumulus.Wund.SendExtraTemp1] ?? 0)}");
+			}
+			if (cumulus.Wund.SendExtraTemp2 > 0 && cumulus.Wund.SendExtraTemp2 <= 10)
+			{
+				Data.Append($"&temp3f={station.TempFstr(station.ExtraTemp[cumulus.Wund.SendExtraTemp2] ?? 0)}");
+			}
+			if (cumulus.Wund.SendExtraTemp3 > 0 && cumulus.Wund.SendExtraTemp3 <= 10)
+			{
+				Data.Append($"&temp4f={station.TempFstr(station.ExtraTemp[cumulus.Wund.SendExtraTemp3] ?? 0)}");
+			}
+			if (cumulus.Wund.SendExtraTemp4 > 0 && cumulus.Wund.SendExtraTemp4 <= 10)
+			{
+				Data.Append($"&temp5f={station.TempFstr(station.ExtraTemp[cumulus.Wund.SendExtraTemp4] ?? 0)}");
 			}
 
 			Data.Append($"&softwaretype=Cumulus%20v{cumulus.Version}");

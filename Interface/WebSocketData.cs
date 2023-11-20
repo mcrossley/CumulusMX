@@ -604,7 +604,7 @@ namespace CumulusMX
 
 		[DataMember(Name = "OutdoorHum")]
 		public string OutdoorHumFormatted
-		{ 
+		{
 			get => OutdoorHum.HasValue ? OutdoorHum.Value.ToString() : nullVal;
 			set { }
 		}
@@ -934,7 +934,7 @@ namespace CumulusMX
 		[DataMember(Name = "TempTrend")]
 		public string TempTrendRounded
 		{
-			get => TempTrend.ToString(cumulus.TempFormat);
+			get => TempTrend.ToString(cumulus.TempTrendFormat);
 			set { }
 		}
 
@@ -944,7 +944,7 @@ namespace CumulusMX
 		[DataMember(Name = "PressTrend")]
 		public string PressTrendRounded
 		{
-			get => PressTrend.ToString(cumulus.PressFormat);
+			get => PressTrend.ToString(cumulus.PressTrendFormat);
 			set { }
 		}
 
@@ -1046,7 +1046,7 @@ namespace CumulusMX
 
 		[DataMember]
 		public bool AlarmMySql { get; set; }
-		
+
 		[DataMember]
 		public bool AlarmIsRaining { get; set; }
 	}

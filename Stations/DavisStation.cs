@@ -1680,7 +1680,7 @@ namespace CumulusMX
 					}
 				}
 
-				var forecast = (cumulus.DavisForecast1[key1] + cumulus.DavisForecast2[key2] + cumulus.DavisForecast3[key3]).Trim();
+				var forecast = (cumulus.Trans.DavisForecast1[key1] + cumulus.Trans.DavisForecast2[key2] + cumulus.Trans.DavisForecast3[key3]).Trim();
 
 				DoForecast(forecast, false);
 
@@ -1741,15 +1741,7 @@ namespace CumulusMX
 						DoLeafWetness(wet, j);
 					}
 				}
-				if (cumulus.ExtraDataLogging.LeafTemp)
-				{
-					for (var j = 1; j <= 4; j++)
-					{
-						var val = (int)loopData.GetPropValue("LeafTemp" + j);
-						double? temp = val < 255 && val > 0 ? ConvertTempFToUser(val - 90) : null;
-						DoLeafTemp(temp, j);
-					}
-				}
+
 				UpdateStatusPanel(DateTime.Now);
 				UpdateMQTT();
 			}
@@ -1890,24 +1882,34 @@ namespace CumulusMX
 				DateTime now = DateTime.Now;
 
 				// Extract station pressure, and use it to calculate altimeter pressure
-				// Spike removal is in mb/hPa
-				var pressUser = ConvertPressINHGToUser(loopData.AbsolutePressure);
-				var pressMB = ConvertUserPressToMB(pressUser).Value;
-				if ((previousPressStation == 9999) || (Math.Abs(pressMB - previousPressStation) < cumulus.Spike.PressDiff))
+
+				// first sanity check - one user was getting zero values!
+				if (loopData.AbsolutePressure < 20)
 				{
-					previousPressStation = pressMB;
-					StationPressure = ConvertPressINHGToUser(loopData.AbsolutePressure);
-					AltimeterPressure = ConvertPressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure), AltitudeM(cumulus.Altitude)));
+					cumulus.LogDebugMessage("LOOP2: Ignoring absolute pressure value < 20 inHg");
+					// no absolute, so just make altimeter = sl pressure
+					AltimeterPressure = Pressure;
+					StationPressure = 0;
 				}
 				else
 				{
-					cumulus.LogSpikeRemoval("Station Pressure difference greater than specified; reading ignored");
-					cumulus.LogSpikeRemoval($"NewVal={pressMB:F1} OldVal={previousPressStation:F1} SpikePressDiff={cumulus.Spike.PressDiff:F1} HighLimit={cumulus.Limit.PressHigh:F1} LowLimit={cumulus.Limit.PressLow:F1}");
-					lastSpikeRemoval = DateTime.Now;
-					cumulus.SpikeAlarm.LastError = $"Station Pressure difference greater than spike value - NewVal={pressMB:F1} OldVal={previousPressStation:F1}";
-					cumulus.SpikeAlarm.Triggered = true;
-					StationPressure = null;
-					AltimeterPressure = null;
+					// Spike removal is in mb/hPa
+					var pressUser = ConvertPressINHGToUser(loopData.AbsolutePressure);
+					var pressMB = ConvertUserPressToMB(pressUser);
+					if ((previousPressStation == 9999) || (Math.Abs(pressMB.Value - previousPressStation) < cumulus.Spike.PressDiff))
+					{
+						previousPressStation = pressMB.Value;
+						StationPressure = ConvertPressINHGToUser(loopData.AbsolutePressure);
+						AltimeterPressure = ConvertPressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure), AltitudeM(cumulus.Altitude)));
+					}
+					else
+					{
+						cumulus.LogSpikeRemoval("Station Pressure difference greater than specified; reading ignored");
+						cumulus.LogSpikeRemoval($"NewVal={pressMB:F1} OldVal={previousPressStation:F1} SpikePressDiff={cumulus.Spike.PressDiff:F1} HighLimit={cumulus.Limit.PressHigh:F1} LowLimit={cumulus.Limit.PressLow:F1}");
+						lastSpikeRemoval = DateTime.Now;
+						cumulus.SpikeAlarm.LastError = $"Station Pressure difference greater than spike value - NewVal={pressMB:F1} OldVal={previousPressStation:F1}";
+						cumulus.SpikeAlarm.Triggered = true;
+					}
 				}
 
 				double wind = ConvertWindMPHToUser(loopData.CurrentWindSpeed).Value;
@@ -1915,7 +1917,7 @@ namespace CumulusMX
 				// Use current average as we don't have a new value in LOOP2. Allow for calibration.
 				if (loopData.CurrentWindSpeed < 200)
 				{
-					DoWind(wind, loopData.WindDirection, WindAverage / cumulus.Calib.WindSpeed.Mult, now);
+					DoWind(wind, loopData.WindDirection, -1, now);
 				}
 				else
 				{
@@ -1926,7 +1928,8 @@ namespace CumulusMX
 				if (loopData.WindGust10Min < 200 && cumulus.StationOptions.PeakGustMinutes >= 10)
 				{
 					// Extract 10-min gust and see if it is higher than we have recorded.
-					var gust10min = ConvertWindMPHToUser(loopData.WindGust10Min)*cumulus.Calib.WindGust.Mult;
+					var gust10min = cumulus.Calib.WindSpeed.Calibrate(ConvertWindMPHToUser(loopData.WindGust10Min));
+
 					var gustdir = loopData.WindGustDir;
 
 					cumulus.LogDebugMessage("LOOP2: 10-min gust: " + (gust10min.HasValue ? gust10min.Value.ToString(cumulus.WindFormat) : "null"));
@@ -1937,8 +1940,8 @@ namespace CumulusMX
 						if (CheckHighGust(gust10min, gustdir, now))
 						{
 							// add to recent values so normal calculation includes this value
-							WindRecent[nextwind].Gust = ConvertWindMPHToUser(loopData.WindGust10Min).Value;
-							WindRecent[nextwind].Speed = WindAverage.Value / cumulus.Calib.WindSpeed.Mult;
+							WindRecent[nextwind].Gust = gust10min.Value;
+							WindRecent[nextwind].Speed = WindAverage.Value;
 							WindRecent[nextwind].Timestamp = now;
 							nextwind = (nextwind + 1) % MaxWindRecent;
 
@@ -1989,7 +1992,7 @@ namespace CumulusMX
 			bool midnightraindone = luhour == 0;
 
 			// work out the next logger interval after the last CMX update
-			var nextLoggerTime = Utils.RoundTimeUpToInterval(cumulus.LastUpdateTime, TimeSpan.FromMinutes(loggerInterval));
+			var nextLoggerTime = Utils.RoundTimeUpToInterval(cumulus.LastUpdateTime.AddMinutes(-1), TimeSpan.FromMinutes(loggerInterval));
 
 			// check if the calculated logger time is later than now!
 			if (nextLoggerTime > DateTime.Now)
@@ -2588,16 +2591,6 @@ namespace CumulusMX
 								{
 									DoLeafWetness(archiveData.LeafWetness2, 2);
 								}
-
-								if (archiveData.LeafTemp1 < 255 && archiveData.LeafTemp1 > 0)
-								{
-									DoLeafTemp(ConvertTempFToUser(archiveData.LeafTemp1 - 90), 1);
-								}
-
-								if (archiveData.LeafTemp2 < 255 && archiveData.LeafTemp2 > 0)
-								{
-									DoLeafTemp(ConvertTempFToUser(archiveData.LeafTemp2 - 90), 2);
-								}
 							}
 
 							Cumulus.LogMessage("GetArchiveData: Page=" + p + " Record=" + r + " Timestamp=" + archiveData.Timestamp);
@@ -2614,7 +2607,7 @@ namespace CumulusMX
 
 							_ = cumulus.DoLogFile(timestamp, false);
 							Cumulus.LogMessage("GetArchiveData: Log file entry written");
-							cumulus.MySqlStuff.DoRealtimeData(999, false, timestamp);
+							cumulus.MySqlSettings.DoRealtimeData(999, false, timestamp);
 
 							_ = cumulus.DoExtraLogFile(timestamp);
 

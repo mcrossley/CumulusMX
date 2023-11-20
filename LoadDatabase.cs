@@ -138,7 +138,7 @@ namespace CumulusMX
 
 			// Unix timestamp zero value is 1/1/1970
 			if (lastLogDate.Year == 1970)
-				lastLogDate = cumulus.RecordsBeganDate;
+				lastLogDate = cumulus.RecordsBeganDateTime;
 
 			// Check the last data time against the time now and see it is within a logging period window
 			if (lastLogDate.AddMinutes(cumulus.logints[cumulus.DataLogInterval]) > cumulus.LastUpdateTime)
@@ -273,7 +273,7 @@ namespace CumulusMX
 			// Unix timestamp zero value is 1/1/1970
 			if (lastLogDate.Year == 1970)
 			{
-				lastLogDate = cumulus.RecordsBeganDate;
+				lastLogDate = cumulus.RecordsBeganDateTime;
 				lastLogTimestamp = 0;
 			}
 

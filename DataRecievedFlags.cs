@@ -28,7 +28,6 @@ namespace CumulusMX
 
 		internal bool[] SoilMoisture;
 		internal bool[] SoilTemp;
-		internal bool[] LeafTemp;
 		internal bool[] LeafWetness;
 		internal bool[] AirQuality;
 		internal bool[] AirQualityAvg;
@@ -47,7 +46,6 @@ namespace CumulusMX
 			ExtraUserTemp = new bool[11];
 			SoilMoisture = new bool[17];
 			SoilTemp = new bool[17];
-			LeafTemp = new bool[5];
 			LeafWetness = new bool[9];
 			AirQuality = new bool[5];
 			AirQualityAvg = new bool[5];
@@ -208,10 +206,6 @@ namespace CumulusMX
 
 			for (var i = 1; i < 5; i++)
 			{
-				if (LeafTemp[i])
-					LeafTemp[i] = false;
-				else
-					station.LeafTemp[i] = null;
 				if (AirQuality[i])
 					AirQuality[i] = false;
 				else

@@ -57,14 +57,8 @@ namespace CumulusMX
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "Exception occurred reading archive data");
-				Exception te = ex;
-				while (te != null)
-				{
-					Cumulus.LogConsoleMessage($"Error getting history data: {te.Message}", ConsoleColor.Red);
-					te = te.InnerException;
-				}
 			}
-			
+
 			//cumulus.LogDebugMessage("Lock: Station releasing the lock");
 			Cumulus.syncInit.Release();
 			StartLoop();
@@ -73,6 +67,13 @@ namespace CumulusMX
 		private void ProcessHistoryData(List<Observation> datalist)
 		{
 			var totalentries = datalist.Count;
+
+			if (totalentries == 0)
+			{
+				Cumulus.LogMessage("No history data to process");
+				Cumulus.LogConsoleMessage("No history data to process");
+				return;
+			}
 
 			Cumulus.LogMessage("Processing history data, number of entries = " + totalentries);
 			Cumulus.LogConsoleMessage(
@@ -344,10 +345,13 @@ namespace CumulusMX.Tempest
 		private readonly Task _listenTask;
 		private readonly CancellationTokenSource tokenSource;
 
-		public EventClient(int port) : base(port)
+		public EventClient(int port)
 		{
 			tokenSource = new CancellationTokenSource();
 			_listenTask = new Task(() => ListenForPackets(tokenSource.Token));
+			// force shared port
+			ExclusiveAddressUse = false;
+			Client.Bind(new IPEndPoint(IPAddress.Any, port));
 		}
 
 		public event EventHandler<PacketReceivedArgs> PacketReceived;

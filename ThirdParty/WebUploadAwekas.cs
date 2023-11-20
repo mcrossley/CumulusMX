@@ -59,15 +59,29 @@ namespace CumulusMX.ThirdParty
 				if (response.StatusCode != HttpStatusCode.OK)
 				{
 					Cumulus.LogMessage($"AWEKAS: ERROR - Response code = {response.StatusCode}, body = {responseBodyAsText}");
-					cumulus.HttpUploadAlarm.LastError = $"AWEKAS: HTTP Response code = {response.StatusCode}, body = {responseBodyAsText}";
-					cumulus.HttpUploadAlarm.Triggered = true;
+					cumulus.ThirdPartyUploadAlarm.LastError = $"AWEKAS: HTTP Response code = {response.StatusCode}, body = {responseBodyAsText}";
+					cumulus.ThirdPartyUploadAlarm.Triggered = true;
 				}
 				else
 				{
-					cumulus.HttpUploadAlarm.Triggered = false;
+					cumulus.ThirdPartyUploadAlarm.Triggered = false;
 				}
-				//var respJson = JsonConvert.DeserializeObject<AwekasResponse>(responseBodyAsText);
-				var respJson = JsonSerializer.DeserializeFromString<AwekasResponse>(responseBodyAsText);
+
+				AwekasResponse respJson;
+
+				try
+				{
+					respJson = JsonSerializer.DeserializeFromString<AwekasResponse>(responseBodyAsText);
+				}
+				catch (Exception ex)
+				{
+					Cumulus.LogMessage("AWEKAS: Exception deserializing response = " + ex.Message);
+					Cumulus.LogMessage($"AWEKAS: ERROR - Response body = {responseBodyAsText}");
+					cumulus.ThirdPartyUploadAlarm.LastError = "AWEKAS deserializing response: " + ex.Message;
+					cumulus.ThirdPartyUploadAlarm.Triggered = true;
+					Updating = false;
+					return;
+				}
 
 				// Check the status response
 				if (respJson.status == 2)
@@ -121,8 +135,8 @@ namespace CumulusMX.ThirdParty
 					else
 					{
 						Cumulus.LogMessage("AWEKAS: Unknown error");
-						cumulus.HttpUploadAlarm.LastError = "AWEKAS: Unknown error";
-						cumulus.HttpUploadAlarm.Triggered = true;
+						cumulus.ThirdPartyUploadAlarm.LastError = "AWEKAS: Unknown error";
+						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 					}
 				}
 
@@ -155,8 +169,8 @@ namespace CumulusMX.ThirdParty
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "AWEKAS: Error");
-				cumulus.HttpUploadAlarm.LastError = "AWEKAS: " + ex.Message;
-				cumulus.HttpUploadAlarm.Triggered = true;
+				cumulus.ThirdPartyUploadAlarm.LastError = "AWEKAS: " + ex.Message;
+				cumulus.ThirdPartyUploadAlarm.Triggered = true;
 			}
 			finally
 			{

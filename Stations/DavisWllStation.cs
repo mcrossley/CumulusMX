@@ -31,19 +31,18 @@ namespace CumulusMX
 		private bool savedUseSpeedForAvgCalc;
 		private bool savedCalculatePeakGust;
 		private int maxArchiveRuns = 1;
-		private static readonly HttpClientHandler HistoricHttpHandler = new HttpClientHandler();
+		private static readonly HttpClientHandler HistoricHttpHandler = new HttpClientHandler() { SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13 };
 		private readonly HttpClient wlHttpClient = new HttpClient(HistoricHttpHandler);
 		private readonly HttpClient dogsBodyClient = new HttpClient();
 		private readonly bool checkWllGustValues;
 		private bool broadcastReceived;
 		private int weatherLinkArchiveInterval = 16 * 60; // Used to get historic Health, 16 minutes in seconds only for initial fetch after load
 		private bool wllVoltageLow;
-		private readonly CancellationTokenSource tokenSource = new CancellationTokenSource();
-		private readonly CancellationToken cancellationToken;
 		private readonly AutoResetEvent bwDoneEvent = new AutoResetEvent(false);
 
 		private readonly List<WlSensor> sensorList = new List<WlSensor>();
 		private readonly bool useWeatherLinkDotCom = true;
+		private double currentAvgWindSpd = -1;
 
 		public DavisWllStation(Cumulus cumulus) : base(cumulus)
 		{
@@ -60,8 +59,6 @@ namespace CumulusMX
 
 			// initialise the battery status
 			TxBatText = "1-NA 2-NA 3-NA 4-NA 5-NA 6-NA 7-NA 8-NA";
-
-			cancellationToken = tokenSource.Token;
 
 			// Override the ServiceStack De-serialization function
 			// Check which format provided, attempt to parse as datetime or return minValue.
@@ -252,7 +249,7 @@ namespace CumulusMX
 				// Create a current conditions thread to poll readings every 10 seconds
 				GetWllCurrent(null, null);
 				tmrCurrent.Elapsed += GetWllCurrent;
-				tmrCurrent.Interval = 10 * 1000;  // Every 10 seconds
+				tmrCurrent.Interval = 20 * 1000;  // Every 20 seconds
 				tmrCurrent.AutoReset = true;
 				tmrCurrent.Start();
 
@@ -287,12 +284,12 @@ namespace CumulusMX
 					using var udpClient = new UdpClient();
 					udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 
-					while (!cancellationToken.IsCancellationRequested)
+					while (!cumulus.cancellationToken.IsCancellationRequested)
 					{
 						try
 						{
 							var broadcastTask = udpClient.ReceiveAsync();
-							var timeoutTask = Task.Delay(3000, cancellationToken); // We should get a message every 2.5 seconds
+							var timeoutTask = Task.Delay(3000, cumulus.cancellationToken); // We should get a message every 2.5 seconds
 
 							// wait for a broadcast message, a timeout, or a cancellation request
 							await Task.WhenAny(broadcastTask, timeoutTask);
@@ -318,7 +315,7 @@ namespace CumulusMX
 					}
 					udpClient.Close();
 					Cumulus.LogMessage("WLL broadcast listener stopped");
-				}, cancellationToken);
+				}, cumulus.cancellationToken);
 
 				Cumulus.LogMessage($"WLL Now listening on broadcast port {port}");
 
@@ -356,10 +353,6 @@ namespace CumulusMX
 				tmrBroadcastWatchdog.Stop();
 				tmrCurrent.Stop();
 				StopMinuteTimer();
-				if (tokenSource != null)
-				{
-					tokenSource.Cancel();
-				}
 				if (bw != null && bw.WorkerSupportsCancellation)
 				{
 					bw.CancelAsync();
@@ -587,10 +580,12 @@ namespace CumulusMX
 								int windDir = rec.wind_dir_last ?? 0;
 
 								// No average in the broadcast data, so use last value from current - allow for calibration
-								DoWind(ConvertWindMPHToUser(rec.wind_speed_last), windDir, WindAverage / cumulus.Calib.WindSpeed.Mult, dateTime);
+								if (currentAvgWindSpd < 0)
+									currentAvgWindSpd = ConvertWindMPHToUser(rec.wind_speed_last).Value / 2;
+								DoWind(ConvertWindMPHToUser(rec.wind_speed_last), windDir, currentAvgWindSpd, dateTime);
 
 								var gust = ConvertWindMPHToUser(rec.wind_speed_hi_last_10_min);
-								var gustCal = gust.HasValue ? gust * cumulus.Calib.WindGust.Mult : null; ;
+								var gustCal = gust.HasValue ? cumulus.Calib.WindGust.Calibrate(gust) : null; ;
 								if (checkWllGustValues)
 								{
 									if ((gustCal ?? 0) > (RecentMaxGust ?? 0))
@@ -604,8 +599,8 @@ namespace CumulusMX
 											cumulus.LogDebugMessage("Set max gust from broadcast 10 min high value: " + gustCal.Value.ToString(cumulus.WindFormat) + " was: " + RecentMaxGust.Value.ToString(cumulus.WindFormat));
 
 											// add to recent values so normal calculation includes this value
-											WindRecent[nextwind].Gust = gust.Value; // use uncalibrated value
-											WindRecent[nextwind].Speed = WindAverage.Value / cumulus.Calib.WindSpeed.Mult;
+											WindRecent[nextwind].Gust = gustCal.Value; // use calibrated value
+											WindRecent[nextwind].Speed = WindAverage.Value;
 											WindRecent[nextwind].Timestamp = dateTime;
 											nextwind = (nextwind + 1) % MaxWindRecent;
 
@@ -836,9 +831,9 @@ namespace CumulusMX
 									// pesky null values from WLL when it is calm
 									int wdir = data1.wind_dir_last ?? 0;
 									var wind = ConvertWindMPHToUser(data1.wind_speed_last ?? 0);
-									var wspdAvg10min = ConvertWindMPHToUser(data1.wind_speed_avg_last_10_min ?? 0);
+									currentAvgWindSpd = ConvertWindMPHToUser(data1.wind_speed_avg_last_10_min ?? 0).Value;
 
-									DoWind(wind, wdir, wspdAvg10min, dateTime);
+									DoWind(wind, wdir, currentAvgWindSpd, dateTime);
 
 									/*
 									if (data1.wind_speed_avg_last_10_min.HasValue)
@@ -877,7 +872,7 @@ namespace CumulusMX
 									else if (!CalcRecentMaxGust)
 									{
 										// Check for spikes, and set highs
-										if (CheckHighGust(gustCal, data1.wind_dir_at_hi_speed_last_10_min, dateTime))
+										if (CheckHighGust(gustCal, data1.wind_dir_at_hi_speed_last_10_min, dateTime)  && broadcastStopped)
 										{
 											RecentMaxGust = gustCal;
 										}
@@ -1783,7 +1778,7 @@ namespace CumulusMX
 					// Log all the data
 					_ = cumulus.DoLogFile(timestamp, false); // let this run in background
 					Cumulus.LogMessage("GetWlHistoricData: Log file entry written");
-					cumulus.MySqlStuff.DoRealtimeData(999, false, timestamp);
+					cumulus.MySqlSettings.DoRealtimeData(999, false, timestamp);
 
 					_ = cumulus.DoCustomIntervalLogs(timestamp);
 
@@ -2107,7 +2102,7 @@ namespace CumulusMX
 
 								if (data11.wind_speed_avg != null)
 								{
-									WindAverage = ConvertWindMPHToUser((double)data11.wind_speed_avg) * cumulus.Calib.WindSpeed.Mult;
+									WindAverage = cumulus.Calib.WindSpeed.Calibrate(ConvertWindMPHToUser((double)data11.wind_speed_avg));
 
 									// add in 'archivePeriod' minutes worth of wind speed to windrun
 									int interval = data11.arch_int / 60;

@@ -84,8 +84,8 @@ namespace CumulusMX
 		/// <returns></returns>
 		private static bool LessThanOrEqual(double value1, double value2)
 		{
-			int intvalue1 = Convert.ToInt32(value1*1000);
-			int intvalue2 = Convert.ToInt32(value2*1000);
+			int intvalue1 = Convert.ToInt32(value1 * 1000);
+			int intvalue2 = Convert.ToInt32(value2 * 1000);
 			return (intvalue1 <= intvalue2);
 		}
 
@@ -97,14 +97,14 @@ namespace CumulusMX
 		/// <returns></returns>
 		private static bool GreaterThanOrEqual(double value1, double value2)
 		{
-			int intvalue1 = Convert.ToInt32(value1*1000);
-			int intvalue2 = Convert.ToInt32(value2*1000);
+			int intvalue1 = Convert.ToInt32(value1 * 1000);
+			int intvalue2 = Convert.ToInt32(value2 * 1000);
 			return (intvalue1 >= intvalue2);
 		}
 
-		private  string CompassPoint(int bearing)
+		private string CompassPoint(int bearing)
 		{
-			return cumulus.compassp[(((bearing * 100) + 1125) % 36000) / 2250];
+			return cumulus.Trans.compassp[(((bearing * 100) + 1125) % 36000) / 2250];
 		}
 
 		private static decimal Frac(decimal num)
@@ -116,7 +116,7 @@ namespace CumulusMX
 		{
 			deg = (int) Math.Floor(latLong);
 			latLong = Frac(latLong) * 60;
-			min = (int)Math.Floor(latLong);
+			min = (int) Math.Floor(latLong);
 			latLong = Frac(latLong) * 60;
 			sec = (int) Math.Round(latLong);
 		}
@@ -154,7 +154,7 @@ namespace CumulusMX
 			}
 			if (windsamples > 0)
 			{
-				avgwindspeed = totalwindspeed/windsamples;
+				avgwindspeed = totalwindspeed / windsamples;
 			}
 			else
 			{
@@ -179,7 +179,7 @@ namespace CumulusMX
 
 		private static int CalcAvgBearing(double x, double y)
 		{
-			var avg = 90 - (int)(Trig.RadToDeg(Math.Atan2(y, x)));
+			var avg = 90 - (int) (Trig.RadToDeg(Math.Atan2(y, x)));
 			if (avg < 0)
 			{
 				avg = 360 + avg;
@@ -188,7 +188,7 @@ namespace CumulusMX
 			return avg;
 		}
 
-		public List<string> CreateMonthlyReport(DateOnly thedate)
+		public string CreateMonthlyReport(DateOnly thedate)
 		{
 			var output = new List<string>();
 
@@ -235,19 +235,20 @@ namespace CumulusMX
 			int month = thedate.Month;
 			int year = thedate.Year;
 
+
 			try
 			{
 				var fromDate = thedate.ToUnixTime();
 				var toDate = thedate.AddMonths(1).ToUnixTime();
-				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", fromDate, toDate);
+				var days = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ? order by Timestamp", fromDate, toDate);
 
-				foreach (var row in rows)
+				foreach (var day in days)
 				{
-					int daynumber = row.Date.Day;
+					int daynumber = day.Date.Day;
 
 					// max temp
-					dayList[daynumber].maxtemp = row.HighTemp.HasValue ? row.HighTemp.Value : -999;
-					dayList[daynumber].maxtemptimestamp = row.HighTempDateTime.HasValue ? row.HighTempDateTime.Value : DateTime.MinValue;
+					dayList[daynumber].maxtemp = day.HighTemp.HasValue ? day.HighTemp.Value : -999;
+					dayList[daynumber].maxtemptimestamp = day.HighTempDateTime.HasValue ? day.HighTempDateTime.Value : DateTime.MinValue;
 					if (dayList[daynumber].maxtemp > maxtemp)
 					{
 						maxtemp = dayList[daynumber].maxtemp;
@@ -263,8 +264,8 @@ namespace CumulusMX
 					}
 
 					// min temp
-					dayList[daynumber].mintemp = row.LowTemp.HasValue ? row.LowTemp.Value : 999;
-					dayList[daynumber].mintemptimestamp = row.LowTempDateTime.HasValue ? row.LowTempDateTime.Value : DateTime.MinValue;
+					dayList[daynumber].mintemp = day.LowTemp.HasValue ? day.LowTemp.Value : 999;
+					dayList[daynumber].mintemptimestamp = day.LowTempDateTime.HasValue ? day.LowTempDateTime.Value : DateTime.MinValue;
 					if (dayList[daynumber].mintemp < mintemp)
 					{
 						mintemp = dayList[daynumber].mintemp;
@@ -286,9 +287,9 @@ namespace CumulusMX
 						totalmeantemp += meantemp;
 						dayList[daynumber].meantemp = meantemp;
 					}
-					else if (row.AvgTemp.HasValue)
+					else if (day.AvgTemp.HasValue)
 					{
-						meantemp = row.AvgTemp.Value;
+						meantemp = day.AvgTemp.Value;
 						totalmeantemp += meantemp;
 						dayList[daynumber].meantemp = meantemp;
 					}
@@ -303,43 +304,66 @@ namespace CumulusMX
 
 					if (meantemp > -1000)
 					{
-						// heating degree day
-						if (row.HeatingDegreeDays.HasValue)
+						if (cumulus.NOAAconf.UseNoaaHeatCoolDays)
 						{
-							// read HDD from DayData
-							dayList[daynumber].heatingdegdays = row.HeatingDegreeDays.HasValue ? row.HeatingDegreeDays.Value : 0;
-							totalheating += dayList[daynumber].heatingdegdays;
-						}
-						else if (meantemp < cumulus.NOAAconf.HeatThreshold)
-						{
-							dayList[daynumber].heatingdegdays = cumulus.NOAAconf.HeatThreshold - meantemp;
-							totalheating += cumulus.NOAAconf.HeatThreshold - meantemp;
+							// use the simple NOAA calculation
+							// https://www.weather.gov/key/climate_heat_cool
+							// mean = (high + low) / 2
+							// mean > 65F = cooling = high - 65
+							// mean < 65F = heating = 65 - low
+							if (WeatherStation.ConvertUserTempToF(meantemp) > 65)
+							{
+								dayList[daynumber].heatingdegdays = 0;
+								dayList[daynumber].coolingdegdays = dayList[daynumber].maxtemp - WeatherStation.ConvertTempFToUser(65).Value;
+								totalcooling += dayList[daynumber].coolingdegdays;
+							}
+							else
+							{
+								dayList[daynumber].coolingdegdays = 0;
+								dayList[daynumber].heatingdegdays = WeatherStation.ConvertTempFToUser(65).Value - dayList[daynumber].mintemp;
+								totalheating += dayList[daynumber].heatingdegdays;
+							}
 						}
 						else
 						{
-							dayList[daynumber].heatingdegdays = 0;
-						}
+							// heating degree day
+							if (day.HeatingDegreeDays.HasValue)
+							{
+								// read HDD from DayData
+								dayList[daynumber].heatingdegdays = day.HeatingDegreeDays.HasValue ? day.HeatingDegreeDays.Value : 0;
+								totalheating += dayList[daynumber].heatingdegdays;
+							}
+							else if (meantemp < cumulus.NOAAconf.HeatThreshold)
+							{
+								dayList[daynumber].heatingdegdays = cumulus.NOAAconf.HeatThreshold - meantemp;
+								totalheating += cumulus.NOAAconf.HeatThreshold - meantemp;
+							}
+							else
+							{
+								dayList[daynumber].heatingdegdays = 0;
+							}
 
-						// cooling degree days
-						if (row.CoolingDegreeDays.HasValue)
-						{
-							dayList[daynumber].coolingdegdays = row.CoolingDegreeDays.Value;
-							totalcooling += row.CoolingDegreeDays.Value;
-						}
-						else if (meantemp > cumulus.NOAAconf.CoolThreshold)
-						{
-							dayList[daynumber].coolingdegdays = meantemp - cumulus.NOAAconf.CoolThreshold;
-							totalcooling += meantemp - cumulus.NOAAconf.CoolThreshold;
-						}
-						else
-						{
-							dayList[daynumber].coolingdegdays = 0;
+							// cooling degree days
+							if (day.CoolingDegreeDays.HasValue)
+							{
+								dayList[daynumber].coolingdegdays = day.CoolingDegreeDays.Value;
+								totalcooling += day.CoolingDegreeDays.Value;
+							}
+							else if (meantemp > cumulus.NOAAconf.CoolThreshold)
+							{
+								dayList[daynumber].coolingdegdays = meantemp - cumulus.NOAAconf.CoolThreshold;
+								totalcooling += meantemp - cumulus.NOAAconf.CoolThreshold;
+							}
+							else
+							{
+								dayList[daynumber].coolingdegdays = 0;
+							}
 						}
 					}
 
 					// rain
-					dayList[daynumber].rain = row.TotalRain.HasValue ? row.TotalRain.Value : 0;
-					totalrain += row.TotalRain.HasValue ? row.TotalRain.Value : 0;
+					dayList[daynumber].rain = day.TotalRain.HasValue ? day.TotalRain.Value : 0;
+					totalrain += day.TotalRain.HasValue ? day.TotalRain.Value : 0;
 					if (dayList[daynumber].rain > maxrain)
 					{
 						maxrain = dayList[daynumber].rain;
@@ -360,8 +384,8 @@ namespace CumulusMX
 					}
 
 					// high wind speed
-					dayList[daynumber].highwindspeed = row.HighGust.HasValue ? row.HighGust.Value : 0;
-					dayList[daynumber].highwindtimestamp = row.HighGust.HasValue ? row.HighGustDateTime.Value : DateTime.MinValue;
+					dayList[daynumber].highwindspeed = day.HighGust.HasValue ? day.HighGust.Value : 0;
+					dayList[daynumber].highwindtimestamp = day.HighGust.HasValue ? day.HighGustDateTime.Value : DateTime.MinValue;
 					if (dayList[daynumber].highwindspeed > highwind)
 					{
 						highwind = dayList[daynumber].highwindspeed;
@@ -369,13 +393,13 @@ namespace CumulusMX
 					}
 
 					// dominant wind bearing
-					if (row.DominantWindBearing.HasValue)
+					if (day.DominantWindBearing.HasValue)
 					{
-						dayList[daynumber].winddomdir = row.DominantWindBearing.Value;
+						dayList[daynumber].winddomdir = day.DominantWindBearing.Value;
 					}
 
 					// do the wind average for the day...
-					CalculateDayWindAverages(row.Date, ref dayList, ref windsamples, ref totalwindspeed);
+					CalculateDayWindAverages(day.Date, ref dayList, ref windsamples, ref totalwindspeed);
 
 					daycount++;
 					dayList[daynumber].valid = true;
@@ -627,7 +651,7 @@ namespace CumulusMX
 			output.Add($"Days of Rain: {raincount1} (>= {cumulus.NOAAconf.RainComp1.ToString(cumulus.RainFormat, numFormat)} {cumulus.Units.RainText})  {raincount2} (>= {cumulus.NOAAconf.RainComp2.ToString(cumulus.RainFormat, numFormat)} {cumulus.Units.RainText})  {raincount3} (>= {cumulus.NOAAconf.RainComp3.ToString(cumulus.RainFormat, numFormat)} {cumulus.Units.RainText})");
 			output.Add($"Heat Base: {cumulus.NOAAconf.HeatThreshold.ToString(cumulus.TempFormat, numFormat)}  Cool Base: {cumulus.NOAAconf.CoolThreshold.ToString(cumulus.TempFormat, numFormat)}  Method: Integration");
 
-			return output;
+			return string.Join(Environment.NewLine, output);
 		}
 
 
@@ -683,7 +707,7 @@ namespace CumulusMX
 		}
 
 
-		public List<string> CreateYearlyReport(DateOnly thedate)
+		public string CreateYearlyReport(DateOnly thedate)
 		{
 			var output = new List<string>();
 
@@ -763,82 +787,107 @@ namespace CumulusMX
 			{
 				var fromDate = thedate.ToUnixTime();
 				var toDate = thedate.AddYears(1).ToUnixTime();
-				var rows = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ?", fromDate, toDate);
+				var days = station.Database.Query<DayData>("select * from DayData where Timestamp >= ? and Timestamp < ?", fromDate, toDate);
 
-				foreach (var row in rows)
+				foreach (var day in days)
 				{
-					rowDateTime = row.Date.ToString("yyyy/MM/dd");
-					var day = row.Date.Day;
-					month = row.Date.Month;
+					rowDateTime = day.Date.ToString("yyyy/MM/dd");
+					var dom = day.Date.Day;
+					month = day.Date.Month;
 					double meantemp = -999.0;
 
-					if (row.HighTemp.HasValue && row.LowTemp.HasValue)
+					if (day.HighTemp.HasValue && day.LowTemp.HasValue)
 					{
-						MonthList[month].totalmaxtemp += row.HighTemp.Value;
-						MonthList[month].totalmintemp += row.LowTemp.Value;
+						MonthList[month].totalmaxtemp += day.HighTemp.Value;
+						MonthList[month].totalmintemp += day.LowTemp.Value;
 
-						meantemp = cumulus.NOAAconf.UseMinMaxAvg ? (row.HighTemp.Value + row.LowTemp.Value) / 2.0 : row.AvgTemp.Value;
+						meantemp = cumulus.NOAAconf.UseMinMaxAvg ? (day.HighTemp.Value + day.LowTemp.Value) / 2.0 : day.AvgTemp.Value;
 
 						MonthList[month].valid = true;
 						MonthList[month].samples++;
 						MonthList[month].totaltemp += meantemp;
 
 						// Max temp?
-						if (row.HighTemp.Value > MonthList[month].maxtemp)
+						if (day.HighTemp.Value > MonthList[month].maxtemp)
 						{
-							MonthList[month].maxtemp = row.HighTemp.Value;
-							MonthList[month].maxtempday = day;
+							MonthList[month].maxtemp = day.HighTemp.Value;
+							MonthList[month].maxtempday = dom;
 						}
-						if (GreaterThanOrEqual(row.HighTemp.Value, cumulus.NOAAconf.MaxTempComp1))
+						if (GreaterThanOrEqual(day.HighTemp.Value, cumulus.NOAAconf.MaxTempComp1))
 						{
 							MonthList[month].maxtempcount1++;
 						}
-						if (LessThanOrEqual(row.HighTemp.Value, cumulus.NOAAconf.MaxTempComp2))
+						if (LessThanOrEqual(day.HighTemp.Value, cumulus.NOAAconf.MaxTempComp2))
 						{
 							MonthList[month].maxtempcount2++;
 						}
 						// Min temp?
-						if (row.LowTemp.Value < MonthList[month].mintemp)
+						if (day.LowTemp.Value < MonthList[month].mintemp)
 						{
-							MonthList[month].mintemp = row.LowTemp.Value;
-							MonthList[month].mintempday = day;
+							MonthList[month].mintemp = day.LowTemp.Value;
+							MonthList[month].mintempday = dom;
 						}
-						if (LessThanOrEqual(row.LowTemp.Value, cumulus.NOAAconf.MinTempComp1))
+						if (LessThanOrEqual(day.LowTemp.Value, cumulus.NOAAconf.MinTempComp1))
 						{
 							MonthList[month].mintempcount1++;
 						}
-						if (LessThanOrEqual(row.LowTemp.Value, cumulus.NOAAconf.MinTempComp2))
+						if (LessThanOrEqual(day.LowTemp.Value, cumulus.NOAAconf.MinTempComp2))
 						{
 							MonthList[month].mintempcount2++;
 						}
 					}
-					// heating degree days
-					if (row.HeatingDegreeDays.HasValue)
+
+					if (cumulus.NOAAconf.UseNoaaHeatCoolDays)
 					{
-						// read HDD from DayData
-						MonthList[month].heatingdegdays += row.HeatingDegreeDays.Value;
-						totalheating += row.HeatingDegreeDays.Value;
+						// use the simple NOAA calculation
+						// https://www.weather.gov/key/climate_heat_cool
+						// mean = (high + low) / 2
+						// mean > 65F = cooling = high - 65
+						// mean < 65F = heating = 65 - low
+						if (WeatherStation.ConvertUserTempToF(meantemp) > 65)
+						{
+							var cool = day.HighTemp - WeatherStation.ConvertTempFToUser(65);
+							MonthList[month].coolingdegdays += cool ?? 0;
+							totalcooling += cool ?? 0;
+						}
+						else
+						{
+							var heat = WeatherStation.ConvertTempFToUser(65) - day.LowTemp;
+							MonthList[month].heatingdegdays += heat ?? 0;
+							totalheating += heat ?? 0;
+						}
 					}
-					else if (meantemp > -999 && meantemp < cumulus.NOAAconf.HeatThreshold)
+					else
 					{
-						MonthList[month].heatingdegdays = MonthList[month].heatingdegdays + cumulus.NOAAconf.HeatThreshold - meantemp;
-						totalheating += cumulus.NOAAconf.HeatThreshold - meantemp;
+						// heating degree days
+						if (day.HeatingDegreeDays.HasValue)
+						{
+							// read HDD from DayData
+							MonthList[month].heatingdegdays += day.HeatingDegreeDays.Value;
+							totalheating += day.HeatingDegreeDays.Value;
+						}
+						else if (meantemp > -999 && meantemp < cumulus.NOAAconf.HeatThreshold)
+						{
+							MonthList[month].heatingdegdays = MonthList[month].heatingdegdays + cumulus.NOAAconf.HeatThreshold - meantemp;
+							totalheating += cumulus.NOAAconf.HeatThreshold - meantemp;
+						}
+						// cooling degree days
+						if (day.CoolingDegreeDays.HasValue)
+						{
+							// read HDD from DayData
+							MonthList[month].coolingdegdays += day.CoolingDegreeDays.Value;
+							totalcooling += (day.CoolingDegreeDays.Value);
+						}
+						else if (meantemp > -999 && meantemp > cumulus.NOAAconf.CoolThreshold)
+						{
+							MonthList[month].coolingdegdays = MonthList[month].coolingdegdays + meantemp - cumulus.NOAAconf.CoolThreshold;
+							totalcooling += meantemp - cumulus.NOAAconf.CoolThreshold;
+						}
 					}
-					// cooling degree days
-					if (row.CoolingDegreeDays.HasValue)
-					{
-						// read HDD from DayData
-						MonthList[month].coolingdegdays += row.CoolingDegreeDays.Value;
-						totalcooling += (row.CoolingDegreeDays.Value);
-					}
-					else if (meantemp > -999 && meantemp > cumulus.NOAAconf.CoolThreshold)
-					{
-						MonthList[month].coolingdegdays = MonthList[month].coolingdegdays + meantemp - cumulus.NOAAconf.CoolThreshold;
-						totalcooling += meantemp - cumulus.NOAAconf.CoolThreshold;
-					}
+
 					// Rain days
 
-					var rainvalue = row.TotalRain.HasValue ? row.TotalRain.Value : 0;
+					var rainvalue = day.TotalRain.HasValue ? day.TotalRain.Value : 0;
 					MonthList[month].totrain += rainvalue;
 					if (GreaterThanOrEqual(rainvalue, cumulus.NOAAconf.RainComp1))
 					{
@@ -856,13 +905,13 @@ namespace CumulusMX
 					if (rainvalue > MonthList[month].maxrain)
 					{
 						MonthList[month].maxrain = rainvalue;
-						MonthList[month].maxrainday = day;
+						MonthList[month].maxrainday = dom;
 					}
 					// Max Gust?
-					if (row.HighGust.HasValue && row.HighGust.Value > MonthList[month].highwindspeed)
+					if (day.HighGust.HasValue && day.HighGust.Value > MonthList[month].highwindspeed)
 					{
-						MonthList[month].highwindspeed = row.HighGust.Value;
-						MonthList[month].highwindday = day;
+						MonthList[month].highwindspeed = day.HighGust.Value;
+						MonthList[month].highwindday = dom;
 					}
 				}
 			}
@@ -1173,7 +1222,7 @@ namespace CumulusMX
 			try
 			{
 				if (samples <= 0)
-					return output;
+					return string.Join(Environment.NewLine, output);
 
 				repLine.Clear();
 				if (avgwindcount == 0)
@@ -1215,7 +1264,7 @@ namespace CumulusMX
 			repLine.Append(string.Format("{0,6}", CompassPoint(domdir)));
 
 			output.Add(repLine.ToString());
-			return output;
+			return string.Join(Environment.NewLine, output);
 		}
 
 		private class DbWindAvgDir
@@ -1243,6 +1292,7 @@ namespace CumulusMX
 		public bool Use12hour { get; set; }
 		public bool UseUtf8 { get; set; }
 		public bool UseMinMaxAvg { get; set; }
+		public bool UseNoaaHeatCoolDays { get; set; }
 		public bool UseDotDecimal { get; set; }
 		public bool Create { get; set; }
 		public bool AutoFtp { get; set; }

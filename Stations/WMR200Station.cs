@@ -1599,7 +1599,7 @@ namespace CumulusMX
 
 			_ = cumulus.DoLogFile(timestamp,false);
 			_ = cumulus.DoCustomIntervalLogs(timestamp);
-			cumulus.MySqlStuff.DoRealtimeData(999, false, timestamp);
+			cumulus.MySqlSettings.DoRealtimeData(999, false, timestamp);
 
 			_ = cumulus.DoExtraLogFile(timestamp);
 

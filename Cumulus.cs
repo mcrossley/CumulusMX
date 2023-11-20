@@ -3,31 +3,34 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.IO.Ports;
 using System.IO.Compression;
+using System.IO.Ports;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Sockets;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using Timer = System.Timers.Timer;
 using EmbedIO;
-using EmbedIO.WebApi;
 using EmbedIO.Files;
+using EmbedIO.WebApi;
 using FluentFTP;
 using FluentFTP.Helpers;
-using Renci.SshNet;
-using SQLite;
-using NReco.Logging.File;
 using Microsoft.Extensions.Logging;
-using LogLevel = Microsoft.Extensions.Logging.LogLevel;
+using NReco.Logging.File;
+using Renci.SshNet;
 using ServiceStack;
+using SQLite;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
+using Timer = System.Timers.Timer;
 
 //using MQTTnet;
 
@@ -100,7 +103,8 @@ namespace CumulusMX
 		{
 			FTP = 0,
 			FTPS = 1,
-			SFTP = 2
+			SFTP = 2,
+			PHP = 3
 		}
 
 		public enum PrimaryAqSensor
@@ -195,8 +199,8 @@ namespace CumulusMX
 
 		//public Dataunits Units;
 
-		private FileStream _linuxLockFile;
-		private static string _linuxLockFilename = "/tmp/" + Program.AppGuid + ".lock";
+		private FileStream _lockFile;
+		private static string _lockFilename;
 
 		public const double DefaultHiVal = -9999.0;
 		public const double DefaultLoVal = 9999.0;
@@ -224,12 +228,12 @@ namespace CumulusMX
 		private WebTags webtags;
 		private TokenParser tokenParser;
 		private TokenParser realtimeTokenParser;
-		private readonly TokenParser customLogIntvlTokenParser = new TokenParser();
-		private readonly TokenParser customLogDailyTokenParser = new TokenParser();
 
 
 		private readonly NumberFormatInfo invNum = CultureInfo.InvariantCulture.NumberFormat;
 		private readonly DateTimeFormatInfo invDate = CultureInfo.InvariantCulture.DateTimeFormat;
+
+		internal Lang Trans = new Lang();
 
 		public bool NormalRunning = false;
 		private static LoggerFactory loggerFactory = new LoggerFactory();
@@ -256,114 +260,6 @@ namespace CumulusMX
 		//public int UnitMult = 1000;
 
 		public int GraphDays = 31;
-
-		public string NewMoon = "New Moon",
-			WaxingCrescent = "Waxing Crescent",
-			FirstQuarter = "First Quarter",
-			WaxingGibbous = "Waxing Gibbous",
-			FullMoon = "Full Moon",
-			WaningGibbous = "Waning Gibbous",
-			LastQuarter = "Last Quarter",
-			WaningCrescent = "Waning Crescent";
-
-		public string Calm = "Calm",
-			Lightair = "Light air",
-			Lightbreeze = "Light breeze",
-			Gentlebreeze = "Gentle breeze",
-			Moderatebreeze = "Moderate breeze",
-			Freshbreeze = "Fresh breeze",
-			Strongbreeze = "Strong breeze",
-			Neargale = "Near gale",
-			Gale = "Gale",
-			Stronggale = "Strong gale",
-			Storm = "Storm",
-			Violentstorm = "Violent storm",
-			Hurricane = "Hurricane";
-
-		public string Risingveryrapidly = "Rising very rapidly",
-			Risingquickly = "Rising quickly",
-			Rising = "Rising",
-			Risingslowly = "Rising slowly",
-			Steady = "Steady",
-			Fallingslowly = "Falling slowly",
-			Falling = "Falling",
-			Fallingquickly = "Falling quickly",
-			Fallingveryrapidly = "Falling very rapidly";
-
-		public string[] compassp = { "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW" };
-
-		public string[] zForecast =
-		{
-			"Settled fine", "Fine weather", "Becoming fine", "Fine, becoming less settled", "Fine, possible showers", "Fairly fine, improving",
-			"Fairly fine, possible showers early", "Fairly fine, showery later", "Showery early, improving", "Changeable, mending",
-			"Fairly fine, showers likely", "Rather unsettled clearing later", "Unsettled, probably improving", "Showery, bright intervals",
-			"Showery, becoming less settled", "Changeable, some rain", "Unsettled, short fine intervals", "Unsettled, rain later", "Unsettled, some rain",
-			"Mostly very unsettled", "Occasional rain, worsening", "Rain at times, very unsettled", "Rain at frequent intervals", "Rain, very unsettled",
-			"Stormy, may improve", "Stormy, much rain"
-		};
-
-		public string[] DavisForecast1 =
-		{
-			"FORECAST REQUIRES 3 HRS. OF RECENT DATA",
-			"Mostly cloudy with little temperature change.",
-			"Mostly cloudy and cooler.",
-			"Clearing, cooler and windy.",
-			"Clearing and cooler.",
-			"Increasing clouds and cooler.",
-			"Increasing clouds with little temperature change.",
-			"Increasing clouds and warmer.",
-			"Mostly clear for 12 to 24 hours with little temperature change.",
-			"Mostly clear for 6 to 12 hours with little temperature change.",
-			"Mostly clear and warmer. ", "Mostly clear for 12 to 24 hours and cooler.",
-			"Mostly clear for 12 hours with little temperature change.",
-			"Mostly clear with little temperature change.",
-			"Mostly clear and cooler.",
-			"Partially cloudy, Rain and/or snow possible or continuing.",
-			"Partially cloudy, Snow possible or continuing.",
-			"Partially cloudy, Rain possible or continuing.",
-			"Mostly cloudy, Rain and/or snow possible or continuing.",
-			"Mostly cloudy, Snow possible or continuing.",
-			"Mostly cloudy, Rain possible or continuing.",
-			"Mostly cloudy. ", "Partially cloudy.",
-			"Mostly clear.",
-			"Partly cloudy with little temperature change.",
-			"Partly cloudy and cooler.",
-			"Unknown forecast rule."
-		};
-
-		public string[] DavisForecast2 =
-		{
-			"",
-			"Precipitation possible within 48 hours.",
-			"Precipitation possible within 24 to 48 hours.",
-			"Precipitation possible within 24 hours.",
-			"Precipitation possible within 12 to 24 hours.",
-			"Precipitation possible within 12 hours, possibly heavy at times.",
-			"Precipitation possible within 12 hours.",
-			"Precipitation possible within 6 to 12 hours. ",
-			"Precipitation possible within 6 to 12 hours, possibly heavy at times.",
-			"Precipitation possible and windy within 6 hours.",
-			"Precipitation possible within 6 hours.",
-			"Precipitation ending in 12 to 24 hours.",
-			"Precipitation possibly heavy at times and ending within 12 hours.",
-			"Precipitation ending within 12 hours.",
-			"Precipitation ending within 6 hours.",
-			"Precipitation likely, possibly heavy at times.",
-			"Precipitation likely.",
-			"Precipitation continuing, possibly heavy at times.",
-			"Precipitation continuing."
-		};
-
-		public string[] DavisForecast3 =
-		{
-			"",
-			"Windy with possible wind shift to the W, SW, or S.",
-			"Possible wind shift to the W, SW, or S.",
-			"Windy with possible wind shift to the W, NW, or N.",
-			"Possible wind shift to the W, NW, or N.",
-			"Windy.",
-			"Increasing winds."
-		};
 
 		public int[,] DavisForecastLookup =
 		{
@@ -551,8 +447,6 @@ namespace CumulusMX
 
 		public SolarOptions SolarOptions = new SolarOptions();
 
-		public string AlarmEmailPreamble;
-		public string AlarmEmailSubject;
 		public string AlarmFromEmail;
 		public string[] AlarmDestEmail;
 		public bool AlarmEmailHtml;
@@ -627,7 +521,7 @@ namespace CumulusMX
 		public Alarm DataStoppedAlarm = new Alarm("Data Stopped", AlarmTypes.Trigger);
 		public Alarm BatteryLowAlarm = new Alarm("Battery Low", AlarmTypes.Trigger);
 		public Alarm SensorAlarm = new Alarm("Sensor Data Stopped", AlarmTypes.Trigger);
-		public Alarm SpikeAlarm = new Alarm("Data Spike",AlarmTypes.Trigger);
+		public Alarm SpikeAlarm = new Alarm("Data Spike", AlarmTypes.Trigger);
 		public Alarm HighWindAlarm = new Alarm("High Wind", AlarmTypes.Above);
 		public Alarm HighGustAlarm = new Alarm("High Gust", AlarmTypes.Above);
 		public Alarm HighRainRateAlarm = new Alarm("High Rainfall Rate", AlarmTypes.Above);
@@ -639,7 +533,7 @@ namespace CumulusMX
 		public Alarm HighTempAlarm = new Alarm("High Temperature", AlarmTypes.Above);
 		public Alarm LowTempAlarm = new Alarm("Low Temperature", AlarmTypes.Below);
 		public Alarm UpgradeAlarm = new Alarm("Upgrade Available", AlarmTypes.Trigger);
-		public Alarm HttpUploadAlarm = new Alarm("HTTP Uploads", AlarmTypes.Trigger);
+		public Alarm ThirdPartyUploadAlarm = new Alarm("HTTP Uploads", AlarmTypes.Trigger);
 		public Alarm MySqlUploadAlarm = new Alarm("MySQL Uploads", AlarmTypes.Trigger);
 		public Alarm IsRainingAlarm = new Alarm("IsRaining", AlarmTypes.Trigger);
 
@@ -657,8 +551,6 @@ namespace CumulusMX
 		public int RecentDataDays = 7;
 
 		public int RealtimeInterval;
-
-		public string ForecastNotAvailable = "Not available";
 
 		//public WebServer httpServer;
 		public MxWebSocket WebSock;
@@ -692,6 +584,11 @@ namespace CumulusMX
 		internal bool CustomHttpRolloverEnabled;
 		internal string[] CustomHttpRolloverStrings = new string[10];
 
+		// PHP upload HTTP
+		internal HttpClientHandler phpUploadHttpHandler;
+		internal HttpClient phpUploadHttpClient;
+		internal HttpClient phpRealtimeUploadHttpClient;
+
 		public Thread ftpThread;
 		public Thread MySqlCatchupThread;
 
@@ -700,7 +597,9 @@ namespace CumulusMX
 
 		public string LatestBuild = "n/a";
 
-		internal MySqlHander MySqlStuff;
+		internal MySqlHander MySqlSettings;
+
+		private static HttpFiles httpFiles;
 
 		public AirLinkData airLinkDataIn;
 		public AirLinkData airLinkDataOut;
@@ -734,8 +633,19 @@ namespace CumulusMX
 
 		public string loggingfile;
 
+		private SemaphoreSlim uploadCountLimitSemaphoreSlim;
+
+		// Global cancellation token for when CMX is stopping
+		public readonly CancellationTokenSource tokenSource = new CancellationTokenSource();
+		public CancellationToken cancellationToken;
+
+		private static bool boolWindows;
+
+
 		public Cumulus()
 		{
+			cancellationToken = tokenSource.Token;
+
 			// Set up the diagnostic tracing
 			loggingfile = RemoveOldDiagsFiles("MXdiags" + Path.DirectorySeparatorChar);
 
@@ -779,7 +689,6 @@ namespace CumulusMX
 			SQLitePCL.raw.SetProvider(new SQLitePCL.SQLite3Provider_e_sqlite3());
 
 
-
 			LogMessage(" ========================== Cumulus MX starting ==========================");
 
 			LogMessage("Command line: " + Environment.CommandLine + " " + startParms);
@@ -787,6 +696,8 @@ namespace CumulusMX
 			LogMessage($"Cumulus MX v.{Version} build {Build} - running 64 bit: {Environment.Is64BitProcess}");
 			LogConsoleMessage($"Cumulus MX v.{Version} build {Build} - running 64 bit: {Environment.Is64BitProcess}");
 			LogConsoleMessage("Working Dir: " + AppDir);
+
+			boolWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
 			IsOSX = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
@@ -807,7 +718,7 @@ namespace CumulusMX
 
 
 			// determine system uptime based on OS
-			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			if (boolWindows)
 			{
 				try
 				{
@@ -867,165 +778,221 @@ namespace CumulusMX
 			WCloud.DefaultInterval = 10;
 			OpenWeatherMap.DefaultInterval = 15;
 
-			MySqlStuff = new MySqlHander(this);
+			MySqlSettings = new MySqlHander(this);
 
-			StdWebFiles = new FileGenerationFtpOptions[2];
-			StdWebFiles[0] = new FileGenerationFtpOptions()
+			StdWebFiles = new FileGenerationOptions[]
 			{
-				TemplateFileName = WebPath + "websitedataT.json",
-				LocalPath = WebPath,
-				LocalFileName = "websitedata.json",
-				RemoteFileName = "websitedata.json"
-			};
-			StdWebFiles[1] = new FileGenerationFtpOptions()
-			{
-				LocalPath = "",
-				LocalFileName = "wxnow.txt",
-				RemoteFileName = "wxnow.txt"
-			};
-
-			RealtimeFiles = new FileGenerationFtpOptions[2];
-			RealtimeFiles[0] = new FileGenerationFtpOptions()
-			{
-				LocalFileName = "realtime.txt",
-				RemoteFileName = "realtime.txt"
-			};
-			RealtimeFiles[1] = new FileGenerationFtpOptions()
-			{
-				TemplateFileName = WebPath + "realtimegaugesT.txt",
-				LocalPath = WebPath,
-				LocalFileName = "realtimegauges.txt",
-				RemoteFileName = "realtimegauges.txt"
+				new FileGenerationOptions()
+				{
+					TemplateFileName = WebPath + "websitedataT.json",
+					LocalPath = WebPath,
+					LocalFileName = "websitedata.json",
+					RemoteFileName = "websitedata.json"
+				},
+				new FileGenerationOptions()
+				{
+					LocalPath = "",
+					LocalFileName = "wxnow.txt",
+					RemoteFileName = "wxnow.txt"
+				}
 			};
 
-			GraphDataFiles = new FileGenerationFtpOptions[13];
-			GraphDataFiles[0] = new FileGenerationFtpOptions()
+			RealtimeFiles = new FileGenerationOptions[]
 			{
-				LocalPath = WebPath,
-				LocalFileName = "graphconfig.json",
-				RemoteFileName = "graphconfig.json"
-			};
-			GraphDataFiles[1] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "availabledata.json",
-				RemoteFileName = "availabledata.json"
-			};
-			GraphDataFiles[2] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "tempdata.json",
-				RemoteFileName = "tempdata.json"
-			};
-			GraphDataFiles[3] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "pressdata.json",
-				RemoteFileName = "pressdata.json"
-			};
-			GraphDataFiles[4] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "winddata.json",
-				RemoteFileName = "winddata.json"
-			};
-			GraphDataFiles[5] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "wdirdata.json",
-				RemoteFileName = "wdirdata.json"
-			};
-			GraphDataFiles[6] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "humdata.json",
-				RemoteFileName = "humdata.json"
-			};
-			GraphDataFiles[7] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "raindata.json",
-				RemoteFileName = "raindata.json"
-			};
-			GraphDataFiles[8] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "dailyrain.json",
-				RemoteFileName = "dailyrain.json"
-			};
-			GraphDataFiles[9] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "dailytemp.json",
-				RemoteFileName = "dailytemp.json"
-			};
-			GraphDataFiles[10] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "solardata.json",
-				RemoteFileName = "solardata.json"
-			};
-			GraphDataFiles[11] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "sunhours.json",
-				RemoteFileName = "sunhours.json"
-			};
-			GraphDataFiles[12] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "airquality.json",
-				RemoteFileName = "airquality.json"
+				new FileGenerationOptions()
+				{
+					LocalFileName = "realtime.txt",
+					RemoteFileName = "realtime.txt"
+				},
+				new FileGenerationOptions()
+				{
+					TemplateFileName = WebPath + "realtimegaugesT.txt",
+					LocalPath = WebPath,
+					LocalFileName = "realtimegauges.txt",
+					RemoteFileName = "realtimegauges.txt"
+				}
 			};
 
-			GraphDataEodFiles = new FileGenerationFtpOptions[8];
-			GraphDataEodFiles[0] = new FileGenerationFtpOptions()
+			GraphDataFiles = new FileGenerationOptions[]
 			{
-				LocalPath = WebPath,
-				LocalFileName = "alldailytempdata.json",
-				RemoteFileName = "alldailytempdata.json"
+				new FileGenerationOptions()		// 0
+				{
+					LocalPath = WebPath,
+					LocalFileName = "graphconfig.json",
+					RemoteFileName = "graphconfig.json"
+				},
+				new FileGenerationOptions()		// 1
+				{
+					LocalPath = WebPath,
+					LocalFileName = "availabledata.json",
+					RemoteFileName = "availabledata.json"
+				},
+				new FileGenerationOptions()		// 2
+				{
+					LocalPath = WebPath,
+					LocalFileName = "tempdata.json",
+					RemoteFileName = "tempdata.json"
+				},
+				new FileGenerationOptions()		// 3
+				{
+					LocalPath = WebPath,
+					LocalFileName = "pressdata.json",
+					RemoteFileName = "pressdata.json"
+				},
+				new FileGenerationOptions()		// 4
+				{
+					LocalPath = WebPath,
+					LocalFileName = "winddata.json",
+					RemoteFileName = "winddata.json"
+				},
+				new FileGenerationOptions()		// 5
+				{
+					LocalPath = WebPath,
+					LocalFileName = "wdirdata.json",
+					RemoteFileName = "wdirdata.json"
+				},
+				new FileGenerationOptions()		// 6
+				{
+					LocalPath = WebPath,
+					LocalFileName = "humdata.json",
+					RemoteFileName = "humdata.json"
+				},
+				new FileGenerationOptions()		// 7
+				{
+					LocalPath = WebPath,
+					LocalFileName = "raindata.json",
+					RemoteFileName = "raindata.json"
+				},
+				new FileGenerationOptions()		// 8
+				{
+					LocalPath = WebPath,
+					LocalFileName = "dailyrain.json",
+					RemoteFileName = "dailyrain.json"
+				},
+				new FileGenerationOptions()		// 9
+				{
+					LocalPath = WebPath,
+					LocalFileName = "dailytemp.json",
+					RemoteFileName = "dailytemp.json"
+				},
+				new FileGenerationOptions()		// 10
+				{
+					LocalPath = WebPath,
+					LocalFileName = "solardata.json",
+					RemoteFileName = "solardata.json"
+				},
+				new FileGenerationOptions()		// 11
+				{
+					LocalPath = WebPath,
+					LocalFileName = "sunhours.json",
+					RemoteFileName = "sunhours.json"
+				},
+				new FileGenerationOptions()		// 12
+				{
+					LocalPath = WebPath,
+					LocalFileName = "airquality.json",
+					RemoteFileName = "airquality.json"
+				},
+				new FileGenerationOptions()		// 13
+				{
+					LocalPath = WebPath,
+					LocalFileName = "extratempdata.json",
+					RemoteFileName = "extratempdata.json"
+				},
+				new FileGenerationOptions()		// 14
+				{
+					LocalPath = WebPath,
+					LocalFileName = "extrahumdata.json",
+					RemoteFileName = "extrahumdata.json"
+				},
+				new FileGenerationOptions()		// 15
+				{
+					LocalPath = WebPath,
+					LocalFileName = "extradewdata.json",
+					RemoteFileName = "extradewdata.json"
+				},
+				new FileGenerationOptions()		// 16
+				{
+					LocalPath = WebPath,
+					LocalFileName = "soiltempdata.json",
+					RemoteFileName = "soiltempdata.json"
+				},
+				new FileGenerationOptions()		// 17
+				{
+					LocalPath = WebPath,
+					LocalFileName = "soilmoistdata.json",
+					RemoteFileName = "soilmoistdata.json"
+				},
+				new FileGenerationOptions()		// 18
+				{
+					LocalPath = WebPath,
+					LocalFileName = "usertempdata.json",
+					RemoteFileName = "usertempdata.json"
+				},
+				new FileGenerationOptions()		// 19
+				{
+					LocalPath = WebPath,
+					LocalFileName = "co2sensordata.json",
+					RemoteFileName = "co2sensordata.json"
+				},
+				new FileGenerationOptions()     // 20
+				{
+					LocalPath = WebPath,
+					LocalFileName = "leafwetdata.json",
+					RemoteFileName = "leafwetdata.json"
+				}
 			};
-			GraphDataEodFiles[1] = new FileGenerationFtpOptions()
+
+			GraphDataEodFiles = new FileGenerationOptions[]
 			{
-				LocalPath = WebPath,
-				LocalFileName = "alldailypressdata.json",
-				RemoteFileName = "alldailypressdata.json"
-			};
-			GraphDataEodFiles[2] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "alldailywinddata.json",
-				RemoteFileName = "alldailywinddata.json"
-			};
-			GraphDataEodFiles[3] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "alldailyhumdata.json",
-				RemoteFileName = "alldailyhumdata.json"
-			};
-			GraphDataEodFiles[4] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "alldailyraindata.json",
-				RemoteFileName = "alldailyraindata.json"
-			};
-			GraphDataEodFiles[5] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "alldailysolardata.json",
-				RemoteFileName = "alldailysolardata.json"
-			};
-			GraphDataEodFiles[6] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "alldailydegdaydata.json",
-				RemoteFileName = "alldailydegdaydata.json"
-			};
-			GraphDataEodFiles[7] = new FileGenerationFtpOptions()
-			{
-				LocalPath = WebPath,
-				LocalFileName = "alltempsumdata.json",
-				RemoteFileName = "alltempsumdata.json"
+				new FileGenerationOptions()
+				{
+					LocalPath = WebPath,
+					LocalFileName = "alldailytempdata.json",
+					RemoteFileName = "alldailytempdata.json"
+				},
+				new FileGenerationOptions()
+				{
+					LocalPath = WebPath,
+					LocalFileName = "alldailypressdata.json",
+					RemoteFileName = "alldailypressdata.json"
+				},
+				new FileGenerationOptions()
+				{
+					LocalPath = WebPath,
+					LocalFileName = "alldailywinddata.json",
+					RemoteFileName = "alldailywinddata.json"
+				},
+				new FileGenerationOptions()
+				{
+					LocalPath = WebPath,
+					LocalFileName = "alldailyhumdata.json",
+					RemoteFileName = "alldailyhumdata.json"
+				},
+				new FileGenerationOptions()
+				{
+					LocalPath = WebPath,
+					LocalFileName = "alldailyraindata.json",
+					RemoteFileName = "alldailyraindata.json"
+				},
+				new FileGenerationOptions()
+				{
+					LocalPath = WebPath,
+					LocalFileName = "alldailysolardata.json",
+					RemoteFileName = "alldailysolardata.json"
+				},
+				new FileGenerationOptions()
+				{
+					LocalPath = WebPath,
+					LocalFileName = "alldailydegdaydata.json",
+					RemoteFileName = "alldailydegdaydata.json"
+				},
+				new FileGenerationOptions()
+				{
+					LocalPath = WebPath,
+					LocalFileName = "alltempsumdata.json",
+					RemoteFileName = "alltempsumdata.json"
+				}
 			};
 
 			ProgramOptions.Culture = new CultureConfig();
@@ -1062,12 +1029,19 @@ namespace CumulusMX
 			LowTempAlarm.cumulus = this;
 			LowTempAlarm.Units = Units.TempText;
 			UpgradeAlarm.cumulus = this;
-			HttpUploadAlarm.cumulus = this;
+			ThirdPartyUploadAlarm.cumulus = this;
 			MySqlUploadAlarm.cumulus = this;
 			IsRainingAlarm.cumulus = this;
 
 			// Read the configuration file
 			ReadIniFile();
+
+			// Do we prevent more than one copy of CumulusMX running?
+			CheckForSingleInstance(boolWindows);
+
+			if (FtpOptions.FtpMode == FtpProtocols.PHP)
+				LogMessage("Maximum concurrent PHP Uploads = " + FtpOptions.MaxConcurrentUploads);
+			uploadCountLimitSemaphoreSlim = new SemaphoreSlim(FtpOptions.MaxConcurrentUploads);
 
 			ListSeparator = CultureInfo.CurrentCulture.TextInfo.ListSeparator;
 
@@ -1086,120 +1060,12 @@ namespace CumulusMX
 			// Take a backup of all the data before we start proper
 			BackupData(false, DateTime.Now);
 
-
-			// Do we prevent more than one copy of CumulusMX running?
-			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-			{
-				try
-				{
-					if (!Program.appMutex.WaitOne(0, false))
-					{
-						if (ProgramOptions.WarnMultiple)
-						{
-							LogConsoleMessage("Cumulus is already running - terminating", ConsoleColor.Red);
-							LogConsoleMessage("Program exit");
-							LogMessage("Stop second instance: Cumulus is already running and 'Stop second instance' is enabled - terminating");
-							LogMessage("Stop second instance: Program exit");
-							Program.exitSystem = true;
-							return;
-						}
-						else
-						{
-							LogConsoleMessage("Cumulus is already running - but 'Stop second instance' is disabled", ConsoleColor.Yellow);
-							LogMessage("Stop second instance: Cumulus is already running but 'Stop second instance' is disabled - continuing");
-						}
-					}
-					else
-					{
-						LogMessage("Stop second instance: No other running instances of Cumulus found");
-					}
-				}
-				catch (AbandonedMutexException)
-				{
-					LogMessage("Stop second instance: Abandoned Mutex Error!");
-					LogMessage("Stop second instance: Was a previous copy of Cumulus terminated from task manager, or otherwise forcibly stopped?");
-					LogMessage("Stop second instance: Continuing this instance of Cumulus");
-				}
-				catch (Exception ex)
-				{
-					LogMessage("Stop second instance: Mutex Error! - " + ex);
-					if (ProgramOptions.WarnMultiple)
-					{
-						LogMessage("Stop second instance: Terminating this instance of Cumulus");
-						Program.exitSystem = true;
-						return;
-					}
-					else
-					{
-						LogMessage("Stop second instance: 'Stop second instance' is disabled - continuing this instance of Cumulus");
-					}
-				}
-			}
-			else // Unix
-			{
-				try
-				{
-					if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-					{
-						// must include Write access in order to lock file - /tmp seems to be universal across Linux and Mac
-						_linuxLockFile = new FileStream(_linuxLockFilename, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
-						_linuxLockFile.Lock(0, 0); // 0,0 has special meaning to lock entire file regardless of length
-
-						using (var thisProcess = System.Diagnostics.Process.GetCurrentProcess())
-						{
-							var procId = thisProcess.Id.ToString().ToAsciiBytes();
-							_linuxLockFile.Write(procId, 0, procId.Length);
-							_linuxLockFile.Flush();
-						}
-
-						LogMessage("Stop second instance: No other running instances of Cumulus found");
-					}
-				}
-				catch (IOException ex) when ((ex.HResult & 0x0000FFFF) == 32 || (ex.HResult & 0x0000FFFF) == 33)
-				{
-					// sharing violation 32, or lock violation 33
-					if (ProgramOptions.WarnMultiple)
-					{
-						LogConsoleMessage("Cumulus is already running - terminating", ConsoleColor.Red);
-						LogConsoleMessage("Program exit");
-						LogMessage("Stop second instance: Cumulus is already running and 'Stop second instance' is enabled - terminating");
-						LogMessage("Stop second instance: Program exit");
-						Program.exitSystem = true;
-						return;
-					}
-					else
-					{
-						LogConsoleMessage("Cumulus is already running - but 'Stop second instance' is disabled", ConsoleColor.Yellow);
-						LogMessage("Stop second instance: Cumulus is already running but 'Stop second instance' is disabled - continuing");
-					}
-				}
-				catch (Exception ex)
-				{
-					LogMessage("Stop second instance: File Error! - " + ex);
-					LogMessage("Stop second instance: File HResult - " + ex.HResult);
-					LogMessage("Stop second instance: File HResult - " + (ex.HResult & 0x0000FFFF));
-
-					if (ProgramOptions.WarnMultiple)
-					{
-						LogMessage("Stop second instance: Terminating this instance of Cumulus");
-						LogConsoleMessage("An error occurred during second instance detection and 'Stop second instance' is enabled - terminating", ConsoleColor.Red);
-						LogConsoleMessage("Program exit");
-						Program.exitSystem = true;
-						return;
-					}
-					else
-					{
-						LogMessage("Stop second instance: 'Stop second instance' is disabled - continuing this instance of Cumulus");
-					}
-				}
-			}
-
 			// Do we delay the start of Cumulus MX for a fixed period?
 			if (ProgramOptions.StartupDelaySecs > 0)
 			{
 				// Check uptime
 				double ts = -1;
-				if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && UpTime != null)
+				if (boolWindows && UpTime != null)
 				{
 					// Windows enable the performance counter method
 					UpTime = new PerformanceCounter("System", "System Up Time");
@@ -1252,7 +1118,7 @@ namespace CumulusMX
 				do
 				{
 					var pingTimeoutDT = DateTime.Now.AddSeconds(pingTimeoutSecs);
-					var pingTokenSource = new CancellationTokenSource();
+					var pingTokenSource = new CancellationTokenSource(pingTimeoutSecs * 1000);
 					var pingCancelToken = pingTokenSource.Token;
 
 					LogDebugMessage($"Starting PING #{attempt} task with time-out of {pingTimeoutSecs} seconds");
@@ -1428,10 +1294,17 @@ namespace CumulusMX
 			SunFormat = "F" + SunshineDPlaces;
 			ETFormat = "F" + (RainDPlaces + 1);
 			WindRunFormat = "F" + WindRunDPlaces;
-			TempTrendFormat = "+0.0;-0.0;0";
+			TempTrendFormat = "+0.0;-0.0;0.0";
+			PressTrendFormat = $"+0.{new string('0', PressDPlaces)};-0.{new string('0', PressDPlaces)};0.{new string('0', PressDPlaces)}";
 			AirQualityFormat = "F" + AirQualityDPlaces;
 
 			ReadStringsFile();
+
+			if (FtpOptions.FtpMode == FtpProtocols.PHP)
+			{
+				SetupPhpUploadClients();
+				TestPhpUploadCompression();
+			}
 
 			SetUpHttpProxy();
 
@@ -1443,9 +1316,6 @@ namespace CumulusMX
 			customHttpMinutesTokenParser.OnToken += TokenParserOnToken;
 			customHttpRolloverTokenParser.OnToken += TokenParserOnToken;
 
-			customLogIntvlTokenParser.OnToken += TokenParserOnToken;
-			customLogDailyTokenParser.OnToken += TokenParserOnToken;
-
 			if (SmtpOptions.Enabled)
 			{
 				emailer = new EmailSender(this);
@@ -1456,7 +1326,7 @@ namespace CumulusMX
 			MoonAge = MoonriseMoonset.MoonAge();
 			DoMoonImage();
 
-			LogMessage("Station type: " + (StationType == -1 ? "Undefined" : StationDesc[StationType]));
+			LogMessage("Station type: " + (StationType == -1 ? "Undefined" : StationType + " - " + StationDesc[StationType]));
 
 			SetupUnitText();
 
@@ -1488,6 +1358,7 @@ namespace CumulusMX
 			// switch off logging from Unosquare.Swan which underlies embedIO
 			Swan.Logging.Logger.NoLogging();
 
+			httpFiles = new HttpFiles(this);
 
 			var assemblyPath = Path.GetDirectoryName(typeof(Program).Assembly.Location);
 			var htmlRootPath = Path.Combine(assemblyPath, "interface");
@@ -1533,10 +1404,13 @@ namespace CumulusMX
 			Api.alarmSettings = new AlarmSettings(this);
 			Api.mySqlSettings = new MysqlSettings(this);
 			Api.customLogs = new CustomLogsSettings(this);
+			Api.httpFiles = httpFiles;
 			Api.dataEditor = new DataEditor(this);
 			Api.logfileEditor = new DataEditors(this);
 			Api.tagProcessor = new ApiTagProcessor(this);
 			Api.wizard = new Wizard(this);
+			Api.langSettings = new LangSettings(this);
+			Api.displaySettings = new DisplaySettings(this);
 
 			// Don't wait for the web server
 			_ = httpServer.RunAsync();
@@ -1662,15 +1536,15 @@ namespace CumulusMX
 
 				if (StationType == StationTypes.HttpWund)
 				{
-					HttpStations.stationWund = (HttpStationWund)station;
+					HttpStations.stationWund = (HttpStationWund) station;
 				}
 				else if (StationType == StationTypes.HttpEcowitt)
 				{
-					HttpStations.stationEcowitt = (HttpStationEcowitt)station;
+					HttpStations.stationEcowitt = (HttpStationEcowitt) station;
 				}
 				else if (StationType == StationTypes.HttpAmbient)
 				{
-					HttpStations.stationAmbient = (HttpStationAmbient)station;
+					HttpStations.stationAmbient = (HttpStationAmbient) station;
 				}
 
 				LogMessage("Creating extra sensors");
@@ -1706,7 +1580,7 @@ namespace CumulusMX
 				WCloud.station = station;
 				OpenWeatherMap.station = station;
 
-				MySqlStuff.InitialConfig(station);
+				MySqlSettings.InitialConfig(station);
 
 
 				webtags = new WebTags(this, station);
@@ -1775,6 +1649,7 @@ namespace CumulusMX
 				// If enabled generate the daily graph data files, and upload at first opportunity
 				LogDebugMessage("Generating the daily graph data files");
 				station.Graphs.CreateEodGraphDataFiles();
+				station.Graphs.CreateDailyGraphDataFiles();
 			}
 
 			//LogDebugMessage("Lock: Cumulus releasing the lock");
@@ -1827,6 +1702,69 @@ namespace CumulusMX
 					customHttpSecondsHandler.Credentials = creds;
 					customHttpMinutesHandler.Credentials = creds;
 					customHttpRolloverHandler.Credentials = creds;
+				}
+			}
+		}
+
+		internal void SetupPhpUploadClients()
+		{
+			phpUploadHttpHandler = new HttpClientHandler
+			{
+				ClientCertificateOptions = ClientCertificateOption.Manual,
+				ServerCertificateCustomValidationCallback = (sender, cert, chain, errors) =>
+				{
+					return FtpOptions.PhpIgnoreCertErrors ? true : errors == System.Net.Security.SslPolicyErrors.None;
+				},
+				MaxConnectionsPerServer = 50,
+				AllowAutoRedirect = false,
+				SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13
+			};
+
+			if (!string.IsNullOrEmpty(HTTPProxyName))
+			{
+				phpUploadHttpHandler.Proxy = new WebProxy(HTTPProxyName, HTTPProxyPort);
+				phpUploadHttpHandler.UseProxy = true;
+				if (!string.IsNullOrEmpty(HTTPProxyUser))
+				{
+					phpUploadHttpHandler.Credentials = new NetworkCredential(HTTPProxyUser, HTTPProxyPassword);
+				}
+			}
+
+			phpUploadHttpClient = new HttpClient(phpUploadHttpHandler);
+			phpRealtimeUploadHttpClient = new HttpClient(phpUploadHttpHandler);
+
+			phpUploadHttpClient.Timeout = TimeSpan.FromSeconds(20);
+			phpRealtimeUploadHttpClient.Timeout = TimeSpan.FromSeconds(20);
+		}
+
+
+		internal async void TestPhpUploadCompression()
+		{
+			LogDebugMessage($"Testing PHP upload compression: '{FtpOptions.PhpUrl}'");
+			using (var request = new HttpRequestMessage(HttpMethod.Get, FtpOptions.PhpUrl))
+			{
+				try
+				{
+					request.Headers.Add("Accept", "text/html");
+					request.Headers.Add("Accept-Encoding", "gzip, deflate");
+					var response = await phpUploadHttpClient.SendAsync(request);
+					response.EnsureSuccessStatusCode();
+					var encoding = response.Content.Headers.ContentEncoding;
+
+					FtpOptions.PhpCompression = encoding.Count == 0 ? "none" : encoding.First();
+
+					if (FtpOptions.PhpCompression == "none")
+					{
+						LogDebugMessage("PHP upload does not support compression");
+					}
+					else
+					{
+						LogDebugMessage($"PHP upload supports {FtpOptions.PhpCompression} compression");
+					}
+				}
+				catch (Exception ex)
+				{
+					LogMessage("TestPhpUploadCompression: Error - " + ex.Message);
 				}
 			}
 		}
@@ -1961,7 +1899,7 @@ namespace CumulusMX
 
 			if (isSet)
 			{
-				RealtimeFTP.Logger = FtpLoggerRT;
+				RealtimeFTP.Logger = (IFtpLogger) FtpLoggerRT;
 			}
 			else
 			{
@@ -2113,13 +2051,13 @@ namespace CumulusMX
 					ftpThread.Interrupt();
 				LogMessage("Trying new web update");
 				WebUpdating = 1;
-				ftpThread = new Thread(() => DoHTMLFiles(now)) { IsBackground = true };
+				ftpThread = new Thread(() => DoHTMLFiles()) { IsBackground = true };
 				ftpThread.Start();
 			}
 			else
 			{
 				WebUpdating = 1;
-				ftpThread = new Thread(() => DoHTMLFiles(now)) { IsBackground = true };
+				ftpThread = new Thread(() => DoHTMLFiles()) { IsBackground = true };
 				ftpThread.Start();
 			}
 		}
@@ -2170,12 +2108,12 @@ namespace CumulusMX
 						_ = RealtimeLocalCopy(cycle); // let this run in background
 					}
 
-					if (FtpOptions.RealtimeEnabled && FtpOptions.Enabled && !RealtimeFtpReconnecting)
+					if (FtpOptions.RealtimeEnabled && FtpOptions.Enabled && (!RealtimeFtpReconnecting || FtpOptions.FtpMode == FtpProtocols.PHP))
 					{
 						// Is a previous cycle still running?
 						if (RealtimeFtpInProgress)
 						{
-							LogMessage($"Realtime[{cycle}]: Warning, a previous cycle is still trying to connect to FTP server, skip count = {++realtimeFTPRetries}");
+							LogMessage($"Realtime[{cycle}]: Warning, a previous cycle is still trying to connect to the upload server, skip count = {++realtimeFTPRetries}");
 							// real time interval is in ms, if a session has been uploading for 3 minutes - abort it and reconnect
 							if (realtimeFTPRetries * RealtimeInterval / 1000 > 3 * 60)
 							{
@@ -2196,26 +2134,25 @@ namespace CumulusMX
 								_ = RealtimeFTPReconnect(); // let this run in background
 								reconnecting = true;
 							}
-							if (FtpOptions.FtpMode != FtpProtocols.SFTP && !RealtimeFTP.IsConnected)
+							if ((FtpOptions.FtpMode == FtpProtocols.FTP || FtpOptions.FtpMode == FtpProtocols.FTPS) && !RealtimeFTP.IsConnected)
 							{
 								_ = RealtimeFTPReconnect(); // let this run in background
 								reconnecting = true;
 							}
 
-							if (!reconnecting)
+							if (!reconnecting || FtpOptions.FtpMode == FtpProtocols.PHP)
 							{
 								// Finally we can do some FTP!
 								RealtimeFtpInProgress = true;
 
 								try
 								{
-									RealtimeFTPUpload(cycle);
+									RealtimeUpload(cycle);
 									realtimeFTPRetries = 0;
 								}
-								catch (Exception)
+								catch (Exception ex)
 								{
-									LogMessage($"Realtime[{cycle}]: Error during realtime FTP update that requires reconnection");
-									_ = RealtimeFTPReconnect(); // let this run in background
+									LogExceptionMessage(ex, $"Realtime[{cycle}]: Error during realtime FTP update that requires reconnection");
 								}
 								RealtimeFtpInProgress = false;
 							}
@@ -2238,7 +2175,7 @@ namespace CumulusMX
 					}
 				}
 
-				MySqlStuff.DoRealtimeData(cycle, true);
+				MySqlSettings.DoRealtimeData(cycle, true);
 			}
 			catch (Exception ex)
 			{
@@ -2254,6 +2191,9 @@ namespace CumulusMX
 
 		private async Task RealtimeFTPReconnect()
 		{
+			if (FtpOptions.FtpMode == FtpProtocols.PHP)
+				return;
+
 			RealtimeFtpReconnecting = true;
 			await Task.Run(() =>
 			{
@@ -2290,7 +2230,7 @@ namespace CumulusMX
 						}
 						catch (Exception ex)
 						{
-							LogDebugMessage($"RealtimeReconnect: Error disconnecting from server - {ex.Message}");
+							LogExceptionMessage(ex, "RealtimeReconnect: Error disconnecting from server");
 						}
 						finally
 						{
@@ -2448,7 +2388,7 @@ namespace CumulusMX
 
 			for (var i = 0; i < RealtimeFiles.Length; i++)
 			{
-				if (RealtimeFiles[i].Create && RealtimeFiles[i].Copy)
+				if (RealtimeFiles[i].Copy)
 				{
 					var dstFile = dstPath + RealtimeFiles[i].RemoteFileName;
 					var srcFile = RealtimeFiles[i].LocalPath + RealtimeFiles[i].LocalFileName;
@@ -2456,7 +2396,26 @@ namespace CumulusMX
 					try
 					{
 						LogDebugMessage($"RealtimeLocalCopy[{cycle}]: Copying - {RealtimeFiles[i].LocalFileName}");
-						await Utils.CopyFileAsync(srcFile, dstFile);
+
+						if (RealtimeFiles[i].Create)
+						{
+							await Utils.CopyFileAsync(srcFile, dstFile);
+						}
+						else
+						{
+							var text = String.Empty;
+
+							if (RealtimeFiles[i].LocalFileName == "realtime.txt")
+							{
+								text = CreateRealtimeFileString(cycle);
+							}
+							else if (RealtimeFiles[i].LocalFileName == "realtimegauges.txt")
+							{
+								text = ProcessTemplateFile2String(RealtimeFiles[i].TemplateFileName, realtimeTokenParser, false);
+							}
+
+							File.WriteAllText(dstFile, text);
+						}
 					}
 					catch (Exception ex)
 					{
@@ -2467,80 +2426,268 @@ namespace CumulusMX
 		}
 
 
-		private void RealtimeFTPUpload(byte cycle)
+		private async void RealtimeUpload(byte cycle)
 		{
 			var remotePath = "";
-			bool doMore;
+			var tasklist = new List<Task>();
+
+			var taskCount = 0;
+			var runningTaskCount = 0;
 
 			if (FtpOptions.Directory.Length > 0)
 			{
 				remotePath = (FtpOptions.Directory.EndsWith("/") ? FtpOptions.Directory : FtpOptions.Directory + "/");
 			}
 
+			LogDebugMessage($"Realtime[{cycle}]: Real time files starting");
+
 			for (var i = 0; i < RealtimeFiles.Length; i++)
 			{
-				if (RealtimeFiles[i].Create && RealtimeFiles[i].FTP)
+				if (RealtimeFiles[i].FTP)
 				{
 					var remoteFile = remotePath + RealtimeFiles[i].RemoteFileName;
 					var localFile = RealtimeFiles[i].LocalPath + RealtimeFiles[i].LocalFileName;
 
-					LogFtpDebugMessage($"Realtime[{cycle}]: Uploading - {RealtimeFiles[i].LocalFileName}");
-					if (FtpOptions.FtpMode == FtpProtocols.SFTP)
-					{
-						doMore = UploadFile(RealtimeSSH, localFile, remoteFile, cycle);
-					}
-					else
-					{
-						doMore = UploadFile(RealtimeFTP, localFile, remoteFile, cycle);
-					}
+					LogFtpDebugMessage($"Realtime[{cycle}]: Uploading - {RealtimeFiles[i].RemoteFileName}");
 
-					if (!doMore)
+					string data = string.Empty;
+
+					if (FtpOptions.FtpMode != FtpProtocols.PHP)
 					{
-						LogFtpMessage($"Realtime[{cycle}]: Aborting this upload");
-						throw new FtpException("Connection failed.");
+						// realtime file
+						if (RealtimeFiles[i].LocalFileName == "realtime.txt")
+						{
+							data = CreateRealtimeFileString(cycle);
+						}
+
+						if (RealtimeFiles[i].LocalFileName == "realtimegauges.txt")
+						{
+							data = ProcessTemplateFile2String(RealtimeFiles[i].TemplateFileName, realtimeTokenParser, true, true);
+						}
+
+						using (var dataStream = GenerateStreamFromString(data))
+						{
+							if (FtpOptions.FtpMode == FtpProtocols.SFTP)
+							{
+
+								_ = UploadStream(RealtimeSSH, remoteFile, dataStream, cycle);
+							}
+							else if (FtpOptions.FtpMode == FtpProtocols.FTP || FtpOptions.FtpMode == FtpProtocols.FTPS)
+							{
+								_ = UploadStream(RealtimeFTP, remoteFile, dataStream, cycle);
+							}
+						}
+					}
+					else // PHP
+					{
+						try
+						{
+#if DEBUG
+							LogDebugMessage($"Realtime[{cycle}]: Real time file {RealtimeFiles[i].RemoteFileName} waiting for semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+							uploadCountLimitSemaphoreSlim.Wait(cancellationToken);
+							LogDebugMessage($"Realtime[{cycle}]: Real time file {RealtimeFiles[i].RemoteFileName} has a semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#else
+							uploadCountLimitSemaphoreSlim.Wait(cancellationToken);
+#endif
+						}
+						catch (OperationCanceledException)
+						{
+							return;
+						}
+
+						Interlocked.Increment(ref taskCount);
+
+						var idx = i;
+						tasklist.Add(Task.Run(async () =>
+						{
+							if (cancellationToken.IsCancellationRequested)
+								return false;
+
+							// realtime file
+							if (RealtimeFiles[idx].LocalFileName == "realtime.txt")
+							{
+								data = CreateRealtimeFileString(cycle);
+							}
+
+							if (RealtimeFiles[idx].LocalFileName == "realtimegauges.txt")
+							{
+								data = await ProcessTemplateFile2StringAsync(RealtimeFiles[idx].TemplateFileName, true, true);
+							}
+
+							try
+							{
+								_ = await UploadString(phpRealtimeUploadHttpClient, false, string.Empty, data, RealtimeFiles[idx].RemoteFileName, cycle);
+								// no realtime files are incremental, so no need to update LastDataTime
+							}
+							finally
+							{
+								uploadCountLimitSemaphoreSlim.Release();
+#if DEBUG
+								LogDebugMessage($"Realtime[{cycle}]: Real time file {RealtimeFiles[idx].RemoteFileName} released semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#endif
+							}
+							return true;
+						}, cancellationToken));
+
+						Interlocked.Increment(ref runningTaskCount);
 					}
 				}
 			}
 
-			// Extra files
-			for (int i = 0; i < numextrafiles; i++)
+			if (FtpOptions.FtpMode != FtpProtocols.PHP)
 			{
-				var uploadfile = ExtraFiles[i].local;
-				var remotefile = ExtraFiles[i].remote;
+				LogDebugMessage($"Realtime[{cycle}]: Real time files complete");
+			}
 
-				if ((uploadfile.Length > 0) && (remotefile.Length > 0) && ExtraFiles[i].realtime && ExtraFiles[i].FTP)
-				{
-					uploadfile = GetUploadFilename(uploadfile, DateTime.Now);
 
-					if (File.Exists(uploadfile))
+			// Extra files
+
+			if (FtpOptions.FtpMode == FtpProtocols.PHP)
+			{
+				LogDebugMessage($"Realtime[{cycle}]: Extra Files starting");
+
+				ExtraFiles.Where(x => x.local.Length > 0 && x.remote.Length > 0 && x.realtime && x.FTP)
+					.ToList()
+					.ForEach(async item =>
 					{
-						remotefile = GetRemoteFileName(remotefile, DateTime.Now);
+						Interlocked.Increment(ref taskCount);
 
-						// all checks OK, file needs to be uploaded
-						if (ExtraFiles[i].process)
+						var uploadfile = item.local;
+						var remotefile = item.remote;
+
+						uploadfile = GetUploadFilename(uploadfile, DateTime.Now);
+
+						if (!File.Exists(uploadfile))
 						{
-							// we've already processed the file
-							uploadfile += "tmp";
+							LogMessage($"Realtime[{cycle}]: Warning, extra web file not found! - {uploadfile}");
+							return;
 						}
-						LogFtpDebugMessage($"Realtime[{cycle}]: Uploading extra web file[{i}] {uploadfile} to {remotefile}");
-						if (FtpOptions.FtpMode == FtpProtocols.SFTP)
+
+						try
 						{
-							doMore = UploadFile(RealtimeSSH, uploadfile, remotefile, cycle);
+#if DEBUG
+							LogDebugMessage($"Realtime[{cycle}]: Extra File {uploadfile} waiting for semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+							await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+							LogDebugMessage($"Realtime[{cycle}]: Extra File {uploadfile} has a semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#else
+							await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+#endif
+						}
+						catch (OperationCanceledException)
+						{
+							return;
+						}
+
+						tasklist.Add(Task.Run(async () =>
+						{
+							try
+							{
+								if (cancellationToken.IsCancellationRequested)
+									return false;
+
+								remotefile = GetRemoteFileName(remotefile, DateTime.Now);
+
+								// all checks OK, file needs to be uploaded
+								LogDebugMessage($"Realtime[{cycle}]: Uploading extra web file {uploadfile} to {remotefile}");
+
+								if (item.process)
+								{
+									var data = await ProcessTemplateFile2StringAsync(uploadfile, false, item.UTF8);
+
+									_ = await UploadString(phpRealtimeUploadHttpClient, false, string.Empty, data, remotefile, cycle, item.binary, item.UTF8);
+								}
+								else
+								{
+									_ = await UploadFile(phpRealtimeUploadHttpClient, uploadfile, remotefile, cycle, item.binary, item.UTF8);
+								}
+								// no extra files are incremental for now, so no need to update LastDataTime
+							}
+							finally
+							{
+								uploadCountLimitSemaphoreSlim.Release();
+#if DEBUG
+								LogDebugMessage($"Realtime[{cycle}]: Extra Web File {uploadfile} released semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#endif
+							}
+
+							// no void return which cannot be tracked
+							return true;
+						}, cancellationToken));
+
+						Interlocked.Increment(ref runningTaskCount);
+					});
+
+				// wait for all the tasks to start
+				while (runningTaskCount < taskCount)
+				{
+					if (cancellationToken.IsCancellationRequested)
+						return;
+
+					await Task.Delay(10);
+				}
+
+				// wait for all the tasks to complete
+				Task.WaitAll(tasklist.ToArray(), cancellationToken);
+				LogDebugMessage($"Realtime[{cycle}]: Real time files complete, {tasklist.Count()} files uploaded");
+				tasklist.Clear();
+			}
+			else
+			{
+				for (int i = 0; i < numextrafiles; i++)
+				{
+					var uploadfile = ExtraFiles[i].local;
+					var remotefile = ExtraFiles[i].remote;
+
+					if ((uploadfile.Length > 0) && (remotefile.Length > 0) && ExtraFiles[i].realtime && ExtraFiles[i].FTP)
+					{
+						uploadfile = GetUploadFilename(uploadfile, DateTime.Now);
+
+						if (File.Exists(uploadfile))
+						{
+							remotefile = GetRemoteFileName(remotefile, DateTime.Now);
+
+							// all checks OK, file needs to be uploaded
+							LogFtpMessage("");
+							LogFtpDebugMessage($"Realtime[{cycle}]: Uploading extra web file[{i}] {uploadfile} to {remotefile}");
+
+							string data = string.Empty;
+
+							if (ExtraFiles[i].process)
+							{
+								data = ProcessTemplateFile2String(uploadfile, realtimeTokenParser, false, ExtraFiles[i].UTF8);
+							}
+
+							if (FtpOptions.FtpMode == FtpProtocols.SFTP)
+							{
+								if (ExtraFiles[i].process)
+								{
+									using var strm = GenerateStreamFromString(data);
+									UploadStream(RealtimeSSH, remotefile, strm, cycle);
+								}
+								else
+								{
+									UploadFile(RealtimeSSH, uploadfile, remotefile, cycle);
+								}
+								continue;
+							}
+
+							if (FtpOptions.FtpMode == FtpProtocols.FTP || FtpOptions.FtpMode == FtpProtocols.FTPS)
+							{
+								if (ExtraFiles[i].process)
+								{
+									using var strm = GenerateStreamFromString(data);
+									UploadStream(RealtimeFTP, remotefile, strm, cycle);
+								}
+								else
+								{
+									UploadFile(RealtimeFTP, uploadfile, remotefile, cycle);
+								}
+							}
 						}
 						else
 						{
-							doMore = UploadFile(RealtimeFTP, uploadfile, remotefile, cycle);
+							LogMessage($"Realtime[{cycle}]: Warning, extra web file[{i}] not found! - {uploadfile}");
 						}
-
-						if (!doMore)
-						{
-							LogMessage($"Realtime[{cycle}]: Aborting this upload");
-							throw new FtpException("Connection failed.");
-						}
-					}
-					else
-					{
-						LogMessage($"Realtime[{cycle}]: Warning, extra web file[{i}] not found! - {uploadfile}");
 					}
 				}
 			}
@@ -2549,19 +2696,19 @@ namespace CumulusMX
 		private async Task CreateRealtimeHTMLfiles(int cycle)
 		{
 			// Process realtime files
-			for (var i = 0; i < RealtimeFiles.Length; i++)
+			for (var i = 1; i < RealtimeFiles.Length; i++)
 			{
 				if (RealtimeFiles[i].Create && !string.IsNullOrWhiteSpace(RealtimeFiles[i].TemplateFileName))
 				{
 					var destFile = RealtimeFiles[i].LocalPath + RealtimeFiles[i].LocalFileName;
+					LogDebugMessage($"Realtime[{cycle}]: Creating realtime file - {RealtimeFiles[i].LocalFileName}");
 					try
 					{
-						LogDebugMessage($"Realtime[{cycle}]: Processing realtime file - {RealtimeFiles[i].LocalFileName}");
 						await ProcessTemplateFile(RealtimeFiles[i].TemplateFileName, destFile, realtimeTokenParser, true);
 					}
 					catch (Exception ex)
 					{
-						LogExceptionMessage(ex, $"Realtime[{cycle}]: Error processing file [{RealtimeFiles[i].LocalFileName}] to [{destFile}]. Error");
+						LogExceptionMessage(ex, $"Realtime[{cycle}]: Error creating file [{RealtimeFiles[i].LocalFileName}] to [{destFile}]. Error");
 					}
 				}
 			}
@@ -2581,29 +2728,20 @@ namespace CumulusMX
 						{
 							remotefile = GetRemoteFileName(remotefile, DateTime.Now);
 
-							if (ExtraFiles[i].process)
-							{
-								// process the file
-								try
-								{
-									LogDebugMessage($"Realtime[{cycle}]: Processing extra file[{i}] - {uploadfile}");
-									ProcessTemplateFile(uploadfile, uploadfile + "tmp", realtimeTokenParser, false).Wait();
-								}
-								catch (Exception ex)
-								{
-									LogExceptionMessage(ex, $"Realtime[{cycle}]: Error processing extra file [{uploadfile}] to [{uploadfile}]. Error");
-									continue;
-								}
-								uploadfile += "tmp";
-							}
-
 							if (!ExtraFiles[i].FTP)
 							{
 								// just copy the file
 								try
 								{
 									LogDebugMessage($"Realtime[{cycle}]: Copying extra file[{i}] {uploadfile} to {remotefile}");
-									await Utils.CopyFileAsync(uploadfile, remotefile);
+									if (ExtraFiles[i].process)
+									{
+										await ProcessTemplateFile(uploadfile, remotefile, realtimeTokenParser, false);
+									}
+									else
+									{
+										await Utils.CopyFileAsync(uploadfile, remotefile);
+									}
 								}
 								catch (Exception ex)
 								{
@@ -2737,21 +2875,21 @@ namespace CumulusMX
 			// Full =   6 -   0 - 354
 			// 3rd  = 276 - 270 - 264
 			if (MoonPhaseAngle < 174 && MoonPhaseAngle > 96)
-				MoonPhaseString = WaxingCrescent;
+				MoonPhaseString = Trans.WaxingCrescent;
 			else if (MoonPhaseAngle <= 96 && MoonPhaseAngle >= 84)
-				MoonPhaseString = FirstQuarter;
+				MoonPhaseString = Trans.FirstQuarter;
 			else if (MoonPhaseAngle < 84 && MoonPhaseAngle > 6)
-				MoonPhaseString = WaxingGibbous;
+				MoonPhaseString = Trans.WaxingGibbous;
 			else if (MoonPhaseAngle <= 6 || MoonPhaseAngle >= 354)
-				MoonPhaseString = FullMoon;
+				MoonPhaseString = Trans.FullMoon;
 			else if (MoonPhaseAngle < 354 && MoonPhaseAngle > 276)
-				MoonPhaseString = WaningGibbous;
+				MoonPhaseString = Trans.WaningGibbous;
 			else if (MoonPhaseAngle <= 276 && MoonPhaseAngle >= 264)
-				MoonPhaseString = LastQuarter;
+				MoonPhaseString = Trans.LastQuarter;
 			else if (MoonPhaseAngle < 264 && MoonPhaseAngle > 186)
-				MoonPhaseString = WaningCrescent;
+				MoonPhaseString = Trans.WaningCrescent;
 			else
-				MoonPhaseString = NewMoon;
+				MoonPhaseString = Trans.NewMoon;
 		}
 
 		internal void DoMoonImage()
@@ -3077,7 +3215,7 @@ namespace CumulusMX
 			{
 				try
 				{
-					TomorrowDayLengthText = string.Format(thereWillBeMinSLessDaylightTomorrow, tomorrowmins, tomorrowsecs);
+					TomorrowDayLengthText = string.Format(Trans.thereWillBeMinSLessDaylightTomorrow, tomorrowmins, tomorrowsecs);
 				}
 				catch (Exception)
 				{
@@ -3088,7 +3226,7 @@ namespace CumulusMX
 			{
 				try
 				{
-					TomorrowDayLengthText = string.Format(thereWillBeMinSMoreDaylightTomorrow, tomorrowmins, tomorrowsecs);
+					TomorrowDayLengthText = string.Format(Trans.thereWillBeMinSMoreDaylightTomorrow, tomorrowmins, tomorrowsecs);
 				}
 				catch (Exception)
 				{
@@ -3269,6 +3407,14 @@ namespace CumulusMX
 				CultureInfo.DefaultThreadCurrentCulture = newCulture;
 			}
 
+			ProgramOptions.TimeFormat = ini.GetValue("Program", "TimeFormat", "t");
+			if (ProgramOptions.TimeFormat == "t")
+				ProgramOptions.TimeFormatLong = "T";
+			else if (ProgramOptions.TimeFormat == "h:mm tt")
+				ProgramOptions.TimeFormatLong = "h:mm:ss tt";
+			else
+				ProgramOptions.TimeFormatLong = "HH:mm:ss";
+
 			ProgramOptions.EncryptedCreds = ini.GetValue("Program", "EncryptedCreds", false);
 
 			ProgramOptions.UpdateDayfile = ini.GetValue("Program", "UpdateDayfile", true);
@@ -3375,7 +3521,7 @@ namespace CumulusMX
 			StationOptions.CalcWind10MinAve = ini.GetValue("Station", "Wind10MinAverage", false);
 			StationOptions.UseSpeedForAvgCalc = ini.GetValue("Station", "UseSpeedForAvgCalc", false);
 			StationOptions.UseSpeedForLatest = ini.GetValue("Station", "UseSpeedForLatest", false);
-			StationOptions.UseRainForIsRaining = ini.GetValue("Station", "UseRainForIsRaining", false);
+			StationOptions.UseRainForIsRaining = ini.GetValue("Station", "UseRainForIsRaining", 1); // 0=station, 1=rain sensor, 2=haptic sensor
 			StationOptions.LeafWetnessIsRainingIdx = ini.GetValue("Station", "LeafWetnessIsRainingIdx", -1);
 			StationOptions.LeafWetnessIsRainingThrsh = ini.GetValue("Station", "LeafWetnessIsRainingVal", 0.0);
 
@@ -3528,26 +3674,28 @@ namespace CumulusMX
 
 			LCMaxWind = ini.GetValue("Station", "LCMaxWind", 9999);
 
-			RecordsBeganStr = ini.GetValue("Station", "StartDate", DateTime.Now.ToString("dd/MM/yyyy", invDate));
-			RecordsBeganDate = DateTime.Now;
-			// Try to convert old style localised entries to fixed format dd/MM/yyyy
-			if (!DateTime.TryParseExact(RecordsBeganStr, "dd/MM/yyyy", invDate, DateTimeStyles.None, out RecordsBeganDate))
-			{
-				if (!DateTime.TryParseExact(RecordsBeganStr, "D", CultureInfo.CurrentCulture, DateTimeStyles.None, out RecordsBeganDate))
-				{
-					var msg = "Failed to parse the 'StartDate' in cumulus.ini";
-					LogConsoleMessage(msg);
-					LogMessage(msg);
-					msg = $"Please manually update it from it's present format '{RecordsBeganStr}' to 'dd/mm/yyyy'";
-					LogConsoleMessage(msg);
-					LogMessage(msg);
-				}
-				else
-					rewriteRequired = true;
-			}
-			RecordsBeganStr = RecordsBeganDate.ToString("dd/MM/yyyy", invDate);
 
-			LogMessage("Cumulus start date: " + RecordsBeganStr);
+			if (ini.ValueExists("Station", "StartDate"))
+			{
+				var RecordsBeganDate = ini.GetValue("Station", "StartDate", DateTime.Now.ToLongDateString());
+				try
+				{
+					RecordsBeganDateTime = DateTime.Parse(RecordsBeganDate);
+					rewriteRequired = true;
+				}
+				catch (Exception ex)
+				{
+					LogErrorMessage($"Error parsing the RecordsBegan date {RecordsBeganDate}: {ex.Message}");
+				}
+			}
+			else
+			{
+				var RecordsBeganDate = ini.GetValue("Station", "StartDateIso", DateTime.Now.ToString("yyyy-MM-dd"));
+				RecordsBeganDateTime = DateTime.ParseExact(RecordsBeganDate, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+			}
+
+			LogMessage($"Cumulus start date Parsed: {RecordsBeganDateTime:yyyy-MM-dd}");
+
 
 			ImetOptions.WaitTime = ini.GetValue("Station", "ImetWaitTime", 500);
 			ImetOptions.ReadDelay = ini.GetValue("Station", "ImetReadDelay", 500);
@@ -3708,6 +3856,11 @@ namespace CumulusMX
 			{
 				EcowittSettings.MapWN34[i] = ini.GetValue("GW1000", "WN34MapChan" + i, 0);
 			}
+			// forwarders
+			for (int i = 0; i < EcowittSettings.EcowittForwarders.Length; i++)
+			{
+				EcowittSettings.EcowittForwarders[i] = ini.GetValue("GW1000", "Forwarder" + i, "");
+			}
 
 
 			// Ambient settings
@@ -3811,16 +3964,24 @@ namespace CumulusMX
 				rewriteRequired = true;
 			}
 
+			// PHP upload options
+			FtpOptions.PhpUrl = ini.GetValue("FTP site", "PHP-URL", "");
+			FtpOptions.PhpSecret = ini.GetValue("FTP site", "PHP-Secret", "");
+			if (FtpOptions.PhpSecret == string.Empty)
+				FtpOptions.PhpSecret = Guid.NewGuid().ToString();
+			FtpOptions.PhpIgnoreCertErrors = ini.GetValue("FTP site", "PHP-IgnoreCertErrors", false);
+			FtpOptions.MaxConcurrentUploads = ini.GetValue("FTP site", "MaxConcurrentUploads", boolWindows ? 4 : 1);
+
 			MoonImage.Ftp = ini.GetValue("FTP site", "IncludeMoonImage", false);
 			MoonImage.Copy = ini.GetValue("FTP site", "CopyMoonImage", false);
 
 
 			RealtimeFiles[0].Create = ini.GetValue("FTP site", "RealtimeTxtCreate", false);
-			RealtimeFiles[0].FTP = RealtimeFiles[0].Create && ini.GetValue("FTP site", "RealtimeTxtFTP", false);
-			RealtimeFiles[0].Copy = RealtimeFiles[0].Create && ini.GetValue("FTP site", "RealtimeTxtCopy", false);
+			RealtimeFiles[0].FTP = ini.GetValue("FTP site", "RealtimeTxtFTP", false);
+			RealtimeFiles[0].Copy = ini.GetValue("FTP site", "RealtimeTxtCopy", false);
 			RealtimeFiles[1].Create = ini.GetValue("FTP site", "RealtimeGaugesTxtCreate", false);
-			RealtimeFiles[1].FTP = RealtimeFiles[1].Create && ini.GetValue("FTP site", "RealtimeGaugesTxtFTP", false);
-			RealtimeFiles[1].Copy = RealtimeFiles[1].Create && ini.GetValue("FTP site", "RealtimeGaugesTxtCopy", false);
+			RealtimeFiles[1].FTP = ini.GetValue("FTP site", "RealtimeGaugesTxtFTP", false);
+			RealtimeFiles[1].Copy = ini.GetValue("FTP site", "RealtimeGaugesTxtCopy", false);
 
 			RealtimeInterval = ini.GetValue("FTP site", "RealtimeInterval", 30000);
 			if (RealtimeInterval < 1)
@@ -3882,6 +4043,12 @@ namespace CumulusMX
 				GraphDataEodFiles[i].Copy = ini.GetValue("FTP site", keyNameCopy, IncludeGraphDataFiles);
 			}
 
+			for (var i = 0; i < HttpFilesConfig.Length; i++)
+			{
+				HttpFilesConfig[i] = new HttpFileProps();
+			}
+
+
 			FTPRename = ini.GetValue("FTP site", "FTPRename", true);
 			UTF8encode = ini.GetValue("FTP site", "UTF8encode", true);
 			DeleteBeforeUpload = ini.GetValue("FTP site", "DeleteBeforeUpload", false);
@@ -3895,7 +4062,7 @@ namespace CumulusMX
 				ExtraFiles[i].process = ini.GetValue("FTP site", "ExtraProcess" + i, false);
 				ExtraFiles[i].binary = ini.GetValue("FTP site", "ExtraBinary" + i, false);
 				ExtraFiles[i].realtime = ini.GetValue("FTP site", "ExtraRealtime" + i, false);
-				ExtraFiles[i].FTP = ini.GetValue("FTP site", "ExtraFTP" + i, true);
+				ExtraFiles[i].FTP = ini.GetValue("FTP site", "ExtraFTP" + i, false);
 				ExtraFiles[i].UTF8 = ini.GetValue("FTP site", "ExtraUTF" + i, false);
 				ExtraFiles[i].endofday = ini.GetValue("FTP site", "ExtraEOD" + i, false);
 			}
@@ -3925,41 +4092,105 @@ namespace CumulusMX
 			MoonImage.Transparent = ini.GetValue("Graphs", "MoonImageShadeTransparent", false);
 			MoonImage.FtpDest = ini.GetValue("Graphs", "MoonImageFtpDest", "images/moon.png");
 			MoonImage.CopyDest = ini.GetValue("Graphs", "MoonImageCopyDest", FtpOptions.LocalCopyFolder + "images" + sep1 + "moon.png");
-			GraphOptions.TempVisible = ini.GetValue("Graphs", "TempVisible", true);
-			GraphOptions.InTempVisible = ini.GetValue("Graphs", "InTempVisible", true);
-			GraphOptions.HIVisible = ini.GetValue("Graphs", "HIVisible", true);
-			GraphOptions.DPVisible = ini.GetValue("Graphs", "DPVisible", true);
-			GraphOptions.WCVisible = ini.GetValue("Graphs", "WCVisible", true);
-			GraphOptions.AppTempVisible = ini.GetValue("Graphs", "AppTempVisible", true);
-			GraphOptions.FeelsLikeVisible = ini.GetValue("Graphs", "FeelsLikeVisible", true);
-			GraphOptions.HumidexVisible = ini.GetValue("Graphs", "HumidexVisible", true);
-			GraphOptions.InHumVisible = ini.GetValue("Graphs", "InHumVisible", true);
-			GraphOptions.OutHumVisible = ini.GetValue("Graphs", "OutHumVisible", true);
-			GraphOptions.UVVisible = ini.GetValue("Graphs", "UVVisible", true);
-			GraphOptions.SolarVisible = ini.GetValue("Graphs", "SolarVisible", true);
-			GraphOptions.SunshineVisible = ini.GetValue("Graphs", "SunshineVisible", true);
-			GraphOptions.DailyAvgTempVisible = ini.GetValue("Graphs", "DailyAvgTempVisible", true);
-			GraphOptions.DailyMaxTempVisible = ini.GetValue("Graphs", "DailyMaxTempVisible", true);
-			GraphOptions.DailyMinTempVisible = ini.GetValue("Graphs", "DailyMinTempVisible", true);
-			GraphOptions.GrowingDegreeDaysVisible1 = ini.GetValue("Graphs", "GrowingDegreeDaysVisible1", true);
-			GraphOptions.GrowingDegreeDaysVisible2 = ini.GetValue("Graphs", "GrowingDegreeDaysVisible2", true);
-			GraphOptions.TempSumVisible0 = ini.GetValue("Graphs", "TempSumVisible0", true);
-			GraphOptions.TempSumVisible1 = ini.GetValue("Graphs", "TempSumVisible1", true);
-			GraphOptions.TempSumVisible2 = ini.GetValue("Graphs", "TempSumVisible2", true);
-			GraphOptions.ExtraTempVisible = ini.GetValue("Graphs", "ExtraTempVisible", new bool[10]);
-			GraphOptions.ExtraHumVisible = ini.GetValue("Graphs", "ExtraHumVisible", new bool[10]);
-			GraphOptions.ExtraDewPointVisible = ini.GetValue("Graphs", "ExtraDewPointVisible", new bool[10]);
-			GraphOptions.SoilTempVisible = ini.GetValue("Graphs", "SoilTempVisible", new bool[16]);
-			GraphOptions.SoilMoistVisible = ini.GetValue("Graphs", "SoilMoistVisible", new bool[16]);
-			GraphOptions.UserTempVisible = ini.GetValue("Graphs", "UserTempVisible", new bool[8]);
-			GraphOptions.CO2Sensor.CO2 = ini.GetValue("Graphs", "CO2-CO2", false);
-			GraphOptions.CO2Sensor.CO2Avg = ini.GetValue("Graphs", "CO2-CO2Avg", false);
-			GraphOptions.CO2Sensor.Pm25 = ini.GetValue("Graphs", "CO2-Pm25", false);
-			GraphOptions.CO2Sensor.Pm25Avg = ini.GetValue("Graphs", "CO2-Pm25Avg", false);
-			GraphOptions.CO2Sensor.Pm10 = ini.GetValue("Graphs", "CO2-Pm10", false);
-			GraphOptions.CO2Sensor.Pm10Avg = ini.GetValue("Graphs", "CO2-Pm10Avg", false);
-			GraphOptions.CO2Sensor.Temp = ini.GetValue("Graphs", "CO2-Temp", false);
-			GraphOptions.CO2Sensor.Hum = ini.GetValue("Graphs", "CO2-Hum", false);
+			GraphOptions.Visible.Temp.Val = ini.GetValue("Graphs", "TempVisible", 1);
+			GraphOptions.Visible.InTemp.Val = ini.GetValue("Graphs", "InTempVisible", 1);
+			GraphOptions.Visible.HeatIndex.Val = ini.GetValue("Graphs", "HIVisible", 1);
+			GraphOptions.Visible.DewPoint.Val = ini.GetValue("Graphs", "DPVisible", 1);
+			GraphOptions.Visible.WindChill.Val = ini.GetValue("Graphs", "WCVisible", 1);
+			GraphOptions.Visible.AppTemp.Val = ini.GetValue("Graphs", "AppTempVisible", 1);
+			GraphOptions.Visible.FeelsLike.Val = ini.GetValue("Graphs", "FeelsLikeVisible", 1);
+			GraphOptions.Visible.Humidex.Val = ini.GetValue("Graphs", "HumidexVisible", 1);
+			GraphOptions.Visible.InHum.Val = ini.GetValue("Graphs", "InHumVisible", 1);
+			GraphOptions.Visible.OutHum.Val = ini.GetValue("Graphs", "OutHumVisible", 1);
+			GraphOptions.Visible.UV.Val = ini.GetValue("Graphs", "UVVisible", 1);
+			GraphOptions.Visible.Solar.Val = ini.GetValue("Graphs", "SolarVisible", 1);
+			GraphOptions.Visible.Sunshine.Val = ini.GetValue("Graphs", "SunshineVisible", 1);
+			GraphOptions.Visible.AvgTemp.Val = ini.GetValue("Graphs", "DailyAvgTempVisible", 1);
+			GraphOptions.Visible.MaxTemp.Val = ini.GetValue("Graphs", "DailyMaxTempVisible", 1);
+			GraphOptions.Visible.MinTemp.Val = ini.GetValue("Graphs", "DailyMinTempVisible", 1);
+			GraphOptions.Visible.GrowingDegreeDays1.Val = ini.GetValue("Graphs", "GrowingDegreeDaysVisible1", 1);
+			GraphOptions.Visible.GrowingDegreeDays2.Val = ini.GetValue("Graphs", "GrowingDegreeDaysVisible2", 1);
+			GraphOptions.Visible.TempSum0.Val = ini.GetValue("Graphs", "TempSumVisible0", 1);
+			GraphOptions.Visible.TempSum1.Val = ini.GetValue("Graphs", "TempSumVisible1", 1);
+			GraphOptions.Visible.TempSum2.Val = ini.GetValue("Graphs", "TempSumVisible2", 1);
+			GraphOptions.Visible.ExtraTemp.Vals = ini.GetValue("Graphs", "ExtraTempVisible", new int[10]);
+			GraphOptions.Visible.ExtraHum.Vals = ini.GetValue("Graphs", "ExtraHumVisible", new int[10]);
+			GraphOptions.Visible.ExtraDewPoint.Vals = ini.GetValue("Graphs", "ExtraDewPointVisible", new int[10]);
+			GraphOptions.Visible.SoilTemp.Vals = ini.GetValue("Graphs", "SoilTempVisible", new int[16]);
+			GraphOptions.Visible.SoilMoist.Vals = ini.GetValue("Graphs", "SoilMoistVisible", new int[16]);
+			GraphOptions.Visible.UserTemp.Vals = ini.GetValue("Graphs", "UserTempVisible", new int[8]);
+			GraphOptions.Visible.LeafWetness.Vals = ini.GetValue("Graphs", "LeafWetnessVisible", new int[8]);
+			GraphOptions.Visible.AqSensor.Pm.Vals = ini.GetValue("Graphs", "Aq-PmVisible", new int[4]);
+			GraphOptions.Visible.AqSensor.PmAvg.Vals = ini.GetValue("Graphs", "Aq-PmAvgVisible", new int[4]);
+			GraphOptions.Visible.AqSensor.Temp.Vals = ini.GetValue("Graphs", "Aq-TempVisible", new int[4]);
+			GraphOptions.Visible.AqSensor.Hum.Vals = ini.GetValue("Graphs", "Aq-HumVisible", new int[4]);
+			GraphOptions.Visible.CO2Sensor.CO2.Val = ini.GetValue("Graphs", "CO2-CO2", 1);
+			GraphOptions.Visible.CO2Sensor.CO2Avg.Val = ini.GetValue("Graphs", "CO2-CO2Avg", 1);
+			GraphOptions.Visible.CO2Sensor.Pm25.Val = ini.GetValue("Graphs", "CO2-Pm25", 1);
+			GraphOptions.Visible.CO2Sensor.Pm25Avg.Val = ini.GetValue("Graphs", "CO2-Pm25Avg", 1);
+			GraphOptions.Visible.CO2Sensor.Pm10.Val = ini.GetValue("Graphs", "CO2-Pm10", 1);
+			GraphOptions.Visible.CO2Sensor.Pm10Avg.Val = ini.GetValue("Graphs", "CO2-Pm10Avg", 1);
+			GraphOptions.Visible.CO2Sensor.Temp.Val = ini.GetValue("Graphs", "CO2-Temp", 0);
+			GraphOptions.Visible.CO2Sensor.Hum.Val = ini.GetValue("Graphs", "CO2-Hum", 0);
+
+			GraphOptions.Colour.Temp = ini.GetValue("GraphColours", "TempColour", "#ff0000");
+			GraphOptions.Colour.InTemp = ini.GetValue("GraphColours", "InTempColour", "#50b432");
+			GraphOptions.Colour.HeatIndex = ini.GetValue("GraphColours", "HIColour", "#9161c9");
+			GraphOptions.Colour.DewPoint = ini.GetValue("GraphColours", "DPColour", "#ffff00");
+			GraphOptions.Colour.WindChill = ini.GetValue("GraphColours", "WCColour", "#ffa500");
+			GraphOptions.Colour.AppTemp = ini.GetValue("GraphColours", "AppTempColour", "#00fffe");
+			GraphOptions.Colour.FeelsLike = ini.GetValue("GraphColours", "FeelsLikeColour", "#00fffe");
+			GraphOptions.Colour.Humidex = ini.GetValue("GraphColours", "HumidexColour", "#008000");
+			GraphOptions.Colour.InHum = ini.GetValue("GraphColours", "InHumColour", "#008000");
+			GraphOptions.Colour.OutHum = ini.GetValue("GraphColours", "OutHumColour", "#ff0000");
+			GraphOptions.Colour.Press = ini.GetValue("GraphColours", "PressureColour", "#6495ed");
+			GraphOptions.Colour.WindGust = ini.GetValue("GraphColours", "WindGustColour", "#ff0000");
+			GraphOptions.Colour.WindAvg = ini.GetValue("GraphColours", "WindAvgColour", "#6495ed");
+			GraphOptions.Colour.WindRun = ini.GetValue("GraphColours", "WindRunColour", "#3dd457");
+			GraphOptions.Colour.WindBearing = ini.GetValue("GraphColours", "WindBearingColour", "#6495ed");
+			GraphOptions.Colour.WindBearingAvg = ini.GetValue("GraphColours", "WindBearingAvgColour", "#ff0000");
+			GraphOptions.Colour.Rainfall = ini.GetValue("GraphColours", "Rainfall", "#6495ed");
+			GraphOptions.Colour.RainRate = ini.GetValue("GraphColours", "RainRate", "#ff0000");
+			GraphOptions.Colour.UV = ini.GetValue("GraphColours", "UVColour", "#8a2be2");
+			GraphOptions.Colour.Solar = ini.GetValue("GraphColours", "SolarColour", "#ff8c00");
+			GraphOptions.Colour.SolarTheoretical = ini.GetValue("GraphColours", "SolarTheoreticalColour", "#6464ff");
+			GraphOptions.Colour.Sunshine = ini.GetValue("GraphColours", "SunshineColour", "#ff8c00");
+			GraphOptions.Colour.MaxTemp = ini.GetValue("GraphColours", "MaxTempColour", "#ff0000");
+			GraphOptions.Colour.AvgTemp = ini.GetValue("GraphColours", "AvgTempColour", "#008000");
+			GraphOptions.Colour.MinTemp = ini.GetValue("GraphColours", "MinTempColour", "#6495ed");
+			GraphOptions.Colour.MaxPress = ini.GetValue("GraphColours", "MaxPressColour", "#6495ed");
+			GraphOptions.Colour.MinPress = ini.GetValue("GraphColours", "MinPressColour", "#39ef74");
+			GraphOptions.Colour.MaxOutHum = ini.GetValue("GraphColours", "MaxHumColour", "#6495ed");
+			GraphOptions.Colour.MinOutHum = ini.GetValue("GraphColours", "MinHumColour", "#39ef74");
+			GraphOptions.Colour.MaxHeatIndex = ini.GetValue("GraphColours", "MaxHIColour", "#ffa500");
+			GraphOptions.Colour.MaxDew = ini.GetValue("GraphColours", "MaxDPColour", "#dada00");
+			GraphOptions.Colour.MinDew = ini.GetValue("GraphColours", "MinDPColour", "#ffc0cb");
+			GraphOptions.Colour.MaxFeels = ini.GetValue("GraphColours", "MaxFeelsLikeColour", "#00ffff");
+			GraphOptions.Colour.MinFeels = ini.GetValue("GraphColours", "MinFeelsLikeColour", "#800080");
+			GraphOptions.Colour.MaxApp = ini.GetValue("GraphColours", "MaxAppTempColour", "#808080");
+			GraphOptions.Colour.MinApp = ini.GetValue("GraphColours", "MinAppTempColour", "#a52a2a");
+			GraphOptions.Colour.MaxHumidex = ini.GetValue("GraphColours", "MaxHumidexColour", "#c7b72a");
+			GraphOptions.Colour.Pm2p5 = ini.GetValue("GraphColours", "Pm2p5Colour", "#6495ed");
+			GraphOptions.Colour.Pm10 = ini.GetValue("GraphColours", "Pm2p5Colour", "#008000");
+			var colours16 = new List<string>(16) { "#ff0000", "#008000", "#0000ff", "#ffa500", "#dada00", "#ffc0cb", "#00ffff", "#800080", "#808080", "#a52a2a", "#c7b72a", "#7fffd4", "#adff2f", "#ff7f50", "#ff00ff", "#00b2ff" };
+			var colours10 = colours16.Take(10).ToArray();
+			var colours8 = colours16.Take(8).ToArray();
+			var colours2 = colours16.Take(2).ToArray();
+			GraphOptions.Colour.ExtraTemp = ini.GetValue("GraphColours", "ExtraTempColour", colours10);
+			GraphOptions.Colour.ExtraHum = ini.GetValue("GraphColours", "ExtraHumColour", colours10);
+			GraphOptions.Colour.ExtraDewPoint = ini.GetValue("GraphColours", "ExtraDewPointColour", colours10);
+			GraphOptions.Colour.SoilTemp = ini.GetValue("GraphColours", "SoilTempColour", colours16.ToArray());
+			GraphOptions.Colour.SoilMoist = ini.GetValue("GraphColours", "SoilMoistColour", colours16.ToArray());
+			GraphOptions.Colour.LeafWetness = ini.GetValue("GraphColours", "LeafWetness", colours2);
+			GraphOptions.Colour.UserTemp = ini.GetValue("GraphColours", "UserTempColour", colours8);
+			GraphOptions.Colour.CO2Sensor.CO2 = ini.GetValue("GraphColours", "CO2-CO2Colour", "#dc143c");
+			GraphOptions.Colour.CO2Sensor.CO2Avg = ini.GetValue("GraphColours", "CO2-CO2AvgColour", "#8b0000");
+			GraphOptions.Colour.CO2Sensor.Pm25 = ini.GetValue("GraphColours", "CO2-Pm25Colour", "#00bfff");
+			GraphOptions.Colour.CO2Sensor.Pm25Avg = ini.GetValue("GraphColours", "CO2-Pm25AvgColour", "#1e90ff");
+			GraphOptions.Colour.CO2Sensor.Pm10 = ini.GetValue("GraphColours", "CO2-Pm10Colour", "#d2691e");
+			GraphOptions.Colour.CO2Sensor.Pm10Avg = ini.GetValue("GraphColours", "CO2-Pm10AvgColour", "#b8860b");
+			GraphOptions.Colour.CO2Sensor.Temp = ini.GetValue("GraphColours", "CO2-TempColour", "#ff0000");
+			GraphOptions.Colour.CO2Sensor.Hum = ini.GetValue("GraphColours", "CO2-HumColour", "#008000");
 
 
 			Wund.ID = ini.GetValue("Wunderground", "ID", "");
@@ -4361,16 +4592,16 @@ namespace CumulusMX
 			UpgradeAlarm.Action = ini.GetValue("Alarms", "UpgradeAlarmAction", "");
 			UpgradeAlarm.ActionParams = ini.GetValue("Alarms", "UpgradeAlarmActionParams", "");
 
-			HttpUploadAlarm.Enabled = ini.GetValue("Alarms", "HttpUploadAlarmSet", false);
-			HttpUploadAlarm.Sound = ini.GetValue("Alarms", "HttpUploadAlarmSound", false);
-			HttpUploadAlarm.SoundFile = ini.GetValue("Alarms", "HttpUploadAlarmSoundFile", DefaultSoundFile);
-			HttpUploadAlarm.Notify = ini.GetValue("Alarms", "HttpUploadAlarmNotify", false);
-			HttpUploadAlarm.Email = ini.GetValue("Alarms", "HttpUploadAlarmEmail", false);
-			HttpUploadAlarm.Latch = ini.GetValue("Alarms", "HttpUploadAlarmLatch", false);
-			HttpUploadAlarm.LatchHours = ini.GetValue("Alarms", "HttpUploadAlarmLatchHours", 24);
-			HttpUploadAlarm.TriggerThreshold = ini.GetValue("Alarms", "HttpUploadAlarmTriggerCount", 1);
-			HttpUploadAlarm.Action = ini.GetValue("Alarms", "HttpUploadAlarmAction", "");
-			HttpUploadAlarm.ActionParams = ini.GetValue("Alarms", "HttpUploadAlarmActionParams", "");
+			ThirdPartyUploadAlarm.Enabled = ini.GetValue("Alarms", "HttpUploadAlarmSet", false);
+			ThirdPartyUploadAlarm.Sound = ini.GetValue("Alarms", "HttpUploadAlarmSound", false);
+			ThirdPartyUploadAlarm.SoundFile = ini.GetValue("Alarms", "HttpUploadAlarmSoundFile", DefaultSoundFile);
+			ThirdPartyUploadAlarm.Notify = ini.GetValue("Alarms", "HttpUploadAlarmNotify", false);
+			ThirdPartyUploadAlarm.Email = ini.GetValue("Alarms", "HttpUploadAlarmEmail", false);
+			ThirdPartyUploadAlarm.Latch = ini.GetValue("Alarms", "HttpUploadAlarmLatch", false);
+			ThirdPartyUploadAlarm.LatchHours = ini.GetValue("Alarms", "HttpUploadAlarmLatchHours", 24);
+			ThirdPartyUploadAlarm.TriggerThreshold = ini.GetValue("Alarms", "HttpUploadAlarmTriggerCount", 1);
+			ThirdPartyUploadAlarm.Action = ini.GetValue("Alarms", "HttpUploadAlarmAction", "");
+			ThirdPartyUploadAlarm.ActionParams = ini.GetValue("Alarms", "HttpUploadAlarmActionParams", "");
 
 			MySqlUploadAlarm.Enabled = ini.GetValue("Alarms", "MySqlUploadAlarmSet", false);
 			MySqlUploadAlarm.Sound = ini.GetValue("Alarms", "MySqlUploadAlarmSound", false);
@@ -4401,15 +4632,23 @@ namespace CumulusMX
 			Calib.WindSpeed.Mult = ini.GetValue("Offsets", "WindSpeedMult", 1.0);
 			Calib.WindGust.Mult = ini.GetValue("Offsets", "WindGustMult", 1.0);
 			Calib.Temp.Mult = ini.GetValue("Offsets", "TempMult", 1.0);
-			Calib.Temp.Mult2 = ini.GetValue("Offsets", "TempMult2", 0.0);
 			Calib.Hum.Mult = ini.GetValue("Offsets", "HumMult", 1.0);
-			Calib.Hum.Mult2 = ini.GetValue("Offsets", "HumMult2", 0.0);
 			Calib.Rain.Mult = ini.GetValue("Offsets", "RainMult", 1.0);
 			Calib.Solar.Mult = ini.GetValue("Offsets", "SolarMult", 1.0);
 			Calib.UV.Mult = ini.GetValue("Offsets", "UVMult", 1.0);
 			Calib.WetBulb.Mult = ini.GetValue("Offsets", "WetBulbMult", 1.0);
 			Calib.InTemp.Mult = ini.GetValue("Offsets", "InTempMult", 1.0);
 			Calib.InHum.Mult = ini.GetValue("Offsets", "InHumMult", 1.0);
+
+			Calib.Press.Mult2 = ini.GetValue("Offsets", "PressMult2", 0.0);
+			Calib.WindSpeed.Mult2 = ini.GetValue("Offsets", "WindSpeedMult2", 0.0);
+			Calib.WindGust.Mult2 = ini.GetValue("Offsets", "WindGustMult2", 0.0);
+			Calib.Temp.Mult2 = ini.GetValue("Offsets", "TempMult2", 0.0);
+			Calib.Hum.Mult2 = ini.GetValue("Offsets", "HumMult2", 0.0);
+			Calib.InTemp.Mult2 = ini.GetValue("Offsets", "InTempMult2", 0.0);
+			Calib.InHum.Mult2 = ini.GetValue("Offsets", "InHumMult2", 0.0);
+			Calib.Solar.Mult2 = ini.GetValue("Offsets", "SolarMult2", 0.0);
+			Calib.UV.Mult2 = ini.GetValue("Offsets", "UVMult2", 0.0);
 
 			Limit.TempHigh = ini.GetValue("Limits", "TempHighC", 60.0);
 			Limit.TempLow = ini.GetValue("Limits", "TempLowC", -60.0);
@@ -4526,6 +4765,7 @@ namespace CumulusMX
 			NOAAconf.YearFile = ini.GetValue("NOAA", "YearFileFormat", "'NOAAYR'yyyy'.txt'");
 			NOAAconf.UseUtf8 = ini.GetValue("NOAA", "NOAAUseUTF8", true);
 			NOAAconf.UseDotDecimal = ini.GetValue("NOAA", "UseDotDecimal", false);
+			NOAAconf.UseNoaaHeatCoolDays = ini.GetValue("NOAA", "UseNoaaHeatCoolDays", false);
 			NOAAconf.UseMinMaxAvg = ini.GetValue("NOAA", "UseMinMaxAvg", false);
 
 			NOAAconf.TempNorms[1] = ini.GetValue("NOAA", "NOAATempNormJan", -1000.0);
@@ -4566,84 +4806,101 @@ namespace CumulusMX
 			DisplayOptions.ShowUV = ini.GetValue("Display", "DisplayUvData", false);
 
 			// MySQL - common
-			MySqlStuff.ConnSettings.Server = ini.GetValue("MySQL", "Host", "127.0.0.1");
-			MySqlStuff.ConnSettings.Port = (uint)ini.GetValue("MySQL", "Port", 3306);
-			MySqlStuff.ConnSettings.UserID = ini.GetValue("MySQL", "User", "");
-			MySqlStuff.ConnSettings.Password = ini.GetValue("MySQL", "Pass", "");
-			MySqlStuff.ConnSettings.Database = ini.GetValue("MySQL", "Database", "database");
-			MySqlStuff.Settings.UpdateOnEdit = ini.GetValue("MySQL", "UpdateOnEdit", true);
-			MySqlStuff.Settings.BufferOnfailure = ini.GetValue("MySQL", "BufferOnFailure", false);
+			MySqlSettings.ConnSettings.Server = ini.GetValue("MySQL", "Host", "127.0.0.1");
+			MySqlSettings.ConnSettings.Port = (uint)ini.GetValue("MySQL", "Port", 3306);
+			MySqlSettings.ConnSettings.UserID = ini.GetValue("MySQL", "User", "");
+			MySqlSettings.ConnSettings.Password = ini.GetValue("MySQL", "Pass", "");
+			MySqlSettings.ConnSettings.Database = ini.GetValue("MySQL", "Database", "database");
+			MySqlSettings.Settings.UpdateOnEdit = ini.GetValue("MySQL", "UpdateOnEdit", true);
+			MySqlSettings.Settings.BufferOnfailure = ini.GetValue("MySQL", "BufferOnFailure", false);
 
-			if (string.IsNullOrEmpty(MySqlStuff.ConnSettings.Server) || string.IsNullOrEmpty(MySqlStuff.ConnSettings.UserID) || string.IsNullOrEmpty(MySqlStuff.ConnSettings.Password))
-				MySqlStuff.Settings.UpdateOnEdit = false;
+			if (string.IsNullOrEmpty(MySqlSettings.ConnSettings.Server) || string.IsNullOrEmpty(MySqlSettings.ConnSettings.UserID) || string.IsNullOrEmpty(MySqlSettings.ConnSettings.Password))
+				MySqlSettings.Settings.UpdateOnEdit = false;
 
 			// MySQL - monthly log file
-			MySqlStuff.Settings.Monthly.Enabled = ini.GetValue("MySQL", "MonthlyMySqlEnabled", false);
-			MySqlStuff.Settings.Monthly.TableName = ini.GetValue("MySQL", "MonthlyTable", "Monthly");
+			MySqlSettings.Settings.Monthly.Enabled = ini.GetValue("MySQL", "MonthlyMySqlEnabled", false);
+			MySqlSettings.Settings.Monthly.TableName = ini.GetValue("MySQL", "MonthlyTable", "Monthly");
+
 			// MySQL - real-time
-			MySqlStuff.Settings.Realtime.Enabled = ini.GetValue("MySQL", "RealtimeMySqlEnabled", false);
-			MySqlStuff.Settings.Realtime.TableName = ini.GetValue("MySQL", "RealtimeTable", "Realtime");
-			MySqlStuff.Settings.RealtimeRetention = ini.GetValue("MySQL", "RealtimeRetention", "");
-			MySqlStuff.Settings.RealtimeLimit1Minute = ini.GetValue("MySQL", "RealtimeMySql1MinLimit", false) && RealtimeInterval < 60000; // do not enable if real time interval is greater than 1 minute
+			MySqlSettings.Settings.Realtime.Enabled = ini.GetValue("MySQL", "RealtimeMySqlEnabled", false);
+			MySqlSettings.Settings.Realtime.TableName = ini.GetValue("MySQL", "RealtimeTable", "Realtime");
+			MySqlSettings.Settings.RealtimeRetention = ini.GetValue("MySQL", "RealtimeRetention", "");
+			MySqlSettings.Settings.RealtimeLimit1Minute = ini.GetValue("MySQL", "RealtimeMySql1MinLimit", false) && RealtimeInterval < 60000; // do not enable if real time interval is greater than 1 minute
 																																				// MySQL - dayfile
-			MySqlStuff.Settings.Dayfile.Enabled = ini.GetValue("MySQL", "DayfileMySqlEnabled", false);
-			MySqlStuff.Settings.Dayfile.TableName = ini.GetValue("MySQL", "DayfileTable", "Dayfile");
+			MySqlSettings.Settings.Dayfile.Enabled = ini.GetValue("MySQL", "DayfileMySqlEnabled", false);
+			MySqlSettings.Settings.Dayfile.TableName = ini.GetValue("MySQL", "DayfileTable", "Dayfile");
+
 			// MySQL - custom seconds
-			MySqlStuff.Settings.CustomSecs.Commands[0] = ini.GetValue("MySQL", "CustomMySqlSecondsCommandString", "");
+			MySqlSettings.Settings.CustomSecs.Commands[0] = ini.GetValue("MySQL", "CustomMySqlSecondsCommandString", "");
 			for (var i = 1; i < 10; i++)
 			{
 				if (ini.ValueExists("MySQL", "CustomMySqlSecondsCommandString" + i))
-					MySqlStuff.Settings.CustomSecs.Commands[i] = ini.GetValue("MySQL", "CustomMySqlSecondsCommandString" + i, "");
+					MySqlSettings.Settings.CustomSecs.Commands[i] = ini.GetValue("MySQL", "CustomMySqlSecondsCommandString" + i, "");
 			}
-			MySqlStuff.Settings.CustomSecs.Enabled = ini.GetValue("MySQL", "CustomMySqlSecondsEnabled", false);
-			MySqlStuff.Settings.CustomSecs.Interval = ini.GetValue("MySQL", "CustomMySqlSecondsInterval", 10);
-			if (MySqlStuff.Settings.CustomSecs.Interval < 1) { MySqlStuff.Settings.CustomSecs.Interval = 1; }
+			MySqlSettings.Settings.CustomSecs.Enabled = ini.GetValue("MySQL", "CustomMySqlSecondsEnabled", false);
+			MySqlSettings.Settings.CustomSecs.Interval = ini.GetValue("MySQL", "CustomMySqlSecondsInterval", 10);
+			if (MySqlSettings.Settings.CustomSecs.Interval < 1) { MySqlSettings.Settings.CustomSecs.Interval = 1; }
+
 			// MySQL - custom minutes
-			MySqlStuff.Settings.CustomMins.Commands[0] = ini.GetValue("MySQL", "CustomMySqlMinutesCommandString", "");
+			MySqlSettings.Settings.CustomMins.Commands[0] = ini.GetValue("MySQL", "CustomMySqlMinutesCommandString", "");
 			for (var i = 1; i < 10; i++)
 			{
 				if (ini.ValueExists("MySQL", "CustomMySqlMinutesCommandString" + i))
-					MySqlStuff.Settings.CustomMins.Commands[i] = ini.GetValue("MySQL", "CustomMySqlMinutesCommandString" + i, "");
+					MySqlSettings.Settings.CustomMins.Commands[i] = ini.GetValue("MySQL", "CustomMySqlMinutesCommandString" + i, "");
 			}
-			MySqlStuff.Settings.CustomMins.Enabled = ini.GetValue("MySQL", "CustomMySqlMinutesEnabled", false);
-			MySqlStuff.CustomMinutesIntervalIndex = ini.GetValue("MySQL", "CustomMySqlMinutesIntervalIndex", -1);
-			if (MySqlStuff.CustomMinutesIntervalIndex >= 0 && MySqlStuff.CustomMinutesIntervalIndex < FactorsOf60.Length)
+			MySqlSettings.Settings.CustomMins.Enabled = ini.GetValue("MySQL", "CustomMySqlMinutesEnabled", false);
+			MySqlSettings.CustomMinutesIntervalIndex = ini.GetValue("MySQL", "CustomMySqlMinutesIntervalIndex", -1);
+			if (MySqlSettings.CustomMinutesIntervalIndex >= 0 && MySqlSettings.CustomMinutesIntervalIndex < FactorsOf60.Length)
 			{
-				MySqlStuff.Settings.CustomMins.Interval = FactorsOf60[MySqlStuff.CustomMinutesIntervalIndex];
+				MySqlSettings.Settings.CustomMins.Interval = FactorsOf60[MySqlSettings.CustomMinutesIntervalIndex];
 			}
 			else
 			{
-				MySqlStuff.Settings.CustomMins.Interval = 10;
-				MySqlStuff.CustomMinutesIntervalIndex = 6;
+				MySqlSettings.Settings.CustomMins.Interval = 10;
+				MySqlSettings.CustomMinutesIntervalIndex = 6;
 				rewriteRequired = true;
 			}
+
+			// MySql - Timed
+			MySqlSettings.Settings.CustomTimed.Enabled = ini.GetValue("MySQL", "CustomMySqlTimedEnabled", false);
+			for (var i = 0; i < 10; i++)
+			{
+				MySqlSettings.Settings.CustomTimed.Commands[i] = ini.GetValue("MySQL", "CustomMySqlTimedCommandString" + i, "");
+				MySqlSettings.Settings.CustomTimed.SetStartTime(i, ini.GetValue("MySQL", "CustomMySqlTimedStartTime" + i, "00:00"));
+				MySqlSettings.Settings.CustomTimed.Intervals[i] = ini.GetValue("MySQL", "CustomMySqlTimedInterval" + i, 1440);
+
+				if (!string.IsNullOrEmpty(MySqlSettings.Settings.CustomTimed.Commands[i]))
+					MySqlSettings.Settings.CustomTimed.SetInitialNextInterval(i, DateTime.Now);
+			}
+
 			// MySQL - custom roll-over
-			MySqlStuff.Settings.CustomRollover.Commands[0] = ini.GetValue("MySQL", "CustomMySqlRolloverCommandString", "");
+			MySqlSettings.Settings.CustomRollover.Enabled = ini.GetValue("MySQL", "CustomMySqlRolloverEnabled", false);
+			MySqlSettings.Settings.CustomRollover.Commands[0] = ini.GetValue("MySQL", "CustomMySqlRolloverCommandString", "");
 			for (var i = 1; i < 10; i++)
 			{
 				if (ini.ValueExists("MySQL", "CustomMySqlRolloverCommandString" + i))
-					MySqlStuff.Settings.CustomRollover.Commands[i] = ini.GetValue("MySQL", "CustomMySqlRolloverCommandString" + i, "");
+					MySqlSettings.Settings.CustomRollover.Commands[i] = ini.GetValue("MySQL", "CustomMySqlRolloverCommandString" + i, "");
 			}
-			MySqlStuff.Settings.CustomRollover.Enabled = ini.GetValue("MySQL", "CustomMySqlRolloverEnabled", false);
 
 			// Custom HTTP - seconds
+			CustomHttpSecondsEnabled = ini.GetValue("HTTP", "CustomHttpSecondsEnabled", false);
 			CustomHttpSecondsStrings[0] = ini.GetValue("HTTP", "CustomHttpSecondsString", "");
 			for (var i = 1; i < 10; i++)
 			{
 				if (ini.ValueExists("HTTP", "CustomHttpSecondsString" + i))
 					CustomHttpSecondsStrings[i] = ini.GetValue("HTTP", "CustomHttpSecondsString" + i, "");
 			}
-			CustomHttpSecondsEnabled = ini.GetValue("HTTP", "CustomHttpSecondsEnabled", false);
 			CustomHttpSecondsInterval = ini.GetValue("HTTP", "CustomHttpSecondsInterval", 10);
 			if (CustomHttpSecondsInterval < 1) { CustomHttpSecondsInterval = 1; }
+
 			// Custom HTTP - minutes
+			CustomHttpMinutesEnabled = ini.GetValue("HTTP", "CustomHttpMinutesEnabled", false);
 			CustomHttpMinutesStrings[0] = ini.GetValue("HTTP", "CustomHttpMinutesString", "");
 			for (var i = 1; i < 10; i++)
 			{
 				if (ini.ValueExists("HTTP", "CustomHttpMinutesString" + i))
 					CustomHttpMinutesStrings[i] = ini.GetValue("HTTP", "CustomHttpMinutesString" + i, "");
 			}
-			CustomHttpMinutesEnabled = ini.GetValue("HTTP", "CustomHttpMinutesEnabled", false);
 			CustomHttpMinutesIntervalIndex = ini.GetValue("HTTP", "CustomHttpMinutesIntervalIndex", -1);
 			if (CustomHttpMinutesIntervalIndex >= 0 && CustomHttpMinutesIntervalIndex < FactorsOf60.Length)
 			{
@@ -4655,14 +4912,34 @@ namespace CumulusMX
 				CustomHttpMinutesIntervalIndex = 6;
 				rewriteRequired = true;
 			}
+
 			// Http - custom roll-over
+			CustomHttpRolloverEnabled = ini.GetValue("HTTP", "CustomHttpRolloverEnabled", false);
 			CustomHttpRolloverStrings[0] = ini.GetValue("HTTP", "CustomHttpRolloverString", "");
 			for (var i = 1; i < 10; i++)
 			{
 				if (ini.ValueExists("HTTP", "CustomHttpRolloverString" + i))
 					CustomHttpRolloverStrings[i] = ini.GetValue("HTTP", "CustomHttpRolloverString" + i, "");
 			}
-			CustomHttpRolloverEnabled = ini.GetValue("HTTP", "CustomHttpRolloverEnabled", false);
+
+			// Http files
+			for (var i = 0; i < 10; i++)
+			{
+				if (ini.ValueExists("HTTP", "HttpFileUrl" + i))
+				{
+					HttpFilesConfig[i].Enabled = ini.GetValue("HTTP", "HttpFileEnabled" + i, false);
+					HttpFilesConfig[i].Url = ini.GetValue("HTTP", "HttpFileUrl" + i, "");
+					HttpFilesConfig[i].Remote = ini.GetValue("HTTP", "HttpFileRemote" + i, "");
+					HttpFilesConfig[i].Interval = ini.GetValue("HTTP", "HttpFileInterval" + i, 0);
+					HttpFilesConfig[i].Upload = ini.GetValue("HTTP", "HttpFileUpload" + i, false);
+					HttpFilesConfig[i].Timed = ini.GetValue("HTTP", "HttpFileTimed" + i, false);
+					HttpFilesConfig[i].StartTimeString = ini.GetValue("HTTP", "HttpFileStartTime" + i, "00:00");
+					if (HttpFilesConfig[i].Timed)
+					{
+						HttpFilesConfig[i].SetInitialNextInterval(DateTime.Now);
+					}
+				}
+			}
 
 			// Select-a-Chart settings
 			for (int i = 0; i < SelectaChartOptions.series.Length; i++)
@@ -4778,8 +5055,8 @@ namespace CumulusMX
 				OpenWeatherMap.PW = Crypto.DecryptString(OpenWeatherMap.PW, Program.InstanceId, "OpenWeatherMap.PW");
 				MQTT.Username = Crypto.DecryptString(MQTT.Username, Program.InstanceId, "MQTT.Username");
 				MQTT.Password = Crypto.DecryptString(MQTT.Password, Program.InstanceId, "MQTT.Password");
-				MySqlStuff.ConnSettings.UserID = Crypto.DecryptString(MySqlStuff.ConnSettings.UserID, Program.InstanceId, "MySql UserID");
-				MySqlStuff.ConnSettings.Password = Crypto.DecryptString(MySqlStuff.ConnSettings.Password, Program.InstanceId, "MySql Password");
+				MySqlSettings.ConnSettings.UserID = Crypto.DecryptString(MySqlSettings.ConnSettings.UserID, Program.InstanceId, "MySql UserID");
+				MySqlSettings.ConnSettings.Password = Crypto.DecryptString(MySqlSettings.ConnSettings.Password, Program.InstanceId, "MySql Password");
 				SmtpOptions.User = Crypto.DecryptString(SmtpOptions.User, Program.InstanceId, "SmtpOptions.User");
 				SmtpOptions.Password = Crypto.DecryptString(SmtpOptions.Password, Program.InstanceId, "SmtpOptions.Password");
 				HTTPProxyUser = Crypto.DecryptString(HTTPProxyUser, Program.InstanceId, "HTTPProxyUser");
@@ -4828,6 +5105,7 @@ namespace CumulusMX
 
 			ini.SetValue("Program", "DataStoppedExit", ProgramOptions.DataStoppedExit);
 			ini.SetValue("Program", "DataStoppedMins", ProgramOptions.DataStoppedMins);
+			ini.SetValue("Program", "TimeFormat", ProgramOptions.TimeFormat);
 
 			ini.SetValue("Program", "UpdateDayfile", ProgramOptions.UpdateDayfile);
 			ini.SetValue("Program", "UpdateLogfile", ProgramOptions.UpdateLogfile);
@@ -4926,7 +5204,7 @@ namespace CumulusMX
 
 			ini.SetValue("Station", "LocName", LocationName);
 			ini.SetValue("Station", "LocDesc", LocationDesc);
-			ini.SetValue("Station", "StartDate", RecordsBeganStr);
+			ini.SetValue("Station", "StartDateIso", RecordsBeganDateTime.ToString("yyyy-MM-dd"));
 			ini.SetValue("Station", "YTDrain", YTDrain);
 			ini.SetValue("Station", "YTDrainyear", YTDrainyear);
 			ini.SetValue("Station", "UseDataLogger", UseDataLogger);
@@ -5063,6 +5341,14 @@ namespace CumulusMX
 			for (int i = 1; i <= 8; i++)
 			{
 				ini.SetValue("GW1000", "WN34MapChan" + i, EcowittSettings.MapWN34[i]);
+			}
+			// forwarders
+			for (int i = 0; i < EcowittSettings.EcowittForwarders.Length; i++)
+			{
+				if (string.IsNullOrEmpty(EcowittSettings.EcowittForwarders[i]))
+					ini.DeleteValue("GW1000", "Forwarder" + i);
+				else
+					ini.SetValue("GW1000", "Forwarder" + i, EcowittSettings.EcowittForwarders[i].ToString());
 			}
 
 			// Ambient settings
@@ -5208,6 +5494,11 @@ namespace CumulusMX
 			ini.SetValue("FTP site", "EnableLocalCopy", FtpOptions.LocalCopyEnabled);
 			ini.SetValue("FTP site", "LocalCopyFolder", FtpOptions.LocalCopyFolder);
 
+			// PHP upload options
+			ini.SetValue("FTP site", "PHP-URL", FtpOptions.PhpUrl);
+			ini.SetValue("FTP site", "PHP-Secret", FtpOptions.PhpSecret);
+			ini.SetValue("FTP site", "PHP-IgnoreCertErrors", FtpOptions.PhpIgnoreCertErrors);
+			ini.SetValue("FTP site", "MaxConcurrentUploads", FtpOptions.MaxConcurrentUploads);
 
 			ini.SetValue("Station", "CloudBaseInFeet", CloudBaseInFeet);
 
@@ -5232,6 +5523,11 @@ namespace CumulusMX
 			ini.SetValue("Wunderground", "SendLeafWetness1", Wund.SendLeafWetness1);
 			ini.SetValue("Wunderground", "SendLeafWetness2", Wund.SendLeafWetness2);
 			ini.SetValue("Wunderground", "SendAirQuality", Wund.SendAirQuality);
+			ini.SetValue("Wunderground", "SendExtraTemp1", Wund.SendExtraTemp1);
+			ini.SetValue("Wunderground", "SendExtraTemp2", Wund.SendExtraTemp2);
+			ini.SetValue("Wunderground", "SendExtraTemp3", Wund.SendExtraTemp3);
+			ini.SetValue("Wunderground", "SendExtraTemp4", Wund.SendExtraTemp4);
+
 
 			ini.SetValue("Windy", "APIkey", Crypto.EncryptString(Windy.ApiKey, Program.InstanceId, "Windy.ApiKey"));
 			ini.SetValue("Windy", "StationIdx", Windy.StationIdx);
@@ -5498,16 +5794,16 @@ namespace CumulusMX
 			ini.SetValue("Alarms", "UpgradeAlarmAction", UpgradeAlarm.Action);
 			ini.SetValue("Alarms", "UpgradeAlarmActionParams", UpgradeAlarm.ActionParams);
 
-			ini.SetValue("Alarms", "HttpUploadAlarmSet", HttpUploadAlarm.Enabled);
-			ini.SetValue("Alarms", "HttpUploadAlarmSound", HttpUploadAlarm.Sound);
-			ini.SetValue("Alarms", "HttpUploadAlarmSoundFile", HttpUploadAlarm.SoundFile);
-			ini.SetValue("Alarms", "HttpUploadAlarmNotify", HttpUploadAlarm.Notify);
-			ini.SetValue("Alarms", "HttpUploadAlarmEmail", HttpUploadAlarm.Email);
-			ini.SetValue("Alarms", "HttpUploadAlarmLatch", HttpUploadAlarm.Latch);
-			ini.SetValue("Alarms", "HttpUploadAlarmLatchHours", HttpUploadAlarm.LatchHours);
-			ini.SetValue("Alarms", "HttpUploadAlarmTriggerCount", HttpUploadAlarm.TriggerThreshold);
-			ini.SetValue("Alarms", "HttpUploadAlarmAction", HttpUploadAlarm.Action);
-			ini.SetValue("Alarms", "HttpUploadAlarmActionParams", HttpUploadAlarm.ActionParams);
+			ini.SetValue("Alarms", "HttpUploadAlarmSet", ThirdPartyUploadAlarm.Enabled);
+			ini.SetValue("Alarms", "HttpUploadAlarmSound", ThirdPartyUploadAlarm.Sound);
+			ini.SetValue("Alarms", "HttpUploadAlarmSoundFile", ThirdPartyUploadAlarm.SoundFile);
+			ini.SetValue("Alarms", "HttpUploadAlarmNotify", ThirdPartyUploadAlarm.Notify);
+			ini.SetValue("Alarms", "HttpUploadAlarmEmail", ThirdPartyUploadAlarm.Email);
+			ini.SetValue("Alarms", "HttpUploadAlarmLatch", ThirdPartyUploadAlarm.Latch);
+			ini.SetValue("Alarms", "HttpUploadAlarmLatchHours", ThirdPartyUploadAlarm.LatchHours);
+			ini.SetValue("Alarms", "HttpUploadAlarmTriggerCount", ThirdPartyUploadAlarm.TriggerThreshold);
+			ini.SetValue("Alarms", "HttpUploadAlarmAction", ThirdPartyUploadAlarm.Action);
+			ini.SetValue("Alarms", "HttpUploadAlarmActionParams", ThirdPartyUploadAlarm.ActionParams);
 
 			ini.SetValue("Alarms", "MySqlUploadAlarmSet", MySqlUploadAlarm.Enabled);
 			ini.SetValue("Alarms", "MySqlUploadAlarmSound", MySqlUploadAlarm.Sound);
@@ -5540,15 +5836,23 @@ namespace CumulusMX
 			ini.SetValue("Offsets", "WindSpeedMult", Calib.WindSpeed.Mult);
 			ini.SetValue("Offsets", "WindGustMult", Calib.WindGust.Mult);
 			ini.SetValue("Offsets", "TempMult", Calib.Temp.Mult);
-			ini.SetValue("Offsets", "TempMult2", Calib.Temp.Mult2);
 			ini.SetValue("Offsets", "HumMult", Calib.Hum.Mult);
-			ini.SetValue("Offsets", "HumMult2", Calib.Hum.Mult2);
 			ini.SetValue("Offsets", "RainMult", Calib.Rain.Mult);
 			ini.SetValue("Offsets", "SolarMult", Calib.Solar.Mult);
 			ini.SetValue("Offsets", "UVMult", Calib.UV.Mult);
 			ini.SetValue("Offsets", "WetBulbMult", Calib.WetBulb.Mult);
 			ini.SetValue("Offsets", "InTempMult", Calib.InTemp.Mult);
 			ini.SetValue("Offsets", "InHumMult", Calib.InHum.Mult);
+
+			ini.SetValue("Offsets", "PressMult2", Calib.Press.Mult2);
+			ini.SetValue("Offsets", "WindSpeedMult2", Calib.WindSpeed.Mult2);
+			ini.SetValue("Offsets", "WindGustMult2", Calib.WindGust.Mult2);
+			ini.SetValue("Offsets", "TempMult2", Calib.Temp.Mult2);
+			ini.SetValue("Offsets", "HumMult2", Calib.Hum.Mult2);
+			ini.SetValue("Offsets", "InTempMult2", Calib.InTemp.Mult2);
+			ini.SetValue("Offsets", "InHumMult2", Calib.InHum.Mult2);
+			ini.SetValue("Offsets", "SolarMult2", Calib.Solar.Mult2);
+			ini.SetValue("Offsets", "UVMult2", Calib.UV.Mult2);
 
 			ini.SetValue("Limits", "TempHighC", Limit.TempHigh);
 			ini.SetValue("Limits", "TempLowC", Limit.TempLow);
@@ -5593,6 +5897,7 @@ namespace CumulusMX
 			ini.SetValue("NOAA", "YearFileFormat", NOAAconf.YearFile);
 			ini.SetValue("NOAA", "NOAAUseUTF8", NOAAconf.UseUtf8);
 			ini.SetValue("NOAA", "UseDotDecimal", NOAAconf.UseDotDecimal);
+			ini.SetValue("NOAA", "UseNoaaHeatCoolDays", NOAAconf.UseNoaaHeatCoolDays);
 			ini.SetValue("NOAA", "UseMinMaxAvg", NOAAconf.UseMinMaxAvg);
 
 			ini.SetValue("NOAA", "NOAATempNormJan", NOAAconf.TempNorms[1]);
@@ -5639,90 +5944,149 @@ namespace CumulusMX
 			ini.SetValue("Graphs", "MoonImageShadeTransparent", MoonImage.Transparent);
 			ini.SetValue("Graphs", "MoonImageFtpDest", MoonImage.FtpDest);
 			ini.SetValue("Graphs", "MoonImageCopyDest", MoonImage.CopyDest);
-			ini.SetValue("Graphs", "TempVisible", GraphOptions.TempVisible);
-			ini.SetValue("Graphs", "InTempVisible", GraphOptions.InTempVisible);
-			ini.SetValue("Graphs", "HIVisible", GraphOptions.HIVisible);
-			ini.SetValue("Graphs", "DPVisible", GraphOptions.DPVisible);
-			ini.SetValue("Graphs", "WCVisible", GraphOptions.WCVisible);
-			ini.SetValue("Graphs", "AppTempVisible", GraphOptions.AppTempVisible);
-			ini.SetValue("Graphs", "FeelsLikeVisible", GraphOptions.FeelsLikeVisible);
-			ini.SetValue("Graphs", "HumidexVisible", GraphOptions.HumidexVisible);
-			ini.SetValue("Graphs", "InHumVisible", GraphOptions.InHumVisible);
-			ini.SetValue("Graphs", "OutHumVisible", GraphOptions.OutHumVisible);
-			ini.SetValue("Graphs", "UVVisible", GraphOptions.UVVisible);
-			ini.SetValue("Graphs", "SolarVisible", GraphOptions.SolarVisible);
-			ini.SetValue("Graphs", "SunshineVisible", GraphOptions.SunshineVisible);
-			ini.SetValue("Graphs", "DailyAvgTempVisible", GraphOptions.DailyAvgTempVisible);
-			ini.SetValue("Graphs", "DailyMaxTempVisible", GraphOptions.DailyMaxTempVisible);
-			ini.SetValue("Graphs", "DailyMinTempVisible", GraphOptions.DailyMinTempVisible);
-			ini.SetValue("Graphs", "GrowingDegreeDaysVisible1", GraphOptions.GrowingDegreeDaysVisible1);
-			ini.SetValue("Graphs", "GrowingDegreeDaysVisible2", GraphOptions.GrowingDegreeDaysVisible2);
-			ini.SetValue("Graphs", "TempSumVisible0", GraphOptions.TempSumVisible0);
-			ini.SetValue("Graphs", "TempSumVisible1", GraphOptions.TempSumVisible1);
-			ini.SetValue("Graphs", "TempSumVisible2", GraphOptions.TempSumVisible2);
-			ini.SetValue("Graphs", "ExtraTempVisible", GraphOptions.ExtraTempVisible);
-			ini.SetValue("Graphs", "ExtraHumVisible", GraphOptions.ExtraHumVisible);
-			ini.SetValue("Graphs", "ExtraDewPointVisible", GraphOptions.ExtraDewPointVisible);
-			ini.SetValue("Graphs", "SoilTempVisible", GraphOptions.SoilTempVisible);
-			ini.SetValue("Graphs", "SoilMoistVisible", GraphOptions.SoilMoistVisible);
-			ini.SetValue("Graphs", "UserTempVisible", GraphOptions.UserTempVisible);
-			ini.SetValue("Graphs", "CO2-CO2", GraphOptions.CO2Sensor.CO2);
-			ini.SetValue("Graphs", "CO2-CO2Avg", GraphOptions.CO2Sensor.CO2Avg);
-			ini.SetValue("Graphs", "CO2-Pm25", GraphOptions.CO2Sensor.Pm25);
-			ini.SetValue("Graphs", "CO2-Pm25Avg", GraphOptions.CO2Sensor.Pm25Avg);
-			ini.SetValue("Graphs", "CO2-Pm10", GraphOptions.CO2Sensor.Pm10);
-			ini.SetValue("Graphs", "CO2-Pm10Avg", GraphOptions.CO2Sensor.Pm10Avg);
-			ini.SetValue("Graphs", "CO2-Temp", GraphOptions.CO2Sensor.Temp);
-			ini.SetValue("Graphs", "CO2-Hum", GraphOptions.CO2Sensor.Hum);
+
+			ini.SetValue("Graphs", "TempVisible", GraphOptions.Visible.Temp.Val);
+			ini.SetValue("Graphs", "InTempVisible", GraphOptions.Visible.InTemp.Val);
+			ini.SetValue("Graphs", "HIVisible", GraphOptions.Visible.HeatIndex.Val);
+			ini.SetValue("Graphs", "DPVisible", GraphOptions.Visible.DewPoint.Val);
+			ini.SetValue("Graphs", "WCVisible", GraphOptions.Visible.WindChill.Val);
+			ini.SetValue("Graphs", "AppTempVisible", GraphOptions.Visible.AppTemp.Val);
+			ini.SetValue("Graphs", "FeelsLikeVisible", GraphOptions.Visible.FeelsLike.Val);
+			ini.SetValue("Graphs", "HumidexVisible", GraphOptions.Visible.Humidex.Val);
+			ini.SetValue("Graphs", "InHumVisible", GraphOptions.Visible.InHum.Val);
+			ini.SetValue("Graphs", "OutHumVisible", GraphOptions.Visible.OutHum.Val);
+			ini.SetValue("Graphs", "UVVisible", GraphOptions.Visible.UV.Val);
+			ini.SetValue("Graphs", "SolarVisible", GraphOptions.Visible.Solar.Val);
+			ini.SetValue("Graphs", "SunshineVisible", GraphOptions.Visible.Sunshine.Val);
+			ini.SetValue("Graphs", "DailyAvgTempVisible", GraphOptions.Visible.AvgTemp.Val);
+			ini.SetValue("Graphs", "DailyMaxTempVisible", GraphOptions.Visible.MaxTemp.Val);
+			ini.SetValue("Graphs", "DailyMinTempVisible", GraphOptions.Visible.MinTemp.Val);
+			ini.SetValue("Graphs", "GrowingDegreeDaysVisible1", GraphOptions.Visible.GrowingDegreeDays1.Val);
+			ini.SetValue("Graphs", "GrowingDegreeDaysVisible2", GraphOptions.Visible.GrowingDegreeDays2.Val);
+			ini.SetValue("Graphs", "TempSumVisible0", GraphOptions.Visible.TempSum0.Val);
+			ini.SetValue("Graphs", "TempSumVisible1", GraphOptions.Visible.TempSum1.Val);
+			ini.SetValue("Graphs", "TempSumVisible2", GraphOptions.Visible.TempSum2.Val);
+			ini.SetValue("Graphs", "ExtraTempVisible", GraphOptions.Visible.ExtraTemp.Vals);
+			ini.SetValue("Graphs", "ExtraHumVisible", GraphOptions.Visible.ExtraHum.Vals);
+			ini.SetValue("Graphs", "ExtraDewPointVisible", GraphOptions.Visible.ExtraDewPoint.Vals);
+			ini.SetValue("Graphs", "SoilTempVisible", GraphOptions.Visible.SoilTemp.Vals);
+			ini.SetValue("Graphs", "SoilMoistVisible", GraphOptions.Visible.SoilMoist.Vals);
+			ini.SetValue("Graphs", "UserTempVisible", GraphOptions.Visible.UserTemp.Vals);
+			ini.SetValue("Graphs", "LeafWetnessVisible", GraphOptions.Visible.LeafWetness.Vals);
+			ini.SetValue("Graphs", "Aq-PmVisible", GraphOptions.Visible.AqSensor.Pm.Vals);
+			ini.SetValue("Graphs", "Aq-PmAvgVisible", GraphOptions.Visible.AqSensor.PmAvg.Vals);
+			ini.SetValue("Graphs", "Aq-TempVisible", GraphOptions.Visible.AqSensor.Temp.Vals);
+			ini.SetValue("Graphs", "Aq-HumVisible", GraphOptions.Visible.AqSensor.Hum.Vals);
+			ini.SetValue("Graphs", "CO2-CO2", GraphOptions.Visible.CO2Sensor.CO2.Val);
+			ini.SetValue("Graphs", "CO2-CO2Avg", GraphOptions.Visible.CO2Sensor.CO2Avg.Val);
+			ini.SetValue("Graphs", "CO2-Pm25", GraphOptions.Visible.CO2Sensor.Pm25.Val);
+			ini.SetValue("Graphs", "CO2-Pm25Avg", GraphOptions.Visible.CO2Sensor.Pm25Avg.Val);
+			ini.SetValue("Graphs", "CO2-Pm10", GraphOptions.Visible.CO2Sensor.Pm10.Val);
+			ini.SetValue("Graphs", "CO2-Pm10Avg", GraphOptions.Visible.CO2Sensor.Pm10Avg.Val);
+			ini.SetValue("Graphs", "CO2-Temp", GraphOptions.Visible.CO2Sensor.Temp.Val);
+			ini.SetValue("Graphs", "CO2-Hum", GraphOptions.Visible.CO2Sensor.Hum.Val);
+
+			ini.SetValue("GraphColours", "TempColour", GraphOptions.Colour.Temp);
+			ini.SetValue("GraphColours", "InTempColour", GraphOptions.Colour.InTemp);
+			ini.SetValue("GraphColours", "HIColour", GraphOptions.Colour.HeatIndex);
+			ini.SetValue("GraphColours", "DPColour", GraphOptions.Colour.DewPoint);
+			ini.SetValue("GraphColours", "WCColour", GraphOptions.Colour.WindChill);
+			ini.SetValue("GraphColours", "AppTempColour", GraphOptions.Colour.AppTemp);
+			ini.SetValue("GraphColours", "FeelsLikeColour", GraphOptions.Colour.FeelsLike);
+			ini.SetValue("GraphColours", "HumidexColour", GraphOptions.Colour.Humidex);
+			ini.SetValue("GraphColours", "InHumColour", GraphOptions.Colour.InHum);
+			ini.SetValue("GraphColours", "OutHumColour", GraphOptions.Colour.OutHum);
+			ini.SetValue("GraphColours", "PressureColour", GraphOptions.Colour.Press);
+			ini.SetValue("GraphColours", "WindGustColour", GraphOptions.Colour.WindGust);
+			ini.SetValue("GraphColours", "WindAvgColour", GraphOptions.Colour.WindAvg);
+			ini.SetValue("GraphColours", "WindRunColour", GraphOptions.Colour.WindRun);
+			ini.SetValue("GraphColours", "Rainfall", GraphOptions.Colour.Rainfall);
+			ini.SetValue("GraphColours", "RainRate", GraphOptions.Colour.RainRate);
+			ini.SetValue("GraphColours", "UVColour", GraphOptions.Colour.UV);
+			ini.SetValue("GraphColours", "SolarColour", GraphOptions.Colour.Solar);
+			ini.SetValue("GraphColours", "SolarTheoreticalColour", GraphOptions.Colour.SolarTheoretical);
+			ini.SetValue("GraphColours", "SunshineColour", GraphOptions.Colour.Sunshine);
+			ini.SetValue("GraphColours", "MaxTempColour", GraphOptions.Colour.MaxTemp);
+			ini.SetValue("GraphColours", "AvgTempColour", GraphOptions.Colour.AvgTemp);
+			ini.SetValue("GraphColours", "MinTempColour", GraphOptions.Colour.MinTemp);
+			ini.SetValue("GraphColours", "MaxPressColour", GraphOptions.Colour.MaxPress);
+			ini.SetValue("GraphColours", "MinPressColour", GraphOptions.Colour.MinPress);
+			ini.SetValue("GraphColours", "MaxHumColour", GraphOptions.Colour.MaxOutHum);
+			ini.SetValue("GraphColours", "MinHumColour", GraphOptions.Colour.MinOutHum);
+			ini.SetValue("GraphColours", "MaxHIColour", GraphOptions.Colour.MaxHeatIndex);
+			ini.SetValue("GraphColours", "MaxDPColour", GraphOptions.Colour.MaxDew);
+			ini.SetValue("GraphColours", "MinDPColour", GraphOptions.Colour.MinDew);
+			ini.SetValue("GraphColours", "MaxFeelsLikeColour", GraphOptions.Colour.MaxFeels);
+			ini.SetValue("GraphColours", "MinFeelsLikeColour", GraphOptions.Colour.MinFeels);
+			ini.SetValue("GraphColours", "MaxAppTempColour", GraphOptions.Colour.MaxApp);
+			ini.SetValue("GraphColours", "MinAppTempColour", GraphOptions.Colour.MinApp);
+			ini.SetValue("GraphColours", "MaxHumidexColour", GraphOptions.Colour.MaxHumidex);
+			ini.SetValue("GraphColours", "Pm2p5Colour", GraphOptions.Colour.Pm2p5);
+			ini.SetValue("GraphColours", "Pm2p5Colour", GraphOptions.Colour.Pm10);
+			ini.SetValue("GraphColours", "ExtraTempColour", GraphOptions.Colour.ExtraTemp);
+			ini.SetValue("GraphColours", "ExtraHumColour", GraphOptions.Colour.ExtraHum);
+			ini.SetValue("GraphColours", "ExtraDewPointColour", GraphOptions.Colour.ExtraDewPoint);
+			ini.SetValue("GraphColours", "SoilTempColour", GraphOptions.Colour.SoilTemp);
+			ini.SetValue("GraphColours", "SoilMoistColour", GraphOptions.Colour.SoilMoist);
+			ini.SetValue("GraphColours", "LeafWetness", GraphOptions.Colour.LeafWetness);
+
+			ini.SetValue("GraphColours", "UserTempColour", GraphOptions.Colour.UserTemp);
+			ini.SetValue("GraphColours", "CO2-CO2Colour", GraphOptions.Colour.CO2Sensor.CO2);
+			ini.SetValue("GraphColours", "CO2-CO2AvgColour", GraphOptions.Colour.CO2Sensor.CO2Avg);
+			ini.SetValue("GraphColours", "CO2-Pm25Colour", GraphOptions.Colour.CO2Sensor.Pm25);
+			ini.SetValue("GraphColours", "CO2-Pm25AvgColour", GraphOptions.Colour.CO2Sensor.Pm25Avg);
+			ini.SetValue("GraphColours", "CO2-Pm10Colour", GraphOptions.Colour.CO2Sensor.Pm10);
+			ini.SetValue("GraphColours", "CO2-Pm10AvgColour", GraphOptions.Colour.CO2Sensor.Pm10Avg);
+			ini.SetValue("GraphColours", "CO2-TempColour", GraphOptions.Colour.CO2Sensor.Temp);
+			ini.SetValue("GraphColours", "CO2-HumColour", GraphOptions.Colour.CO2Sensor.Hum);
+
+			ini.SetValue("MySQL", "Host", MySqlSettings.ConnSettings.Server);
+			ini.SetValue("MySQL", "Port", (int) MySqlSettings.ConnSettings.Port);
+			ini.SetValue("MySQL", "User", Crypto.EncryptString(MySqlSettings.ConnSettings.UserID, Program.InstanceId, "MySql UserID"));
+			ini.SetValue("MySQL", "Pass", Crypto.EncryptString(MySqlSettings.ConnSettings.Password, Program.InstanceId, "MySql Password"));
+			ini.SetValue("MySQL", "Database", MySqlSettings.ConnSettings.Database);
+			ini.SetValue("MySQL", "MonthlyMySqlEnabled", MySqlSettings.Settings.Monthly.Enabled);
+			ini.SetValue("MySQL", "RealtimeMySqlEnabled", MySqlSettings.Settings.Realtime.Enabled);
+			ini.SetValue("MySQL", "RealtimeMySql1MinLimit", MySqlSettings.Settings.RealtimeLimit1Minute);
+			ini.SetValue("MySQL", "DayfileMySqlEnabled", MySqlSettings.Settings.Dayfile.Enabled);
+			ini.SetValue("MySQL", "UpdateOnEdit", MySqlSettings.Settings.UpdateOnEdit);
+			ini.SetValue("MySQL", "BufferOnFailure", MySqlSettings.Settings.BufferOnfailure);
 
 
-			ini.SetValue("MySQL", "Host", MySqlStuff.ConnSettings.Server);
-			ini.SetValue("MySQL", "Port", (int) MySqlStuff.ConnSettings.Port);
-			ini.SetValue("MySQL", "User", Crypto.EncryptString(MySqlStuff.ConnSettings.UserID, Program.InstanceId, "MySql UserID"));
-			ini.SetValue("MySQL", "Pass", Crypto.EncryptString(MySqlStuff.ConnSettings.Password, Program.InstanceId, "MySql Password"));
-			ini.SetValue("MySQL", "Database", MySqlStuff.ConnSettings.Database);
-			ini.SetValue("MySQL", "MonthlyMySqlEnabled", MySqlStuff.Settings.Monthly.Enabled);
-			ini.SetValue("MySQL", "RealtimeMySqlEnabled", MySqlStuff.Settings.Realtime.Enabled);
-			ini.SetValue("MySQL", "RealtimeMySql1MinLimit", MySqlStuff.Settings.RealtimeLimit1Minute);
-			ini.SetValue("MySQL", "DayfileMySqlEnabled", MySqlStuff.Settings.Dayfile.Enabled);
-			ini.SetValue("MySQL", "UpdateOnEdit", MySqlStuff.Settings.UpdateOnEdit);
-			ini.SetValue("MySQL", "BufferOnFailure", MySqlStuff.Settings.BufferOnfailure);
+			ini.SetValue("MySQL", "MonthlyTable", MySqlSettings.Settings.Monthly.TableName);
+			ini.SetValue("MySQL", "DayfileTable", MySqlSettings.Settings.Dayfile.TableName);
+			ini.SetValue("MySQL", "RealtimeTable", MySqlSettings.Settings.Realtime.TableName);
+			ini.SetValue("MySQL", "RealtimeRetention", MySqlSettings.Settings.RealtimeRetention);
 
+			ini.SetValue("MySQL", "CustomMySqlSecondsEnabled", MySqlSettings.Settings.CustomSecs.Enabled);
+			ini.SetValue("MySQL", "CustomMySqlMinutesEnabled", MySqlSettings.Settings.CustomMins.Enabled);
+			ini.SetValue("MySQL", "CustomMySqlRolloverEnabled", MySqlSettings.Settings.CustomRollover.Enabled);
 
-			ini.SetValue("MySQL", "MonthlyTable", MySqlStuff.Settings.Monthly.TableName);
-			ini.SetValue("MySQL", "DayfileTable", MySqlStuff.Settings.Dayfile.TableName);
-			ini.SetValue("MySQL", "RealtimeTable", MySqlStuff.Settings.Realtime.TableName);
-			ini.SetValue("MySQL", "RealtimeRetention", MySqlStuff.Settings.RealtimeRetention);
+			ini.SetValue("MySQL", "CustomMySqlSecondsInterval", MySqlSettings.Settings.CustomSecs.Interval);
+			ini.SetValue("MySQL", "CustomMySqlMinutesIntervalIndex", MySqlSettings.CustomMinutesIntervalIndex);
 
-			ini.SetValue("MySQL", "CustomMySqlSecondsEnabled", MySqlStuff.Settings.CustomSecs.Enabled);
-			ini.SetValue("MySQL", "CustomMySqlMinutesEnabled", MySqlStuff.Settings.CustomMins.Enabled);
-			ini.SetValue("MySQL", "CustomMySqlRolloverEnabled", MySqlStuff.Settings.CustomRollover.Enabled);
+			// MySql - Timed
+			ini.SetValue("MySQL", "CustomMySqlTimedEnabled", MySqlSettings.Settings.CustomTimed.Enabled);
 
-			ini.SetValue("MySQL", "CustomMySqlSecondsInterval", MySqlStuff.Settings.CustomSecs.Interval);
-			ini.SetValue("MySQL", "CustomMySqlMinutesIntervalIndex", MySqlStuff.CustomMinutesIntervalIndex);
-
-			ini.SetValue("MySQL", "CustomMySqlSecondsCommandString", MySqlStuff.Settings.CustomSecs.Commands[0]);
-			ini.SetValue("MySQL", "CustomMySqlMinutesCommandString", MySqlStuff.Settings.CustomMins.Commands[0]);
-			ini.SetValue("MySQL", "CustomMySqlRolloverCommandString", MySqlStuff.Settings.CustomRollover.Commands[0]);
-
-
-			for (var i = 1; i < 10; i++)
+			for (var i = 0; i < 10; i++)
 			{
-				if (string.IsNullOrEmpty(MySqlStuff.Settings.CustomSecs.Commands[i]))
-					ini.DeleteValue("MySQL", "CustomMySqlSecondsCommandString" + i);
+				if (string.IsNullOrEmpty(MySqlSettings.Settings.CustomTimed.Commands[i]))
+				{
+					ini.DeleteValue("MySQL", "CustomMySqlTimedCommandString" + i);
+					ini.DeleteValue("MySQL", "CustomMySqlTimedStartTime" + i);
+					ini.DeleteValue("MySQL", "CustomMySqlTimedInterval" + i);
+				}
 				else
-					ini.SetValue("MySQL", "CustomMySqlSecondsCommandString" + i, MySqlStuff.Settings.CustomSecs.Commands[i]);
-
-				if (string.IsNullOrEmpty(MySqlStuff.Settings.CustomMins.Commands[i]))
-					ini.DeleteValue("MySQL", "CustomMySqlMinutesCommandString" + i);
-				else
-					ini.SetValue("MySQL", "CustomMySqlMinutesCommandString" + i, MySqlStuff.Settings.CustomMins.Commands[i]);
-
-				if (string.IsNullOrEmpty(MySqlStuff.Settings.CustomRollover.Commands[i]))
-					ini.DeleteValue("MySQL", "CustomMySqlRolloverCommandString" + i);
-				else
-					ini.SetValue("MySQL", "CustomMySqlRolloverCommandString" + i, MySqlStuff.Settings.CustomRollover.Commands[i]);
+				{
+					ini.SetValue("MySQL", "CustomMySqlTimedCommandString" + i, MySqlSettings.Settings.CustomTimed.Commands[i]);
+					ini.SetValue("MySQL", "CustomMySqlTimedStartTime" + i, MySqlSettings.Settings.CustomTimed.GetStartTimeString(i));
+					ini.SetValue("MySQL", "CustomMySqlTimedInterval" + i, MySqlSettings.Settings.CustomTimed.Intervals[i]);
+				}
 			}
+
+			ini.SetValue("HTTP", "CustomHttpSecondsString", CustomHttpSecondsStrings[0]);
+			ini.SetValue("HTTP", "CustomHttpMinutesString", CustomHttpMinutesStrings[0]);
+			ini.SetValue("HTTP", "CustomHttpRolloverString", CustomHttpRolloverStrings[0]);
 
 			ini.SetValue("HTTP", "CustomHttpSecondsString", CustomHttpSecondsStrings[0]);
 			ini.SetValue("HTTP", "CustomHttpMinutesString", CustomHttpMinutesStrings[0]);
@@ -5752,6 +6116,31 @@ namespace CumulusMX
 
 			ini.SetValue("HTTP", "CustomHttpSecondsInterval", CustomHttpSecondsInterval);
 			ini.SetValue("HTTP", "CustomHttpMinutesIntervalIndex", CustomHttpMinutesIntervalIndex);
+
+			// Http files
+			for (var i = 0; i < 10; i++)
+			{
+				if (string.IsNullOrEmpty(HttpFilesConfig[i].Url) && string.IsNullOrEmpty(HttpFilesConfig[i].Remote))
+				{
+					ini.DeleteValue("HTTP", "HttpFileEnabled" + i);
+					ini.DeleteValue("HTTP", "HttpFileUrl" + i);
+					ini.DeleteValue("HTTP", "HttpFileRemote" + i);
+					ini.DeleteValue("HTTP", "HttpFileInterval" + i);
+					ini.DeleteValue("HTTP", "HttpFileUpload" + i);
+					ini.DeleteValue("HTTP", "HttpFileTimed" + i);
+					ini.DeleteValue("HTTP", "HttpFileStartTime" + i);
+				}
+				else
+				{
+					ini.SetValue("HTTP", "HttpFileEnabled" + i, HttpFilesConfig[i].Enabled);
+					ini.SetValue("HTTP", "HttpFileUrl" + i, HttpFilesConfig[i].Url);
+					ini.SetValue("HTTP", "HttpFileRemote" + i, HttpFilesConfig[i].Remote);
+					ini.SetValue("HTTP", "HttpFileInterval" + i, HttpFilesConfig[i].Interval);
+					ini.SetValue("HTTP", "HttpFileUpload" + i, HttpFilesConfig[i].Upload);
+					ini.SetValue("HTTP", "HttpFileTimed" + i, HttpFilesConfig[i].Timed);
+					ini.SetValue("HTTP", "HttpFileStartTime" + i, HttpFilesConfig[i].StartTimeString);
+				}
+			}
 
 			for (int i = 0; i < SelectaChartOptions.series.Length; i++)
 			{
@@ -5840,149 +6229,138 @@ namespace CumulusMX
 
 			// forecast
 
-			ForecastNotAvailable = ini.GetValue("Forecast", "notavailable", ForecastNotAvailable);
+			Trans.ForecastNotAvailable = ini.GetValue("Forecast", "notavailable", "Not available");
 
-			exceptional = ini.GetValue("Forecast", "exceptional", exceptional);
+			Trans.Exceptional = ini.GetValue("Forecast", "exceptional", "Exceptional Weather");
+
 			for (var i = 0; i <= 25; i++)
 			{
-				zForecast[i] = ini.GetValue("Forecast", "forecast" + (i + 1), zForecast[i]);
+				Trans.zForecast[i] = ini.GetValue("Forecast", "forecast" + (i + 1), Trans.zForecast[i]);
 			}
 			// moon phases
-			NewMoon = ini.GetValue("MoonPhases", "Newmoon", NewMoon);
-			WaxingCrescent = ini.GetValue("MoonPhases", "WaxingCrescent", WaxingCrescent);
-			FirstQuarter = ini.GetValue("MoonPhases", "FirstQuarter", FirstQuarter);
-			WaxingGibbous = ini.GetValue("MoonPhases", "WaxingGibbous", WaxingGibbous);
-			FullMoon = ini.GetValue("MoonPhases", "Fullmoon", FullMoon);
-			WaningGibbous = ini.GetValue("MoonPhases", "WaningGibbous", WaningGibbous);
-			LastQuarter = ini.GetValue("MoonPhases", "LastQuarter", LastQuarter);
-			WaningCrescent = ini.GetValue("MoonPhases", "WaningCrescent", WaningCrescent);
+			Trans.NewMoon = ini.GetValue("MoonPhases", "Newmoon", "New Moon");
+			Trans.WaxingCrescent = ini.GetValue("MoonPhases", "WaxingCrescent", "Waxing Crescent");
+			Trans.FirstQuarter = ini.GetValue("MoonPhases", "FirstQuarter", "First Quarter");
+			Trans.WaxingGibbous = ini.GetValue("MoonPhases", "WaxingGibbous", "Waxing Gibbous");
+			Trans.FullMoon = ini.GetValue("MoonPhases", "Fullmoon", "Full Moon");
+			Trans.WaningGibbous = ini.GetValue("MoonPhases", "WaningGibbous", "Waning Gibbous");
+			Trans.LastQuarter = ini.GetValue("MoonPhases", "LastQuarter", "Last Quarter");
+			Trans.WaningCrescent = ini.GetValue("MoonPhases", "WaningCrescent", "Waning Crescent");
 			// Beaufort
-			Calm = ini.GetValue("Beaufort", "Calm", Calm);
-			Lightair = ini.GetValue("Beaufort", "Lightair", Lightair);
-			Lightbreeze = ini.GetValue("Beaufort", "Lightbreeze", Lightbreeze);
-			Gentlebreeze = ini.GetValue("Beaufort", "Gentlebreeze", Gentlebreeze);
-			Moderatebreeze = ini.GetValue("Beaufort", "Moderatebreeze", Moderatebreeze);
-			Freshbreeze = ini.GetValue("Beaufort", "Freshbreeze", Freshbreeze);
-			Strongbreeze = ini.GetValue("Beaufort", "Strongbreeze", Strongbreeze);
-			Neargale = ini.GetValue("Beaufort", "Neargale", Neargale);
-			Gale = ini.GetValue("Beaufort", "Gale", Gale);
-			Stronggale = ini.GetValue("Beaufort", "Stronggale", Stronggale);
-			Storm = ini.GetValue("Beaufort", "Storm", Storm);
-			Violentstorm = ini.GetValue("Beaufort", "Violentstorm", Violentstorm);
-			Hurricane = ini.GetValue("Beaufort", "Hurricane", Hurricane);
+			Trans.Calm = ini.GetValue("Beaufort", "Calm", "Calm");
+			Trans.Lightair = ini.GetValue("Beaufort", "Lightair", "Light air");
+			Trans.Lightbreeze = ini.GetValue("Beaufort", "Lightbreeze", "Light breeze");
+			Trans.Gentlebreeze = ini.GetValue("Beaufort", "Gentlebreeze", "Gentle breeze");
+			Trans.Moderatebreeze = ini.GetValue("Beaufort", "Moderatebreeze", "Moderate breeze");
+			Trans.Freshbreeze = ini.GetValue("Beaufort", "Freshbreeze", "Fresh breeze");
+			Trans.Strongbreeze = ini.GetValue("Beaufort", "Strongbreeze", "Strong breeze");
+			Trans.Neargale = ini.GetValue("Beaufort", "Neargale", "Near gale");
+			Trans.Gale = ini.GetValue("Beaufort", "Gale", "Gale");
+			Trans.Stronggale = ini.GetValue("Beaufort", "Stronggale", "Strong gale");
+			Trans.Storm = ini.GetValue("Beaufort", "Storm", "Storm");
+			Trans.Violentstorm = ini.GetValue("Beaufort", "Violentstorm", "Violent storm");
+			Trans.Hurricane = ini.GetValue("Beaufort", "Hurricane", "Hurricane");
+			Trans.Unknown = ini.GetValue("Beaufort", "Unknown", "UNKNOWN");
 			// trends
-			Risingveryrapidly = ini.GetValue("Trends", "Risingveryrapidly", Risingveryrapidly);
-			Risingquickly = ini.GetValue("Trends", "Risingquickly", Risingquickly);
-			Rising = ini.GetValue("Trends", "Rising", Rising);
-			Risingslowly = ini.GetValue("Trends", "Risingslowly", Risingslowly);
-			Steady = ini.GetValue("Trends", "Steady", Steady);
-			Fallingslowly = ini.GetValue("Trends", "Fallingslowly", Fallingslowly);
-			Falling = ini.GetValue("Trends", "Falling", Falling);
-			Fallingquickly = ini.GetValue("Trends", "Fallingquickly", Fallingquickly);
-			Fallingveryrapidly = ini.GetValue("Trends", "Fallingveryrapidly", Fallingveryrapidly);
+			Trans.Risingveryrapidly = ini.GetValue("Trends", "Risingveryrapidly", "Rising very rapidly");
+			Trans.Risingquickly = ini.GetValue("Trends", "Risingquickly", "Rising quickly");
+			Trans.Rising = ini.GetValue("Trends", "Rising", "Rising");
+			Trans.Risingslowly = ini.GetValue("Trends", "Risingslowly", "Rising slowly");
+			Trans.Steady = ini.GetValue("Trends", "Steady", "Steady");
+			Trans.Fallingslowly = ini.GetValue("Trends", "Fallingslowly", "Falling slowly");
+			Trans.Falling = ini.GetValue("Trends", "Falling", "Falling");
+			Trans.Fallingquickly = ini.GetValue("Trends", "Fallingquickly", "Falling quickly");
+			Trans.Fallingveryrapidly = ini.GetValue("Trends", "Fallingveryrapidly", "Falling very rapidly");
 			// compass points
-			compassp[0] = ini.GetValue("Compass", "N", compassp[0]);
-			compassp[1] = ini.GetValue("Compass", "NNE", compassp[1]);
-			compassp[2] = ini.GetValue("Compass", "NE", compassp[2]);
-			compassp[3] = ini.GetValue("Compass", "ENE", compassp[3]);
-			compassp[4] = ini.GetValue("Compass", "E", compassp[4]);
-			compassp[5] = ini.GetValue("Compass", "ESE", compassp[5]);
-			compassp[6] = ini.GetValue("Compass", "SE", compassp[6]);
-			compassp[7] = ini.GetValue("Compass", "SSE", compassp[7]);
-			compassp[8] = ini.GetValue("Compass", "S", compassp[8]);
-			compassp[9] = ini.GetValue("Compass", "SSW", compassp[9]);
-			compassp[10] = ini.GetValue("Compass", "SW", compassp[10]);
-			compassp[11] = ini.GetValue("Compass", "WSW", compassp[11]);
-			compassp[12] = ini.GetValue("Compass", "W", compassp[12]);
-			compassp[13] = ini.GetValue("Compass", "WNW", compassp[13]);
-			compassp[14] = ini.GetValue("Compass", "NW", compassp[14]);
-			compassp[15] = ini.GetValue("Compass", "NNW", compassp[15]);
+			Trans.compassp[0] = ini.GetValue("Compass", "N", "N");
+			Trans.compassp[1] = ini.GetValue("Compass", "NNE", "NNE");
+			Trans.compassp[2] = ini.GetValue("Compass", "NE", "NE");
+			Trans.compassp[3] = ini.GetValue("Compass", "ENE", "ENE");
+			Trans.compassp[4] = ini.GetValue("Compass", "E", "E");
+			Trans.compassp[5] = ini.GetValue("Compass", "ESE", "ESE");
+			Trans.compassp[6] = ini.GetValue("Compass", "SE", "SE");
+			Trans.compassp[7] = ini.GetValue("Compass", "SSE", "SSE");
+			Trans.compassp[8] = ini.GetValue("Compass", "S", "S");
+			Trans.compassp[9] = ini.GetValue("Compass", "SSW", "SSW");
+			Trans.compassp[10] = ini.GetValue("Compass", "SW", "SW");
+			Trans.compassp[11] = ini.GetValue("Compass", "WSW", "WSW");
+			Trans.compassp[12] = ini.GetValue("Compass", "W", "W");
+			Trans.compassp[13] = ini.GetValue("Compass", "WNW", "WNW");
+			Trans.compassp[14] = ini.GetValue("Compass", "NW", "NW");
+			Trans.compassp[15] = ini.GetValue("Compass", "NNW", "NNW");
 
-			for (var i = 1; i <= 4; i++)
+			for (var i = 0; i < 4; i++)
 			{
-				// leaf temp captions (for Extra Sensor Data screen)
-				LeafTempCaptions[i] = ini.GetValue("LeafTempCaptions", "Sensor" + i, LeafTempCaptions[i]);
-
 				// air quality captions (for Extra Sensor Data screen)
-				AirQualityCaptions[i] = ini.GetValue("AirQualityCaptions", "Sensor" + i, AirQualityCaptions[i]);
-				AirQualityAvgCaptions[i] = ini.GetValue("AirQualityCaptions", "SensorAvg", AirQualityAvgCaptions[1]);
+				Trans.AirQualityCaptions[i] = ini.GetValue("AirQualityCaptions", "Sensor" + (i + 1), Trans.AirQualityCaptions[i]);
+				Trans.AirQualityAvgCaptions[i] = ini.GetValue("AirQualityCaptions", "SensorAvg" + (i + 1), Trans.AirQualityAvgCaptions[1]);
 			}
 
-			for (var i = 1; i <= 8; i++)
+			for (var i = 0; i < 8; i++)
 			{
 				// leaf wetness captions (for Extra Sensor Data screen)
-				LeafWetnessCaptions[i] = ini.GetValue("LeafWetnessCaptions", "Sensor" + i, LeafWetnessCaptions[i]);
+				Trans.LeafWetnessCaptions[i] = ini.GetValue("LeafWetnessCaptions", "Sensor" + (i + 1), Trans.LeafWetnessCaptions[i]);
 
 				// User temperature captions (for Extra Sensor Data screen)
-				UserTempCaptions[i] = ini.GetValue("UserTempCaptions", "Sensor" + i, UserTempCaptions[i]);
+				Trans.UserTempCaptions[i] = ini.GetValue("UserTempCaptions", "Sensor" + (i + 1), Trans.UserTempCaptions[i]);
 			}
 
-			for (var i = 1; i <= 10; i++)
+			for (var i = 0; i < 10; i++)
 			{
 				// Extra temperature captions (for Extra Sensor Data screen)
-				ExtraTempCaptions[i] = ini.GetValue("ExtraTempCaptions", "Sensor" + i, ExtraTempCaptions[i]);
+				Trans.ExtraTempCaptions[i] = ini.GetValue("ExtraTempCaptions", "Sensor" + (i + 1), Trans.ExtraTempCaptions[i]);
 
 				// Extra humidity captions (for Extra Sensor Data screen)
-				ExtraHumCaptions[i] = ini.GetValue("ExtraHumCaptions", "Sensor" + i, ExtraHumCaptions[i]);
+				Trans.ExtraHumCaptions[i] = ini.GetValue("ExtraHumCaptions", "Sensor" + (i + 1), Trans.ExtraHumCaptions[i]);
 
 				// Extra dew point captions (for Extra Sensor Data screen)
-				ExtraDPCaptions[i] = ini.GetValue("ExtraDPCaptions", "Sensor" + i, ExtraDPCaptions[i]);
+				Trans.ExtraDPCaptions[i] = ini.GetValue("ExtraDPCaptions", "Sensor" + (i + 1), Trans.ExtraDPCaptions[i]);
 			}
 
-			for (var i = 1; i <= 16; i++)
+			for (var i = 0; i < 16; i++)
 			{
 				// soil temp captions (for Extra Sensor Data screen)
-				SoilTempCaptions[i] = ini.GetValue("SoilTempCaptions", "Sensor" + i, SoilTempCaptions[i]);
+				Trans.SoilTempCaptions[i] = ini.GetValue("SoilTempCaptions", "Sensor" + (i + 1), Trans.SoilTempCaptions[i]);
 
 				// soil moisture captions (for Extra Sensor Data screen)
-				SoilMoistureCaptions[i] = ini.GetValue("SoilMoistureCaptions", "Sensor" + i, SoilMoistureCaptions[i]);
+				Trans.SoilMoistureCaptions[i] = ini.GetValue("SoilMoistureCaptions", "Sensor" + (i + 1), Trans.SoilMoistureCaptions[i]);
 			}
 
 			// CO2 captions - Ecowitt WH45 sensor
-			CO2_CurrentCaption = ini.GetValue("CO2Captions", "CO2-Current", CO2_CurrentCaption);
-			CO2_24HourCaption = ini.GetValue("CO2Captions", "CO2-24hr", CO2_24HourCaption);
-			CO2_pm2p5Caption = ini.GetValue("CO2Captions", "CO2-Pm2p5", CO2_pm2p5Caption);
-			CO2_pm2p5_24hrCaption = ini.GetValue("CO2Captions", "CO2-Pm2p5-24hr", CO2_pm2p5_24hrCaption);
-			CO2_pm10Caption = ini.GetValue("CO2Captions", "CO2-Pm10", CO2_pm10Caption);
-			CO2_pm10_24hrCaption = ini.GetValue("CO2Captions", "CO2-Pm10-24hr", CO2_pm10_24hrCaption);
+			Trans.CO2_CurrentCaption = ini.GetValue("CO2Captions", "CO2-Current", "CO&#8322 Current");
+			Trans.CO2_24HourCaption = ini.GetValue("CO2Captions", "CO2-24hr", "CO&#8322 24h avg");
+			Trans.CO2_pm2p5Caption = ini.GetValue("CO2Captions", "CO2-Pm2p5", "PM 2.5");
+			Trans.CO2_pm2p5_24hrCaption = ini.GetValue("CO2Captions", "CO2-Pm2p5-24hr", "PM 2.5 24h avg");
+			Trans.CO2_pm10Caption = ini.GetValue("CO2Captions", "CO2-Pm10", "PM 10");
+			Trans.CO2_pm10_24hrCaption = ini.GetValue("CO2Captions", "CO2-Pm10-24hr", "PM 10 24h avg");
 
-			// User temperature captions (for Extra Sensor Data screen)
-			UserTempCaptions[1] = ini.GetValue("UserTempCaptions", "Sensor1", UserTempCaptions[1]);
-			UserTempCaptions[2] = ini.GetValue("UserTempCaptions", "Sensor2", UserTempCaptions[2]);
-			UserTempCaptions[3] = ini.GetValue("UserTempCaptions", "Sensor3", UserTempCaptions[3]);
-			UserTempCaptions[4] = ini.GetValue("UserTempCaptions", "Sensor4", UserTempCaptions[4]);
-			UserTempCaptions[5] = ini.GetValue("UserTempCaptions", "Sensor5", UserTempCaptions[5]);
-			UserTempCaptions[6] = ini.GetValue("UserTempCaptions", "Sensor6", UserTempCaptions[6]);
-			UserTempCaptions[7] = ini.GetValue("UserTempCaptions", "Sensor7", UserTempCaptions[7]);
-			UserTempCaptions[8] = ini.GetValue("UserTempCaptions", "Sensor8", UserTempCaptions[8]);
-
-			thereWillBeMinSLessDaylightTomorrow = ini.GetValue("Solar", "LessDaylightTomorrow", thereWillBeMinSLessDaylightTomorrow);
-			thereWillBeMinSMoreDaylightTomorrow = ini.GetValue("Solar", "MoreDaylightTomorrow", thereWillBeMinSMoreDaylightTomorrow);
+			Trans.thereWillBeMinSLessDaylightTomorrow = ini.GetValue("Solar", "LessDaylightTomorrow", "There will be {0}min {1}s less daylight tomorrow");
+			Trans.thereWillBeMinSMoreDaylightTomorrow = ini.GetValue("Solar", "MoreDaylightTomorrow", "There will be {0}min {1}s more daylight tomorrow");
 
 			// Davis forecast 1
-			DavisForecast1[0] = ini.GetValue("DavisForecast1", "forecast1", DavisForecast1[0]);
+			Trans.DavisForecast1[0] = ini.GetValue("DavisForecast1", "forecast1", Trans.DavisForecast1[0]);
 			for (var i = 1; i <= 25; i++)
 			{
-				DavisForecast1[i] = ini.GetValue("DavisForecast1", "forecast" + (i + 1), DavisForecast1[i]) + " ";
+				Trans.DavisForecast1[i] = ini.GetValue("DavisForecast1", "forecast" + (i + 1), Trans.DavisForecast1[i]) + " ";
 			}
-			DavisForecast1[26] = ini.GetValue("DavisForecast1", "forecast27", DavisForecast1[26]);
+			Trans.DavisForecast1[26] = ini.GetValue("DavisForecast1", "forecast27", Trans.DavisForecast1[26]);
 
 			// Davis forecast 2
-			DavisForecast2[0] = ini.GetValue("DavisForecast2", "forecast1", DavisForecast2[0]);
+			Trans.DavisForecast2[0] = ini.GetValue("DavisForecast2", "forecast1", Trans.DavisForecast2[0]);
 			for (var i = 1; i <= 18; i++)
 			{
-				DavisForecast2[i] = ini.GetValue("DavisForecast2", "forecast" + (i + 1), DavisForecast2[i]) + " ";
+				Trans.DavisForecast2[i] = ini.GetValue("DavisForecast2", "forecast" + (i + 1), Trans.DavisForecast2[i]) + " ";
 			}
 
 			// Davis forecast 3
 			for (var i = 0; i <= 6; i++)
 			{
-				DavisForecast3[i] = ini.GetValue("DavisForecast3", "forecast" + (i + 1), DavisForecast3[i]);
+				Trans.DavisForecast3[i] = ini.GetValue("DavisForecast3", "forecast" + (i + 1), Trans.DavisForecast3[i]);
 			}
 
 			// alarm emails
-			AlarmEmailSubject = ini.GetValue("AlarmEmails", "subject", "Cumulus MX Alarm");
-			AlarmEmailPreamble = ini.GetValue("AlarmEmails", "preamble", "A Cumulus MX alarm has been triggered.");
+			Trans.AlarmEmailSubject = ini.GetValue("AlarmEmails", "subject", "Cumulus MX Alarm");
+			Trans.AlarmEmailPreamble = ini.GetValue("AlarmEmails", "preamble", "A Cumulus MX alarm has been triggered.");
 			HighGustAlarm.EmailMsg = ini.GetValue("AlarmEmails", "windGustAbove", "A wind gust above {0} {1} has occurred.");
 			HighPressAlarm.EmailMsg = ini.GetValue("AlarmEmails", "pressureAbove", "The pressure has risen above {0} {1}.");
 			HighTempAlarm.EmailMsg = ini.GetValue("AlarmEmails", "tempAbove", "The temperature has risen above {0} {1}.");
@@ -6000,12 +6378,177 @@ namespace CumulusMX
 			BatteryLowAlarm.EmailMsg = ini.GetValue("AlarmEmails", "batteryLow", "A low battery condition has been detected.");
 			SpikeAlarm.EmailMsg = ini.GetValue("AlarmEmails", "dataSpike", "A data spike from your weather station has been suppressed.");
 			UpgradeAlarm.EmailMsg = ini.GetValue("AlarmEmails", "upgrade", "An upgrade to Cumulus MX is now available.");
-			HttpUploadAlarm.EmailMsg = ini.GetValue("AlarmEmails", "httpStopped", "HTTP uploads are failing.");
+			ThirdPartyUploadAlarm.EmailMsg = ini.GetValue("AlarmEmails", "httpStopped", "HTTP uploads are failing.");
 			MySqlUploadAlarm.EmailMsg = ini.GetValue("AlarmEmails", "mySqlStopped", "MySQL uploads are failing.");
 			IsRainingAlarm.EmailMsg = ini.GetValue("AlarmEmails", "isRaining", "It has started to rain.");
+
+			if (!File.Exists("strings.ini"))
+			{
+				WriteStringsFile();
+			}
 		}
 
+		public void WriteStringsFile()
+		{
+			LogMessage("Writing strings.ini file");
 
+			IniFile ini = new IniFile("strings.ini");
+
+			// forecast
+			ini.SetValue("Forecast", "notavailable", Trans.ForecastNotAvailable);
+
+			ini.SetValue("Forecast", "exceptional", Trans.Exceptional);
+			for (var i = 0; i <= 25; i++)
+			{
+				ini.SetValue("Forecast", "forecast" + (i + 1), Trans.zForecast[i]);
+			}
+			// moon phases
+			ini.SetValue("MoonPhases", "Newmoon", Trans.NewMoon);
+			ini.SetValue("MoonPhases", "WaxingCrescent", Trans.WaxingCrescent);
+			ini.SetValue("MoonPhases", "FirstQuarter", Trans.FirstQuarter);
+			ini.SetValue("MoonPhases", "WaxingGibbous", Trans.WaxingGibbous);
+			ini.SetValue("MoonPhases", "Fullmoon", Trans.FullMoon);
+			ini.SetValue("MoonPhases", "WaningGibbous", Trans.WaningGibbous);
+			ini.SetValue("MoonPhases", "LastQuarter", Trans.LastQuarter);
+			ini.SetValue("MoonPhases", "WaningCrescent", Trans.WaningCrescent);
+			// Beaufort
+			ini.SetValue("Beaufort", "Calm", Trans.Calm);
+			ini.SetValue("Beaufort", "Lightair", Trans.Lightair);
+			ini.SetValue("Beaufort", "Lightbreeze", Trans.Lightbreeze);
+			ini.SetValue("Beaufort", "Gentlebreeze", Trans.Gentlebreeze);
+			ini.SetValue("Beaufort", "Moderatebreeze", Trans.Moderatebreeze);
+			ini.SetValue("Beaufort", "Freshbreeze", Trans.Freshbreeze);
+			ini.SetValue("Beaufort", "Strongbreeze", Trans.Strongbreeze);
+			ini.SetValue("Beaufort", "Neargale", Trans.Neargale);
+			ini.SetValue("Beaufort", "Gale", Trans.Gale);
+			ini.SetValue("Beaufort", "Stronggale", Trans.Stronggale);
+			ini.SetValue("Beaufort", "Storm", Trans.Storm);
+			ini.SetValue("Beaufort", "Violentstorm", Trans.Violentstorm);
+			ini.SetValue("Beaufort", "Hurricane", Trans.Hurricane);
+			ini.SetValue("Beaufort", "Unknown", Trans.Unknown);
+			// trends
+			ini.SetValue("Trends", "Risingveryrapidly", Trans.Risingveryrapidly);
+			ini.SetValue("Trends", "Risingquickly", Trans.Risingquickly);
+			ini.SetValue("Trends", "Rising", Trans.Rising);
+			ini.SetValue("Trends", "Risingslowly", Trans.Risingslowly);
+			ini.SetValue("Trends", "Steady", Trans.Steady);
+			ini.SetValue("Trends", "Fallingslowly", Trans.Fallingslowly);
+			ini.SetValue("Trends", "Falling", Trans.Falling);
+			ini.SetValue("Trends", "Fallingquickly", Trans.Fallingquickly);
+			ini.SetValue("Trends", "Fallingveryrapidly", Trans.Fallingveryrapidly);
+			// compass points
+			ini.SetValue("Compass", "N", Trans.compassp[0]);
+			ini.SetValue("Compass", "NNE", Trans.compassp[1]);
+			ini.SetValue("Compass", "NE", Trans.compassp[2]);
+			ini.SetValue("Compass", "ENE", Trans.compassp[3]);
+			ini.SetValue("Compass", "E", Trans.compassp[4]);
+			ini.SetValue("Compass", "ESE", Trans.compassp[5]);
+			ini.SetValue("Compass", "SE", Trans.compassp[6]);
+			ini.SetValue("Compass", "SSE", Trans.compassp[7]);
+			ini.SetValue("Compass", "S", Trans.compassp[8]);
+			ini.SetValue("Compass", "SSW", Trans.compassp[9]);
+			ini.SetValue("Compass", "SW", Trans.compassp[10]);
+			ini.SetValue("Compass", "WSW", Trans.compassp[11]);
+			ini.SetValue("Compass", "W", Trans.compassp[12]);
+			ini.SetValue("Compass", "WNW", Trans.compassp[13]);
+			ini.SetValue("Compass", "NW", Trans.compassp[14]);
+			ini.SetValue("Compass", "NNW", Trans.compassp[15]);
+
+			for (var i = 0; i < 4; i++)
+			{
+				// air quality captions (for Extra Sensor Data screen)
+				ini.SetValue("AirQualityCaptions", "Sensor" + (i + 1), Trans.AirQualityCaptions[i]);
+				ini.SetValue("AirQualityCaptions", "SensorAvg" + (i + 1), Trans.AirQualityAvgCaptions[1]);
+			}
+
+			for (var i = 0; i < 8; i++)
+			{
+				// leaf wetness captions (for Extra Sensor Data screen)
+				ini.SetValue("LeafWetnessCaptions", "Sensor" + (i + 1), Trans.LeafWetnessCaptions[i]);
+
+				// User temperature captions (for Extra Sensor Data screen)
+				ini.SetValue("UserTempCaptions", "Sensor" + (i + 1), Trans.UserTempCaptions[i]);
+			}
+
+			for (var i = 0; i < 10; i++)
+			{
+				// Extra temperature captions (for Extra Sensor Data screen)
+				ini.SetValue("ExtraTempCaptions", "Sensor" + (i + 1), Trans.ExtraTempCaptions[i]);
+
+				// Extra humidity captions (for Extra Sensor Data screen)
+				ini.SetValue("ExtraHumCaptions", "Sensor" + (i + 1), Trans.ExtraHumCaptions[i]);
+
+				// Extra dew point captions (for Extra Sensor Data screen)
+				ini.SetValue("ExtraDPCaptions", "Sensor" + (i + 1), Trans.ExtraDPCaptions[i]);
+			}
+
+			for (var i = 0; i < 16; i++)
+			{
+				// soil temp captions (for Extra Sensor Data screen)
+				ini.SetValue("SoilTempCaptions", "Sensor" + (i + 1), Trans.SoilTempCaptions[i]);
+
+				// soil moisture captions (for Extra Sensor Data screen)
+				ini.SetValue("SoilMoistureCaptions", "Sensor" + (i + 1), Trans.SoilMoistureCaptions[i]);
+			}
+
+			// CO2 captions - Ecowitt WH45 sensor
+			ini.SetValue("CO2Captions", "CO2-Current", Trans.CO2_CurrentCaption);
+			ini.SetValue("CO2Captions", "CO2-24hr", Trans.CO2_24HourCaption);
+			ini.SetValue("CO2Captions", "CO2-Pm2p5", Trans.CO2_pm2p5Caption);
+			ini.SetValue("CO2Captions", "CO2-Pm2p5-24hr", Trans.CO2_pm2p5_24hrCaption);
+			ini.SetValue("CO2Captions", "CO2-Pm10", Trans.CO2_pm10Caption);
+			ini.SetValue("CO2Captions", "CO2-Pm10-24hr", Trans.CO2_pm10_24hrCaption);
+
+
+			ini.SetValue("Solar", "LessDaylightTomorrow", Trans.thereWillBeMinSLessDaylightTomorrow);
+			ini.SetValue("Solar", "MoreDaylightTomorrow", Trans.thereWillBeMinSMoreDaylightTomorrow);
+
+			// Davis forecast 1
+			for (var i = 0; i <= 26; i++)
+			{
+				ini.SetValue("DavisForecast1", "forecast" + (i + 1), Trans.DavisForecast1[i]);
+			}
+
+			// Davis forecast 2
+			for (var i = 0; i <= 18; i++)
+			{
+				ini.SetValue("DavisForecast2", "forecast" + (i + 1), Trans.DavisForecast2[i]);
+			}
+
+			// Davis forecast 3
+			for (var i = 0; i <= 6; i++)
+			{
+				ini.SetValue("DavisForecast3", "forecast" + (i + 1), Trans.DavisForecast3[i]);
+			}
+
+			// alarm emails
+			ini.SetValue("AlarmEmails", "subject", Trans.AlarmEmailSubject);
+			ini.SetValue("AlarmEmails", "preamble", Trans.AlarmEmailPreamble);
+			ini.SetValue("AlarmEmails", "windGustAbove", HighGustAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "pressureAbove", HighPressAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "tempAbove", HighTempAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "pressBelow", LowPressAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "tempBelow", LowTempAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "pressDown", PressChangeAlarm.EmailMsgDn);
+			ini.SetValue("AlarmEmails", "pressUp", PressChangeAlarm.EmailMsgUp);
+			ini.SetValue("AlarmEmails", "rainAbove", HighRainTodayAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "rainRateAbove", HighRainRateAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "sensorLost", SensorAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "tempDown", TempChangeAlarm.EmailMsgDn);
+			ini.SetValue("AlarmEmails", "tempUp", TempChangeAlarm.EmailMsgUp);
+			ini.SetValue("AlarmEmails", "windAbove", HighWindAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "dataStopped", DataStoppedAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "batteryLow", BatteryLowAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "dataSpike", SpikeAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "upgrade", UpgradeAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "httpStopped", ThirdPartyUploadAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "mySqlStopped", MySqlUploadAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "isRaining", IsRainingAlarm.EmailMsg);
+
+			ini.Flush();
+
+			LogMessage("Completed writing strings.ini file");
+		}
 
 		public int xapPort { get; set; }
 
@@ -6032,6 +6575,8 @@ namespace CumulusMX
 		public string ExternalProgram { get; set; }
 
 		public TExtraFiles[] ExtraFiles = new TExtraFiles[numextrafiles];
+
+		public HttpFileProps[] HttpFilesConfig = new HttpFileProps[10];
 
 		//public int MaxFTPconnectRetries { get; set; }
 
@@ -6139,9 +6684,7 @@ namespace CumulusMX
 
 		//public bool EWduplicatecheck { get; set; }
 
-		public string RecordsBeganStr { get; set; }
-
-		public DateTime RecordsBeganDate;
+		public DateTime RecordsBeganDateTime { get; set; }
 
 		//public bool EWdisablecheckinit { get; set; }
 
@@ -6208,6 +6751,7 @@ namespace CumulusMX
 
 		public bool DavisStation { get; set; }
 		public string TempTrendFormat { get; set; }
+		public string PressTrendFormat { get; set; }
 		public string AppDir { get; set; }
 
 		public int Manufacturer { get; set; }
@@ -6310,33 +6854,11 @@ namespace CumulusMX
 		private volatile bool RealtimeFtpReconnecting;
 		private byte RealtimeCycleCounter;
 
-		public FileGenerationFtpOptions[] StdWebFiles;
-		public FileGenerationFtpOptions[] RealtimeFiles;
-		public FileGenerationFtpOptions[] GraphDataFiles;
-		public FileGenerationFtpOptions[] GraphDataEodFiles;
+		public FileGenerationOptions[] StdWebFiles;
+		public FileGenerationOptions[] RealtimeFiles;
+		public FileGenerationOptions[] GraphDataFiles;
+		public FileGenerationOptions[] GraphDataEodFiles;
 
-
-		public string exceptional = "Exceptional Weather";
-//		private WebSocketServer wsServer;
-		public string[] ExtraTempCaptions = { "", "Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4", "Sensor 5", "Sensor 6", "Sensor 7", "Sensor 8", "Sensor 9", "Sensor 10" };
-		public string[] ExtraHumCaptions = { "", "Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4", "Sensor 5", "Sensor 6", "Sensor 7", "Sensor 8", "Sensor 9", "Sensor 10" };
-		public string[] ExtraDPCaptions = { "", "Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4", "Sensor 5", "Sensor 6", "Sensor 7", "Sensor 8", "Sensor 9", "Sensor 10" };
-		public string[] SoilTempCaptions = { "", "Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4", "Sensor 5", "Sensor 6", "Sensor 7", "Sensor 8", "Sensor 9", "Sensor 10", "Sensor 11", "Sensor 12", "Sensor 13", "Sensor 14", "Sensor 15", "Sensor 16" };
-		public string[] SoilMoistureCaptions = { "", "Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4", "Sensor 5", "Sensor 6", "Sensor 7", "Sensor 8", "Sensor 9", "Sensor 10", "Sensor 11", "Sensor 12", "Sensor 13", "Sensor 14", "Sensor 15", "Sensor 16" };
-		public string[] AirQualityCaptions = { "", "Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4" };
-		public string[] AirQualityAvgCaptions = { "", "Sensor Avg 1", "Sensor Avg 2", "Sensor Avg 3", "Sensor Avg 4" };
-		public string[] LeafTempCaptions = { "", "Temp 1", "Temp 2", "Temp 3", "Temp 4" };
-		public string[] LeafWetnessCaptions = { "", "Wetness 1", "Wetness 2", "Wetness 3", "Wetness 4", "Wetness 5", "Wetness 6", "Wetness 7", "Wetness 8" };
-		public string[] UserTempCaptions = { "", "Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4", "Sensor 5", "Sensor 6", "Sensor 7", "Sensor 8" };
-		private string thereWillBeMinSLessDaylightTomorrow = "There will be {0}min {1}s less daylight tomorrow";
-		private string thereWillBeMinSMoreDaylightTomorrow = "There will be {0}min {1}s more daylight tomorrow";
-		// WH45 CO2 sensor captions
-		public string CO2_CurrentCaption = "CO&#8322 Current";
-		public string CO2_24HourCaption = "CO&#8322 24h avg";
-		public string CO2_pm2p5Caption = "PM 2.5";
-		public string CO2_pm2p5_24hrCaption = "PM 2.5 24h avg";
-		public string CO2_pm10Caption = "PM 10";
-		public string CO2_pm10_24hrCaption = "PM 10 24h avg";
 
 		/*
 		public string Getversion()
@@ -6586,15 +7108,22 @@ namespace CumulusMX
 
 			station.WriteTodayFile(timestamp, true);
 
-			if (MySqlStuff.Settings.Monthly.Enabled)
+			if (MySqlSettings.Settings.Monthly.Enabled)
 			{
-				MySqlStuff.DoIntervalData(timestamp, live);
+				MySqlSettings.DoIntervalData(timestamp, live);
 			}
 		}
 
 
 		public async Task DoCustomIntervalLogs(DateTime timestamp)
 		{
+			if ((!station.PressReadyToPlot || !station.TempReadyToPlot || !station.WindReadyToPlot) && !StationOptions.NoSensorCheck)
+			{
+				// not all the data is ready and NoSensorCheck is not enabled
+				LogMessage($"DoCustomIntervalLogs: Not all data is ready, aborting process");
+				return;
+			}
+
 			for (var i = 0; i < 10; i++)
 			{
 				if (CustomIntvlLogSettings[i].Enabled && timestamp.Minute % CustomIntvlLogSettings[i].Interval == 0)
@@ -6620,9 +7149,12 @@ namespace CumulusMX
 			sb.Append(timestamp.ToString("dd/MM/yy") + ListSeparator);
 			sb.Append(timestamp.ToString("HH:mm") + ListSeparator);
 
+			var tokenParser = new TokenParser();
+			tokenParser.OnToken += TokenParserOnToken;
+
 			// process the webtags in the content string
-			customLogIntvlTokenParser.InputText = CustomIntvlLogSettings[idx].ContentString;
-			sb.Append(customLogIntvlTokenParser.ToStringFromString());
+			tokenParser.InputText = CustomIntvlLogSettings[idx].ContentString;
+			sb.Append(tokenParser.ToStringFromString());
 
 			LogDataMessage("DoCustomIntervalLog: entry: " + sb);
 
@@ -6676,9 +7208,12 @@ namespace CumulusMX
 			var sb = new StringBuilder(300);
 			sb.Append(datestring + ListSeparator);
 
+			var tokenParser = new TokenParser();
+			tokenParser.OnToken += TokenParserOnToken;
+
 			// process the webtags in the content string
-			customLogDailyTokenParser.InputText = CustomDailyLogSettings[idx].ContentString;
-			sb.Append(customLogDailyTokenParser.ToStringFromString());
+			tokenParser.InputText = CustomDailyLogSettings[idx].ContentString;
+			sb.Append(tokenParser.ToStringFromString());
 
 			LogDataMessage("DoCustomDailyLog: entry: " + sb);
 
@@ -6868,19 +7403,6 @@ namespace CumulusMX
 				_ = station.Database.InsertOrReplace(newRec);
 			}
 
-			if (ExtraDataLogging.LeafTemp)
-			{
-				var newRec = new LeafTemp()
-				{
-					Time = timestamp,
-					Temp1 = station.LeafTemp[1],
-					Temp2 = station.LeafTemp[2],
-					Temp3 = station.LeafTemp[3],
-					Temp4 = station.LeafTemp[4]
-				};
-				_ = station.Database.InsertOrReplace(newRec);
-			}
-
 			if (ExtraDataLogging.LeafWetness)
 			{
 				var newRec = new LeafWet()
@@ -6974,8 +7496,8 @@ namespace CumulusMX
 					sb.Append(sep);
 				}
 
-				sb.Append((station.LeafTemp[1].HasValue ? station.LeafTemp[1].Value.ToString(TempFormat, invNum) : "") + sep);		//40
-				sb.Append((station.LeafTemp[2].HasValue ? station.LeafTemp[2].Value.ToString(TempFormat, invNum) : "") + sep);		//41
+				sb.Append("0" + ListSeparator);     //40 - was leaf temp 1
+				sb.Append("0" + ListSeparator);     //41 - was leaf temp 2
 
 				sb.Append((station.LeafWetness[1].HasValue ? station.LeafWetness[1].Value.ToString(LeafWetFormat) : "") + sep);		//42
 				sb.Append((station.LeafWetness[2].HasValue ? station.LeafWetness[2].Value.ToString(LeafWetFormat) : "") + sep);		//43
@@ -7266,6 +7788,96 @@ namespace CumulusMX
 			} while (!success && retries >= 0);
 		}
 
+		private void CheckForSingleInstance(bool Windows)
+		{
+			try
+			{
+				if (Windows)
+				{
+					var tempFolder = Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.Machine);
+					_lockFilename = tempFolder + "\\cumulusmx-" + wsPort + ".lock";
+				}
+				else
+				{
+					// /tmp seems to be universal across Linux and Mac
+					_lockFilename = "/tmp/cumulusmx-" + wsPort + ".lock";
+				}
+
+				LogMessage("Creating lock file " + _lockFilename);
+				// must include Write access in order to lock file
+				_lockFile = new FileStream(_lockFilename, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
+
+				using (var thisProcess = Process.GetCurrentProcess())
+				{
+					var procId = thisProcess.Id.ToString().ToAsciiBytes();
+					_lockFile.Write(procId, 0, procId.Length);
+					_lockFile.Flush();
+				}
+
+				// Cannot lock the file on MacOS, we have to rely on FileShare
+				if (!IsOSX)
+				{
+#pragma warning disable CA1416 // Validate platform compatibility
+					_lockFile.Lock(0, 0); // 0,0 has special meaning to lock entire file regardless of length
+#pragma warning restore CA1416 // Validate platform compatibility
+				}
+
+				// give everyone access to the file
+				if (Windows)
+				{
+#pragma warning disable CA1416 // Validate platform compatibility
+					FileInfo fileInfo = new FileInfo(_lockFilename);
+					FileSecurity accessControl = fileInfo.GetAccessControl();
+					accessControl.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), FileSystemRights.FullControl, AccessControlType.Allow));
+					fileInfo.SetAccessControl(accessControl);
+#pragma warning restore CA1416 // Validate platform compatibility
+				}
+				else
+				{
+					Utils.RunExternalTask("chmod", "777 " + _lockFilename, false);
+				}
+
+				LogMessage("Stop second instance: No other running instances of Cumulus found");
+			}
+			catch (IOException ex) when ((ex.HResult & 0x0000FFFF) == 32 || (ex.HResult & 0x0000FFFF) == 33)
+			{
+				// sharing violation 32, or lock violation 33
+				if (ProgramOptions.WarnMultiple)
+				{
+					LogConsoleMessage("Cumulus is already running - terminating", ConsoleColor.Red);
+					LogConsoleMessage("Program exit");
+					LogMessage("Stop second instance: Cumulus is already running and 'Stop second instance' is enabled - terminating");
+					LogMessage("Stop second instance: Program exit");
+					Environment.Exit(3);
+					return;
+				}
+				else
+				{
+					LogConsoleMessage("Cumulus is already running - but 'Stop second instance' is disabled", ConsoleColor.Yellow);
+					LogMessage("Stop second instance: Cumulus is already running but 'Stop second instance' is disabled - continuing");
+				}
+			}
+			catch (Exception ex)
+			{
+				LogMessage("Stop second instance: File Error! - " + ex);
+				LogMessage("Stop second instance: File HResult - " + ex.HResult);
+				LogMessage("Stop second instance: File HResult - " + (ex.HResult & 0x0000FFFF));
+
+				if (ProgramOptions.WarnMultiple)
+				{
+					LogMessage("Stop second instance: Terminating this instance of Cumulus");
+					LogConsoleMessage("An error occurred during second instance detection and 'Stop second instance' is enabled - terminating", ConsoleColor.Red);
+					LogConsoleMessage("Program exit");
+					Environment.Exit(3);
+					return;
+				}
+				else
+				{
+					LogMessage("Stop second instance: 'Stop second instance' is disabled - continuing this instance of Cumulus");
+				}
+			}
+		}
+
 		public void BackupData(bool daily, DateTime timestamp)
 		{
 			LogMessage($"Starting {(daily ? "daily" : "start-up")} backup");
@@ -7328,6 +7940,7 @@ namespace CumulusMX
 				var yearbackup = datafolder + Path.GetFileName(YearIniFile);
 				var diarybackup = datafolder + Path.GetFileName(diaryfile);
 				var dbBackup = datafolder + Path.GetFileName(dbfile);
+				var stringsbackup = foldername + "strings.ini";
 
 				var LogFile = GetLogFileName(timestamp);
 				var logbackup = datafolder + Path.GetFileName(LogFile);
@@ -7378,6 +7991,8 @@ namespace CumulusMX
 								archive.CreateEntryFromFile("Cumulus.ini", configbackup);
 							if (File.Exists("UniqueId.txt"))
 								archive.CreateEntryFromFile("UniqueId.txt", uniquebackup);
+							if (File.Exists("strings.ini"))
+								archive.CreateEntryFromFile("strings.ini", stringsbackup);
 						}
 						catch (Exception ex)
 						{
@@ -7865,7 +8480,7 @@ namespace CumulusMX
 
 		public string Beaufort(double? Bspeed) // Takes speed in current unit, returns Bft number as text
 		{
-			return station.Beaufort(Bspeed).ToString() ;
+			return WeatherStation.Beaufort(Bspeed).ToString() ;
 		}
 
 		public string BeaufortDesc(double? Bspeed)
@@ -7873,23 +8488,23 @@ namespace CumulusMX
 			// Takes speed in current units, returns Bft description
 
 			// Convert to Force
-			var force = station.Beaufort(Bspeed);
+			var force = WeatherStation.Beaufort(Bspeed);
 			return force switch
 			{
-				0 => Calm,
-				1 => Lightair,
-				2 => Lightbreeze,
-				3 => Gentlebreeze,
-				4 => Moderatebreeze,
-				5 => Freshbreeze,
-				6 => Strongbreeze,
-				7 => Neargale,
-				8 => Gale,
-				9 => Stronggale,
-				10 => Storm,
-				11 => Violentstorm,
-				12 => Hurricane,
-				_ => "UNKNOWN",
+				0 => Trans.Calm,
+				1 => Trans.Lightair,
+				2 => Trans.Lightbreeze,
+				3 => Trans.Gentlebreeze,
+				4 => Trans.Moderatebreeze,
+				5 => Trans.Freshbreeze,
+				6 => Trans.Strongbreeze,
+				7 => Trans.Neargale,
+				8 => Trans.Gale,
+				9 => Trans.Stronggale,
+				10 => Trans.Storm,
+				11 => Trans.Violentstorm,
+				12 => Trans.Hurricane,
+				_ => Trans.Unknown
 			};
 		}
 
@@ -7910,6 +8525,8 @@ namespace CumulusMX
 
 		public void Stop()
 		{
+			tokenSource.Cancel();
+
 			LogMessage("Cumulus closing");
 
 			// Stop the timers
@@ -7921,7 +8538,7 @@ namespace CumulusMX
 			try { MQTTTimer.Stop(); } catch { }
 			//AirLinkTimer.Stop();
 			try { CustomHttpSecondsTimer.Stop(); } catch { }
-			try { MySqlStuff.CustomSecondsTimer.Stop(); } catch { }
+			try { MySqlSettings.CustomSecondsTimer.Stop(); } catch { }
 			try { MQTTTimer.Stop(); } catch { }
 
 			try
@@ -7980,13 +8597,13 @@ namespace CumulusMX
 
 			try
 			{
-				if (null != _linuxLockFile)
+				if (null != _lockFile)
 				{
 					LogMessage("Releasing lock file...");
-					_linuxLockFile.SetLength(0);
-					_linuxLockFile.Close();
-					_linuxLockFile.Dispose();
-					File.Delete(_linuxLockFilename);
+					_lockFile.SetLength(0);
+					_lockFile.Close();
+					_lockFile.Dispose();
+					File.Delete(_lockFilename);
 				}
 			}
 			catch { }
@@ -7994,32 +8611,39 @@ namespace CumulusMX
 			LogMessage("Station shutdown complete");
 		}
 
-		public void DoHTMLFiles(DateTime ts)
+		public async void DoHTMLFiles()
 		{
 			try
 			{
 				if (!RealtimeIntervalEnabled)
 				{
 					CreateRealtimeFile(999).Wait();
-					MySqlStuff.DoRealtimeData(999, true);
+					MySqlSettings.DoRealtimeData(999, true);
 				}
 
-				LogDebugMessage("Creating standard web files");
+				LogDebugMessage("Interval: Creating standard web files");
 				for (var i = 0; i < StdWebFiles.Length; i++)
 				{
 					if (StdWebFiles[i].Create && !string.IsNullOrWhiteSpace(StdWebFiles[i].TemplateFileName))
 					{
 						var destFile = StdWebFiles[i].LocalPath + StdWebFiles[i].LocalFileName;
-						ProcessTemplateFile(StdWebFiles[i].TemplateFileName, destFile, tokenParser, true).Wait();
+						if (StdWebFiles[i].LocalFileName == "wxnow.txt")
+						{
+							station.CreateWxnowFile();
+						}
+						else
+						{
+							await ProcessTemplateFile(StdWebFiles[i].TemplateFileName, destFile, tokenParser, true);
+						}
 					}
 				}
-				LogDebugMessage("Done creating standard Data file");
+				LogDebugMessage("Interval: Done creating standard Data file");
 
-				LogDebugMessage("Creating graph data files");
-				station.Graphs.CreateGraphDataFiles(ts).Wait();
-				LogDebugMessage("Done creating graph data files");
+				LogDebugMessage("Interval: Creating graph data files");
+				station.Graphs.CreateGraphDataFiles().Wait();
+				LogDebugMessage("Interval: Done creating graph data files");
 
-				//LogDebugMessage("Creating extra files");
+				LogDebugMessage("Interval: Creating extra files");
 				// handle any extra files
 				for (int i = 0; i < numextrafiles; i++)
 				{
@@ -8028,7 +8652,7 @@ namespace CumulusMX
 						var uploadfile = ExtraFiles[i].local;
 						var remotefile = ExtraFiles[i].remote;
 
-						if ((uploadfile.Length > 0) && (remotefile.Length > 0))
+						if ((uploadfile.Length > 0) && (remotefile.Length > 0) && !ExtraFiles[i].FTP)
 						{
 							uploadfile = GetUploadFilename(uploadfile, DateTime.Now);
 
@@ -8036,28 +8660,25 @@ namespace CumulusMX
 							{
 								remotefile = GetRemoteFileName(remotefile, DateTime.Now);
 
-								if (ExtraFiles[i].process)
+								LogDebugMessage($"Interval: Copying extra file[{i}] {uploadfile} to {remotefile}");
+								try
 								{
-									LogDebugMessage($"Interval: Processing extra file[{i}] - {uploadfile}");
-									// process the file
-									ProcessTemplateFile(uploadfile, uploadfile + "tmp", tokenParser, false).Wait();
-									uploadfile += "tmp";
+									if (ExtraFiles[i].process)
+									{
+										var data = ProcessTemplateFile2String(uploadfile, tokenParser, false, ExtraFiles[i].UTF8);
+										File.WriteAllText(remotefile, data);
+									}
+									else
+									{
+										// just copy the file
+										File.Copy(uploadfile, remotefile, true);
+									}
 								}
-
-								if (!ExtraFiles[i].FTP)
+								catch (Exception ex)
 								{
-									// just copy the file
-									LogDebugMessage($"Interval: Copying extra file[{i}] {uploadfile} to {remotefile}");
-									try
-									{
-										Utils.CopyFileSync(uploadfile, remotefile);
-									}
-									catch (Exception ex)
-									{
-										LogExceptionMessage(ex, $"Interval: Error copying extra file[{i}] ");
-									}
-									//LogDebugMessage("Finished copying extra file " + uploadfile);
+									LogDebugMessage($"Interval: Error copying extra file[{i}]: " + ex.Message);
 								}
+								//LogDebugMessage("Finished copying extra file " + uploadfile);
 							}
 							else
 							{
@@ -8066,6 +8687,8 @@ namespace CumulusMX
 						}
 					}
 				}
+
+				LogDebugMessage("Interval: Done creating extra files");
 
 				if (!string.IsNullOrEmpty(ExternalProgram))
 				{
@@ -8087,7 +8710,7 @@ namespace CumulusMX
 
 				_ = DoLocalCopy();
 
-				DoFTPLogin();
+				await DoIntervalUpload();
 			}
 			finally
 			{
@@ -8158,81 +8781,133 @@ namespace CumulusMX
 
 			// standard files
 			LogDebugMessage("LocalCopy: Copying standard web files");
+			var success = 0;
+			var failed = 0;
 			for (var i = 0; i < StdWebFiles.Length; i++)
 			{
 				if (StdWebFiles[i].Copy && StdWebFiles[i].CopyRequired)
 				{
 					try
 					{
-						srcfile = StdWebFiles[i].LocalPath + StdWebFiles[i].LocalFileName;
 						dstfile = remotePath + StdWebFiles[i].RemoteFileName;
-						await Utils.CopyFileAsync(srcfile, dstfile);
+						// the files are no longer always created, so gen them on the fly if required
+						if (StdWebFiles[i].Create)
+						{
+							srcfile = StdWebFiles[i].LocalPath + StdWebFiles[i].LocalFileName;
+							await Utils.CopyFileAsync(srcfile, dstfile);
+						}
+						else
+						{
+							string text;
+							if (StdWebFiles[i].LocalFileName == "wxnow.txt")
+							{
+								text = station.CreateWxnowFileString();
+							}
+							else
+							{
+								text = ProcessTemplateFile2String(StdWebFiles[i].TemplateFileName, tokenParser, true);
+							}
+
+							File.WriteAllText(dstfile, text);
+						}
+						success++;
 					}
 					catch (Exception ex)
 					{
 						LogExceptionMessage(ex, $"LocalCopy: Error copying standard data file [{StdWebFiles[i].LocalFileName}]");
+						failed++;
 					}
 				}
 			}
-			LogDebugMessage("LocalCopy: Done copying standard web files");
+			LogDebugMessage($"LocalCopy: Done copying standard web files - Success: {success}, Failed: {failed}");
 
 			LogDebugMessage("LocalCopy: Copying graph data files");
+			var oldset = DateTime.Now.AddHours(-GraphHours);
+			success = 0;
+			failed = 0;
 			for (int i = 0; i < GraphDataFiles.Length; i++)
 			{
 				if (GraphDataFiles[i].Copy && GraphDataFiles[i].CopyRequired)
 				{
 					try
 					{
-						srcfile = GraphDataFiles[i].LocalPath + GraphDataFiles[i].LocalFileName;
 						dstfile = remotePath + GraphDataFiles[i].RemoteFileName;
 
-						await Utils.CopyFileAsync(srcfile, dstfile);
+						// the files are no longer created when using PHP upload, so gen them on the fly
+						if (GraphDataFiles[i].Create)
+						{
+							srcfile = GraphDataFiles[i].LocalPath + GraphDataFiles[i].LocalFileName;
+							await Utils.CopyFileAsync(srcfile, dstfile);
+						}
+						else
+						{
+							var text = station.Graphs.CreateGraphDataJson(GraphDataFiles[i].LocalFileName, false);
+							File.WriteAllText(dstfile, text);
+						}
+
+
+
 						// The config files only need uploading once per change
-						if (GraphDataFiles[i].LocalFileName == "availabledata.json" ||
-							GraphDataFiles[i].LocalFileName == "graphconfig.json")
+						// 0=graphconfig, 1=availabledata, 8=dailyrain, 9=dailytemp, 11=sunhours
+						if (i == 0 || i == 1 || i == 8 || i == 9 || i == 11)
 						{
 							GraphDataFiles[i].CopyRequired = false;
 						}
+						success++;
 					}
 					catch (Exception ex)
 					{
 						LogExceptionMessage(ex, $"LocalCopy: Error copying graph data file [{srcfile}]");
+						failed++;
 					}
 				}
 			}
-			LogDebugMessage("LocalCopy: Done copying graph data files");
+			LogDebugMessage($"LocalCopy: Done copying graph data files - Success: {success}, Failed: {failed}");
 
 			LogDebugMessage("LocalCopy: Copying daily graph data files");
+			success = 0;
+			failed = 0;
 			for (int i = 0; i < GraphDataEodFiles.Length; i++)
 			{
 				if (GraphDataEodFiles[i].Copy && GraphDataEodFiles[i].CopyRequired)
 				{
 					try
 					{
-						srcfile = GraphDataEodFiles[i].LocalPath + GraphDataEodFiles[i].LocalFileName;
 						dstfile = remotePath + GraphDataEodFiles[i].RemoteFileName;
 
-						await Utils.CopyFileAsync(srcfile, dstfile);
+						// the files are no longer created when using PHP upload, so gen them on the fly
+						if (GraphDataEodFiles[i].Create)
+						{
+							srcfile = GraphDataEodFiles[i].LocalPath + GraphDataEodFiles[i].LocalFileName;
+							await Utils.CopyFileAsync(srcfile, dstfile);
+						}
+						else
+						{
+							var text = station.Graphs.CreateEodGraphDataJson(GraphDataEodFiles[i].LocalFileName);
+							File.WriteAllText(dstfile, text);
+						}
 						// Uploaded OK, reset the upload required flag
 						GraphDataEodFiles[i].CopyRequired = false;
+						success++;
 					}
 					catch (Exception ex)
 					{
 						LogExceptionMessage(ex, $"LocalCopy: Error copying daily graph data file [{srcfile}]");
+						failed++;
 					}
 				}
 			}
-			LogDebugMessage("LocalCopy: Done copying daily graph data files");
+			LogDebugMessage($"LocalCopy: Done copying daily graph data files - Success: {success}, Failed: {failed}");
 
 			if (MoonImage.Copy && MoonImage.ReadyToCopy)
 			{
 				try
 				{
-					LogDebugMessage("LocalCopy: Copying Moon image file");
+					LogDebugMessage("LocalCopy: Copying Moon image file to " + MoonImage.CopyDest);
 					await Utils.CopyFileAsync("web" + DirectorySeparator + "moon.png", MoonImage.CopyDest);
 
 					LogDebugMessage("LocalCopy: Done copying Moon image file");
-					// clear the image ready for FTP flag, only upload once an hour
+					// clear the image ready for copy flag, only upload once an hour
 					MoonImage.ReadyToCopy = false;
 				}
 				catch (Exception ex)
@@ -8244,8 +8919,363 @@ namespace CumulusMX
 			LogDebugMessage("LocalCopy: Copy process complete");
 		}
 
+		public void DoHttpFiles(DateTime now)
+		{
+			// sanity check - is there anything to do?
+			if (HttpFilesConfig.Where(x => x.Enabled && x.Url.Length > 0 && x.Remote.Length > 0 && x.NextDownload <= now).Count() == 0)
+			{
+#if DEBUG
+				LogDebugMessage("ProcessHttpFiles: No files to process at this time");
+#endif
+				return;
+			}
 
-		public void DoFTPLogin()
+			// second sanity check, are there any local copies?
+			var localOnly = HttpFilesConfig.Where(x => x.Enabled && x.Url.Length > 0 && x.Remote.Length > 0 && x.NextDownload <= now && !x.Upload);
+			if (localOnly.Count() > 0)
+			{
+				LogDebugMessage("ProcessHttpFiles: Creating local http files");
+				localOnly
+				.ToList()
+				.ForEach(async item =>
+				{
+					var downloadfile = item.Url;
+					var remotefile = item.Remote;
+
+					// just create a file from the download
+					await httpFiles.DownloadHttpFile(item.Url, item.Remote);
+
+					item.SetNextInterval(now);
+				});
+				LogDebugMessage("ProcessHttpFiles: Done creating local http file tasks, not waiting for them to complete");
+			}
+
+			// third sanity check, are there any uploads?
+			var uploads = HttpFilesConfig.Where(x => x.Enabled && x.Url.Length > 0 && x.Remote.Length > 0 && x.NextDownload <= now && x.Upload);
+			if (uploads.Count() == 0)
+			{
+				return;
+			}
+
+			if (FtpOptions.FtpMode == FtpProtocols.SFTP)
+			{
+				ConnectionInfo connectionInfo;
+				if (FtpOptions.SshAuthen == "password")
+				{
+					connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PasswordAuthenticationMethod(FtpOptions.Username, FtpOptions.Password));
+					LogFtpDebugMessage("ProcessHttpFiles: Connecting using password authentication");
+				}
+				else if (FtpOptions.SshAuthen == "psk")
+				{
+					PrivateKeyFile pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
+					connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
+					LogFtpDebugMessage("ProcessHttpFiles: Connecting using PSK authentication");
+				}
+				else if (FtpOptions.SshAuthen == "password_psk")
+				{
+					PrivateKeyFile pskFile = new PrivateKeyFile(FtpOptions.SshPskFile);
+					connectionInfo = new ConnectionInfo(FtpOptions.Hostname, FtpOptions.Port, FtpOptions.Username, new PasswordAuthenticationMethod(FtpOptions.Username, FtpOptions.Password), new PrivateKeyAuthenticationMethod(FtpOptions.Username, pskFile));
+					LogFtpDebugMessage("ProcessHttpFiles: Connecting using password or PSK authentication");
+				}
+				else
+				{
+					LogFtpMessage($"ProcessHttpFiles: Invalid SshftpAuthentication specified [{FtpOptions.SshAuthen}]");
+					return;
+				}
+
+				try
+				{
+					using (SftpClient conn = new SftpClient(connectionInfo))
+					{
+						// If the ECDSA ciphers are not available - yes I'm talking about you Mono! - remove them from the list to be tried
+/*						try
+						{
+							using (var ecdsa = new System.Security.Cryptography.ECDsaCng())
+								_ = 0; // do nothing
+						}
+						catch (NotImplementedException)
+						{
+							var algsToRemove = connectionInfo.HostKeyAlgorithms.Keys.Where(algName => algName.StartsWith("ecdsa")).ToArray();
+							foreach (var algName in algsToRemove)
+								connectionInfo.HostKeyAlgorithms.Remove(algName);
+						}
+*/
+						try
+						{
+							LogFtpDebugMessage($"ProcessHttpFiles: CumulusMX Connecting to {FtpOptions.Hostname} on port {FtpOptions.Port}");
+							conn.Connect();
+							if (ServicePointManager.DnsRefreshTimeout == 0)
+							{
+								ServicePointManager.DnsRefreshTimeout = 120000; // two minutes default
+							}
+						}
+						catch (Exception ex)
+						{
+							LogFtpMessage($"ProcessHttpFiles: Error connecting SFTP - {ex.Message}");
+
+							if ((uint)ex.HResult == 0x80004005) // Could not resolve host
+							{
+								// Disable the DNS cache for the next query
+								ServicePointManager.DnsRefreshTimeout = 0;
+							}
+							return;
+						}
+
+						uploads
+						.ToList()
+						.ForEach(item =>
+						{
+							Stream strm = null;
+
+							try
+							{
+
+								if (cancellationToken.IsCancellationRequested)
+									return;
+
+								strm = httpFiles.DownloadHttpFileStream(item.Url);
+								UploadStream(conn, item.Remote, strm, -1);
+
+								item.SetNextInterval(now);
+							}
+							catch (Exception ex) when (!(ex is TaskCanceledException))
+							{
+								LogExceptionMessage(ex, $"ProcessHttpFiles: Error uploading http file {item.Url} to: {item.Remote}");
+							}
+							finally
+							{
+								if (null != strm)
+									strm.Dispose();
+							}
+						});
+
+						LogDebugMessage("ProcessHttpFiles: Done uploading http files");
+
+
+						if (conn.IsConnected)
+						{
+							try
+							{
+								// do not error on disconnect
+								conn.Disconnect();
+							}
+							catch { }
+						}
+					}
+				}
+				catch (Exception ex)
+				{
+					LogFtpMessage($"ProcessHttpFiles: Error using SFTP connection - {ex.Message}");
+				}
+				LogFtpDebugMessage("ProcessHttpFiles: Connection process complete");
+			}
+			else if (FtpOptions.FtpMode == FtpProtocols.FTP || (FtpOptions.FtpMode == FtpProtocols.FTPS))
+			{
+				using (FtpClient conn = new FtpClient())
+				{
+					if (FtpOptions.Logging)
+					{
+						conn.Logger = (IFtpLogger) FtpLoggerIN;
+					}
+
+					LogFtpMessage(""); // insert a blank line
+					LogFtpDebugMessage($"ProcessHttpFiles: CumulusMX Connecting to " + FtpOptions.Hostname);
+					conn.Host = FtpOptions.Hostname;
+					conn.Port = FtpOptions.Port;
+					conn.Credentials = new NetworkCredential(FtpOptions.Username, FtpOptions.Password);
+
+					if (!FtpOptions.AutoDetect)
+					{
+
+						if (FtpOptions.FtpMode == FtpProtocols.FTPS)
+						{
+							// Explicit = Current protocol - connects using FTP and switches to TLS
+							// Implicit = Old depreciated protocol - connects using TLS
+							conn.Config.EncryptionMode = FtpOptions.DisableExplicit ? FtpEncryptionMode.Implicit : FtpEncryptionMode.Explicit;
+							conn.Config.DataConnectionEncryption = true;
+							// b3045 - switch from System.Net.Ftp.Client to FluentFTP allows us to specify protocols
+							// b3155 - switch to default again - this will use the highest version available in the OS
+							//conn.SslProtocols = SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
+						}
+
+						if (FtpOptions.ActiveMode)
+						{
+							conn.Config.DataConnectionType = FtpDataConnectionType.PORT;
+						}
+						else if (FtpOptions.DisableEPSV)
+						{
+							conn.Config.DataConnectionType = FtpDataConnectionType.PASV;
+						}
+					}
+
+					if (FtpOptions.FtpMode == FtpProtocols.FTPS)
+					{
+						conn.Config.ValidateAnyCertificate = FtpOptions.IgnoreCertErrors;
+					}
+
+					try
+					{
+						if (FtpOptions.AutoDetect)
+						{
+							conn.AutoConnect();
+						}
+						else
+						{
+							conn.Connect();
+						}
+
+						if (ServicePointManager.DnsRefreshTimeout == 0)
+						{
+							ServicePointManager.DnsRefreshTimeout = 120000; // two minutes default
+						}
+					}
+					catch (Exception ex)
+					{
+						LogFtpMessage("ProcessHttpFiles: Error connecting ftp - " + ex.Message);
+
+						if (ex.InnerException != null)
+						{
+							ex = Utils.GetOriginalException(ex);
+							LogFtpMessage($"ProcessHttpFiles: Base exception - {ex.Message}");
+						}
+
+						if ((uint)ex.HResult == 0x80004005) // Could not resolve host
+						{
+							// Disable the DNS cache for the next query
+							ServicePointManager.DnsRefreshTimeout = 0;
+						}
+						return;
+					}
+
+					LogDebugMessage("ProcessHttpFiles: Uploading http files");
+
+					uploads
+					.ToList()
+					.ForEach(item =>
+					{
+						Stream strm = null;
+
+						try
+						{
+
+							if (cancellationToken.IsCancellationRequested)
+								return;
+
+							strm = httpFiles.DownloadHttpFileStream(item.Url);
+							UploadStream(conn, item.Remote, strm, -1);
+
+							item.SetNextInterval(now);
+						}
+						catch (Exception ex) when (!(ex is TaskCanceledException))
+						{
+							LogExceptionMessage(ex, $"ProcessHttpFiles: Error uploading http file {item.Url} to: {item.Remote}");
+						}
+						finally
+						{
+							if (null != strm)
+								strm.Dispose();
+						}
+					});
+
+					LogDebugMessage("ProcessHttpFiles: Done uploading http files");
+
+
+
+					if (conn.IsConnected)
+					{
+						conn.Disconnect();
+						LogFtpDebugMessage("ProcessHttpFiles: Disconnected from " + FtpOptions.Hostname);
+					}
+				}
+				LogFtpMessage("ProcessHttpFiles: Process complete");
+			}
+			else if (FtpOptions.FtpMode == FtpProtocols.PHP)
+			{
+				var tasklist = new List<Task>();
+				var taskCount = 0;
+				var runningTaskCount = 0;
+
+				LogDebugMessage("ProcessHttpFiles: Uploading http files");
+
+				HttpFilesConfig
+				.Where(x => x.Enabled && x.Url.Length > 0 && x.Remote.Length > 0 && x.NextDownload <= now && x.Upload)
+				.ToList()
+				.ForEach(async item =>
+				{
+					Interlocked.Increment(ref taskCount);
+
+					var downloadfile = item.Url;
+					var remotefile = item.Remote;
+
+#if DEBUG
+					LogDebugMessage($"ProcessHttpFiles: Http file: {downloadfile} waiting for semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+					await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+					LogDebugMessage($"ProcessHttpFiles: Http file: {downloadfile} has a semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#else
+						await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+#endif
+
+					tasklist.Add(Task.Run(async () =>
+					{
+						try
+						{
+
+							if (cancellationToken.IsCancellationRequested)
+								return false;
+
+							var content = await httpFiles.DownloadHttpFileBase64String(item.Url);
+							_ = await UploadString(phpUploadHttpClient, false, null, content, item.Remote, -1, true);
+
+							item.SetNextInterval(now);
+						}
+						catch (Exception ex) when (!(ex is TaskCanceledException))
+						{
+							LogExceptionMessage(ex, $"ProcessHttpFiles: Error uploading http file {downloadfile} to: {remotefile}");
+						}
+						finally
+						{
+							uploadCountLimitSemaphoreSlim.Release();
+#if DEBUG
+							LogDebugMessage($"ProcessHttpFiles: Http file: {downloadfile} released semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#endif
+						}
+						// no void return which cannot be tracked
+						return true;
+					}, cancellationToken));
+
+					Interlocked.Increment(ref runningTaskCount);
+
+				});
+
+				LogDebugMessage("ProcessHttpFiles: Done uploading http files");
+
+				// wait for all the files to start
+				while (runningTaskCount < taskCount)
+				{
+					if (cancellationToken.IsCancellationRequested)
+					{
+						LogDebugMessage("ProcessHttpFiles: Upload process aborted");
+						return;
+					}
+					Thread.Sleep(10);
+				}
+
+				// wait for all the files to complete
+				Task.WaitAll(tasklist.ToArray(), cancellationToken);
+				//LogDebugMessage($"ProcessHttpFiles: Files upload complete, {tasklist.Count()} files processed");
+
+				if (cancellationToken.IsCancellationRequested)
+				{
+					LogDebugMessage($"ProcessHttpFiles: Upload process aborted");
+					return;
+				}
+
+				LogDebugMessage($"ProcessHttpFiles: Upload process complete, {tasklist.Count()} files processed");
+				tasklist.Clear();
+			}
+		}
+
+		public async Task DoIntervalUpload()
 		{
 			var remotePath = "";
 
@@ -8531,13 +9561,13 @@ namespace CumulusMX
 				}
 				LogFtpDebugMessage("SFTP[Int]: Process complete");
 			}
-			else
+			else if (FtpOptions.FtpMode == FtpProtocols.FTP || (FtpOptions.FtpMode == FtpProtocols.FTPS))
 			{
 				using (FtpClient conn = new FtpClient())
 				{
 					if (FtpOptions.Logging)
 					{
-						conn.Logger = FtpLoggerIN;
+						conn.Logger = (IFtpLogger) FtpLoggerIN;
 					}
 					LogFtpDebugMessage($"FTP[Int]: CumulusMX Connecting to " + FtpOptions.Hostname);
 					conn.Host = FtpOptions.Hostname;
@@ -8770,11 +9800,505 @@ namespace CumulusMX
 				}
 				LogFtpMessage("FTP[Int]: Process complete");
 			}
-		}
+			else if (FtpOptions.FtpMode == FtpProtocols.PHP)
+			{
+				LogDebugMessage("PHP[Int]: Upload process starting");
 
-		// Return True if the connection still exists
-		// Return False if the connection is disposed, null, or not connected
-		private bool UploadFile(FtpClient conn, string localfile, string remotefile, int cycle = -1)
+				var tasklist = new List<Task>();
+				var taskCount = 0;
+				var runningTaskCount = 0;
+
+				if (NOAAconf.NeedFtp)
+				{
+					// upload NOAA Monthly report
+					Interlocked.Increment(ref taskCount);
+
+					tasklist.Add(Task.Run(async () =>
+					{
+						try
+						{
+#if DEBUG
+							LogDebugMessage($"PHP[Int]: NOAA Month report waiting for semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+							await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+							LogDebugMessage($"PHP[Int]: NOAA Month report has a semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#else
+							await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+#endif
+							if (cancellationToken.IsCancellationRequested)
+								return false;
+							LogDebugMessage("PHP[Int]: Uploading NOAA Month report");
+							var uploadfile = ReportPath + NOAAconf.LatestMonthReport;
+							var remotefile = NOAAconf.FtpFolder + '/' + NOAAconf.LatestMonthReport;
+							_ = await UploadFile(phpUploadHttpClient, uploadfile, remotefile, -1, false, NOAAconf.UseUtf8);
+						}
+						catch (OperationCanceledException)
+						{
+							return false;
+						}
+						catch (Exception ex)
+						{
+							LogExceptionMessage(ex, $"PHP[Int]: Error uploading NOAA files");
+						}
+						finally
+						{
+							uploadCountLimitSemaphoreSlim.Release();
+#if DEBUG
+							LogDebugMessage($"PHP[Int]: NOAA Year report released semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#endif
+						}
+						// no void return which cannot be tracked
+						return true;
+					}, cancellationToken));
+
+					Interlocked.Increment(ref runningTaskCount);
+
+					// upload NOAA Annual report
+					Interlocked.Increment(ref taskCount);
+
+					tasklist.Add(Task.Run(async () =>
+					{
+						try
+						{
+#if DEBUG
+							LogDebugMessage($"PHP[Int]: NOAA Year report waiting for semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+							await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+							LogDebugMessage($"PHP[Int]: NOAA Year report has a semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#else
+							await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+#endif
+							if (cancellationToken.IsCancellationRequested)
+								return false;
+							LogDebugMessage("PHP[Int]: Uploading NOAA Year report");
+							var uploadfile = ReportPath + NOAAconf.LatestYearReport;
+							var remotefile = NOAAconf.FtpFolder + '/' + NOAAconf.LatestYearReport;
+							_ = await UploadFile(phpUploadHttpClient, uploadfile, remotefile, -1, false, NOAAconf.UseUtf8);
+							LogDebugMessage("PHP[Int]: Upload of NOAA reports complete");
+							NOAAconf.NeedFtp = false;
+						}
+						catch (OperationCanceledException)
+						{
+							return false;
+						}
+						catch (Exception ex)
+						{
+							LogExceptionMessage(ex, $"PHP[Int]: Error uploading NOAA Year file");
+						}
+						finally
+						{
+							uploadCountLimitSemaphoreSlim.Release();
+#if DEBUG
+							LogDebugMessage($"PHP[Int]: NOAA Year report released semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#endif
+						}
+						// no void return which cannot be tracked
+						return true;
+					}, cancellationToken));
+
+					Interlocked.Increment(ref runningTaskCount);
+				}
+
+				// Extra files
+				LogDebugMessage("PHP[Int]: Extra Files upload starting");
+
+				ExtraFiles
+				.Where(x =>
+					x.local.Length > 0 &&
+					x.remote.Length > 0 &&
+					!x.realtime &&
+					(EODfilesNeedFTP || (EODfilesNeedFTP == x.endofday)) &&
+					x.FTP)
+				.ToList()
+				.ForEach(async item =>
+				{
+					Interlocked.Increment(ref taskCount);
+					var uploadfile = item.local;
+					var remotefile = item.remote;
+					if (!File.Exists(uploadfile))
+					{
+						LogMessage($"PHP[Int]: Extra web file - {uploadfile} - not found!");
+						return;
+					}
+					try
+					{
+#if DEBUG
+						LogDebugMessage($"PHP[Int]: Extra file: {uploadfile} waiting for semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+						await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+						LogDebugMessage($"PHP[Int]: Extra file: {uploadfile} has a semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#else
+					await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+#endif
+					}
+					catch (OperationCanceledException)
+					{
+						return;
+					}
+					tasklist.Add(Task.Run(async () =>
+					{
+						try
+						{
+							if (cancellationToken.IsCancellationRequested)
+								return false;
+							// For EOD files, we want the previous days log files since it is now just past the day roll-over time. Makes a difference on month roll-over
+							var logDay = item.endofday ? DateTime.Now.AddDays(-1) : DateTime.Now;
+							uploadfile = GetUploadFilename(uploadfile, logDay);
+							remotefile = GetRemoteFileName(remotefile, logDay);
+							// all checks OK, file needs to be uploaded
+							if (item.process)
+							{
+								LogDebugMessage($"PHP[Int]: Uploading Extra file: {uploadfile} to: {remotefile} (Processed)");
+								var data = await ProcessTemplateFile2StringAsync(uploadfile, false, item.UTF8);
+								_ = await UploadString(phpUploadHttpClient, false, string.Empty, data, remotefile, -1, false, item.UTF8);
+							}
+							else
+							{
+								LogDebugMessage($"PHP[Int]: Uploading Extra file: {uploadfile} to: {remotefile}");
+								_ = await UploadFile(phpUploadHttpClient, uploadfile, remotefile, -1, false, item.UTF8);
+							}
+						}
+						catch (Exception ex) when (!(ex is TaskCanceledException))
+						{
+							LogExceptionMessage(ex, $"PHP[Int]: Error uploading file {uploadfile} to: {remotefile}");
+						}
+						finally
+						{
+							uploadCountLimitSemaphoreSlim.Release();
+#if DEBUG
+							LogDebugMessage($"PHP[Int]: Extra file: {uploadfile} released semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#endif
+						}
+						// no void return which cannot be tracked
+						return true;
+					}, cancellationToken));
+					Interlocked.Increment(ref runningTaskCount);
+				});
+
+				// wait for all the extra files to start
+				//while (runningTaskCount < taskCount)
+				//{
+				//	await Task.Delay(100);
+				//}
+				// wait for all the extra files to complete
+				//await Task.WhenAll(tasklist);
+				//LogDebugMessage($"PHP[Int]: Extra Files upload complete, {tasklist.Count()} files processed");
+
+				//tasklist.Clear();
+				//taskCount = 0;
+				//runningTaskCount = 0;
+
+				if (EODfilesNeedFTP)
+				{
+					EODfilesNeedFTP = false;
+				}
+
+
+				// standard files
+				LogDebugMessage("PHP[Int]: Standard files upload starting");
+
+				StdWebFiles
+				.Where(x => x.FTP)
+				.ToList()
+				.ForEach(async item =>
+				{
+					Interlocked.Increment(ref taskCount);
+					try
+					{
+#if DEBUG
+						LogDebugMessage($"PHP[Int]: Standard Data file: {item.LocalFileName} waiting for semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+						await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+						LogDebugMessage($"PHP[Int]: Standard Data file: {item.LocalFileName} has a semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#else
+						await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+#endif
+					}
+					catch (OperationCanceledException)
+					{
+						return;
+					}
+					tasklist.Add(Task.Run(async () =>
+					{
+						try
+						{
+							if (cancellationToken.IsCancellationRequested)
+								return false;
+							string data;
+							LogDebugMessage("PHP[Int]: Uploading standard Data file: " + item.RemoteFileName);
+							if (item.LocalFileName == "wxnow.txt")
+							{
+								data = station.CreateWxnowFileString();
+							}
+							else
+							{
+								data = await ProcessTemplateFile2StringAsync(item.TemplateFileName, true, true);
+							}
+							if (await UploadString(phpUploadHttpClient, false, string.Empty, data, item.RemoteFileName, -1, false, true))
+							{
+								// No standard files are "one offs" at present
+								//StdWebFiles[i].FtpRequired = false;
+							}
+						}
+						catch (Exception ex)
+						{
+							LogExceptionMessage(ex, $"PHP[Int]: Error uploading file {item.RemoteFileName}");
+						}
+						finally
+						{
+							uploadCountLimitSemaphoreSlim.Release();
+#if DEBUG
+							LogDebugMessage($"PHP[Int]: Standard Data file: {item.LocalFileName} released semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#endif
+						}
+						// no void return which cannot be tracked
+						return true;
+					}, cancellationToken));
+					Interlocked.Increment(ref runningTaskCount);
+				});
+
+				// wait for all the standard files to start
+				//while (runningTaskCount < taskCount)
+				//{
+				//	await Task.Delay(100);
+				//}
+				// wait for all the standard files to complete
+				//await Task.WhenAll(tasklist);
+				//LogDebugMessage($"PHP[Int]: Standard files upload complete, {tasklist.Count()} files processed");
+
+				//tasklist.Clear();
+				//taskCount = 0;
+				//runningTaskCount = 0;
+
+
+				// Graph Data Files
+				LogDebugMessage("PHP[Int]: Graph files upload starting");
+
+				var oldest = DateTime.Now.AddHours(-GraphHours);
+				// Munge date/time into UTC becuase we use local time as UTC for highCharts consistency across TZs
+				var oldestTs = Utils.ToPseudoJSTime(oldest).ToString();
+				var configFiles = new string[] { "graphconfig.json", "availabledata.json", "dailyrain.json", "dailytemp.json", "sunhours.json" };
+
+				GraphDataFiles
+				.Where(x => x.FTP && x.FtpRequired)
+				.ToList()
+				.ForEach(async item =>
+				{
+					Interlocked.Increment(ref taskCount);
+					try
+					{
+#if DEBUG
+						LogDebugMessage($"PHP[Int]: Graph data file: {item.LocalFileName} waiting for semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+						await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+						LogDebugMessage($"PHP[Int]: Graph data file: {item.LocalFileName} has a semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#else
+					await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+#endif
+					}
+					catch (OperationCanceledException)
+					{
+						return;
+					}
+					tasklist.Add(Task.Run(async () =>
+					{
+						try
+						{
+							if (cancellationToken.IsCancellationRequested)
+								return false;
+							// we want incremental data for PHP
+							var json = station.Graphs.CreateGraphDataJson(item.LocalFileName, item.Incremental);
+							var remotefile = item.RemoteFileName;
+							LogDebugMessage("PHP[Int]: Uploading graph data file: " + item.LocalFileName);
+							if (await UploadString(phpUploadHttpClient, item.Incremental, oldestTs, json, remotefile, -1, false, true))
+							{
+								// The config files only need uploading once per change
+								// 0=graphconfig, 1=availabledata, 8=dailyrain, 9=dailytemp, 11=sunhours
+								if (configFiles.Any(item.LocalFileName.Contains))
+								{
+									item.FtpRequired = false;
+								}
+								else
+								{
+									item.LastDataTime = DateTime.Now;
+									item.Incremental = true;
+								}
+							}
+						}
+						catch (Exception ex)
+						{
+							LogExceptionMessage(ex, $"PHP[Int]: Error uploading graph data file [{item.RemoteFileName}]");
+						}
+						finally
+						{
+							uploadCountLimitSemaphoreSlim.Release();
+#if DEBUG
+							LogDebugMessage($"PHP[Int]: Graph data file: {item.LocalFileName} released semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#endif
+						}
+						// no void return which cannot be tracked
+						return true;
+					}, cancellationToken));
+					Interlocked.Increment(ref runningTaskCount);
+				});
+
+				// wait for all the graph files to start
+				//while (runningTaskCount < taskCount)
+				//{
+				//	await Task.Delay(100);
+				//}
+				// wait for all the graph files to complete
+				//await Task.WhenAll(tasklist);
+				//LogDebugMessage($"PHP[Int]: Graph files upload complete, {tasklist.Count()} files processed");
+
+				//tasklist.Clear();
+				//taskCount = 0;
+				//runningTaskCount = 0;
+
+
+
+				// EOD Graph Data Files
+				LogDebugMessage("PHP[Int]: EOD Graph files upload starting");
+
+				GraphDataEodFiles
+				.Where(x => x.FTP && x.FtpRequired)
+				.ToList()
+				.ForEach(async item =>
+				{
+					Interlocked.Increment(ref taskCount);
+					try
+					{
+#if DEBUG
+						LogDebugMessage($"PHP[Int]: Daily graph data file: {item.LocalFileName} waiting for semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+						await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+						LogDebugMessage($"PHP[Int]: Daily graph data file: {item.LocalFileName} has a semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#else
+						await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+#endif
+					}
+					catch (OperationCanceledException)
+					{
+						return;
+					}
+					tasklist.Add(Task.Run(async () =>
+					{
+						try
+						{
+							if (cancellationToken.IsCancellationRequested)
+								return false;
+							var remotefile = item.RemoteFileName;
+							LogMessage("PHP[Int]: Uploading daily graph data file: " + item.LocalFileName);
+							var json = station.Graphs.CreateEodGraphDataJson(item.LocalFileName);
+							if (await UploadString(phpUploadHttpClient, false, "", json, remotefile, -1, false, true))
+							{
+								// Uploaded OK, reset the upload required flag
+								item.FtpRequired = false;
+							}
+						}
+						catch (Exception ex)
+						{
+							LogExceptionMessage(ex, $"PHP[Int]: Error uploading daily graph data file [{item.RemoteFileName}]");
+						}
+						finally
+						{
+							uploadCountLimitSemaphoreSlim.Release();
+#if DEBUG
+							LogDebugMessage($"PHP[Int]: Daily graph data file: {item.LocalFileName} released semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#endif
+						}
+						// no void return which cannot be tracked
+						return true;
+					}, cancellationToken));
+					Interlocked.Increment(ref runningTaskCount);
+				});
+
+				// wait for all the EOD files to start
+				//while (runningTaskCount < taskCount)
+				//{
+				//	await Task.Delay(100);
+				//}
+				// wait for all the EOD files to complete
+				//await Task.WhenAll(tasklist);
+				//LogDebugMessage($"PHP[Int]: EOD Graph files upload complete, {tasklist.Count()} files processed");
+				//tasklist.Clear();
+
+
+
+				// Moon image
+				if (MoonImage.Ftp && MoonImage.ReadyToFtp)
+				{
+					Interlocked.Increment(ref taskCount);
+
+					tasklist.Add(Task.Run(async () =>
+					{
+						try
+						{
+#if DEBUG
+							LogDebugMessage($"PHP[Int]: Moon image waiting for semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+							await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+							LogDebugMessage($"PHP[Int]: Moon image has a semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#else
+						await uploadCountLimitSemaphoreSlim.WaitAsync(cancellationToken);
+#endif
+						}
+						catch (OperationCanceledException)
+						{
+							return false;
+						}
+						try
+						{
+							LogDebugMessage("PHP[Int]: Uploading Moon image file");
+							if (await UploadFile(phpUploadHttpClient, "web" + DirectorySeparator + "moon.png", MoonImage.FtpDest, -1, true))
+							{
+								// clear the image ready for FTP flag, only upload once an hour
+								MoonImage.ReadyToFtp = false;
+							}
+						}
+						catch (Exception ex)
+						{
+							LogExceptionMessage(ex, "PHP[Int]: Error uploading moon image");
+						}
+						finally
+						{
+							uploadCountLimitSemaphoreSlim.Release();
+#if DEBUG
+							LogDebugMessage($"PHP[Int]: Moon image released semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#endif
+						}
+						// no void return which cannot be tracked
+						return true;
+					}, cancellationToken));
+
+					Interlocked.Increment(ref runningTaskCount);
+				}
+
+				// wait for all the EOD files to start
+				while (runningTaskCount < taskCount)
+				{
+					if (cancellationToken.IsCancellationRequested)
+					{
+						LogDebugMessage($"PHP[Int]: Upload process aborted");
+						return;
+					}
+					await Task.Delay(10);
+				}
+				// wait for all the EOD files to complete
+				Task.WaitAll(tasklist.ToArray(), cancellationToken);
+				//LogDebugMessage($"PHP[Int]: EOD Graph files upload complete, {tasklist.Count()} files processed");
+
+				if (cancellationToken.IsCancellationRequested)
+				{
+					LogDebugMessage($"PHP[Int]: Upload process aborted");
+					return;
+				}
+
+				LogDebugMessage($"PHP[Int]: Upload process complete, {tasklist.Count()} files processed");
+				tasklist.Clear();
+
+				return;
+			}
+
+			LogDebugMessage("PHP[Int]: Upload process complete");
+	}
+
+	// Return True if the connection still exists
+	// Return False if the connection is disposed, null, or not connected
+	private bool UploadFile(FtpClient conn, string localfile, string remotefile, int cycle = -1)
 		{
 			string remotefiletmp = FTPRename ? remotefile + "tmp" : remotefile;
 			string cycleStr = cycle >= 0 ? cycle.ToString() : "Int";
@@ -8789,6 +10313,36 @@ namespace CumulusMX
 				if (!File.Exists(localfile))
 				{
 					LogMessage($"FTP[{cycleStr}]: Error! Local file not found, aborting upload: {localfile}");
+					return true;
+				}
+
+				using (Stream istream = new FileStream(localfile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+				{
+					UploadStream(conn, remotefile, istream, cycle);
+				}
+			}
+			catch (Exception ex)
+			{
+				LogExceptionMessage(ex, $"FTP[{cycleStr}]: Error uploading {localfile} to {remotefile}", true);
+				if (ex.InnerException != null)
+				{
+					LogFtpMessage($"FTP[{cycleStr}]: Inner Exception: {ex.GetBaseException().Message}");
+				}
+			}
+
+			return conn.IsConnected;
+		}
+
+		private bool UploadStream(FtpClient conn, string remotefile, Stream dataStream, int cycle = -1)
+		{
+			string remotefiletmp = FTPRename ? remotefile + "tmp" : remotefile;
+			string cycleStr = cycle >= 0 ? cycle.ToString() : "Int";
+
+			try
+			{
+				if (dataStream.Length == 0)
+				{
+					LogMessage($"FTP[{cycleStr}]: The data is empty - skipping upload of {remotefile}");
 					return true;
 				}
 
@@ -8825,22 +10379,24 @@ namespace CumulusMX
 					}
 					catch (Exception ex)
 					{
-						LogExceptionMessage(ex, $"FTP[{cycleStr}]: Error deleting {remotefile}", true);
+						LogFtpMessage($"FTP[{cycleStr}]: Error deleting {remotefile} : {ex.Message}");
 						if (ex.InnerException != null)
 						{
-							LogFtpMessage($"FTP[{cycleStr}]: Inner Exception: {ex.GetBaseException().Message}");
+							ex = Utils.GetOriginalException(ex);
+							LogFtpMessage($"FTP[{cycleStr}]: Base exception - {ex.Message}");
 						}
 						// continue on error
 					}
 				}
 
-				LogFtpDebugMessage($"FTP[{cycleStr}]: Uploading {localfile} to {remotefiletmp}");
+				LogFtpDebugMessage($"FTP[{cycleStr}]: Uploading {remotefiletmp}");
 
-				var status = conn.UploadFile(localfile, remotefiletmp);
+				FtpStatus status;
+				status = conn.UploadStream(dataStream, remotefiletmp);
 
 				if (status.IsFailure())
 				{
-					LogMessage($"FTP[{cycleStr}]: Upload of {localfile} to {remotefile} failed");
+					LogMessage($"FTP[{cycleStr}]: Upload of {remotefile} failed");
 				}
 				else if (FTPRename)
 				{
@@ -8854,18 +10410,20 @@ namespace CumulusMX
 					}
 					catch (Exception ex)
 					{
-						LogExceptionMessage(ex, $"FTP[{cycleStr}]: Error renaming {remotefiletmp} to {remotefile}", true);
+						LogFtpMessage($"FTP[{cycleStr}]: Error renaming {remotefiletmp} to {remotefile} : {ex.Message}");
 						if (ex.InnerException != null)
 						{
-							LogFtpMessage($"FTP[{cycleStr}]: Inner Exception: {ex.GetBaseException().Message}");
+							ex = Utils.GetOriginalException(ex);
+							LogFtpMessage($"FTP[{cycleStr}]: Base exception - {ex.Message}");
 						}
+
 						return conn.IsConnected;
 					}
 				}
 			}
 			catch (Exception ex)
 			{
-				LogExceptionMessage(ex, $"FTP[{cycleStr}]: Error uploading {localfile} to {remotefile}", true);
+				LogFtpMessage($"FTP[{cycleStr}]: Error uploading {remotefile} : {ex.Message}");
 				if (ex.InnerException != null)
 				{
 					LogFtpMessage($"FTP[{cycleStr}]: Inner Exception: {ex.GetBaseException().Message}");
@@ -8875,11 +10433,20 @@ namespace CumulusMX
 			return conn.IsConnected;
 		}
 
+		public Stream GenerateStreamFromString(string s)
+		{
+			MemoryStream stream = new MemoryStream();
+			StreamWriter writer = new StreamWriter(stream);
+			writer.Write(s);
+			writer.Flush();
+			stream.Position = 0;
+			return stream;
+		}
+
 		// Return True if the connection still exists
 		// Return False if the connection is disposed, null, or not connected
-		private bool UploadFile(SftpClient conn, string localfile, string remotefile, int cycle)
+		private bool UploadFile(SftpClient conn, string localfile, string remotefile, int cycle = -1)
 		{
-			string remotefilename = FTPRename ? remotefile + "tmp" : remotefile;
 			string cycleStr = cycle >= 0 ? cycle.ToString() : "Int";
 
 			if (!File.Exists(localfile))
@@ -8893,12 +10460,14 @@ namespace CumulusMX
 				if (conn == null || !conn.IsConnected)
 				{
 					LogFtpMessage($"SFTP[{cycleStr}]: The SFTP object is null or not connected - skipping upload of {localfile}");
+					RealtimeFTPReconnect().Wait();
 					return false;
 				}
 			}
 			catch (ObjectDisposedException)
 			{
 				LogFtpMessage($"SFTP[{cycleStr}]: The SFTP object is disposed - skipping upload of {localfile}");
+				RealtimeFTPReconnect().Wait();
 				return false;
 			}
 
@@ -8908,32 +10477,82 @@ namespace CumulusMX
 
 				using (Stream istream = new FileStream(localfile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
 				{
-					try
+					UploadStream(conn, remotefile, istream, cycle);
+				}
+			}
+			catch (ObjectDisposedException)
+			{
+				LogFtpMessage($"SFTP[{cycleStr}]: The SFTP object is disposed");
+				return false;
+			}
+			catch (Exception ex)
+			{
+				LogExceptionMessage(ex, $"SFTP[{cycleStr}]: Error uploading {localfile} to {remotefile}", true);
+			}
+			return true;
+		}
+
+		private bool UploadStream(SftpClient conn, string remotefile, Stream dataStream, int cycle = -1)
+		{
+			string remotefilename = FTPRename ? remotefile + "tmp" : remotefile;
+			string cycleStr = cycle >= 0 ? cycle.ToString() : "Int";
+
+			if (dataStream.Length == 0)
+			{
+				LogFtpMessage($"SFTP[{cycleStr}]: The data is empty - skipping upload of {remotefile}");
+				return false;
+			}
+
+			try
+			{
+				if (conn == null || !conn.IsConnected)
+				{
+					LogFtpMessage($"SFTP[{cycleStr}]: The SFTP object is null or not connected - skipping upload of {remotefile}");
+					RealtimeFTPReconnect().Wait();
+					return false;
+				}
+			}
+			catch (ObjectDisposedException)
+			{
+				LogFtpMessage($"SFTP[{cycleStr}]: The SFTP object is disposed - skipping upload of {remotefile}");
+				RealtimeFTPReconnect().Wait();
+				return false;
+			}
+
+			try
+			{
+				// No delete before upload required for SFTP as we use the overwrite flag
+				try
+				{
+					LogFtpDebugMessage($"SFTP[{cycleStr}]: Uploading {remotefilename}");
+
+					conn.OperationTimeout = TimeSpan.FromSeconds(15);
+					conn.UploadFile(dataStream, remotefilename, true);
+					dataStream.Close();
+
+					LogFtpDebugMessage($"SFTP[{cycleStr}]: Uploaded {remotefilename}");
+				}
+				catch (ObjectDisposedException)
+				{
+					LogFtpMessage($"SFTP[{cycleStr}]: The SFTP object is disposed");
+					return false;
+				}
+				catch (Exception ex)
+				{
+					LogFtpMessage($"SFTP[{cycleStr}]: Error uploading {remotefilename} : {ex.Message}");
+
+					if (ex.Message.Contains("Permission denied")) // Non-fatal
+						return true;
+
+					if (ex.InnerException != null)
 					{
-						LogFtpDebugMessage($"SFTP[{cycleStr}]: Uploading {localfile} to {remotefilename}");
-
-						conn.OperationTimeout = TimeSpan.FromSeconds(15);
-						conn.UploadFile(istream, remotefilename, true);
-						istream.Close();
-
-						LogFtpDebugMessage($"SFTP[{cycleStr}]: Uploaded {localfile}");
+						ex = Utils.GetOriginalException(ex);
+						LogFtpMessage($"FTP[{cycleStr}]: Base exception - {ex.Message}");
 					}
-					catch (ObjectDisposedException)
-					{
-						LogFtpMessage($"SFTP[{cycleStr}]: The SFTP object is disposed");
-						return false;
-					}
-					catch (Exception ex)
-					{
-						LogExceptionMessage(ex, $"SFTP[{cycleStr}]: Error uploading {localfile} to {remotefilename}", true);
 
-						if (ex.Message.Contains("Permission denied")) // Non-fatal //TODO: Check error code rather than text
-							return true;
-
-						// Lets start again anyway! Too hard to tell if the error is recoverable
-							conn.Dispose();
-						return false;
-					}
+					// Lets start again anyway! Too hard to tell if the error is recoverable
+					conn.Dispose();
+					return false;
 				}
 
 				if (FTPRename)
@@ -8952,12 +10571,17 @@ namespace CumulusMX
 					}
 					catch (Exception ex)
 					{
-						LogExceptionMessage(ex, $"SFTP[{cycleStr}]: Error renaming {remotefilename} to {remotefile}", true);
+						LogFtpMessage($"SFTP[{cycleStr}]: Error renaming {remotefilename} to {remotefile} : {ex.Message}");
+						if (ex.InnerException != null)
+						{
+							ex = Utils.GetOriginalException(ex);
+							LogFtpMessage($"SFTP[{cycleStr}]: Base exception - {ex.Message}");
+						}
 
 						return true;
 					}
 				}
-				LogFtpDebugMessage($"SFTP[{cycleStr}]: Completed uploading {localfile} to {remotefile}");
+				LogFtpDebugMessage($"SFTP[{cycleStr}]: Completed uploading {remotefile}");
 			}
 			catch (ObjectDisposedException)
 			{
@@ -8966,9 +10590,184 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				LogExceptionMessage(ex, $"SFTP[{cycleStr}]: Error uploading {localfile} to {remotefile}", true);
+				LogFtpMessage($"SFTP[{cycleStr}]: Error uploading {remotefile} - {ex.Message}");
+				if (ex.InnerException != null)
+				{
+					ex = Utils.GetOriginalException(ex);
+					LogFtpMessage($"SFTP[{cycleStr}]: Base exception - {ex.Message}");
+				}
+
 			}
 			return true;
+		}
+
+
+		// Return True if the upload worked
+		// Return False if the upload failed
+		private async Task<bool> UploadFile(HttpClient httpclient, string localfile, string remotefile, int cycle = -1, bool binary = false, bool utf8 = true)
+		{
+			string cycleStr = cycle >= 0 ? cycle.ToString() : "Int";
+
+			//return true;
+
+			try
+			{
+				if (!File.Exists(localfile))
+				{
+					LogMessage($"PHP[{cycleStr}]: Error! Local file not found, aborting upload: {localfile}");
+					return false;
+				}
+
+				var encoding = utf8 ? new UTF8Encoding(false) : Encoding.GetEncoding("iso-8859-1");
+
+				string data;
+				if (binary)
+				{
+					// change binary files to base64 string
+					data = Convert.ToBase64String(await Utils.ReadAllBytesAsync(localfile));
+				}
+				else
+				{
+					data = await Utils.ReadAllTextAsync(localfile, encoding);
+				}
+
+				return await UploadString(httpclient, false, string.Empty, data, remotefile, cycle, binary, utf8);
+			}
+			catch (Exception ex)
+			{
+				LogDebugMessage($"PHP[{cycleStr}]: Error - {ex.Message}");
+				return false;
+			}
+		}
+
+		private async Task<bool> UploadString(HttpClient httpclient, bool incremental, string oldest, string data, string remotefile, int cycle = -1, bool binary = false, bool utf8 = true)
+		{
+			string cycleStr = cycle >= 0 ? cycle.ToString() : "Int";
+
+			if (string.IsNullOrEmpty(data))
+			{
+				LogMessage($"PHP[{cycleStr}]: Uploading to {remotefile}. Error: The data string is empty, ignoring this upload");
+			}
+
+			LogDebugMessage($"PHP[{cycleStr}]: Uploading to {remotefile}");
+
+			// we will try this twice incase the first attempt fails with a closed connection
+			var retry = 0;
+			do
+			{
+				MemoryStream outStream = null;
+				StreamContent streamContent = null;
+
+				try
+				{
+					var encoding = new UTF8Encoding(false);
+
+					using (var request = new HttpRequestMessage(HttpMethod.Post, FtpOptions.PhpUrl))
+					{
+						var unixTs = Utils.ToUnixTime(DateTime.Now).ToString();
+						var signature = Utils.GetSHA256Hash(FtpOptions.PhpSecret, unixTs + remotefile + data);
+
+						// disable expect 100 - PHP doesn't support it
+						request.Headers.ExpectContinue = false;
+						request.Headers.Add("ACTION", incremental ? "append" : "replace");
+						request.Headers.Add("FILE", remotefile);
+						if (incremental)
+						{
+							request.Headers.Add("OLDEST", oldest);
+						}
+						request.Headers.Add("TS", unixTs);
+						request.Headers.Add("SIGNATURE", signature);
+						request.Headers.Add("BINARY", binary ? "1" : "0");
+						request.Headers.Add("UTF8", utf8 ? "1" : "0");
+						// Compress? if supported and payload exceeds 500 bytes
+						if (data.Length < 500 || FtpOptions.PhpCompression == "none")
+						{
+							request.Content = new StringContent(data, encoding, "application/octet-stream");
+						}
+						else
+						{
+							using (var ms = new System.IO.MemoryStream())
+							{
+								if (FtpOptions.PhpCompression == "gzip")
+								{
+									using (var zipped = new System.IO.Compression.GZipStream(ms, System.IO.Compression.CompressionMode.Compress, true))
+									{
+										var byteData = encoding.GetBytes(data);
+										zipped.Write(byteData, 0, byteData.Length);
+									}
+								}
+								else if (FtpOptions.PhpCompression == "deflate")
+								{
+									using (var zipped = new System.IO.Compression.DeflateStream(ms, System.IO.Compression.CompressionMode.Compress, true))
+									{
+										var byteData = encoding.GetBytes(data);
+										zipped.Write(byteData, 0, byteData.Length);
+									}
+								}
+
+								ms.Position = 0;
+								byte[] compressed = new byte[ms.Length];
+								ms.Read(compressed, 0, compressed.Length);
+
+								outStream = new MemoryStream(compressed);
+								streamContent = new StreamContent(outStream);
+								streamContent.Headers.Add("Content-Encoding", FtpOptions.PhpCompression);
+								streamContent.Headers.ContentLength = outStream.Length;
+
+								request.Content = streamContent;
+							}
+						}
+
+						using (var response = await httpclient.SendAsync(request))
+						{
+							//response.EnsureSuccessStatusCode();
+							var responseBodyAsText = await response.Content.ReadAsStringAsync();
+							if (response.StatusCode != HttpStatusCode.OK)
+							{
+								LogMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response code = {(int)response.StatusCode}: {response.StatusCode}");
+								LogMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response text follows:\n{responseBodyAsText}");
+							}
+							else
+							{
+								LogDebugMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response code = {(int)response.StatusCode}: {response.StatusCode}");
+								LogDataMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response text follows:\n{responseBodyAsText}");
+							}
+
+							if (outStream != null)
+								outStream.Dispose();
+
+							if (streamContent != null)
+								streamContent.Dispose();
+
+							return response.StatusCode == HttpStatusCode.OK;
+						}
+					}
+				}
+				catch (System.Net.Http.HttpRequestException ex)
+				{
+					LogExceptionMessage(ex, $"PHP[{cycleStr}]: Error uploading to {remotefile}");
+					retry++;
+					if (retry < 2)
+					{
+						LogMessage($"PHP[{cycleStr}] Retrying upload to {remotefile}");
+					}
+				}
+				catch (Exception ex)
+				{
+					LogExceptionMessage(ex, $"PHP[{cycleStr}]: Error uploading to {remotefile}");
+					retry = 99;
+				}
+				finally
+				{
+					if (outStream != null)
+						outStream.Dispose();
+
+					if (streamContent != null)
+						streamContent.Dispose();
+				}
+			} while (retry < 2);
+
+			return false;
 		}
 
 		public static void LogMessage(string message)
@@ -9111,7 +10910,30 @@ namespace CumulusMX
 		}
 		*/
 
+
 		private async Task CreateRealtimeFile(int cycle)
+		{
+			// Does the user want to create the realtime.txt file?
+			if (!RealtimeFiles[0].Create)
+			{
+				return;
+			}
+
+			var filename = AppDir + RealtimeFile;
+
+			try
+			{
+				LogDebugMessage($"Realtime[{cycle}]: Creating realtime.txt");
+				await File.WriteAllTextAsync(filename, CreateRealtimeFileString(cycle));
+			}
+			catch (Exception ex)
+			{
+				LogMessage("Error encountered during Realtime file update.");
+				LogMessage(ex.Message);
+			}
+		}
+
+		private string CreateRealtimeFileString(int cycle)
 		{
 			/*
 			Example: 18/10/08 16:03:45 8.4 84 5.8 24.2 33.0 261 0.0 1.0 999.7 W 6 mph C mb mm 146.6 +0.1 85.2 588.4 11.6 20.3 57 3.6 -0.7 10.9 12:00 7.8 14:41 37.4 14:38 44.0 14:28 999.8 16:01 998.4 12:06 1.8.2 448 36.0 10.3 10.5 0 9.3
@@ -9178,13 +11000,7 @@ namespace CumulusMX
 			59     8.4        Feels Like temperature
 		  */
 
-			// Does the user want to create the realtime.txt file?
-			if (!RealtimeFiles[0].Create)
-			{
-				return;
-			}
 
-			var filename = AppDir + RealtimeFile;
 			DateTime timestamp = DateTime.Now;
 
 			try
@@ -9253,18 +11069,39 @@ namespace CumulusMX
 				sb.Append(station.IsSunny ? "1 " : "0 ");                                       // 58
 				sb.Append((station.FeelsLike ?? 0).ToString(TempFormat, invNum));               // 59
 
-				using StreamWriter file = new StreamWriter(filename, false);
-				await file.WriteLineAsync(sb.ToString());
-				file.Close();
+				return sb.ToString();
 			}
 			catch (Exception ex)
 			{
 				LogExceptionMessage(ex, "Error encountered during Realtime file update.");
 			}
+			return string.Empty;
 		}
 
 
 		private async Task ProcessTemplateFile(string template, string outputfile, TokenParser parser, bool useAppDir)
+		{
+			var output = ProcessTemplateFile2String(template, parser, useAppDir);
+
+			if (output != string.Empty)
+			{
+				var utf8WithoutBom = new UTF8Encoding(false);
+				var encoding = UTF8encode ? utf8WithoutBom : Encoding.GetEncoding("iso-8859-1");
+
+				try
+				{
+					using StreamWriter file = new StreamWriter(outputfile, false, encoding);
+					await file.WriteAsync(output);
+					file.Close();
+				}
+				catch (Exception ex)
+				{
+					LogExceptionMessage(ex, $"ProcessTemplateFile: Error writing to file '{outputfile}'");
+				}
+			}
+		}
+
+		private string ProcessTemplateFile2String(string template, TokenParser parser, bool useAppDir, bool utf8 = false)
 		{
 			string templatefile = template;
 
@@ -9275,27 +11112,39 @@ namespace CumulusMX
 
 			if (File.Exists(templatefile))
 			{
-				var utf8WithoutBom = new UTF8Encoding(false);
-				var encoding = UTF8encode ? utf8WithoutBom : Encoding.GetEncoding("iso-8859-1");
-				parser.Encoding = encoding;
-				parser.SourceFile = template;
-				var output = parser.ToString();
-
-				try
-				{
-					using StreamWriter file = new StreamWriter(outputfile, false, encoding);
-					await file.WriteAsync(output);
-					file.Close();
-				}
-				catch (Exception e)
-				{
-					LogMessage($"ProcessTemplateFile: Error writing to file '{outputfile}', error was - {e}");
-				}
+				parser.Encoding = utf8 ? new UTF8Encoding(false) : Encoding.GetEncoding("iso-8859-1");
+				parser.SourceFile = templatefile;
+				return parser.ToString();
 			}
 			else
 			{
 				LogMessage($"ProcessTemplateFile: Error, template file not found - {templatefile}");
 			}
+			return string.Empty;
+		}
+
+		private async Task<string> ProcessTemplateFile2StringAsync(string template, bool useAppDir, bool utf8 = false)
+		{
+			string templatefile = template;
+
+			if (useAppDir)
+			{
+				templatefile = AppDir + template;
+			}
+
+			if (File.Exists(templatefile))
+			{
+				var parser = new TokenParser();
+				parser.OnToken += TokenParserOnToken;
+				parser.SourceFile = templatefile;
+				parser.Encoding = utf8 ? new UTF8Encoding(false) : Encoding.GetEncoding("iso-8859-1");
+				return await parser.ToStringAsync();
+			}
+			else
+			{
+				LogMessage($"ProcessTemplateFile: Error, template file not found - {templatefile}");
+			}
+			return string.Empty;
 		}
 
 		public void StartTimersAndSensors()
@@ -9315,9 +11164,10 @@ namespace CumulusMX
 
 			if (RealtimeIntervalEnabled)
 			{
-				if (FtpOptions.RealtimeEnabled)
+				if (FtpOptions.Enabled && FtpOptions.RealtimeEnabled && FtpOptions.FtpMode != FtpProtocols.PHP)
 				{
 					LogConsoleMessage("Connecting real time FTP");
+
 					if (FtpOptions.FtpMode == FtpProtocols.SFTP)
 					{
 						RealtimeSSHLogin();
@@ -9337,7 +11187,7 @@ namespace CumulusMX
 
 			RealtimeTimer.Enabled = RealtimeIntervalEnabled;
 
-			MySqlStuff.CustomSecondsTimer.Enabled = MySqlStuff.Settings.CustomSecs.Enabled;
+			MySqlSettings.CustomSecondsTimer.Enabled = MySqlSettings.Settings.CustomSecs.Enabled;
 
 			CustomHttpSecondsTimer.Enabled = CustomHttpSecondsEnabled;
 
@@ -9373,7 +11223,7 @@ namespace CumulusMX
 			OpenWeatherMap.CatchUpIfRequired();
 
 
-			if (MySqlStuff.CatchUpList.IsEmpty)
+			if (MySqlSettings.CatchUpList.IsEmpty)
 			{
 				// No archived entries to upload
 				LogDebugMessage("MySqlList is Empty");
@@ -9381,8 +11231,8 @@ namespace CumulusMX
 			else
 			{
 				// start the archive upload thread
-				LogMessage($"Starting MySQL catchup thread. Found {MySqlStuff.CatchUpList.Count} commands to execute");
-				_ = MySqlStuff.CommandAsync(MySqlStuff.CatchUpList, "MySQL Archive", true);
+				LogMessage($"Starting MySQL catchup thread. Found {MySqlSettings.CatchUpList.Count} commands to execute");
+				_ = MySqlSettings.CommandAsync(MySqlSettings.CatchUpList, "MySQL Archive", true);
 			}
 
 			WebTimer.Interval = UpdateInterval * 60 * 1000; // mins to millisecs
@@ -9420,29 +11270,6 @@ namespace CumulusMX
 						{
 							remotefile = GetRemoteFileName(remotefile, logDay);
 
-							if (ExtraFiles[i].process)
-							{
-								LogDebugMessage("EOD: Processing extra file " + uploadfile);
-								// process the file
-								var utf8WithoutBom = new UTF8Encoding(false);
-								var encoding = UTF8encode ? utf8WithoutBom : Encoding.GetEncoding("iso-8859-1");
-								tokenParser.Encoding = encoding;
-								tokenParser.SourceFile = uploadfile;
-								var output = tokenParser.ToString();
-								uploadfile += "tmp";
-								try
-								{
-									using StreamWriter file = new StreamWriter(uploadfile, false, encoding);
-									await file.WriteAsync(output);
-									file.Close();
-								}
-								catch (Exception ex)
-								{
-									LogExceptionMessage(ex, "EOD: Error writing file " + uploadfile);
-								}
-								//LogDebugMessage("Finished processing extra file " + uploadfile);
-							}
-
 							if (ExtraFiles[i].FTP)
 							{
 								// FTP the file at the next interval
@@ -9470,6 +11297,10 @@ namespace CumulusMX
 
 		public void RealtimeFTPDisconnect()
 		{
+			// no disconnect required for PHP
+			if (FtpOptions.FtpMode == FtpProtocols.PHP)
+				return;
+
 			try
 			{
 				if (FtpOptions.FtpMode == FtpProtocols.SFTP && RealtimeSSH != null)
@@ -9491,6 +11322,8 @@ namespace CumulusMX
 
 		private void RealtimeFTPLogin()
 		{
+			LogMessage($"RealtimeFTPLogin: Attempting realtime FTP connect to host {FtpOptions.Hostname} on port {FtpOptions.Port}");
+
 			// dispose of the previous FTP client
 			if (RealtimeFTP != null && !RealtimeFTP.IsDisposed)
 			{
@@ -9804,6 +11637,29 @@ namespace CumulusMX
 				NOAAReports noaa = new NOAAReports(this, station);
 				return noaa.GetLastNoaaMonthReportFilename(dat, true);
 			}
+			else if (input.StartsWith("<custinterval"))
+			{
+				try
+				{
+					Match match = Regex.Match(input, @"<custinterval([0-9]{1,2})>");
+
+					if (match.Success)
+					{
+						var idx = int.Parse(match.Groups[1].Value) - 1; // we use a zero relative array
+
+						return GetCustomIntvlLogFileName(idx, dat);
+					}
+					else
+					{
+						LogMessage("GetUploadFilename: No match found for <custinterval[1-10]> in " + input);
+						return input;
+					}
+				}
+				catch (Exception ex)
+				{
+					LogMessage($"GetUploadFilename: Error processing <custinterval[1-10]>, value='{input}', error: {ex.Message}");
+				}
+			}
 
 			return input;
 		}
@@ -9832,16 +11688,41 @@ namespace CumulusMX
 				NOAAReports noaa = new NOAAReports(this, station);
 				return input.Replace("<noaamonthfile>", Path.GetFileName(noaa.GetLastNoaaMonthReportFilename(dat, false)));
 			}
+			else if (input.Contains("<custinterval"))
+			{
+				try
+				{
+					Match match = Regex.Match(input, @"<custinterval([0-9]{1,2})>");
+
+					if (match.Success)
+					{
+						var idx = int.Parse(match.Groups[1].Value) - 1; // we use a zero relative array
+
+						return input.Replace(match.Groups[0].Value, Path.GetFileName(GetCustomIntvlLogFileName(idx, dat)));
+					}
+					else
+					{
+						LogMessage("GetRemoteFileName: No match found for <custinterval[1-10]> in " + input);
+						return input;
+					}
+				}
+				catch (Exception ex)
+				{
+					LogMessage($"GetRemoteFileName: Error processing <custinterval[1-10]>, input='{input}', error: {ex.Message}");
+				}
+			}
 
 			return input;
 		}
 
 		public void LogOffsetsMultipliers()
 		{
-			LogMessage("Offsets and Multipliers:");
-			LogMessage($"PO={Calib.Press.Offset:F3} TO={Calib.Temp.Offset:F3} HO={Calib.Hum.Offset} WDO={Calib.WindDir.Offset} SO={Calib.Solar.Offset:F3} UVO={Calib.UV.Offset:F3} ITO={Calib.InTemp.Offset} IHO={Calib.InHum.Offset}");
-			LogMessage($"PM={Calib.Press.Mult:F3} WSM={Calib.WindSpeed.Mult:F3} WGM={Calib.WindGust.Mult:F3} TM={Calib.Temp.Mult:F3} TM2={Calib.Temp.Mult2:F3} " +
-						$"HM={Calib.Hum.Mult:F3} HM2={Calib.Hum.Mult2:F3} RM={Calib.Rain.Mult:F3} SM={Calib.Solar.Mult:F3} UVM={Calib.UV.Mult:F3} ITM={Calib.InTemp.Mult} IHM={Calib.InHum.Mult}");
+			LogMessage("Offsets:");
+			LogMessage($"P={Calib.Press.Offset:F3} T={Calib.Temp.Offset:F3} H={Calib.Hum.Offset} WD={Calib.WindDir.Offset} S={Calib.Solar.Offset:F3} UV={Calib.UV.Offset:F3} IT={Calib.InTemp.Offset:F3} IH={Calib.InHum.Offset:F3}");
+			LogMessage("Multipliers:");
+			LogMessage($"P={Calib.Press.Mult:F3} WS={Calib.WindSpeed.Mult:F3} WG={Calib.WindGust.Mult:F3} T={Calib.Temp.Mult:F3} H={Calib.Hum.Mult:F3} R={Calib.Rain.Mult:F3} S={Calib.Solar.Mult:F3} UV={Calib.UV.Mult:F3} IT={Calib.InTemp.Mult:F3} IH={Calib.InHum.Mult:F3}");
+			LogMessage("Multipliers2:");
+			LogMessage($"P={Calib.Press.Mult2:F3} WS={Calib.WindSpeed.Mult2:F3} WG={Calib.WindGust.Mult2:F3} T={Calib.Temp.Mult2:F3} H={Calib.Hum.Mult2:F3} S={Calib.Solar.Mult2:F3} UV={Calib.UV.Mult2:F3} IT={Calib.InTemp.Mult2:F3} IH={Calib.InHum.Mult2:F3}");
 			LogMessage("Spike removal:");
 			LogMessage($"TD={Spike.TempDiff:F3} GD={Spike.GustDiff:F3} WD={Spike.WindDiff:F3} HD={Spike.HumidityDiff:F3} PD={Spike.PressDiff:F3} MR={Spike.MaxRainRate:F3} MH={Spike.MaxHourlyRain:F3} ITD={Spike.InTempDiff:F3} IHD={Spike.InHumDiff:F3}");
 			LogMessage("Limits:");
@@ -10045,6 +11926,8 @@ namespace CumulusMX
 		public CultureConfig Culture { get; set; }
 		public bool DataStoppedExit { get; set; }
 		public int DataStoppedMins { get; set; }
+		public string TimeFormat { get; set; }
+		public string TimeFormatLong { get; set; }
 		public bool EncryptedCreds { get; set; }
 		public bool UpdateDayfile { get; set; }
 		public bool UpdateLogfile { get; set; }
@@ -10115,7 +11998,7 @@ namespace CumulusMX
 		public int AvgSpeedMinutes { get; set; }
 		public int PeakGustMinutes { get; set; }
 		public double AnemometerHeightM { get; set; }
-		public bool UseRainForIsRaining { get; set; }
+		public int UseRainForIsRaining { get; set; }
 		public int LeafWetnessIsRainingIdx { get; set; }
 		public double LeafWetnessIsRainingThrsh { get; set; }
 		public string TimeZone { get; set; }
@@ -10131,9 +12014,7 @@ namespace CumulusMX
 		public string Directory { get; set; }
 		public bool IntervalEnabled { get; set; }
 		public bool RealtimeEnabled { get; set; }
-		/// <value>0=FTP, 1=FTPS, 3=SFTP</value>
 		public Cumulus.FtpProtocols FtpMode { get; set; }
-		/// <value>Valid options: password, psk, password_psk</value>
 		public bool AutoDetect { get; set; }
 		public string SshAuthen { get; set; }
 		public string SshPskFile { get; set; }
@@ -10147,9 +12028,14 @@ namespace CumulusMX
 
 		public bool LocalCopyEnabled { get; set; }
 		public string LocalCopyFolder { get; set; }
+		public string PhpUrl { get; set; }
+		public string PhpSecret { get; set; }
+		public bool PhpIgnoreCertErrors { get; set; }
+		public string PhpCompression { get; set; } = "none";
+		public int MaxConcurrentUploads { get; set; }
 	}
 
-	public class FileGenerationFtpOptions
+	public class FileGenerationOptions
 	{
 		public string TemplateFileName { get; set; }
 		public string LocalFileName { get; set; }
@@ -10158,15 +12044,11 @@ namespace CumulusMX
 		public bool Create { get; set; }
 		public bool FTP { get; set; }
 		public bool Copy { get; set; }
-		public bool FtpRequired { get; set; }
-		public bool CopyRequired { get; set; }
-		public bool CreateRequired { get; set; }
-		public FileGenerationFtpOptions()
-		{
-			CreateRequired = true;
-			FtpRequired = true;
-			CopyRequired = true;
-		}
+		public bool FtpRequired { get; set; } = true;
+		public bool CopyRequired { get; set; } = true;
+		public bool CreateRequired { get; set; } = true;
+		public DateTime LastDataTime { get; set; } = DateTime.MinValue;
+		public bool Incremental { get; set; }
 	}
 
 	public class MoonImageOptionsClass
@@ -10254,56 +12136,6 @@ namespace CumulusMX
 		public double BrasTurbidityDec { get; set; }
 	}
 
-	public class GraphOptions
-	{
-		public bool TempVisible { get; set; }
-		public bool InTempVisible { get; set; }
-		public bool HIVisible { get; set; }
-		public bool DPVisible { get; set; }
-		public bool WCVisible { get; set; }
-		public bool AppTempVisible { get; set; }
-		public bool FeelsLikeVisible { get; set; }
-		public bool HumidexVisible { get; set; }
-		public bool InHumVisible { get; set; }
-		public bool OutHumVisible { get; set; }
-		public bool UVVisible { get; set; }
-		public bool SolarVisible { get; set; }
-		public bool SunshineVisible { get; set; }
-		public bool DailyMaxTempVisible { get; set; }
-		public bool DailyAvgTempVisible { get; set; }
-		public bool DailyMinTempVisible { get; set; }
-		public bool GrowingDegreeDaysVisible1 { get; set; }
-		public bool GrowingDegreeDaysVisible2 { get; set; }
-		public bool TempSumVisible0 { get; set; }
-		public bool TempSumVisible1 { get; set; }
-		public bool TempSumVisible2 { get; set; }
-		public bool[] ExtraTempVisible = new bool[10];
-		public bool[] ExtraHumVisible = new bool[10];
-		public bool[] ExtraDewPointVisible = new bool[10];
-		public bool[] SoilTempVisible = new bool[16];
-		public bool[] SoilMoistVisible = new bool[16];
-		public bool[] UserTempVisible = new bool[8];
-		public GrapOptionsCo2Sensor CO2Sensor { get; set; }
-
-		public GraphOptions()
-		{
-			CO2Sensor = new GrapOptionsCo2Sensor();
-		}
-	}
-
-
-	public class GrapOptionsCo2Sensor
-	{
-		public bool CO2 { get; set; }
-		public bool CO2Avg { get; set; }
-		public bool Pm25 { get; set; }
-		public bool Pm25Avg { get; set; }
-		public bool Pm10 { get; set; }
-		public bool Pm10Avg { get; set; }
-		public bool Temp { get; set; }
-		public bool Hum { get; set; }
-	}
-
 	public class SelectaChartOptions
 	{
 		public string[] series { get; set; }
@@ -10384,6 +12216,7 @@ namespace CumulusMX
 		public MySqlTableSettings CustomSecs { get; set; }
 		public MySqlTableSettings CustomMins { get; set; }
 		public MySqlTableSettings CustomRollover { get; set; }
+		public MySqlTableTimedSettings CustomTimed { get; set; }
 
 		public MySqlGeneralSettings()
 		{
@@ -10393,10 +12226,60 @@ namespace CumulusMX
 			CustomSecs = new MySqlTableSettings();
 			CustomMins = new MySqlTableSettings();
 			CustomRollover = new MySqlTableSettings();
+			CustomTimed = new MySqlTableTimedSettings();
 
 			CustomSecs.Commands = new string[10];
 			CustomMins.Commands = new string[10];
 			CustomRollover.Commands = new string[10];
+			CustomTimed.Commands = new string[10];
+		}
+	}
+
+	public class MySqlTableTimedSettings : MySqlTableSettings
+	{
+		public TimeSpan[] StartTimes { get; set; }
+		public int[] Intervals { get; set; }
+		public DateTime[] NextUpdate { get; set; }
+
+
+		public void SetStartTime(int idx, string val)
+		{
+			StartTimes[idx] = TimeSpan.ParseExact(val, "hh\\:mm", CultureInfo.InvariantCulture);
+		}
+
+		public string GetStartTimeString(int idx)
+		{
+			return StartTimes[idx].ToString("hh\\:mm", CultureInfo.InvariantCulture);
+		}
+
+		public void SetInitialNextInterval(int idx, DateTime now)
+		{
+			NextUpdate[idx] = now.Date + StartTimes[idx];
+		}
+
+		public void SetNextInterval(int idx, DateTime now)
+		{
+			// We always revert to the start time so we remain consistent across DST changes
+			NextUpdate[idx] = now.Date + StartTimes[idx];
+
+			if (Intervals[idx] == 0)
+			{
+				// timed but no repeat interval, add a day
+				NextUpdate[idx] = NextUpdate[idx].AddDays(1);
+			}
+			else
+			{
+				// Timed and we have now set the start, add on intervals until we reach the future
+				while (NextUpdate[idx] <= now)
+				{
+					NextUpdate[idx] = NextUpdate[idx].AddMinutes(Intervals[idx]);
+				}
+
+				// have we rolled over a day and the next interval would be prior to the start time?
+				// if so, bump up the next interval to the daily start time
+				if (NextUpdate[idx].TimeOfDay < StartTimes[idx])
+					NextUpdate[idx] = NextUpdate[idx].Date + StartTimes[idx];
+			}
 		}
 	}
 

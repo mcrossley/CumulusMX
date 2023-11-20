@@ -62,15 +62,25 @@ namespace CumulusMX
 				cumulus.Calib.WindSpeed.Mult = Convert.ToDouble(settings.windspd.multiplier, invC);
 				cumulus.Calib.WindGust.Mult = Convert.ToDouble(settings.gust.multiplier, invC);
 				cumulus.Calib.Temp.Mult = Convert.ToDouble(settings.temp.multiplier, invC);
-				cumulus.Calib.Temp.Mult2 = Convert.ToDouble(settings.temp.multiplier2, invC);
 				cumulus.Calib.InTemp.Mult = Convert.ToDouble(settings.tempin.multiplier, invC);
 				cumulus.Calib.Hum.Mult = Convert.ToDouble(settings.hum.multiplier, invC);
-				cumulus.Calib.Hum.Mult2 = Convert.ToDouble(settings.hum.multiplier2, invC);
 				cumulus.Calib.InHum.Mult = Convert.ToDouble(settings.humin.multiplier, invC);
 				cumulus.Calib.Rain.Mult = Convert.ToDouble(settings.rain.multiplier, invC);
 				cumulus.Calib.Solar.Mult = Convert.ToDouble(settings.solar.multiplier, invC);
 				cumulus.Calib.UV.Mult = Convert.ToDouble(settings.uv.multiplier, invC);
 				cumulus.Calib.WetBulb.Mult = Convert.ToDouble(settings.wetbulb.multiplier, invC);
+
+				//multipliers2
+				cumulus.Calib.Press.Mult2 = Convert.ToDouble(settings.pressure.multiplier2, invC);
+				cumulus.Calib.WindSpeed.Mult2 = Convert.ToDouble(settings.windspd.multiplier2, invC);
+				cumulus.Calib.WindGust.Mult2 = Convert.ToDouble(settings.gust.multiplier2, invC);
+				cumulus.Calib.Temp.Mult2 = Convert.ToDouble(settings.temp.multiplier2, invC);
+				cumulus.Calib.InTemp.Mult2 = Convert.ToDouble(settings.tempin.multiplier2, invC);
+				cumulus.Calib.Hum.Mult2 = Convert.ToDouble(settings.hum.multiplier2, invC);
+				cumulus.Calib.InHum.Mult2 = Convert.ToDouble(settings.humin.multiplier2, invC);
+				cumulus.Calib.Solar.Mult2 = Convert.ToDouble(settings.solar.multiplier2, invC);
+				cumulus.Calib.UV.Mult2 = Convert.ToDouble(settings.uv.multiplier2, invC);
+				cumulus.Calib.WetBulb.Mult2 = Convert.ToDouble(settings.wetbulb.multiplier2, invC);
 
 				// spike removal
 				cumulus.Spike.TempDiff = Convert.ToDouble(settings.temp.spike, invC);
@@ -120,6 +130,7 @@ namespace CumulusMX
 			{
 				offset = cumulus.Calib.Press.Offset,
 				multiplier = cumulus.Calib.Press.Mult,
+				multiplier2 = cumulus.Calib.Press.Mult2,
 				spike = cumulus.Spike.PressDiff,
 				limitmax = cumulus.Limit.PressHigh,
 				limitmin = cumulus.Limit.PressLow
@@ -139,6 +150,7 @@ namespace CumulusMX
 			{
 				offset = cumulus.Calib.InTemp.Offset,
 				multiplier = cumulus.Calib.InTemp.Mult,
+				multiplier2 = cumulus.Calib.InTemp.Mult2,
 				spike = cumulus.Spike.InTempDiff
 			};
 
@@ -154,6 +166,7 @@ namespace CumulusMX
 			{
 				offset = (int)cumulus.Calib.InHum.Offset,
 				multiplier = cumulus.Calib.InHum.Mult,
+				multiplier2 = cumulus.Calib.InHum.Mult2,
 				spike = cumulus.Spike.InHumDiff
 			};
 
@@ -161,12 +174,14 @@ namespace CumulusMX
 			var windspd = new Calibrations()
 			{
 				multiplier = cumulus.Calib.WindSpeed.Mult,
+				multiplier2 = cumulus.Calib.WindSpeed.Mult2,
 				spike = cumulus.Spike.WindDiff
 			};
 
 			var gust = new Calibrations()
 			{
 				multiplier = cumulus.Calib.WindGust.Mult,
+				multiplier2 = cumulus.Calib.WindGust.Mult2,
 				spike = cumulus.Spike.GustDiff,
 				limitmax = cumulus.Limit.WindHigh
 			};
@@ -186,19 +201,22 @@ namespace CumulusMX
 			var solar = new Calibrations()
 			{
 				offset = cumulus.Calib.Solar.Offset,
-				multiplier = cumulus.Calib.Solar.Mult
+				multiplier = cumulus.Calib.Solar.Mult,
+				multiplier2 = cumulus.Calib.Solar.Mult2
 			};
 
 			var uv = new Calibrations()
 			{
 				offset = cumulus.Calib.UV.Offset,
-				multiplier = cumulus.Calib.UV.Mult
+				multiplier = cumulus.Calib.UV.Mult,
+				multiplier2 = cumulus.Calib.UV.Mult2
 			};
 
 			var wetbulb = new Calibrations()
 			{
 				offset = cumulus.Calib.WetBulb.Offset,
-				multiplier = cumulus.Calib.WetBulb.Mult
+				multiplier = cumulus.Calib.WetBulb.Mult,
+				multiplier2 = cumulus.Calib.WetBulb.Mult2
 			};
 
 			var dewpt = new Calibrations()

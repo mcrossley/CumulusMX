@@ -100,7 +100,7 @@ namespace CumulusMX
 			}
 		}
 
-		private static string CheckRcDp(double? val, Dictionary<string, string> tagParams, int decimals)
+		private static string CheckRcDp(double? val, Dictionary<string, string> tagParams, int decimals, string format = null)
 		{
 			string ret;
 			if (val == null)
@@ -111,9 +111,15 @@ namespace CumulusMX
 				if (tagParams.Get("tc") == "y")
 					return Math.Truncate(val.Value).ToString();
 
-				int dp = int.TryParse(tagParams.Get("dp"), out dp) ? dp : decimals;
-
-				ret = val.Value.ToString("F" + dp);
+				if (null != format)
+				{
+					ret = val.Value.ToString(format);
+				}
+				else
+				{
+					int dp = int.TryParse(tagParams.Get("dp"), out dp) ? dp : decimals;
+					ret = val.Value.ToString("F" + dp);
+				}
 
 				if (tagParams.Get("rc") == "y")
 				{
@@ -127,7 +133,7 @@ namespace CumulusMX
 			}
 		}
 
-		private static string CheckRcDp(decimal? val, Dictionary<string, string> tagParams, int decimals)
+		private static string CheckRcDp(decimal? val, Dictionary<string, string> tagParams, int decimals, string format = null)
 		{
 			string ret;
 			if (val == null)
@@ -138,9 +144,15 @@ namespace CumulusMX
 				if (tagParams.Get("tc") == "y")
 					return Math.Truncate(val.Value).ToString();
 
-				int dp = int.TryParse(tagParams.Get("dp"), out dp) ? dp : decimals;
-
-				ret = val.Value.ToString("F" + dp);
+				if (null != format)
+				{
+					ret = val.Value.ToString(format);
+				}
+				else
+				{
+					int dp = int.TryParse(tagParams.Get("dp"), out dp) ? dp : decimals;
+					ret = val.Value.ToString("F" + dp);
+				}
 
 				if (tagParams.Get("rc") == "y")
 				{
@@ -614,6 +626,11 @@ namespace CumulusMX
 			return CheckRcDp(CheckPressUnit(station.presstrendval, tagParams), tagParams, cumulus.PressDPlaces);
 		}
 
+		private string Tagpresstrendsigned(Dictionary<string, string> tagParams)
+		{
+			return CheckRcDp(CheckPressUnit(station.presstrendval, tagParams), tagParams, cumulus.PressDPlaces, cumulus.PressTrendFormat);
+		}
+
 		private string TagPressChangeLast3Hours(Dictionary<string,string> tagParams)
 		{
 			return CheckRcDp(CheckPressUnit(station.presstrendval * 3, tagParams), tagParams, cumulus.PressDPlaces);
@@ -845,20 +862,25 @@ namespace CumulusMX
 			return CheckRcDp(CheckTempUnitAbs(station.temptrendval, tagParams), tagParams, cumulus.TempDPlaces);
 		}
 
+		private string Tagtemptrendsigned(Dictionary<string, string> tagParams)
+		{
+			return CheckRcDp(CheckTempUnitAbs(station.temptrendval, tagParams), tagParams, cumulus.TempDPlaces, cumulus.TempTrendFormat);
+		}
+
 		private string Tagtemptrendtext(Dictionary<string,string> tagParams)
 		{
 			string text;
 			if (Math.Abs(station.temptrendval) < 0.001)
 			{
-				text =  cumulus.Steady;
+				text =  cumulus.Trans.Steady;
 			}
 			else if (station.temptrendval > 0)
 			{
-				text = cumulus.Rising;
+				text = cumulus.Trans.Rising;
 			}
 			else
 			{
-				text = cumulus.Falling;
+				text = cumulus.Trans.Falling;
 			}
 			return text;
 		}
@@ -895,7 +917,12 @@ namespace CumulusMX
 
 		private string Tagaltimeterpressure(Dictionary<string,string> tagParams)
 		{
-			return CheckRcDp(CheckPressUnit(station.AltimeterPressure, tagParams), tagParams, cumulus.TempDPlaces);
+			return CheckRcDp(CheckPressUnit(station.AltimeterPressure, tagParams), tagParams, cumulus.PressDPlaces);
+		}
+
+		private string Tagstationpressure(Dictionary<string, string> tagParams)
+		{
+			return CheckRcDp(CheckPressUnit(station.StationPressure, tagParams), tagParams, cumulus.PressDPlaces);
 		}
 
 		private string Tagpresstrend(Dictionary<string,string> tagParams)
@@ -2240,12 +2267,12 @@ namespace CumulusMX
 
 		private string TagYbeaufort(Dictionary<string,string> tagParams)
 		{
-			return "F" + station.Beaufort(station.HiLoYest.HighWind);
+			return "F" + WeatherStation.Beaufort(station.HiLoYest.HighWind);
 		}
 
 		private string TagYbeaufortnumber(Dictionary<string,string> tagParams)
 		{
-			return station.Beaufort(station.HiLoYest.HighWind).ToString();
+			return WeatherStation.Beaufort(station.HiLoYest.HighWind).ToString();
 		}
 
 		private string TagYbeaudesc(Dictionary<string,string> tagParams)
@@ -2566,12 +2593,12 @@ namespace CumulusMX
 
 		private string Tagrecordsbegandate(Dictionary<string,string> tagParams)
 		{
-			return GetFormattedDateTime(cumulus.RecordsBeganDate, "dd MMMM yyyy", tagParams);
+			return GetFormattedDateTime(cumulus.RecordsBeganDateTime, "dd MMMM yyyy", tagParams);
 		}
 
 		private string TagDaysSinceRecordsBegan(Dictionary<string,string> tagParams)
 		{
-			return (DateTime.Now - cumulus.RecordsBeganDate).Days.ToString();
+			return (DateTime.Now - cumulus.RecordsBeganDateTime).Days.ToString();
 		}
 
 		private string TagmintempH(Dictionary<string,string> tagParams)
@@ -4303,9 +4330,9 @@ namespace CumulusMX
 
 		private string TagHttpUploadAlarm(Dictionary<string, string> tagParams)
 		{
-			if (cumulus.HttpUploadAlarm.Enabled)
+			if (cumulus.ThirdPartyUploadAlarm.Enabled)
 			{
-				return cumulus.HttpUploadAlarm.Triggered ? "1" : "0";
+				return cumulus.ThirdPartyUploadAlarm.Triggered ? "1" : "0";
 			}
 
 			return "0";
@@ -5498,12 +5525,12 @@ namespace CumulusMX
 
 		private string TagMySqlRealtimeTime(Dictionary<string, string> tagParams)
 		{
-			return GetFormattedDateTime(cumulus.MySqlStuff.MySqlLastRealtimeTime, "yyyy-MM-dd HH:mm:ss", tagParams);
+			return GetFormattedDateTime(cumulus.MySqlSettings.MySqlLastRealtimeTime, "yyyy-MM-dd HH:mm:ss", tagParams);
 		}
 
 		private string TagMySqlIntervalTime(Dictionary<string, string> tagParams)
 		{
-			return GetFormattedDateTime(cumulus.MySqlStuff.MySqlLastIntervalTime, "yyyy-MM-dd HH:mm", tagParams);
+			return GetFormattedDateTime(cumulus.MySqlSettings.MySqlLastIntervalTime, "yyyy-MM-dd HH:mm", tagParams);
 		}
 
 		public void InitialiseWebtags()
@@ -5547,6 +5574,7 @@ namespace CumulusMX
 				{ "temprange", Tagtemprange },
 				{ "temprangeY", TagtemprangeY },
 				{ "temptrend", Tagtemptrend },
+				{ "temptrendsigned", Tagtemptrendsigned },
 				{ "temptrendtext", Tagtemptrendtext },
 				{ "temptrendenglish", Tagtemptrendenglish },
 				{ "TempChangeLastHour", TagTempChangeLastHour },
@@ -5557,6 +5585,7 @@ namespace CumulusMX
 				{ "humidex", Taghumidex },
 				{ "press", Tagpress },
 				{ "altimeterpressure", Tagaltimeterpressure },
+				{ "stationpressure", Tagstationpressure },
 				{ "presstrend", Tagpresstrend },
 				{ "presstrendenglish", Tagpresstrendenglish },
 				{ "cloudbase", Tagcloudbase },
@@ -5565,6 +5594,7 @@ namespace CumulusMX
 				{ "dew", Tagdew },
 				{ "wetbulb", Tagwetbulb },
 				{ "presstrendval", Tagpresstrendval },
+				{ "presstrendsigned", Tagpresstrendsigned },
 				{ "PressChangeLast3Hours", TagPressChangeLast3Hours },
 				{ "windrunY", TagwindrunY },
 				{ "domwindbearingY", TagdomwindbearingY },

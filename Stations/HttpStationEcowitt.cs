@@ -7,6 +7,9 @@ using EmbedIO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using HttpClient = System.Net.Http.HttpClient;
+using System.Collections.Generic;
+using System.Net.Http;
 
 namespace CumulusMX
 {
@@ -16,13 +19,12 @@ namespace CumulusMX
 		private readonly WeatherStation station;
 		private bool starting = true;
 		private bool stopping = false;
-		private readonly CancellationTokenSource tokenSource = new CancellationTokenSource();
-		private CancellationToken cancellationToken;
 		private readonly NumberFormatInfo invNum = CultureInfo.InvariantCulture.NumberFormat;
 		private bool reportStationType = true;
 		private int lastMinute = -1;
 		private EcowittApi api;
 		private int maxArchiveRuns = 1;
+		private List<HttpClient> httpForwarders = new List<HttpClient>();
 
 		public HttpStationEcowitt(Cumulus cumulus, WeatherStation station = null) : base(cumulus)
 		{
@@ -105,8 +107,6 @@ namespace CumulusMX
 				cumulus.Units.LeafWetnessUnitText = "%";
 			}
 
-			cancellationToken = tokenSource.Token;
-
 			// Only perform the Start-up if we are a proper station, not a Extra Sensor
 			if (mainStation)
 			{
@@ -149,10 +149,6 @@ namespace CumulusMX
 			stopping = true;
 			HttpStations.stationEcowitt = null;
 			HttpStations.stationEcowittExtra = null;
-			if (tokenSource != null)
-			{
-				tokenSource.Cancel();
-			}
 			if (station == null)
 			{
 				StopMinuteTimer();
@@ -216,7 +212,7 @@ namespace CumulusMX
 				maxArchiveRuns++;
 			}
 
-			api.GetHistoricData(startTime, endTime, cancellationToken);
+			api.GetHistoricData(startTime, endTime, cumulus.cancellationToken);
 
 		}
 
@@ -257,15 +253,17 @@ namespace CumulusMX
 				cumulus.LogDebugMessage($"{procName}: Processing posted data");
 
 				var text = new StreamReader(context.Request.InputStream).ReadToEnd();
-				text = System.Text.RegularExpressions.Regex.Replace(text, "PASSKEY=[^&]+", "PASSKEY=<PassKey>");
 
-				cumulus.LogDataMessage($"{procName}: Payload = {text}");
+				cumulus.LogDataMessage($"{procName}: Payload = {System.Text.RegularExpressions.Regex.Replace(text, "PASSKEY=[^&]+", "PASSKEY=<PassKey>")}");
+
 				if (main)
 					LogRawStationData(text, false);
 				else
 					LogRawExtraData(text, false);
 
 				var data = HttpUtility.ParseQueryString(text);
+
+				ForwardData(text);
 
 				// We will ignore the dateutc field, this is "live" data so just use "now" to avoid any clock issues
 				recDate = DateTime.Now;
@@ -387,6 +385,7 @@ namespace CumulusMX
 						// baromrelin
 
 						var press = data["baromrelin"];
+						var stnPress = data["baromabsin"];
 
 						if (press == null)
 						{
@@ -398,6 +397,15 @@ namespace CumulusMX
 							var pressVal = ConvertPressINHGToUser(Convert.ToDouble(press, invNum));
 							DoPressure(pressVal, recDate);
 							UpdatePressureTrendString();
+						}
+
+						if (stnPress == null)
+						{
+							cumulus.LogDebugMessage($"{procName}: Error, missing absolute baro pressure");
+						}
+						else
+						{
+							StationPressure = ConvertPressINHGToUser(Convert.ToDouble(stnPress, invNum));
 						}
 					}
 					catch (Exception ex)
@@ -490,13 +498,17 @@ namespace CumulusMX
 						{
 							rain = data["yearlyrainin"] ?? data["totalrainin"];
 							rRate = data["rainratein"];
+							if (cumulus.StationOptions.UseRainForIsRaining == 2)
+							{
+								IsRaining = Convert.ToDouble(data["​rrain_piezo"], invNum) > 0;
+								cumulus.IsRainingAlarm.Triggered = IsRaining;
+							}
 						}
 						else
 						{
 							rain = data["yrain_piezo"];
 							rRate = data["​rrain_piezo"];
 						}
-
 
 						if (rRate == null)
 						{
@@ -1302,6 +1314,45 @@ namespace CumulusMX
 			else
 			{
 				Cumulus.LogMessage("Error reading Ecowitt Gateway Custom Server config, cannot configure it");
+			}
+		}
+
+		private void ForwardData(string data)
+		{
+			var encoding = new UTF8Encoding(false);
+
+			for (int i = 0; i < cumulus.EcowittSettings.EcowittForwarders.Length; i++)
+			{
+				if (!string.IsNullOrEmpty(cumulus.EcowittSettings.EcowittForwarders[i]))
+				{
+					var url = cumulus.EcowittSettings.EcowittForwarders[i];
+					var idx = i;
+					cumulus.LogDebugMessage("ForwardData: Forwarding Ecowitt data to: " + url);
+
+					if (i + 1 > httpForwarders.Count)
+					{
+						httpForwarders.Add(new HttpClient());
+						httpForwarders[i].Timeout = TimeSpan.FromSeconds(5);
+					}
+
+					// we are just going to fire and forget
+					_ = Task.Run(async () =>
+					{
+						try
+						{
+							using (var request = new HttpRequestMessage(HttpMethod.Post, url))
+							{
+								request.Content = new StringContent(data, encoding, "application/x-www-form-urlencoded");
+								var response = await httpForwarders[idx].SendAsync(request);
+								cumulus.LogDebugMessage($"ForwardData: Forward to {url}: Result: {response.StatusCode}");
+							}
+						}
+						catch (Exception ex)
+						{
+							cumulus.LogExceptionMessage(ex, $"ForwardData: Error forwarding to {url}");
+						}
+					});
+				}
 			}
 		}
 	}

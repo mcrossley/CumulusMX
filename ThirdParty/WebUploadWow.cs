@@ -38,20 +38,20 @@ namespace CumulusMX.ThirdParty
 					if (response.StatusCode != HttpStatusCode.OK)
 					{
 						Cumulus.LogMessage($"WOW Response: ERROR - Response code = {response.StatusCode}, body = {responseBodyAsText}");
-						cumulus.HttpUploadAlarm.LastError = $"WOW: HTTP response - Response code = {response.StatusCode}, body = {responseBodyAsText}";
-						cumulus.HttpUploadAlarm.Triggered = true;
+						cumulus.ThirdPartyUploadAlarm.LastError = $"WOW: HTTP response - Response code = {response.StatusCode}, body = {responseBodyAsText}";
+						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 					}
 					else
 					{
 						cumulus.LogDebugMessage("WOW Response: " + response.StatusCode + ": " + responseBodyAsText);
-						cumulus.HttpUploadAlarm.Triggered = false;
+						cumulus.ThirdPartyUploadAlarm.Triggered = false;
 					}
 				}
 				catch (Exception ex)
 				{
 					cumulus.LogExceptionMessage(ex, "WOW update error");
-					cumulus.HttpUploadAlarm.LastError = "WOW: " + ex.Message;
-					cumulus.HttpUploadAlarm.Triggered = true;
+					cumulus.ThirdPartyUploadAlarm.LastError = "WOW: " + ex.Message;
+					cumulus.ThirdPartyUploadAlarm.Triggered = true;
 				}
 				finally
 				{

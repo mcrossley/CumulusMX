@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace CumulusMX
 {
@@ -88,15 +89,29 @@ namespace CumulusMX
 
 						if (Email && cumulus.SmtpOptions.Enabled && cumulus.emailer != null)
 						{
-							Cumulus.LogMessage($"Alarm ({Name}): Sending email");
 
 							// Construct the message - preamble, plus values
-							var msg = cumulus.AlarmEmailPreamble + "\n" + string.Format(EmailMsg, Value, Units);
+							var msg = cumulus.Trans.AlarmEmailPreamble + "\n" + string.Format(EmailMsg, Value, Units);
 							if (!string.IsNullOrEmpty(LastError))
 							{
 								msg += "\r\nLast error: " + LastError;
 							}
-							_ = cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml);
+							_ = Task.Run(async () =>
+							{
+								// try to send the email 3 times
+								for (int i = 0; i < 3; i++)
+								{
+									// delay for 0, 60, 120 seconds
+									System.Threading.Thread.Sleep(i * 60000);
+
+									Cumulus.LogMessage($"Alarm ({Name}): Sending email - attempt {i + 1}");
+
+									if (await cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.Trans.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml))
+									{
+										break;
+									}
+								}
+							});
 						}
 
 						if (!string.IsNullOrEmpty(Action))
@@ -105,6 +120,7 @@ namespace CumulusMX
 							{
 								// Prepare the process to run
 								var parser = new TokenParser();
+								parser.OnToken += cumulus.TokenParserOnToken;
 								parser.InputText = ActionParams;
 								var args = parser.ToStringFromString();
 								Cumulus.LogMessage($"Alarm ({Name}): Starting external program: '{Action}', with parameters: {args}");
@@ -251,11 +267,26 @@ namespace CumulusMX
 
 					if (Email && cumulus.SmtpOptions.Enabled && cumulus.emailer != null)
 					{
-						Cumulus.LogMessage($"Alarm ({Name}): Sending email");
 
 						// Construct the message - preamble, plus values
-						var msg = cumulus.AlarmEmailPreamble + "\n" + string.Format(EmailMsgUp, Value, Units);
-						_ = cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml);
+						var msg = cumulus.Trans.AlarmEmailPreamble + "\n" + string.Format(EmailMsgUp, Value, Units);
+
+						_ = Task.Run(async () =>
+						{
+							// try to send the email 3 times
+							for (int i = 0; i < 3; i++)
+							{
+								// delay for 0, 60, 120 seconds
+								System.Threading.Thread.Sleep(i * 60000);
+
+								Cumulus.LogMessage($"Alarm ({Name}): Sending email - attempt {i + 1}");
+
+								if (await cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.Trans.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml))
+								{
+									break;
+								}
+							}
+						});
 					}
 					if (!string.IsNullOrEmpty(Action))
 					{
@@ -263,6 +294,7 @@ namespace CumulusMX
 						{
 							// Prepare the process to run
 							var parser = new TokenParser();
+							parser.OnToken += cumulus.TokenParserOnToken;
 							parser.InputText = ActionParams;
 							var args = parser.ToStringFromString();
 							Cumulus.LogMessage($"Alarm ({Name}): Starting external program: '{Action}', with parameters: {args}");
@@ -311,10 +343,25 @@ namespace CumulusMX
 
 					if (Email && cumulus.SmtpOptions.Enabled && cumulus.emailer != null)
 					{
-						Cumulus.LogMessage($"Alarm ({Name}): Sending email");
 						// Construct the message - preamble, plus values
-						var msg = cumulus.AlarmEmailPreamble + "\n" + string.Format(EmailMsgDn, Value, Units);
-						_ = cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml);
+						var msg = cumulus.Trans.AlarmEmailPreamble + "\n" + string.Format(EmailMsgDn, Value, Units);
+
+						_ = Task.Run(async () =>
+						{
+							// try to send the email 3 times
+							for (int i = 0; i < 3; i++)
+							{
+								// delay for 0, 60, 120 seconds
+								System.Threading.Thread.Sleep(i * 60000);
+
+								Cumulus.LogMessage($"Alarm ({Name}): Sending email - attempt {i + 1}");
+
+								if (await cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.Trans.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml))
+								{
+									break;
+								}
+							}
+						});
 					}
 
 					if (!string.IsNullOrEmpty(Action))
@@ -323,6 +370,7 @@ namespace CumulusMX
 						{
 							// Prepare the process to run
 							var parser = new TokenParser();
+							parser.OnToken += cumulus.TokenParserOnToken;
 							parser.InputText = ActionParams;
 							var args = parser.ToStringFromString();
 							Cumulus.LogMessage($"Alarm ({Name}): Starting external program: '{Action}', with parameters: {args}");

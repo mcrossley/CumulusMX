@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using CumulusMX.Stations;
 using ServiceStack.Text;
 
 namespace CumulusMX
@@ -25,12 +26,10 @@ namespace CumulusMX
 
 		private int maxArchiveRuns = 1;
 
-		private bool connectedOk = false;
+		//private bool connectedOk = false;
 		private bool dataReceived = false;
 
 		private readonly System.Timers.Timer tmrDataWatchdog;
-		private readonly CancellationTokenSource tokenSource = new CancellationTokenSource();
-		private readonly CancellationToken cancellationToken;
 
 		private Task historyTask;
 		private Task liveTask;
@@ -90,8 +89,6 @@ namespace CumulusMX
 				Cumulus.LogMessage("Using the piezo rain sensor data");
 			}
 
-			cancellationToken = tokenSource.Token;
-
 			ipaddr = cumulus.Gw1000IpAddress;
 			macaddr = cumulus.Gw1000MacAddress;
 
@@ -106,7 +103,7 @@ namespace CumulusMX
 		public override void DoStartup()
 		{
 			Cumulus.LogMessage("Starting Ecowitt Local API");
-			historyTask = Task.Run(getAndProcessHistoryData, cancellationToken);// grab old data, then start the station
+			historyTask = Task.Run(getAndProcessHistoryData, cumulus.cancellationToken);// grab old data, then start the station
 		}
 
 
@@ -138,15 +135,15 @@ namespace CumulusMX
 					var dataLastRead = DateTime.MinValue;
 					double delay;
 
-					while (!cancellationToken.IsCancellationRequested)
+					while (!cumulus.cancellationToken.IsCancellationRequested)
 					{
-						if (connectedOk)
+						if (Api.Connected)
 						{
 							GetLiveData();
 							dataLastRead = DateTime.Now;
 
 							// every 30 seconds read the rain rate
-							if (cumulus.Gw1000PrimaryRainSensor == 1 && (DateTime.Now - piezoLastRead).TotalSeconds >= 30 && !cancellationToken.IsCancellationRequested)
+							if ((cumulus.Gw1000PrimaryRainSensor == 1 || cumulus.StationOptions.UseRainForIsRaining == 2) && (DateTime.Now - piezoLastRead).TotalSeconds >= 30 && !cumulus.cancellationToken.IsCancellationRequested)
 							{
 								GetPiezoRainData();
 								piezoLastRead = DateTime.Now;
@@ -158,7 +155,7 @@ namespace CumulusMX
 								lastMinute = minute;
 
 								// at the start of every 20 minutes to trigger battery status check
-								if ((minute % 20) == 0 && !cancellationToken.IsCancellationRequested)
+								if ((minute % 20) == 0 && !cumulus.cancellationToken.IsCancellationRequested)
 								{
 									GetSensorIdsNew();
 								}
@@ -173,8 +170,8 @@ namespace CumulusMX
 						else
 						{
 							Cumulus.LogMessage("Attempting to reconnect to Ecowitt device...");
-							connectedOk = Api.OpenTcpPort(cumulus.Gw1000IpAddress, AtPort);
-							if (connectedOk)
+							Api.OpenTcpPort(cumulus.Gw1000IpAddress, AtPort);
+							if (Api.Connected)
 							{
 								Cumulus.LogMessage("Reconnected to Ecowitt device");
 								GetLiveData();
@@ -183,7 +180,7 @@ namespace CumulusMX
 							{
 								// add a small extra delay before trying again
 								Cumulus.LogMessage("Delaying before attempting reconnect");
-								if (cancellationToken.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(20000)))
+								if (cumulus.cancellationToken.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(20000)))
 								{
 									break;
 								}
@@ -192,7 +189,7 @@ namespace CumulusMX
 
 						delay = Math.Min(updateRate - (dataLastRead - DateTime.Now).TotalMilliseconds, updateRate);
 
-						if (cancellationToken.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(delay)))
+						if (cumulus.cancellationToken.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(delay)))
 						{
 							break;
 						}
@@ -207,7 +204,7 @@ namespace CumulusMX
 					Api.CloseTcpPort();
 					Cumulus.LogMessage("Local API task ended");
 				}
-			}, cancellationToken);
+			}, cumulus.cancellationToken);
 
 			cumulus.StartTimersAndSensors();
 		}
@@ -219,10 +216,6 @@ namespace CumulusMX
 			{
 				tmrDataWatchdog.Stop();
 				StopMinuteTimer();
-				if (tokenSource != null)
-				{
-					tokenSource.Cancel();
-				}
 				Task.WaitAll(historyTask, liveTask);
 			}
 			catch
@@ -257,7 +250,7 @@ namespace CumulusMX
 					{
 						GetHistoricData();
 						archiveRun++;
-					} while (archiveRun < maxArchiveRuns && !cancellationToken.IsCancellationRequested);
+					} while (archiveRun < maxArchiveRuns && !cumulus.cancellationToken.IsCancellationRequested);
 				}
 				catch (Exception ex)
 				{
@@ -268,7 +261,7 @@ namespace CumulusMX
 			//cumulus.LogDebugMessage("Lock: Station releasing the lock");
 			_ = Cumulus.syncInit.Release();
 
-			if (cancellationToken.IsCancellationRequested)
+			if (cumulus.cancellationToken.IsCancellationRequested)
 			{
 				return;
 			}
@@ -292,7 +285,7 @@ namespace CumulusMX
 				maxArchiveRuns++;
 			}
 
-			api.GetHistoricData(startTime, endTime, cancellationToken);
+			api.GetHistoricData(startTime, endTime, cumulus.cancellationToken);
 		}
 
 
@@ -492,9 +485,9 @@ namespace CumulusMX
 		{
 			Cumulus.LogMessage("Using IP address = " + ipaddr + " Port = " + AtPort);
 
-			connectedOk = Api.OpenTcpPort(ipaddr, AtPort);
+			Api.OpenTcpPort(ipaddr, AtPort);
 
-			if (connectedOk)
+			if (Api.Connected)
 			{
 				Cumulus.LogMessage("Connected OK");
 				Cumulus.LogConsoleMessage("Connected to station", ConsoleColor.White, true);
@@ -505,7 +498,7 @@ namespace CumulusMX
 				Cumulus.LogConsoleMessage("Unable to connect to station", ConsoleColor.Red, true);
 			}
 
-			if (connectedOk)
+			if (Api.Connected)
 			{
 				// Get the firmware version as check we are communicating
 				GW1000FirmwareVersion = GetFirmwareVersion();
@@ -858,6 +851,8 @@ namespace CumulusMX
 								idx += 1;
 								break;
 							case 0x08: //Absolute Barometric (hPa)
+								tempUint16 = GW1000Api.ConvertBigEndianUInt16(data, idx);
+								StationPressure = ConvertPressMBToUser(tempUint16 / 10.0);
 								idx += 2;
 								break;
 							case 0x09: //Relative Barometric (hPa)
@@ -1398,7 +1393,7 @@ namespace CumulusMX
 			// 24-27 - data(4)
 			// 28    - 0D = rain event
 			// 29-30 - data(2)
-			// 31    - 0F = rain hour
+			// 31    - 0F = rain gain
 			// 32-33 - data(2)
 			// 34    - 80 = piezo rain rate
 			// 35-36 - data(2)
@@ -1416,6 +1411,7 @@ namespace CumulusMX
 			// 61-80 - data(2x10)
 			// 81    - 88 = rain reset time (hr, day [sun-0], month [jan=0])
 			// 82-84 - data(3)
+			// 7B    - solar gain compensation- data(1)
 			// 85 - checksum
 
 			//data = new byte[] { 0xFF, 0xFF, 0x57, 0x00, 0x54, 0x0E, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x12, 0x00, 0x00, 0x02, 0xF2, 0x13, 0x00, 0x00, 0x0B, 0x93, 0x0D, 0x00, 0x00, 0x0F, 0x00, 0x64, 0x80, 0x00, 0x00, 0x83, 0x00, 0x00, 0x00, 0x00, 0x84, 0x00, 0x00, 0x00, 0x00, 0x85, 0x00, 0x00, 0x01, 0xDE, 0x86, 0x00, 0x00, 0x0B, 0xF2, 0x81, 0x00, 0x00, 0x87, 0x00, 0x64, 0x00, 0x64, 0x00, 0x64, 0x00, 0x64, 0x00, 0x64, 0x00, 0x64, 0x00, 0x64, 0x00, 0x64, 0x00, 0x64, 0x00, 0x64, 0x88, 0x00, 0x00, 0x00, 0xF7 };
@@ -1447,7 +1443,7 @@ namespace CumulusMX
 						// all the two byte values we are ignoring
 						case 0x0E: // rain rate
 						case 0x0D: // rain event
-						case 0x0F: // rain hour
+						case 0x0F: // rain gain
 						case 0x81: // piezo rain event
 							idx += 2;
 							break;
@@ -1462,11 +1458,20 @@ namespace CumulusMX
 							idx += 4;
 							break;
 						case 0x80: // piezo rain rate
-							rRate = Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0;
+							if (cumulus.StationOptions.UseRainForIsRaining == 2 && cumulus.Gw1000PrimaryRainSensor != 1)
+							{
+								IsRaining = GW1000Api.ConvertBigEndianUInt16(data, idx) > 0;
+								cumulus.IsRainingAlarm.Triggered = IsRaining;
+							}
+							else
+							{
+								rRate = GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0;
+							}
 							idx += 2;
 							break;
 						case 0x86: // piezo rain year
-							rain = Stations.GW1000Api.ConvertBigEndianUInt32(data, 53) / 10.0;
+							if (cumulus.Gw1000PrimaryRainSensor == 1)
+								rain = GW1000Api.ConvertBigEndianUInt32(data, idx) / 10.0;
 							idx += 4;
 							break;
 						case 0x87: // piezo gain 0-9
@@ -1483,14 +1488,20 @@ namespace CumulusMX
 							var sensor = data[idx++];
 #if DEBUG
 							if (sensor == 0)
-								cumulus.LogDebugMessage("No rain sensor available");
+								cumulus.LogDebugMessage("GetPiezoRainData: No rain sensor available");
 							else if (sensor == 1)
-								cumulus.LogDebugMessage("Traditional rain sensor selected");
+								cumulus.LogDebugMessage("GetPiezoRainData: Traditional rain sensor selected");
 							else if (sensor == 2)
-								cumulus.LogDebugMessage("Piezo rain sensor selected");
+								cumulus.LogDebugMessage("GetPiezoRainData: Piezo rain sensor selected");
 							else
-								cumulus.LogDebugMessage("Unkown rain sensor selection value = " + sensor);
+								cumulus.LogDebugMessage("GetPiezoRainData: Unkown rain sensor selection value = " + sensor);
 #endif
+							break;
+						case 0x7B: // Solar gain compensation
+#if DEBUG
+							cumulus.LogDebugMessage($"GetPiezoRainData: Solar gain compensation = {(data[idx] == '0' ? "disabled" : "enabled")}");
+#endif
+							idx += 1;
 							break;
 						default:
 							cumulus.LogDebugMessage($"GetPiezoRainData: Error: Unknown value type found = {data[idx - 1]}, at position = {idx - 1}");
@@ -1501,16 +1512,20 @@ namespace CumulusMX
 
 				} while (idx < size);
 
-				if (rRate.HasValue && rain.HasValue)
+				if (cumulus.Gw1000PrimaryRainSensor == 1)
 				{
+					if (rRate.HasValue && rain.HasValue)
+					{
+
 #if DEBUG
-					cumulus.LogDebugMessage($"GetPiezoRainData: Rain Year: {rain:f1} mm, Rate: {rRate:f1} mm/hr");
+						cumulus.LogDebugMessage($"GetPiezoRainData: Rain Year: {rain:f1} mm, Rate: {rRate:f1} mm/hr");
 #endif
-					DoRain(ConvertRainMMToUser(rain.Value), ConvertRainMMToUser(rRate.Value), DateTime.Now);
-				}
-				else
-				{
-					Cumulus.LogMessage("GetPiezoRainData: Error, no piezo rain data found in the response");
+						DoRain(ConvertRainMMToUser(rain.Value), ConvertRainMMToUser(rRate.Value), DateTime.Now);
+					}
+					else
+					{
+						Cumulus.LogMessage("GetPiezoRainData: Error, no piezo rain data found in the response");
+					}
 				}
 			}
 			catch (Exception ex)
