@@ -64,7 +64,7 @@ namespace CumulusMX
 			// get the response
 			try
 			{
-				Cumulus.LogMessage("Updating Data Logging settings");
+				cumulus.LogMessage("Updating Data Logging settings");
 
 				var data = new StreamReader(context.Request.InputStream).ReadToEnd();
 

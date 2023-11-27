@@ -1605,7 +1605,8 @@ namespace SQLite
 			var c = 0;
 			if (runInTransaction)
 			{
-				RunInTransaction(() => {
+				RunInTransaction(() =>
+				{
 					foreach (var r in objects)
 					{
 						c += Insert(r);
@@ -1642,7 +1643,8 @@ namespace SQLite
 			var c = 0;
 			if (runInTransaction)
 			{
-				RunInTransaction(() => {
+				RunInTransaction(() =>
+				{
 					foreach (var r in objects)
 					{
 						c += Insert(r, extra);
@@ -1679,7 +1681,8 @@ namespace SQLite
 			var c = 0;
 			if (runInTransaction)
 			{
-				RunInTransaction(() => {
+				RunInTransaction(() =>
+				{
 					foreach (var r in objects)
 					{
 						c += Insert(r, objType);
@@ -2047,7 +2050,8 @@ namespace SQLite
 			var c = 0;
 			if (runInTransaction)
 			{
-				RunInTransaction(() => {
+				RunInTransaction(() =>
+				{
 					foreach (var r in objects)
 					{
 						c += Update(r);
@@ -3004,7 +3008,8 @@ namespace SQLite
 			return
 				(p.CustomAttributes
 				 .Where(x => typeof(CollationAttribute) == x.AttributeType)
-				 .Select(x => {
+				 .Select(x =>
+				 {
 					 var args = x.ConstructorArguments;
 					 return args.Count > 0 ? ((args[0].Value as string) ?? "") : "";
 				 })
@@ -3654,31 +3659,36 @@ namespace SQLite
 
 			if (clrType == typeof(String))
 			{
-				fastSetter = CreateTypedSetterDelegate<T, string>(column, (stmt, index) => {
+				fastSetter = CreateTypedSetterDelegate<T, string>(column, (stmt, index) =>
+				{
 					return SQLite3.ColumnString(stmt, index);
 				});
 			}
 			else if (clrType == typeof(Int32))
 			{
-				fastSetter = CreateNullableTypedSetterDelegate<T, int>(column, (stmt, index) => {
+				fastSetter = CreateNullableTypedSetterDelegate<T, int>(column, (stmt, index) =>
+				{
 					return SQLite3.ColumnInt(stmt, index);
 				});
 			}
 			else if (clrType == typeof(Boolean))
 			{
-				fastSetter = CreateNullableTypedSetterDelegate<T, bool>(column, (stmt, index) => {
+				fastSetter = CreateNullableTypedSetterDelegate<T, bool>(column, (stmt, index) =>
+				{
 					return SQLite3.ColumnInt(stmt, index) == 1;
 				});
 			}
 			else if (clrType == typeof(double))
 			{
-				fastSetter = CreateNullableTypedSetterDelegate<T, double>(column, (stmt, index) => {
+				fastSetter = CreateNullableTypedSetterDelegate<T, double>(column, (stmt, index) =>
+				{
 					return SQLite3.ColumnDouble(stmt, index);
 				});
 			}
 			else if (clrType == typeof(float))
 			{
-				fastSetter = CreateNullableTypedSetterDelegate<T, float>(column, (stmt, index) => {
+				fastSetter = CreateNullableTypedSetterDelegate<T, float>(column, (stmt, index) =>
+				{
 					return (float)SQLite3.ColumnDouble(stmt, index);
 				});
 			}
@@ -3686,13 +3696,15 @@ namespace SQLite
 			{
 				if (conn.StoreTimeSpanAsTicks)
 				{
-					fastSetter = CreateNullableTypedSetterDelegate<T, TimeSpan>(column, (stmt, index) => {
+					fastSetter = CreateNullableTypedSetterDelegate<T, TimeSpan>(column, (stmt, index) =>
+					{
 						return new TimeSpan(SQLite3.ColumnInt64(stmt, index));
 					});
 				}
 				else
 				{
-					fastSetter = CreateNullableTypedSetterDelegate<T, TimeSpan>(column, (stmt, index) => {
+					fastSetter = CreateNullableTypedSetterDelegate<T, TimeSpan>(column, (stmt, index) =>
+					{
 						var text = SQLite3.ColumnString(stmt, index);
 						TimeSpan resultTime;
 						if (!TimeSpan.TryParseExact(text, "c", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.TimeSpanStyles.None, out resultTime))
@@ -3707,13 +3719,15 @@ namespace SQLite
 			{
 				if (conn.StoreDateTimeAsTicks)
 				{
-					fastSetter = CreateNullableTypedSetterDelegate<T, DateTime>(column, (stmt, index) => {
+					fastSetter = CreateNullableTypedSetterDelegate<T, DateTime>(column, (stmt, index) =>
+					{
 						return new DateTime(SQLite3.ColumnInt64(stmt, index));
 					});
 				}
 				else
 				{
-					fastSetter = CreateNullableTypedSetterDelegate<T, DateTime>(column, (stmt, index) => {
+					fastSetter = CreateNullableTypedSetterDelegate<T, DateTime>(column, (stmt, index) =>
+					{
 						var text = SQLite3.ColumnString(stmt, index);
 						DateTime resultDate;
 						if (!DateTime.TryParseExact(text, conn.DateTimeStringFormat, System.Globalization.CultureInfo.InvariantCulture, conn.DateTimeStyle, out resultDate))
@@ -3726,7 +3740,8 @@ namespace SQLite
 			}
 			else if (clrType == typeof(DateTimeOffset))
 			{
-				fastSetter = CreateNullableTypedSetterDelegate<T, DateTimeOffset>(column, (stmt, index) => {
+				fastSetter = CreateNullableTypedSetterDelegate<T, DateTimeOffset>(column, (stmt, index) =>
+				{
 					return new DateTimeOffset(SQLite3.ColumnInt64(stmt, index), TimeSpan.Zero);
 				});
 			}
@@ -3736,76 +3751,88 @@ namespace SQLite
 			}
 			else if (clrType == typeof(Int64))
 			{
-				fastSetter = CreateNullableTypedSetterDelegate<T, Int64>(column, (stmt, index) => {
+				fastSetter = CreateNullableTypedSetterDelegate<T, Int64>(column, (stmt, index) =>
+				{
 					return SQLite3.ColumnInt64(stmt, index);
 				});
 			}
 			else if (clrType == typeof(UInt32))
 			{
-				fastSetter = CreateNullableTypedSetterDelegate<T, UInt32>(column, (stmt, index) => {
+				fastSetter = CreateNullableTypedSetterDelegate<T, UInt32>(column, (stmt, index) =>
+				{
 					return (uint)SQLite3.ColumnInt64(stmt, index);
 				});
 			}
 			else if (clrType == typeof(decimal))
 			{
-				fastSetter = CreateNullableTypedSetterDelegate<T, decimal>(column, (stmt, index) => {
+				fastSetter = CreateNullableTypedSetterDelegate<T, decimal>(column, (stmt, index) =>
+				{
 					return (decimal)SQLite3.ColumnDouble(stmt, index);
 				});
 			}
 			else if (clrType == typeof(Byte))
 			{
-				fastSetter = CreateNullableTypedSetterDelegate<T, Byte>(column, (stmt, index) => {
+				fastSetter = CreateNullableTypedSetterDelegate<T, Byte>(column, (stmt, index) =>
+				{
 					return (byte)SQLite3.ColumnInt(stmt, index);
 				});
 			}
 			else if (clrType == typeof(UInt16))
 			{
-				fastSetter = CreateNullableTypedSetterDelegate<T, UInt16>(column, (stmt, index) => {
+				fastSetter = CreateNullableTypedSetterDelegate<T, UInt16>(column, (stmt, index) =>
+				{
 					return (ushort)SQLite3.ColumnInt(stmt, index);
 				});
 			}
 			else if (clrType == typeof(Int16))
 			{
-				fastSetter = CreateNullableTypedSetterDelegate<T, Int16>(column, (stmt, index) => {
+				fastSetter = CreateNullableTypedSetterDelegate<T, Int16>(column, (stmt, index) =>
+				{
 					return (short)SQLite3.ColumnInt(stmt, index);
 				});
 			}
 			else if (clrType == typeof(sbyte))
 			{
-				fastSetter = CreateNullableTypedSetterDelegate<T, sbyte>(column, (stmt, index) => {
+				fastSetter = CreateNullableTypedSetterDelegate<T, sbyte>(column, (stmt, index) =>
+				{
 					return (sbyte)SQLite3.ColumnInt(stmt, index);
 				});
 			}
 			else if (clrType == typeof(byte[]))
 			{
-				fastSetter = CreateTypedSetterDelegate<T, byte[]>(column, (stmt, index) => {
+				fastSetter = CreateTypedSetterDelegate<T, byte[]>(column, (stmt, index) =>
+				{
 					return SQLite3.ColumnByteArray(stmt, index);
 				});
 			}
 			else if (clrType == typeof(Guid))
 			{
-				fastSetter = CreateNullableTypedSetterDelegate<T, Guid>(column, (stmt, index) => {
+				fastSetter = CreateNullableTypedSetterDelegate<T, Guid>(column, (stmt, index) =>
+				{
 					var text = SQLite3.ColumnString(stmt, index);
 					return new Guid(text);
 				});
 			}
 			else if (clrType == typeof(Uri))
 			{
-				fastSetter = CreateTypedSetterDelegate<T, Uri>(column, (stmt, index) => {
+				fastSetter = CreateTypedSetterDelegate<T, Uri>(column, (stmt, index) =>
+				{
 					var text = SQLite3.ColumnString(stmt, index);
 					return new Uri(text);
 				});
 			}
 			else if (clrType == typeof(StringBuilder))
 			{
-				fastSetter = CreateTypedSetterDelegate<T, StringBuilder>(column, (stmt, index) => {
+				fastSetter = CreateTypedSetterDelegate<T, StringBuilder>(column, (stmt, index) =>
+				{
 					var text = SQLite3.ColumnString(stmt, index);
 					return new StringBuilder(text);
 				});
 			}
 			else if (clrType == typeof(UriBuilder))
 			{
-				fastSetter = CreateTypedSetterDelegate<T, UriBuilder>(column, (stmt, index) => {
+				fastSetter = CreateTypedSetterDelegate<T, UriBuilder>(column, (stmt, index) =>
+				{
 					var text = SQLite3.ColumnString(stmt, index);
 					return new UriBuilder(text);
 				});
@@ -3843,7 +3870,8 @@ namespace SQLite
 						typeof(Action<ObjectType, ColumnMemberType?>), null,
 						column.PropertyInfo.GetSetMethod());
 
-				return (o, stmt, i) => {
+				return (o, stmt, i) =>
+				{
 					var colType = SQLite3.ColumnType(stmt, i);
 					if (colType != SQLite3.ColType.Null)
 						setProperty.Invoke((ObjectType)o, getColumnValue.Invoke(stmt, i));
@@ -3867,7 +3895,8 @@ namespace SQLite
 					typeof(Action<ObjectType, ColumnMemberType>), null,
 					column.PropertyInfo.GetSetMethod());
 
-			return (o, stmt, i) => {
+			return (o, stmt, i) =>
+			{
 				var colType = SQLite3.ColumnType(stmt, i);
 				if (colType != SQLite3.ColType.Null)
 					setProperty.Invoke((ObjectType)o, getColumnValue.Invoke(stmt, i));

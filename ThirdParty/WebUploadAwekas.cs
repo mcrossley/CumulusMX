@@ -51,15 +51,15 @@ namespace CumulusMX.ThirdParty
 
 			try
 			{
-				using HttpResponseMessage response = await httpClient.GetAsync(url);
+				using var response = await Cumulus.MyHttpClient.GetAsync(url);
 				var responseBodyAsText = await response.Content.ReadAsStringAsync();
 				cumulus.LogDebugMessage("AWEKAS Response code = " + response.StatusCode);
 				cumulus.LogDataMessage("AWEKAS: Response text = " + responseBodyAsText);
 
 				if (response.StatusCode != HttpStatusCode.OK)
 				{
-					Cumulus.LogMessage($"AWEKAS: ERROR - Response code = {response.StatusCode}, body = {responseBodyAsText}");
-					cumulus.ThirdPartyUploadAlarm.LastError = $"AWEKAS: HTTP Response code = {response.StatusCode}, body = {responseBodyAsText}";
+					cumulus.LogMessage($"AWEKAS: ERROR - Response code = {response.StatusCode}, body = {responseBodyAsText}");
+					cumulus.ThirdPartyUploadAlarm.LastMessage = $"AWEKAS: HTTP Response code = {response.StatusCode}, body = {responseBodyAsText}";
 					cumulus.ThirdPartyUploadAlarm.Triggered = true;
 				}
 				else
@@ -75,9 +75,9 @@ namespace CumulusMX.ThirdParty
 				}
 				catch (Exception ex)
 				{
-					Cumulus.LogMessage("AWEKAS: Exception deserializing response = " + ex.Message);
-					Cumulus.LogMessage($"AWEKAS: ERROR - Response body = {responseBodyAsText}");
-					cumulus.ThirdPartyUploadAlarm.LastError = "AWEKAS deserializing response: " + ex.Message;
+					cumulus.LogMessage("AWEKAS: Exception deserializing response = " + ex.Message);
+					cumulus.LogMessage($"AWEKAS: ERROR - Response body = {responseBodyAsText}");
+					cumulus.ThirdPartyUploadAlarm.LastMessage = "AWEKAS deserializing response: " + ex.Message;
 					cumulus.ThirdPartyUploadAlarm.Triggered = true;
 					Updating = false;
 					return;
@@ -90,14 +90,14 @@ namespace CumulusMX.ThirdParty
 				}
 				else if (respJson.status == 1)
 				{
-					Cumulus.LogMessage("AWEKAS: Data PARIALLY stored");
+					cumulus.LogMessage("AWEKAS: Data PARIALLY stored");
 					// TODO: Check errors and disabled
 				}
 				else if (respJson.status == 0)  // Authentication error or rate limited
 				{
 					if (respJson.minuploadtime > 0 && respJson.authentication == 0)
 					{
-						Cumulus.LogMessage("AWEKAS: Authentication error");
+						cumulus.LogMessage("AWEKAS: Authentication error");
 						if (Interval < 300)
 						{
 							RateLimited = true;
@@ -105,12 +105,12 @@ namespace CumulusMX.ThirdParty
 							Interval = 300;
 							Enabled = false;
 							SynchronisedUpdate = true;
-							Cumulus.LogMessage("AWEKAS: Temporarily increasing AWEKAS upload interval to 300 seconds due to authentication error");
+							cumulus.LogMessage("AWEKAS: Temporarily increasing AWEKAS upload interval to 300 seconds due to authentication error");
 						}
 					}
 					else if (respJson.minuploadtime == 0)
 					{
-						Cumulus.LogMessage("AWEKAS: Too many requests, rate limited");
+						cumulus.LogMessage("AWEKAS: Too many requests, rate limited");
 						// AWEKAS PLus allows minimum of 60 second updates, try that first
 						if (!RateLimited &&Interval < 60)
 						{
@@ -119,7 +119,7 @@ namespace CumulusMX.ThirdParty
 							Interval = 60;
 							Enabled = false;
 							SynchronisedUpdate = true;
-							Cumulus.LogMessage("AWEKAS: Temporarily increasing AWEKAS upload interval to 60 seconds due to rate limit");
+							cumulus.LogMessage("AWEKAS: Temporarily increasing AWEKAS upload interval to 60 seconds due to rate limit");
 						}
 						// AWEKAS normal allows minimum of 300 second updates, revert to that
 						else
@@ -129,13 +129,13 @@ namespace CumulusMX.ThirdParty
 							IntTimer.Interval =Interval * 1000;
 							Enabled = !SynchronisedUpdate;
 							SynchronisedUpdate = Interval % 60 == 0;
-							Cumulus.LogMessage("AWEKAS: Temporarily increasing AWEKAS upload interval to 300 seconds due to rate limit");
+							cumulus.LogMessage("AWEKAS: Temporarily increasing AWEKAS upload interval to 300 seconds due to rate limit");
 						}
 					}
 					else
 					{
-						Cumulus.LogMessage("AWEKAS: Unknown error");
-						cumulus.ThirdPartyUploadAlarm.LastError = "AWEKAS: Unknown error";
+						cumulus.LogMessage("AWEKAS: Unknown error");
+						cumulus.ThirdPartyUploadAlarm.LastMessage = "AWEKAS: Unknown error";
 						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 					}
 				}
@@ -143,7 +143,7 @@ namespace CumulusMX.ThirdParty
 				// check the min upload time is greater than our upload time
 				if (respJson.status > 0 && respJson.minuploadtime > OriginalInterval)
 				{
-					Cumulus.LogMessage($"AWEKAS: The minimum upload time to AWEKAS for your station is {respJson.minuploadtime} sec, Cumulus is configured for {OriginalInterval} sec, increasing Cumulus interval to match AWEKAS");
+					cumulus.LogMessage($"AWEKAS: The minimum upload time to AWEKAS for your station is {respJson.minuploadtime} sec, Cumulus is configured for {OriginalInterval} sec, increasing Cumulus interval to match AWEKAS");
 					Interval = respJson.minuploadtime;
 					cumulus.WriteIniFile();
 					IntTimer.Interval = Interval * 1000;
@@ -158,7 +158,7 @@ namespace CumulusMX.ThirdParty
 					// We are currently rate limited, it could have been a transient thing because
 					// we just got a valid response, and our interval is >= the minimum allowed.
 					// So we just undo the limit, and resume as before
-					Cumulus.LogMessage($"AWEKAS: Removing temporary increase in upload interval to 60 secs, resuming uploads every {OriginalInterval} secs");
+					cumulus.LogMessage($"AWEKAS: Removing temporary increase in upload interval to 60 secs, resuming uploads every {OriginalInterval} secs");
 					Interval = OriginalInterval;
 					IntTimer.Interval = Interval * 1000;
 					SynchronisedUpdate = Interval % 60 == 0;
@@ -169,7 +169,7 @@ namespace CumulusMX.ThirdParty
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "AWEKAS: Error");
-				cumulus.ThirdPartyUploadAlarm.LastError = "AWEKAS: " + ex.Message;
+				cumulus.ThirdPartyUploadAlarm.LastMessage = "AWEKAS: " + ex.Message;
 				cumulus.ThirdPartyUploadAlarm.Triggered = true;
 			}
 			finally

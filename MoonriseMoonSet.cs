@@ -1105,37 +1105,37 @@ namespace CumulusMX
 
 		private static double rev(double angle)
 		{
-			return angle - Math.Floor(angle/360.0)*360.0;
+			return angle - Math.Floor(angle / 360.0) * 360.0;
 		}
 
 		private static double sind(double angle)
 		{
-			return Math.Sin((angle*Math.PI)/180.0);
+			return Math.Sin((angle * Math.PI) / 180.0);
 		}
 
 		private static double sind(decimal angle)
 		{
-			return sind((double)angle);
+			return sind((double) angle);
 		}
 
 		private static double cosd(double angle)
 		{
-			return Math.Cos((angle*Math.PI)/180.0);
+			return Math.Cos((angle * Math.PI) / 180.0);
 		}
 
 		private static double cosd(decimal angle)
 		{
-			return cosd((double)angle);
+			return cosd((double) angle);
 		}
 
 		private static double tand(double angle)
 		{
-			return Math.Tan((angle*Math.PI)/180.0);
+			return Math.Tan((angle * Math.PI) / 180.0);
 		}
 
 		private static double asind(double c)
 		{
-			return (180.0/Math.PI)*Math.Asin(c);
+			return (180.0 / Math.PI) * Math.Asin(c);
 		}
 
 		//private double acosd(double c)
@@ -1146,14 +1146,15 @@ namespace CumulusMX
 		private static double atan2d(double y, double x)
 		{
 			double num = x < 0 ? 1 : 0;
-			return (180.0/Math.PI)*Math.Atan(y/x) - 180.0*num;
+			return (180.0 / Math.PI) * Math.Atan(y / x) - 180.0 * num;
 		}
 
-		private static double DayNum(int year, int month,int day,double hours) {
+		private static double DayNum(int year, int month, int day, double hours)
+		{
 			// Day number is a modified Julian date, day 0 is 2000 January 0.0
 			// which corresponds to a Julian date of 2451543.5
-			double d=  (367*year-Math.Floor(7*(year+Math.Floor((month+9)/12.0))/4)
-						  +Math.Floor((275*month)/9.0)+day-730530+hours/24);
+			double d = (367 * year - Math.Floor(7 * (year + Math.Floor((month + 9) / 12.0)) / 4)
+						  + Math.Floor((275 * month) / 9.0) + day - 730530 + hours / 24);
 			return d;
 		}
 
@@ -1162,32 +1163,32 @@ namespace CumulusMX
 			return DayNum(year, month, day, hours) + 2451543.5;
 		}
 
-		private static double LocalSidereal(int year,int month,int day,double hours,decimal lon)
+		private static double LocalSidereal(int year, int month, int day, double hours, double lon)
 		{
 			// Compute local sidereal time in degrees
 			// year, month, day and hours are the Greenwich date and time
 			// lon is the observers longitude
-			var d=DayNum(year,month,day,hours);
-			var lst=(98.9818+0.985647352*d+hours*15+(double)lon);
-			return rev(lst)/15;
+			var d = DayNum(year, month, day, hours);
+			var lst = (98.9818 + 0.985647352 * d + hours * 15 + lon);
+			return rev(lst) / 15;
 		}
 
-		private static double[] RaDecToAltAz(double ra,double dec,int year,int month,int day,double hours,decimal lat,decimal lon)
+		private static double[] RaDecToAltAz(double ra, double dec, int year, int month, int day, double hours, double lat, double lon)
 		{
 			// convert ra and dec to altitude and azimuth
 			// year, month, day and hours are the Greenwich date and time
 			// lat and lon are the observers latitude and longitude
-			var lst=LocalSidereal(year,month,day,hours,lon);
-			var x=cosd(15.0*(lst-ra))*cosd(dec);
-			var y=sind(15.0*(lst-ra))*cosd(dec);
-			var z=sind(dec);
+			var lst = LocalSidereal(year, month, day, hours, lon);
+			var x = cosd(15.0 * (lst - ra)) * cosd(dec);
+			var y = sind(15.0 * (lst - ra)) * cosd(dec);
+			var z = sind(dec);
 			// rotate so z is the local zenith
-			var xhor=x*sind(lat)-z*cosd(lat);
-			var yhor=y;
-			var zhor=x*cosd(lat)+z*sind(lat);
-			var azimuth=rev(atan2d(yhor,xhor)+180.0); // so 0 degrees is north
-			var altitude=atan2d(zhor,Math.Sqrt(xhor*xhor+yhor*yhor));
-			return new double[]{altitude,azimuth};
+			var xhor = x * sind(lat) - z * cosd(lat);
+			var yhor = y;
+			var zhor = x * cosd(lat) + z * sind(lat);
+			var azimuth = rev(atan2d(yhor, xhor) + 180.0); // so 0 degrees is north
+			var altitude = atan2d(zhor, Math.Sqrt(xhor * xhor + yhor * yhor));
+			return new double[] { altitude, azimuth };
 		}
 
 		// MoonPos calculates the Moon position, based on Meeus chapter 45
@@ -1195,27 +1196,27 @@ namespace CumulusMX
 		{
 			// julian date
 			var jd = Julian(year, month, day, hours);
-			var T = (jd - 2451545.0)/36525;
-			var T2 = T*T;
-			var T3 = T2*T;
-			var T4 = T3*T;
+			var T = (jd - 2451545.0) / 36525;
+			var T2 = T * T;
+			var T3 = T2 * T;
+			var T4 = T3 * T;
 			// Moons mean longitude L'
-			var LP = 218.3164477 + 481267.88123421*T - 0.0015786*T2 + T3/538841.0 - T4/65194000.0;
+			var LP = 218.3164477 + 481267.88123421 * T - 0.0015786 * T2 + T3 / 538841.0 - T4 / 65194000.0;
 			// Moons mean elongation
-			var D = 297.8501921 + 445267.1114034*T - 0.0018819*T2 + T3/545868.0 - T4/113065000.0;
+			var D = 297.8501921 + 445267.1114034 * T - 0.0018819 * T2 + T3 / 545868.0 - T4 / 113065000.0;
 			// Suns mean anomaly
-			var M = 357.5291092 + 35999.0502909*T - 0.0001536*T2 + T3/24490000.0;
+			var M = 357.5291092 + 35999.0502909 * T - 0.0001536 * T2 + T3 / 24490000.0;
 			// Moons mean anomaly M'
-			var MP = 134.9633964 + 477198.8675055*T + 0.0087414*T2 + T3/69699.0 - T4/14712000.0;
+			var MP = 134.9633964 + 477198.8675055 * T + 0.0087414 * T2 + T3 / 69699.0 - T4 / 14712000.0;
 			// Moons argument of latitude
-			var F = 93.2720950 + 483202.0175233*T - 0.0036539*T2 - T3/3526000.0 + T4/863310000.0;
+			var F = 93.2720950 + 483202.0175233 * T - 0.0036539 * T2 - T3 / 3526000.0 + T4 / 863310000.0;
 
 			// Additional arguments
-			var A1 = 119.75 + 131.849*T;
-			var A2 = 53.09 + 479264.290*T;
-			var A3 = 313.45 + 481266.484*T;
-			var E = 1 - 0.002516*T - 0.0000074*T2;
-			var E2 = E*E;
+			var A1 = 119.75 + 131.849 * T;
+			var A2 = 53.09 + 479264.290 * T;
+			var A3 = 313.45 + 481266.484 * T;
+			var E = 1 - 0.002516 * T - 0.0000074 * T2;
+			var E2 = E * E;
 			// Sums of periodic terms from table 45.A and 45.B
 			var Sl = 0.0;
 			var Sr = 0.0;
@@ -1224,8 +1225,8 @@ namespace CumulusMX
 				var Eterm = 1.0;
 				if (Math.Abs(T45AM[i]) == 1) Eterm = E;
 				if (Math.Abs(T45AM[i]) == 2) Eterm = E2;
-				Sl += T45AL[i]*Eterm*sind(rev(T45AD[i]*D + T45AM[i]*M + T45AMP[i]*MP + T45AF[i]*F));
-				Sr += T45AR[i]*Eterm*cosd(rev(T45AD[i]*D + T45AM[i]*M + T45AMP[i]*MP + T45AF[i]*F));
+				Sl += T45AL[i] * Eterm * sind(rev(T45AD[i] * D + T45AM[i] * M + T45AMP[i] * MP + T45AF[i] * F));
+				Sr += T45AR[i] * Eterm * cosd(rev(T45AD[i] * D + T45AM[i] * M + T45AMP[i] * MP + T45AF[i] * F));
 			}
 			var Sb = 0.0;
 			for (var i = 0; i < 60; i++)
@@ -1233,23 +1234,23 @@ namespace CumulusMX
 				var Eterm = 1.0;
 				if (Math.Abs(T45BM[i]) == 1) Eterm = E;
 				if (Math.Abs(T45BM[i]) == 2) Eterm = E2;
-				Sb += T45BL[i]*Eterm*sind(rev(T45BD[i]*D + T45BM[i]*M + T45BMP[i]*MP + T45BF[i]*F));
+				Sb += T45BL[i] * Eterm * sind(rev(T45BD[i] * D + T45BM[i] * M + T45BMP[i] * MP + T45BF[i] * F));
 			}
 			// Additional additive terms
-			Sl = Sl + 3958*sind(rev(A1)) + 1962*sind(rev(LP - F)) + 318*sind(rev(A2));
-			Sb = Sb - 2235*sind(rev(LP)) + 382*sind(rev(A3)) + 175*sind(rev(A1 - F)) + 175*sind(rev(A1 + F)) + 127*sind(rev(LP - MP)) - 115*sind(rev(LP + MP));
+			Sl = Sl + 3958 * sind(rev(A1)) + 1962 * sind(rev(LP - F)) + 318 * sind(rev(A2));
+			Sb = Sb - 2235 * sind(rev(LP)) + 382 * sind(rev(A3)) + 175 * sind(rev(A1 - F)) + 175 * sind(rev(A1 + F)) + 127 * sind(rev(LP - MP)) - 115 * sind(rev(LP + MP));
 			// geocentric longitude, latitude and distance
-			var mglong = rev(LP + Sl/1000000.0);
-			var mglat = rev(Sb/1000000.0);
+			var mglong = rev(LP + Sl / 1000000.0);
+			var mglat = rev(Sb / 1000000.0);
 			if (mglat > 180.0) mglat -= 360;
-			var mr = Math.Round(385000.56 + Sr/1000.0);
+			var mr = Math.Round(385000.56 + Sr / 1000.0);
 			// Obliquity of Ecliptic
-			var obl = 23.4393 - 3.563E-9*(jd - 2451543.5);
+			var obl = 23.4393 - 3.563E-9 * (jd - 2451543.5);
 			// RA and dec
-			var ra = rev(atan2d(sind(mglong)*cosd(obl) - tand(mglat)*sind(obl), cosd(mglong)))/15.0;
-			var dec = rev(asind(sind(mglat)*cosd(obl) + cosd(mglat)*sind(obl)*sind(mglong)));
+			var ra = rev(atan2d(sind(mglong) * cosd(obl) - tand(mglat) * sind(obl), cosd(mglong))) / 15.0;
+			var dec = rev(asind(sind(mglat) * cosd(obl) + cosd(mglat) * sind(obl) * sind(mglong)));
 			if (dec > 180.0) dec -= 360;
-			return new double[] {ra, dec, mr};
+			return new double[] { ra, dec, mr };
 		}
 
 		public static double[] MoonRise(int year, int month, int day, double TZ, decimal latitude, decimal longitude)
@@ -1272,21 +1273,21 @@ namespace CumulusMX
 			// Compute the moon elevation at start and end of day
 			// store elevation at the hours in an array elh to save search time
 			var rad = MoonPos(year, month, day, hours - TZ);
-			var altaz = RaDecToAltAz(rad[0], rad[1], year, month, day, hours - TZ, latitude, longitude);
+			var altaz = RaDecToAltAz(rad[0], rad[1], year, month, day, hours - TZ, (double) latitude, (double) longitude);
 			elh[0] = altaz[0];
 			elhdone[0] = true;
 			// set the return code to allow for always up or never rises
 			if (elh[0] > 0.0)
 			{
-				riseset = new double[]{-2, -2};
+				riseset = new double[] { -2, -2 };
 			}
 			else
 			{
-				riseset = new double[]{-1, -1};
+				riseset = new double[] { -1, -1 };
 			}
 			hours = 24;
 			rad = MoonPos(year, month, day, hours - TZ);
-			altaz = RaDecToAltAz(rad[0], rad[1], year, month, day, hours - TZ, latitude, longitude);
+			altaz = RaDecToAltAz(rad[0], rad[1], year, month, day, hours - TZ, (double) latitude, (double) longitude);
 			elh[24] = altaz[0];
 			elhdone[24] = true;
 			// search for moonrise and set
@@ -1296,14 +1297,14 @@ namespace CumulusMX
 				double hfirst = 0;
 				double hlast = 24;
 				// Try a binary chop on the hours to speed the search
-				while (Math.Ceiling((hlast - hfirst)/2.0) > 1)
+				while (Math.Ceiling((hlast - hfirst) / 2.0) > 1)
 				{
-					int hmid = (int) (hfirst + Math.Round((hlast - hfirst)/2.0));
+					int hmid = (int) (hfirst + Math.Round((hlast - hfirst) / 2.0));
 					if (!elhdone[hmid])
 					{
 						hours = hmid;
 						rad = MoonPos(year, month, day, hours - TZ);
-						altaz = RaDecToAltAz(rad[0], rad[1], year, month, day, hours - TZ, latitude, longitude);
+						altaz = RaDecToAltAz(rad[0], rad[1], year, month, day, hours - TZ, (double) latitude, (double) longitude);
 						elh[hmid] = altaz[0];
 						elhdone[hmid] = true;
 					}
@@ -1331,7 +1332,7 @@ namespace CumulusMX
 						{
 							hours = i + 1;
 							rad = MoonPos(year, month, day, hours - TZ);
-							altaz = RaDecToAltAz(rad[0], rad[1], year, month, day, hours - TZ, latitude, longitude);
+							altaz = RaDecToAltAz(rad[0], rad[1], year, month, day, hours - TZ, (double) latitude, (double)longitude);
 							elh[(int) hours] = altaz[0];
 							elhdone[(int) hours] = true;
 						}
@@ -1351,30 +1352,30 @@ namespace CumulusMX
 					var ellast = elh[(int) hlast];
 					hours = hfirst + 0.5;
 					rad = MoonPos(year, month, day, hours - TZ);
-					altaz = RaDecToAltAz(rad[0], rad[1], year, month, day, hours - TZ, latitude, longitude);
+					altaz = RaDecToAltAz(rad[0], rad[1], year, month, day, hours - TZ, (double) latitude, (double) longitude);
 					// alert("day ="+day+" hour ="+hours+" altaz="+altaz[0]+" "+altaz[1]);
 					if ((rise == 0) && (altaz[0] <= 0.0))
 					{
-						hfirst =  hours;
+						hfirst = hours;
 						elfirst = altaz[0];
 					}
 					if ((rise == 0) && (altaz[0] > 0.0))
 					{
-						hlast =  hours;
+						hlast = hours;
 						ellast = altaz[0];
 					}
 					if ((rise == 1) && (altaz[0] <= 0.0))
 					{
-						hlast =  hours;
+						hlast = hours;
 						ellast = altaz[0];
 					}
 					if ((rise == 1) && (altaz[0] > 0.0))
 					{
-						hfirst =  hours;
+						hfirst = hours;
 						elfirst = altaz[0];
 					}
 					var eld = Math.Abs(elfirst) + Math.Abs(ellast);
-					riseset[rise] = hfirst + (hlast - hfirst)*Math.Abs(elfirst)/eld;
+					riseset[rise] = hfirst + (hlast - hfirst) * Math.Abs(elfirst) / eld;
 				}
 			} // End of rise/set loop
 			return (riseset);
@@ -1384,22 +1385,22 @@ namespace CumulusMX
 		{
 			// the illuminated percentage from Meeus chapter 46
 			var j = Julian(year, month, day, hours);
-			var T = (j - 2451545.0)/36525;
-			var T2 = T*T;
-			var T3 = T2*T;
-			var T4 = T3*T;
+			var T = (j - 2451545.0) / 36525;
+			var T2 = T * T;
+			var T3 = T2 * T;
+			var T4 = T3 * T;
 			// Moons mean elongation Meeus first edition
 			// var D=297.8502042+445267.1115168*T-0.0016300*T2+T3/545868.0-T4/113065000.0;
 			// Moons mean elongation Meeus second edition
-			var D = 297.8501921 + 445267.1114034*T - 0.0018819*T2 + T3/545868.0 - T4/113065000.0;
+			var D = 297.8501921 + 445267.1114034 * T - 0.0018819 * T2 + T3 / 545868.0 - T4 / 113065000.0;
 			// Moons mean anomaly M' Meeus first edition
 			// var MP=134.9634114+477198.8676313*T+0.0089970*T2+T3/69699.0-T4/14712000.0;
 			// Moons mean anomaly M' Meeus second edition
-			var MP = 134.9633964 + 477198.8675055*T + 0.0087414*T2 + T3/69699.0 - T4/14712000.0;
+			var MP = 134.9633964 + 477198.8675055 * T + 0.0087414 * T2 + T3 / 69699.0 - T4 / 14712000.0;
 			// Suns mean anomaly
-			var M = 357.5291092 + 35999.0502909*T - 0.0001536*T2 + T3/24490000.0;
+			var M = 357.5291092 + 35999.0502909 * T - 0.0001536 * T2 + T3 / 24490000.0;
 			// phase angle
-			var pa = 180.0 - D - 6.289*sind(MP) + 2.1*sind(M) - 1.274*sind(2*D - MP) - 0.658*sind(2*D) - 0.214*sind(2*MP) - 0.11*sind(D);
+			var pa = 180.0 - D - 6.289 * sind(MP) + 2.1 * sind(M) - 1.274 * sind(2 * D - MP) - 0.658 * sind(2 * D) - 0.214 * sind(2 * MP) - 0.11 * sind(D);
 			return (rev(pa));
 		}
 
@@ -1548,7 +1549,7 @@ namespace CumulusMX
 		{
 			if (!System.IO.File.Exists("./web/MoonBaseImage.png"))
 			{
-				Cumulus.LogMessage("CreateMoonImage: File not found - ./web/MoonBaseImage.png");
+				Program.cumulus.LogMessage("CreateMoonImage: File not found - ./web/MoonBaseImage.png");
 				return false;
 			}
 
@@ -1574,7 +1575,7 @@ namespace CumulusMX
 					int srcSize2 = srcSize / 2;
 					var dark = new Rgba32(20, 20, 20, 200);
 
-					for (int yPos = 0; yPos < srcSize2; yPos++)
+					for (int yPos = 0; yPos <= srcSize2; yPos++)
 					{
 						// moons limb
 						var y = srcSize2 - yPos;
@@ -1583,12 +1584,12 @@ namespace CumulusMX
 						if (transparent)
 							xPos = corr == -1 ? 0 : srcSize - 1;
 						else
-							xPos = (int)(Math.Sqrt(srcSize2 * srcSize2 - y * y) * corr + srcSize2);
+							xPos = (int) (Math.Sqrt(srcSize2 * srcSize2 - y * y) * corr + srcSize2);
 
 						// Determine the edges of the illuminated part of the moon
-						double x = 1 - ((double)yPos / (double)srcSize2);
+						double x = 1 - ((double) yPos / (double) srcSize2);
 						x = Math.Sqrt(1 - (x * x));
-						var xPos2 = (int)(srcSize2 + (phase - 0.5) * x * srcSize * (-corr));
+						var xPos2 = (int) (srcSize2 + (phase - 0.5) * x * srcSize * (-corr));
 
 						Span<Rgba32> pixels1 = accessor.GetRowSpan(yPos);
 						for (int x1 = xPos; x1 < xPos2; x1++)
@@ -1597,9 +1598,9 @@ namespace CumulusMX
 								pixels1[x1] = Color.Transparent;
 							else
 							{
-								pixels1[x1].R = (byte)(pixels1[x1].R * 0.2);
-								pixels1[x1].G = (byte)(pixels1[x1].G * 0.2);
-								pixels1[x1].B = (byte)(pixels1[x1].B * 0.2);
+								pixels1[x1].R = (byte) (pixels1[x1].R * 0.2);
+								pixels1[x1].G = (byte) (pixels1[x1].G * 0.2);
+								pixels1[x1].B = (byte) (pixels1[x1].B * 0.2);
 							}
 						}
 
@@ -1613,9 +1614,9 @@ namespace CumulusMX
 									pixels2[x2] = Color.Transparent;
 								else
 								{
-									pixels2[x2].R = (byte)(pixels2[x2].R * 0.2);
-									pixels2[x2].G = (byte)(pixels2[x2].G * 0.2);
-									pixels2[x2].B = (byte)(pixels2[x2].B * 0.2);
+									pixels2[x2].R = (byte) (pixels2[x2].R * 0.2);
+									pixels2[x2].G = (byte) (pixels2[x2].G * 0.2);
+									pixels2[x2].B = (byte) (pixels2[x2].B * 0.2);
 								}
 							}
 						}

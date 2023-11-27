@@ -4,7 +4,6 @@ namespace CumulusMX
 {
 	public static class Trig
 	{
-
 		public static double DegToRad(double pfDeg)
 		{
 			return pfDeg / 180 * Math.PI;

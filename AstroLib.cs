@@ -25,7 +25,7 @@ namespace CumulusMX
 			double al = 0.128 - (0.054 * Math.Log(m) / Math.Log(10));
 
 			// clear-sky solar radiation at earth surface on horizontal surface (W/m^2)
-			return (int)Math.Round(i0 * Math.Exp(-nfac * al * m));
+			return (int) Math.Round(i0 * Math.Exp(-nfac * al * m));
 		}
 
 		public static int RyanStolzSolar(double el, double erv, double atc, double z)
@@ -47,7 +47,7 @@ namespace CumulusMX
 
 			double rsToa = 1360 * sinal / (erv * erv); // RS on the top of atmosphere
 
-			return (int)Math.Round(rsToa * Math.Pow(atc, rm)); //RS on the ground
+			return (int) Math.Round(rsToa * Math.Pow(atc, rm)); //RS on the ground
 		}
 
 
@@ -77,7 +77,7 @@ namespace CumulusMX
 			var dEpoch = new DateTime(1990, 1, 1, 0, 0, 0);
 			double erv = CalcSunDistance(utctime, dEpoch);
 
-			//Cumulus.LogMessage(utctime+" lat="+latitude+" lon="+longitude+" sun elev="+solarelevation);
+			//cumulus.LogMessage(utctime+" lat="+latitude+" lon="+longitude+" sun elev="+solarelevation);
 			if (method == 0)
 			{
 				return RyanStolzSolar(solarelevation, erv, factor, altitude);
@@ -128,7 +128,7 @@ namespace CumulusMX
 			//var solarNoonLst = (720.0 - 4 * longitude - eqOfTime + zone * 60.0) / 1440.0;
 			//var sunriseTimeLst = solarNoonLst - haSunRise * 4 / 1440.0;
 			//var sunsetTimeLst = solarNoonLst + haSunRise * 4 / 1440.0;
-			//var sunlightDurationMins = 8 * haSunRise; 
+			//var sunlightDurationMins = 8 * haSunRise;
 			var trueSolarTime = Trig.PutInRange(dateTime.TimeOfDay.TotalMinutes + eqOfTime + 4 * (double)longitude - 60 * zone, 1440);
 			var hourAngle = trueSolarTime / 4.0 < 0 ? trueSolarTime / 4.0 + 180 : trueSolarTime / 4.0 - 180;
 			var solarZenithAngle = Trig.RadToDeg(Math.Acos(Math.Sin(Trig.DegToRad((double)latitude)) * Math.Sin(Trig.DegToRad(sunDec)) + Math.Cos(Trig.DegToRad((double)latitude)) * Math.Cos(Trig.DegToRad(sunDec)) * Math.Cos(Trig.DegToRad(hourAngle))));
@@ -286,18 +286,18 @@ namespace CumulusMX
 			//double fOblique = GetEarthObliquity(dEpoch, true);
 			const double fSMA = 149598500.0;
 
-			double fN = (360.0/365.242191)*fD;
+			double fN = (360.0 / 365.242191)*fD;
 			fN = Trig.PutIn360Deg(fN);
 			double fM = fN + fSolarMEL - fSolarPL;
 			fM = Trig.PutIn360Deg(fM);
 			fM = Trig.DegToRad(fM);
 			double fE = CalcEccentricAnomaly(fM, fM, fSunEarthEcc, fAcc);
-			double fTanV2 = Math.Sqrt((1.0 + fSunEarthEcc)/(1.0 - fSunEarthEcc))*Math.Tan(fE/2.0);
+			double fTanV2 = Math.Sqrt((1.0 + fSunEarthEcc) / (1.0 - fSunEarthEcc)) * Math.Tan(fE / 2.0);
 			double fV = Math.Atan(fTanV2)*2.0;
-			double fDistance = (fSMA*(1.0 - (fSunEarthEcc*fSunEarthEcc)))/(1.0 + (fSunEarthEcc*Math.Cos(fV)));
+			double fDistance = (fSMA * (1.0 - (fSunEarthEcc*fSunEarthEcc))) / (1.0 + (fSunEarthEcc*Math.Cos(fV)));
 
 			// Convert from km to AU
-			return fDistance/149597871.0;
+			return fDistance / 149597871.0;
 		}
 
 		private static double GetSunEarthEcc(DateTime dDate, bool b0Epoch)
@@ -309,8 +309,8 @@ namespace CumulusMX
 			{
 				fJD -= 1.0;
 			}
-			double fT = (fJD - 2415020.0)/36525.0;
-			double fEcc = 0.01675104 - (0.0000418*fT) - (0.000000126*fT*fT);
+			double fT = (fJD - 2415020.0) / 36525.0;
+			double fEcc = 0.01675104 - (0.0000418 * fT) - (0.000000126 * fT * fT);
 			return fEcc;
 		}
 
@@ -339,10 +339,10 @@ namespace CumulusMX
 
 			double fEG = fEGuess;
 
-			double fDelta = fEG - (fEcc*Math.Sin(fEG)) - fMA;
+			double fDelta = fEG - (fEcc * Math.Sin(fEG)) - fMA;
 			if (Math.Abs(fDelta) > fAcc)
 			{
-				double fDeltaE = (fDelta/(1.0 - (fEcc*Math.Cos(fEG))));
+				double fDeltaE = (fDelta / (1.0 - (fEcc * Math.Cos(fEG))));
 				double fETmp = fEG - fDeltaE;
 				fE = CalcEccentricAnomaly(fETmp, fMA, fEcc, fAcc);
 			}
@@ -365,7 +365,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				fDays = (long) Math.Floor(Math.Abs(fDays))*-1;
+				fDays = (long) Math.Floor(Math.Abs(fDays)) * -1;
 			}
 			return (long) Math.Floor(fDays);
 		}
@@ -383,7 +383,7 @@ namespace CumulusMX
 			int iHour = dDate.Hour;
 			int iMinute = dDate.Minute;
 			int iSecond = dDate.Second;
-			double fFrac = iDay + ((iHour + (iMinute/60) + (iSecond/60/60))/24);
+			double fFrac = iDay + ((iHour + (iMinute / 60) + (iSecond / 60 / 60)) / 24);
 			iGreg = iYear < 1582 ? 0 : 1;
 			if ((iMonth == 1) || (iMonth == 2))
 			{
@@ -392,16 +392,16 @@ namespace CumulusMX
 			}
 
 			double fA = (long) Math.Floor(iYear / 100.0);
-			double fB = (2 - fA + (long) Math.Floor(fA/4))*iGreg;
+			double fB = (2 - fA + (long) Math.Floor(fA/4)) * iGreg;
 			if (iYear < 0)
 			{
-				fC = (int) Math.Floor((365.25*iYear) - 0.75);
+				fC = (int) Math.Floor((365.25 * iYear) - 0.75);
 			}
 			else
 			{
-				fC = (int) Math.Floor(365.25*iYear);
+				fC = (int) Math.Floor(365.25 * iYear);
 			}
-			double fD = (int) Math.Floor(30.6001*(iMonth + 1));
+			double fD = (int) Math.Floor(30.6001 * (iMonth + 1));
 			double fJD = fB + fC + fD + 1720994.5;
 			fJD += fFrac;
 			return fJD;
@@ -427,8 +427,8 @@ namespace CumulusMX
 				fJD -= 1.0;
 			}
 
-			double fT = (fJD - 2415020.0)/36525.0;
-			double fLong = 279.6966778 + (36000.76892*fT) + (0.0003025*fT*fT);
+			double fT = (fJD - 2415020.0) / 36525.0;
+			double fLong = 279.6966778 + (36000.76892 * fT) + (0.0003025 * fT * fT);
 			fLong = Trig.PutIn360Deg(fLong);
 			return fLong;
 		}
@@ -444,8 +444,8 @@ namespace CumulusMX
 				fJD -= 1.0;
 			}
 
-			double fT = (fJD - 2415020.0)/36525.0;
-			double fLong = 281.2208444 + (1.719175*fT) + (0.000452778*fT*fT);
+			double fT = (fJD - 2415020.0) / 36525.0;
+			double fLong = 281.2208444 + (1.719175 * fT) + (0.000452778 * fT * fT);
 			fLong = Trig.PutIn360Deg(fLong);
 			return fLong;
 		}

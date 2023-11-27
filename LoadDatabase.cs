@@ -20,7 +20,7 @@ namespace CumulusMX
 
 			var rowsToAdd = new List<DayData>();
 
-			Cumulus.LogMessage($"LoadDayFileToDb: Attempting to load the daily data");
+			cumulus.LogMessage($"LoadDayFileToDb: Attempting to load the daily data");
 
 			var watch = Stopwatch.StartNew();
 
@@ -72,11 +72,11 @@ namespace CumulusMX
 						catch (Exception ex)
 						{
 							cumulus.LogExceptionMessage(ex, $"LoadDayFileToDb: Error at line {linenum} of {cumulus.DayFileName}");
-							Cumulus.LogMessage("Please edit the file to correct the error");
+							cumulus.LogMessage("Please edit the file to correct the error");
 							errorCount++;
 							if (errorCount >= 20)
 							{
-								Cumulus.LogMessage($"LoadDayFileToDb: Too many errors reading {cumulus.DayFileName} - aborting load of daily data");
+								cumulus.LogMessage($"LoadDayFileToDb: Too many errors reading {cumulus.DayFileName} - aborting load of daily data");
 							}
 						}
 					} while (!(sr.EndOfStream || errorCount >= 20) && doMore);
@@ -85,7 +85,7 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					cumulus.LogExceptionMessage(ex, $"LoadDayFileToDb: Error at line {linenum} of {cumulus.DayFileName}");
-					Cumulus.LogMessage("Please edit the file to correct the error");
+					cumulus.LogMessage("Please edit the file to correct the error");
 				}
 
 				// Anything to add to the data base?
@@ -102,14 +102,14 @@ namespace CumulusMX
 				watch.Stop();
 				cumulus.LogDebugMessage($"LoadDayFileToDb: Dayfile load = {watch.ElapsedMilliseconds} ms");
 				var msg = $"LoadDayFileToDb: Loaded {addedEntries} entries to the daily data table";
-				Cumulus.LogMessage(msg);
+				cumulus.LogMessage(msg);
 				return msg;
 
 			}
 			else
 			{
 				var msg = "LoadDayFileToDb: No Dayfile found - No entries added to the daily data table";
-				Cumulus.LogMessage(msg);
+				cumulus.LogMessage(msg);
 				return msg;
 			}
 		}
@@ -121,14 +121,14 @@ namespace CumulusMX
 			DateTime lastLogDate;
 			long lastLogTimestamp;
 
-			Cumulus.LogMessage("LoadLogFilesToDb: Starting Process");
+			cumulus.LogMessage("LoadLogFilesToDb: Starting Process");
 
 			try
 			{
 				// get the last date time from the database - if any
 				lastLogTimestamp = station.Database.ExecuteScalar<long>("select max(Timestamp) from IntervalData");
 				lastLogDate = lastLogTimestamp.FromUnixTime().ToLocalTime();
-				Cumulus.LogMessage($"LoadLogFilesToDb: Last data logged in database = {lastLogDate.ToString("yyyy-MM-dd HH:mm", invDate)}");
+				cumulus.LogMessage($"LoadLogFilesToDb: Last data logged in database = {lastLogDate.ToString("yyyy-MM-dd HH:mm", invDate)}");
 			}
 			catch (Exception ex)
 			{
@@ -144,7 +144,7 @@ namespace CumulusMX
 			if (lastLogDate.AddMinutes(cumulus.logints[cumulus.DataLogInterval]) > cumulus.LastUpdateTime)
 			{
 				// the database is up to date - nothing to do here
-				Cumulus.LogMessage("LoadLogFilesToDb: The database is up to date");
+				cumulus.LogMessage("LoadLogFilesToDb: The database is up to date");
 				return;
 			}
 
@@ -206,7 +206,7 @@ namespace CumulusMX
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, $"LoadLogFilesToDb: Error at line {linenum} of {logFile}");
-						Cumulus.LogMessage("Please edit the file to correct the error");
+						cumulus.LogMessage("Please edit the file to correct the error");
 					}
 				}
 				else
@@ -245,7 +245,7 @@ namespace CumulusMX
 			var UserTemps = new List<UserTemp>();
 			var CO2Datas = new List<CO2Data>();
 
-			Cumulus.LogMessage("LoadExtraFilesToDb: Starting Process");
+			cumulus.LogMessage("LoadExtraFilesToDb: Starting Process");
 
 			try
 			{
@@ -261,7 +261,7 @@ namespace CumulusMX
 				lastLogTimestamp = Math.Max(lastLogTimestamp, station.Database.ExecuteScalar<long>("select max(Timestamp) from UserTemp"));
 				lastLogTimestamp = Math.Max(lastLogTimestamp, station.Database.ExecuteScalar<long>("select max(Timestamp) from CO2Data"));
 				lastLogDate = lastLogTimestamp.FromUnixTime().ToLocalTime();
-				Cumulus.LogMessage($"LoadExtraFilesToDb: Last data logged in database = {lastLogDate.ToString("yyyy-MM-dd HH:mm", invDate)}");
+				cumulus.LogMessage($"LoadExtraFilesToDb: Last data logged in database = {lastLogDate.ToString("yyyy-MM-dd HH:mm", invDate)}");
 			}
 			catch (Exception ex)
 			{
@@ -281,7 +281,7 @@ namespace CumulusMX
 			if (lastLogDate.AddMinutes(cumulus.logints[cumulus.DataLogInterval]) > cumulus.LastUpdateTime)
 			{
 				// the database is up to date - nothing to do here
-				Cumulus.LogMessage("LoadExtraFilesToDb: The database is up to date");
+				cumulus.LogMessage("LoadExtraFilesToDb: The database is up to date");
 				return;
 			}
 
@@ -437,7 +437,7 @@ namespace CumulusMX
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, $"LoadExtraFilesToDb: Error at line {linenum} of {logFile}");
-						Cumulus.LogMessage("Please edit the file to correct the error");
+						cumulus.LogMessage("Please edit the file to correct the error");
 					}
 				}
 				else

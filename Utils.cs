@@ -1,6 +1,4 @@
-﻿using ServiceStack;
-using Swan;
-using System;
+﻿using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -9,7 +7,12 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+
+using ServiceStack;
+using Swan;
+
 
 // A rag tag of useful functions
 
@@ -31,21 +34,21 @@ namespace CumulusMX
 
 		public static long ToJsTime(DateTime dateTime)
 		{
-			return (long)dateTime.ToUnixEpochDate() * 1000;
+			return (long) dateTime.ToUnixEpochDate() * 1000;
 		}
 
 		// SPECIAL JS TS for graphs. It looks like a JS TS, but is the local time as if it were UTC.
 		// Used for the graph data, as HighCharts is going to display UTC date/times to be consistent across TZ
 		public static long ToPseudoJSTime(DateTime timestamp)
 		{
-			return (long)DateTime.SpecifyKind(timestamp, DateTimeKind.Utc).ToUnixEpochDate() * 1000;
+			return (long) DateTime.SpecifyKind(timestamp, DateTimeKind.Utc).ToUnixEpochDate() * 1000;
 		}
 
 		// SPECIAL Unix TS for graphs. It looks like a Unix TS, but is the local time as if it were UTC.
 		// Used for the graph data, as HighCharts is going to display UTC date/times to be consistent across TZ
 		public static long ToPseudoUnixTime(DateTime timestamp)
 		{
-			return (long)DateTime.SpecifyKind(timestamp, DateTimeKind.Utc).ToUnixEpochDate();
+			return (long) DateTime.SpecifyKind(timestamp, DateTimeKind.Utc).ToUnixEpochDate();
 		}
 
 		public static DateTime RoundTimeUpToInterval(DateTime dateTime, TimeSpan intvl)
@@ -68,7 +71,7 @@ namespace CumulusMX
 
 		public static string ByteArrayToHexString(byte[] ba)
 		{
-			System.Text.StringBuilder hex = new System.Text.StringBuilder(ba.Length * 2);
+			var hex = new StringBuilder(ba.Length * 2);
 			foreach (byte b in ba)
 				hex.AppendFormat("{0:x2}", b);
 			return hex.ToString();
@@ -121,7 +124,6 @@ namespace CumulusMX
 
 			return splitValues.All(r => byte.TryParse(r, out tempForParsing));
 		}
-
 
 		public static DateTime ddmmyyStrToDate(string d)
 		{
@@ -225,6 +227,20 @@ namespace CumulusMX
 			return TimeSpan.TryParseExact(val, format, CultureInfo.InvariantCulture, out tim) ? baseDate.Add(tim) : null;
 		}
 
+		public static string GetLogFileSeparator(string line, string defSep)
+		{
+			// we know the dayfile and monthly log files start with
+			// dd/MM/yy,NN,...
+			// dd/MM/yy,hh:mm,N.N,....
+			// so we just need to find the first separator after the date before a number
+
+			var reg = Regex.Match(line, @"\d{2}[^\d]+\d{2}[^\d]+\d{2}([^\d])");
+			if (reg.Success)
+				return reg.Groups[1].Value;
+			else
+				return defSep;
+		}
+
 		public static IPAddress GetIpWithDefaultGateway()
 		{
 			try
@@ -274,10 +290,11 @@ namespace CumulusMX
 			sourceStream.CopyTo(destinationStream);
 		}
 
-		public static string ExceptionToString(Exception ex)
+		public static string ExceptionToString(Exception ex, out string message)
 		{
 			var sb = new StringBuilder();
 
+			message = ex.Message;
 			sb.AppendLine("");
 			sb.AppendLine("Exception Type: " + ex.GetType().FullName);
 			sb.AppendLine("Message: " + ex.Message);
@@ -311,7 +328,7 @@ namespace CumulusMX
 			if (ex.InnerException != null)
 			{
 				sb.AppendLine("Inner Exception... ");
-				sb.AppendLine(ExceptionToString(ex.InnerException));
+				sb.AppendLine(ExceptionToString(ex.InnerException, out message));
 			}
 
 			return sb.ToString();
@@ -333,6 +350,18 @@ namespace CumulusMX
 			{
 				process.WaitForExit();
 			}
+		}
+
+		public static bool ByteArraysEqual(byte[] b1, byte[] b2)
+		{
+			if (b1 == b2) return true;
+			if (b1 == null || b2 == null) return false;
+			if (b1.Length != b2.Length) return false;
+			for (int i = 0; i < b1.Length; i++)
+			{
+				if (b1[i] != b2[i]) return false;
+			}
+			return true;
 		}
 
 		public static Exception GetOriginalException(Exception ex)
@@ -400,18 +429,6 @@ namespace CumulusMX
 			{
 				return false;
 			}
-		}
-
-		public static bool ByteArraysEqual(byte[] b1, byte[] b2)
-		{
-			if (b1 == b2) return true;
-			if (b1 == null || b2 == null) return false;
-			if (b1.Length != b2.Length) return false;
-			for (int i = 0; i < b1.Length; i++)
-			{
-				if (b1[i] != b2[i]) return false;
-			}
-			return true;
 		}
 	}
 }

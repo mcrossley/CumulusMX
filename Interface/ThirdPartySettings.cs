@@ -1,8 +1,10 @@
-﻿using EmbedIO;
-using ServiceStack;
-using System;
+﻿using System;
 using System.IO;
 using System.Net;
+
+using EmbedIO;
+using ServiceStack;
+
 
 namespace CumulusMX
 {
@@ -46,7 +48,7 @@ namespace CumulusMX
 			// process the settings
 			try
 			{
-				Cumulus.LogMessage("Updating third party settings");
+				cumulus.LogMessage("Updating third party settings");
 
 				// wunderground
 				try
@@ -311,6 +313,7 @@ namespace CumulusMX
 							else
 								cumulus.CustomHttpSecondsStrings[i] = null;
 						}
+
 						cumulus.CustomHttpSecondsInterval = settings.customhttp.customseconds.interval;
 						cumulus.CustomHttpSecondsTimer.Interval = cumulus.CustomHttpSecondsInterval * 1000;
 					}
@@ -325,6 +328,7 @@ namespace CumulusMX
 							else
 								cumulus.CustomHttpMinutesStrings[i] = null;
 						}
+
 						cumulus.CustomHttpMinutesIntervalIndex = settings.customhttp.customminutes.intervalindex;
 						if (cumulus.CustomHttpMinutesIntervalIndex >= 0 && cumulus.CustomHttpMinutesIntervalIndex < cumulus.FactorsOf60.Length)
 						{
@@ -376,17 +380,6 @@ namespace CumulusMX
 
 		public string GetAlpacaFormData()
 		{
-			/*
-			var twittersettings = new JsonThirdPartySettingsTwitterSettings()
-			{
-				enabled = cumulus.Twitter.Enabled,
-				interval = cumulus.Twitter.Interval,
-				password = cumulus.Twitter.PW,
-				sendlocation = cumulus.Twitter.SendLocation,
-				user = cumulus.Twitter.ID
-			};
-			*/
-
 			var wusettings = new WundergroundJson()
 			{
 				catchup = cumulus.Wund.CatchUp,
@@ -464,8 +457,8 @@ namespace CumulusMX
 				enabled = cumulus.WOW.Enabled,
 				includesolar = cumulus.WOW.SendSolar,
 				includeuv = cumulus.WOW.SendUV,
-				includesoiltemp = cumulus.WOW.SendSoilTemp,
 				soiltempsensor = cumulus.WOW.SoilTempSensor,
+				includesoiltemp = cumulus.WOW.SendSoilTemp,
 				interval = cumulus.WOW.Interval,
 				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.WOW.PW : hidden,
 				stationid = cumulus.WOW.ID

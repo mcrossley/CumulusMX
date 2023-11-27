@@ -1,10 +1,11 @@
 ﻿using System;
-using MailKit.Net.Smtp;
-using MimeKit;
 using System.Text.RegularExpressions;
-using MailKit;
 using System.Threading;
 using System.Threading.Tasks;
+
+using MailKit;
+using MailKit.Net.Smtp;
+using MimeKit;
 
 namespace CumulusMX
 {
@@ -21,7 +22,7 @@ namespace CumulusMX
 		}
 
 
-		public async Task<bool> SendEmail(string[] to, string from, string subject, string message, bool isHTML)
+		public async Task<bool> SendEmail(string[] to, string from, string subject, string message, bool isHTML, bool useBcc)
 		{
 			bool retVal = false;
 			try
@@ -30,15 +31,22 @@ namespace CumulusMX
 				await _writeLock.WaitAsync();
 				//cumulus.LogDebugMessage($"SendEmail: Has the lock");
 
-				Cumulus.LogMessage($"SendEmail: Sending email, to [{string.Join("; ", to)}], subject [{subject}], body [{message}]...");
+				var logMessage = message.Replace("\n", "'\n'");
+				var sendSubject = subject + " - " + cumulus.LocationName;
+
+				cumulus.LogDebugMessage($"SendEmail: Sending email, to [{string.Join("; ", to)}], subject [{sendSubject}], body [{logMessage}]...");
 
 				var m = new MimeMessage();
 				m.From.Add(new MailboxAddress("", from));
 				foreach (var addr in to)
 				{
-					m.To.Add(new MailboxAddress("", addr));
+					if (useBcc)
+						m.Bcc.Add(new MailboxAddress("", addr));
+					else
+						m.To.Add(new MailboxAddress("", addr));
 				}
-				m.Subject = subject;
+
+				m.Subject = sendSubject;
 
 				BodyBuilder bodyBuilder = new BodyBuilder();
 				if (isHTML)
@@ -58,7 +66,7 @@ namespace CumulusMX
 					client.ServerCertificateValidationCallback = (s, c, h, e) => true;
 				}
 
-				await client.ConnectAsync(cumulus.SmtpOptions.Server, cumulus.SmtpOptions.Port, (MailKit.Security.SecureSocketOptions)cumulus.SmtpOptions.SslOption);
+				await client.ConnectAsync(cumulus.SmtpOptions.Server, cumulus.SmtpOptions.Port, (MailKit.Security.SecureSocketOptions) cumulus.SmtpOptions.SslOption);
 
 				// Note: since we don't have an OAuth2 token, disable
 				// the XOAUTH2 authentication mechanism.
@@ -75,10 +83,9 @@ namespace CumulusMX
 
 				retVal = true;
 			}
-			catch (Exception e)
+			catch (Exception ex)
 			{
-				Cumulus.LogMessage("SendEmail: Error - " + e);
-
+				cumulus.LogExceptionMessage(ex, "SendEmail: Error");
 			}
 			finally
 			{
@@ -123,7 +130,7 @@ namespace CumulusMX
 
 				using (SmtpClient client = cumulus.SmtpOptions.Logging ? new SmtpClient(new ProtocolLogger("MXdiags/smtp.log")) : new SmtpClient())
 				{
-					client.Connect(cumulus.SmtpOptions.Server, cumulus.SmtpOptions.Port, (MailKit.Security.SecureSocketOptions)cumulus.SmtpOptions.SslOption);
+					client.Connect(cumulus.SmtpOptions.Server, cumulus.SmtpOptions.Port, (MailKit.Security.SecureSocketOptions) cumulus.SmtpOptions.SslOption);
 					//client.Connect(cumulus.SmtpOptions.Server, cumulus.SmtpOptions.Port, MailKit.Security.SecureSocketOptions.StartTlsWhenAvailable);
 
 					// Note: since we don't have an OAuth2 token, disable

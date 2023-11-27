@@ -99,7 +99,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage(ex.ToString());
+				cumulus.LogMessage(ex.ToString());
 			}
 
 			return "";
@@ -127,7 +127,7 @@ namespace CumulusMX
 					newRec.FromString(newData.data[0]);
 
 					var cnt = station.Database.Update(newRec);
-					Cumulus.LogMessage($"EditDailyData: Update SQLite, {cnt} records updated: {newData.data[0][1]}");
+					cumulus.LogMessage($"EditDailyData: Update SQLite, {cnt} records updated: {newData.data[0][1]}");
 
 				}
 				catch (Exception ex)
@@ -167,8 +167,8 @@ namespace CumulusMX
 						// write dayfile back again
 						File.WriteAllLines(cumulus.DayFileName, lines);
 
-						Cumulus.LogMessage($"EditDailyData: Edit {cumulus.DayFileName} line {lineNum + 1}, original = {orgLine}");
-						Cumulus.LogMessage($"EditDailyData: Edit {cumulus.DayFileName} line {lineNum + 1},      new = {newLine}");
+						cumulus.LogMessage($"EditDailyData: Edit {cumulus.DayFileName} line {lineNum + 1}, original = {orgLine}");
+						cumulus.LogMessage($"EditDailyData: Edit {cumulus.DayFileName} line {lineNum + 1},      new = {newLine}");
 					}
 				}
 				catch (Exception ex)
@@ -180,11 +180,11 @@ namespace CumulusMX
 				}
 
 				// Update the MySQL record
-				if (!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Server) &&
-					!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.UserID) &&
-					!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Password) &&
-					!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Database) &&
-					cumulus.MySqlSettings.Settings.UpdateOnEdit
+				if (!string.IsNullOrEmpty(cumulus.MySqlFunction.ConnSettings.Server) &&
+					!string.IsNullOrEmpty(cumulus.MySqlFunction.ConnSettings.UserID) &&
+					!string.IsNullOrEmpty(cumulus.MySqlFunction.ConnSettings.Password) &&
+					!string.IsNullOrEmpty(cumulus.MySqlFunction.ConnSettings.Database) &&
+					cumulus.MySqlFunction.Settings.UpdateOnEdit
 					)
 				{
 					var updateStr = "";
@@ -193,7 +193,7 @@ namespace CumulusMX
 					{
 						var updt = new StringBuilder(1024);
 
-						updt.Append($"UPDATE {cumulus.MySqlSettings.Settings.Dayfile.TableName} SET ");
+						updt.Append($"UPDATE {cumulus.MySqlFunction.Settings.Dayfile.TableName} SET ");
 						if (newRec.HighGust.HasValue) updt.Append($"HighWindGust={newRec.HighGust.Value.ToString(cumulus.WindFormat, invNum)},");
 						if (newRec.HighGustBearing.HasValue) updt.Append($"HWindGBear={newRec.HighGustBearing.Value},");
 						if (newRec.HighGustDateTime.HasValue) updt.Append($"THWindG={newRec.HighGustDateTime.Value:\\'HH:mm\\'},");
@@ -251,13 +251,13 @@ namespace CumulusMX
 						updt.Append($"WHERE LogDate='{newRec.Timestamp:yyyy-MM-dd}';");
 						updateStr = updt.ToString();
 
-						cumulus.MySqlSettings.CommandSync(updateStr, "EditDayFile");
-						Cumulus.LogMessage($"EditDayFile: SQL Updated");
+						cumulus.MySqlFunction.CommandSync(updateStr, "EditDayFile");
+						cumulus.LogMessage($"EditDayFile: SQL Updated");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditDayFile: Failed, to update MySQL. Error");
-						Cumulus.LogMessage($"EditDayFile: SQL Update statement = {updateStr}");
+						cumulus.LogMessage($"EditDayFile: SQL Update statement = {updateStr}");
 						context.Response.StatusCode = 501;  // Use 501 to signal that SQL failed but file update was OK
 						var thisrec = new List<string>(newData.data[0]);
 
@@ -317,7 +317,7 @@ namespace CumulusMX
 							// update the dayfile
 							lines.RemoveAt(lineNum);
 
-							Cumulus.LogMessage($"EditDailyData: Delete line {lineNum + 1}, original = {orgLine}");
+							cumulus.LogMessage($"EditDailyData: Delete line {lineNum + 1}, original = {orgLine}");
 
 						}
 					}
@@ -330,11 +330,11 @@ namespace CumulusMX
 					}
 
 					// Update the MySQL record
-					if (!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Server) &&
-						!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.UserID) &&
-						!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Password) &&
-						!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Database) &&
-						cumulus.MySqlSettings.Settings.UpdateOnEdit)
+					if (!string.IsNullOrEmpty(cumulus.MySqlFunction.ConnSettings.Server) &&
+						!string.IsNullOrEmpty(cumulus.MySqlFunction.ConnSettings.UserID) &&
+						!string.IsNullOrEmpty(cumulus.MySqlFunction.ConnSettings.Password) &&
+						!string.IsNullOrEmpty(cumulus.MySqlFunction.ConnSettings.Database) &&
+						cumulus.MySqlFunction.Settings.UpdateOnEdit)
 					{
 						var thisRec = new List<string>(newData.data[0]);
 
@@ -347,7 +347,7 @@ namespace CumulusMX
 						catch (Exception ex)
 						{
 							cumulus.LogExceptionMessage(ex, "EditDayFile: Entry deletion failed. Error");
-							Cumulus.LogMessage($"EditDayFile: Entry data = " + thisRec.ToJson());
+							cumulus.LogMessage($"EditDayFile: Entry data = " + thisRec.ToJson());
 							context.Response.StatusCode = 500;
 							return "{\"errors\":{\"Logfile\":[\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 						}
@@ -373,7 +373,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage($"EditDayFile: Unrecognised action = " + newData.action);
+				cumulus.LogMessage($"EditDayFile: Unrecognised action = " + newData.action);
 				context.Response.StatusCode = 500;
 				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
 			}
@@ -482,7 +482,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage(ex.ToString());
+				cumulus.LogMessage(ex.ToString());
 			}
 
 			return "";
@@ -514,11 +514,11 @@ namespace CumulusMX
 					//await station.DatabaseAsync.UpdateAsync(newRec);
 					if (res == 1)
 					{
-						Cumulus.LogMessage($"EditIntervalData: Changed database entry {logDateStr}");
+						cumulus.LogMessage($"EditIntervalData: Changed database entry {logDateStr}");
 					}
 					else
 					{
-						Cumulus.LogMessage($"EditIntervalData: ERROR - Faied to update database entry {logDateStr}");
+						cumulus.LogMessage($"EditIntervalData: ERROR - Faied to update database entry {logDateStr}");
 						context.Response.StatusCode = 500;
 						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 					}
@@ -555,7 +555,7 @@ namespace CumulusMX
 
 					if (!found)
 					{
-						Cumulus.LogMessage($"EditIntervalData: Error editing entry, line not found for - {logDateStr}");
+						cumulus.LogMessage($"EditIntervalData: Error editing entry, line not found for - {logDateStr}");
 						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
 					}
 
@@ -570,13 +570,13 @@ namespace CumulusMX
 					{
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditIntervalData: Changed Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-						Cumulus.LogMessage($"EditIntervalData: Changed Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						cumulus.LogMessage($"EditIntervalData: Changed Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						cumulus.LogMessage($"EditIntervalData: Changed Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditIntervalData: Failed, error");
-						Cumulus.LogMessage("EditIntervalData: Data received - " + newLine);
+						cumulus.LogMessage("EditIntervalData: Data received - " + newLine);
 						context.Response.StatusCode = 500;
 
 						//return "{\"errors\":{\"Logfile\":[\"<br>Failed to update, error = " + ex.Message + "\"]}}";
@@ -585,11 +585,11 @@ namespace CumulusMX
 
 
 				// Update the MySQL record
-				if (!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Server) &&
-					!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.UserID) &&
-					!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Password) &&
-					!string.IsNullOrEmpty(cumulus.MySqlSettings.ConnSettings.Database) &&
-					cumulus.MySqlSettings.Settings.UpdateOnEdit
+				if (!string.IsNullOrEmpty(cumulus.MySqlFunction.ConnSettings.Server) &&
+					!string.IsNullOrEmpty(cumulus.MySqlFunction.ConnSettings.UserID) &&
+					!string.IsNullOrEmpty(cumulus.MySqlFunction.ConnSettings.Password) &&
+					!string.IsNullOrEmpty(cumulus.MySqlFunction.ConnSettings.Database) &&
+					cumulus.MySqlFunction.Settings.UpdateOnEdit
 					)
 				{
 					// Only the monthly log file is stored in MySQL
@@ -600,7 +600,7 @@ namespace CumulusMX
 					{
 						var updt = new StringBuilder(1024);
 
-						updt.Append($"UPDATE {cumulus.MySqlSettings.Settings.Monthly.TableName} SET ");
+						updt.Append($"UPDATE {cumulus.MySqlFunction.Settings.Monthly.TableName} SET ");
 						updt.Append($"Temp={(newRec.Temp.HasValue ? newRec.Temp.Value.ToString(cumulus.TempFormat, invNum) : "null")},");
 						updt.Append($"Humidity={(newRec.Humidity.HasValue ? newRec.Humidity.Value : "null")},");
 						updt.Append($"Dewpoint={(newRec.DewPoint.HasValue ? newRec.DewPoint.Value.ToString(cumulus.TempFormat, invNum) : "null")},");
@@ -635,13 +635,13 @@ namespace CumulusMX
 						updateStr = updt.ToString();
 
 
-						cumulus.MySqlSettings.CommandSync(updateStr, "EditLogFile");
-						Cumulus.LogMessage($"EditIntervalData: SQL Updated");
+						cumulus.MySqlFunction.CommandSync(updateStr, "EditLogFile");
+						cumulus.LogMessage($"EditIntervalData: SQL Updated");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditIntervalData: Failed, to update MySQL. Error");
-						Cumulus.LogMessage($"EditIntervalData: SQL Update statement = {updateStr}");
+						cumulus.LogMessage($"EditIntervalData: SQL Update statement = {updateStr}");
 						context.Response.StatusCode = 501; // Use 501 to signal that SQL failed but file update was OK
 						var thisrec = new List<string>(newData.data[0]);
 
@@ -664,11 +664,11 @@ namespace CumulusMX
 
 						if (res == 1)
 						{
-							Cumulus.LogMessage($"EditIntervalData: Deleted database entry {(newRec.Timestamp.ToString("dd/MM/yy hh:mm", CultureInfo.InvariantCulture))}");
+							cumulus.LogMessage($"EditIntervalData: Deleted database entry {(newRec.Timestamp.ToString("dd/MM/yy hh:mm", CultureInfo.InvariantCulture))}");
 						}
 						else
 						{
-							Cumulus.LogMessage($"EditIntervalData: ERROR - Faied to update database entry {(newRec.Timestamp.ToString("dd/MM/yy hh:mm", CultureInfo.InvariantCulture))}");
+							cumulus.LogMessage($"EditIntervalData: ERROR - Faied to update database entry {(newRec.Timestamp.ToString("dd/MM/yy hh:mm", CultureInfo.InvariantCulture))}");
 							context.Response.StatusCode = 502;
 							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 
@@ -715,12 +715,12 @@ namespace CumulusMX
 
 									// write logfile back again
 									File.WriteAllLines(logfile, lines);
-									Cumulus.LogMessage($"EditDataLog: Entry deleted - {orgLine}");
+									cumulus.LogMessage($"EditDataLog: Entry deleted - {orgLine}");
 								}
 								catch (Exception ex)
 								{
 									cumulus.LogExceptionMessage(ex, "EditDataLog: Entry deletion failed. Error");
-									Cumulus.LogMessage($"EditDataLog: Entry data = - {orgLine}");
+									cumulus.LogMessage($"EditDataLog: Entry data = - {orgLine}");
 									context.Response.StatusCode = 500;
 									return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 								}
@@ -843,7 +843,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage(ex.ToString());
+				cumulus.LogMessage(ex.ToString());
 			}
 
 			return "";
@@ -875,11 +875,11 @@ namespace CumulusMX
 					//await station.DatabaseAsync.UpdateAsync(newRec);
 					if (res == 1)
 					{
-						Cumulus.LogMessage($"EditExtraTemp: Changed database entry {logDateStr}");
+						cumulus.LogMessage($"EditExtraTemp: Changed database entry {logDateStr}");
 					}
 					else
 					{
-						Cumulus.LogMessage($"EditExtraTemp: ERROR - Faied to update database entry {logDateStr}");
+						cumulus.LogMessage($"EditExtraTemp: ERROR - Faied to update database entry {logDateStr}");
 						context.Response.StatusCode = 500;
 						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 					}
@@ -917,7 +917,7 @@ namespace CumulusMX
 
 					if (!found)
 					{
-						Cumulus.LogMessage($"EditExtraTemp: Error editing entry, line not found for - {logDateStr}");
+						cumulus.LogMessage($"EditExtraTemp: Error editing entry, line not found for - {logDateStr}");
 						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
 					}
 
@@ -933,13 +933,13 @@ namespace CumulusMX
 					{
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditExtraTemp: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-						Cumulus.LogMessage($"EditExtraTemp: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						cumulus.LogMessage($"EditExtraTemp: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						cumulus.LogMessage($"EditExtraTemp: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditExtraTemp: Failed, error");
-						Cumulus.LogMessage("EditExtraTemp: Data received - " + newLine);
+						cumulus.LogMessage("EditExtraTemp: Data received - " + newLine);
 						context.Response.StatusCode = 500;
 
 						//return "{\"errors\":{\"Logfile\":[\"<br>Failed to update, error = " + ex.Message + "\"]}}";
@@ -960,11 +960,11 @@ namespace CumulusMX
 						//await station.DatabaseAsync.DeleteAsync(newRec);
 						if (res == 1)
 						{
-							Cumulus.LogMessage($"EditExtraTemp: Deleted database entry {row[0]}");
+							cumulus.LogMessage($"EditExtraTemp: Deleted database entry {row[0]}");
 						}
 						else
 						{
-							Cumulus.LogMessage($"EditExtraTemp: ERROR - Faied to update database entry {row[0]}");
+							cumulus.LogMessage($"EditExtraTemp: ERROR - Faied to update database entry {row[0]}");
 							context.Response.StatusCode = 502;
 							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 
@@ -1014,7 +1014,7 @@ namespace CumulusMX
 
 						if (!found)
 						{
-							Cumulus.LogMessage($"EditExtraTemp: Error deleting entry, line not found for - {row[0]}");
+							cumulus.LogMessage($"EditExtraTemp: Error deleting entry, line not found for - {row[0]}");
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
 						}
 
@@ -1029,13 +1029,13 @@ namespace CumulusMX
 						{
 							// write logfile back again
 							File.WriteAllLines(logfile, lines);
-							Cumulus.LogMessage($"EditExtraTemp: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-							Cumulus.LogMessage($"EditExtraTemp: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+							cumulus.LogMessage($"EditExtraTemp: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							cumulus.LogMessage($"EditExtraTemp: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 						}
 						catch (Exception ex)
 						{
 							cumulus.LogExceptionMessage(ex, "EditExtraTemp: Entry deletion failed. Error");
-							Cumulus.LogMessage($"EditExtraTemp: Entry data = - {orgLine}");
+							cumulus.LogMessage($"EditExtraTemp: Entry data = - {orgLine}");
 							context.Response.StatusCode = 500;
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 						}
@@ -1044,7 +1044,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage($"EditExtraTemp: Unrecognised action = " + newData.action);
+				cumulus.LogMessage($"EditExtraTemp: Unrecognised action = " + newData.action);
 				context.Response.StatusCode = 500;
 				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
 			}
@@ -1138,7 +1138,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage(ex.ToString());
+				cumulus.LogMessage(ex.ToString());
 			}
 
 			return "";
@@ -1168,11 +1168,11 @@ namespace CumulusMX
 					//await station.DatabaseAsync.UpdateAsync(newRec);
 					if (res == 1)
 					{
-						Cumulus.LogMessage($"EditExtraHum: Changed database entry {logDateStr}");
+						cumulus.LogMessage($"EditExtraHum: Changed database entry {logDateStr}");
 					}
 					else
 					{
-						Cumulus.LogMessage($"EditExtraHum: ERROR - Faied to update database entry {logDateStr}");
+						cumulus.LogMessage($"EditExtraHum: ERROR - Faied to update database entry {logDateStr}");
 						context.Response.StatusCode = 500;
 						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 					}
@@ -1209,7 +1209,7 @@ namespace CumulusMX
 
 					if (!found)
 					{
-						Cumulus.LogMessage($"EditExtraHum: Error editing entry, line not found for - {logDateStr}");
+						cumulus.LogMessage($"EditExtraHum: Error editing entry, line not found for - {logDateStr}");
 						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
 					}
 
@@ -1225,13 +1225,13 @@ namespace CumulusMX
 					{
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditExtraHum: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-						Cumulus.LogMessage($"EditExtraHum: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						cumulus.LogMessage($"EditExtraHum: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						cumulus.LogMessage($"EditExtraHum: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditExtraHum: Failed, error");
-						Cumulus.LogMessage("EditExtraHum: Data received - " + newLine);
+						cumulus.LogMessage("EditExtraHum: Data received - " + newLine);
 						context.Response.StatusCode = 500;
 
 						//return "{\"errors\":{\"Logfile\":[\"<br>Failed to update, error = " + ex.Message + "\"]}}";
@@ -1252,11 +1252,11 @@ namespace CumulusMX
 						//await station.DatabaseAsync.DeleteAsync(newRec);
 						if (res == 1)
 						{
-							Cumulus.LogMessage($"EditExtraHum: Deleted database entry {row[0]}");
+							cumulus.LogMessage($"EditExtraHum: Deleted database entry {row[0]}");
 						}
 						else
 						{
-							Cumulus.LogMessage($"EditExtraHum: ERROR - Faied to update database entry {row[0]}");
+							cumulus.LogMessage($"EditExtraHum: ERROR - Faied to update database entry {row[0]}");
 							context.Response.StatusCode = 502;
 							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 						}
@@ -1304,7 +1304,7 @@ namespace CumulusMX
 
 						if (!found)
 						{
-							Cumulus.LogMessage($"EditExtraHum: Error deleting entry, line not found for - {row[0]}");
+							cumulus.LogMessage($"EditExtraHum: Error deleting entry, line not found for - {row[0]}");
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
 						}
 
@@ -1320,13 +1320,13 @@ namespace CumulusMX
 						{
 							// write logfile back again
 							File.WriteAllLines(logfile, lines);
-							Cumulus.LogMessage($"EditExtraHum: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-							Cumulus.LogMessage($"EditExtraHum: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+							cumulus.LogMessage($"EditExtraHum: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							cumulus.LogMessage($"EditExtraHum: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 						}
 						catch (Exception ex)
 						{
 							cumulus.LogExceptionMessage(ex, "EditDataLog: Entry deletion failed. Error");
-							Cumulus.LogMessage($"EditExtraHum: Entry data = - {orgLine}");
+							cumulus.LogMessage($"EditExtraHum: Entry data = - {orgLine}");
 							context.Response.StatusCode = 500;
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 						}
@@ -1335,7 +1335,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage($"EditExtraHum: Unrecognised action = " + newData.action);
+				cumulus.LogMessage($"EditExtraHum: Unrecognised action = " + newData.action);
 				context.Response.StatusCode = 500;
 				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
 			}
@@ -1429,7 +1429,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage(ex.ToString());
+				cumulus.LogMessage(ex.ToString());
 			}
 
 			return "";
@@ -1459,11 +1459,11 @@ namespace CumulusMX
 					//await station.DatabaseAsync.UpdateAsync(newRec);
 					if (res == 1)
 					{
-						Cumulus.LogMessage($"EditExtraDew: Changed database entry {logDateStr}");
+						cumulus.LogMessage($"EditExtraDew: Changed database entry {logDateStr}");
 					}
 					else
 					{
-						Cumulus.LogMessage($"EditExtraDew: ERROR - Faied to update database entry {logDateStr}");
+						cumulus.LogMessage($"EditExtraDew: ERROR - Faied to update database entry {logDateStr}");
 						context.Response.StatusCode = 500;
 						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 					}
@@ -1500,7 +1500,7 @@ namespace CumulusMX
 
 					if (!found)
 					{
-						Cumulus.LogMessage($"EditExtraDew: Error editing entry, line not found for - {logDateStr}");
+						cumulus.LogMessage($"EditExtraDew: Error editing entry, line not found for - {logDateStr}");
 						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
 					}
 
@@ -1516,13 +1516,13 @@ namespace CumulusMX
 					{
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditExtraDew: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-						Cumulus.LogMessage($"EditExtraDew: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						cumulus.LogMessage($"EditExtraDew: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						cumulus.LogMessage($"EditExtraDew: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditExtraDew: Failed, error");
-						Cumulus.LogMessage("EditExtraDew: Data received - " + newLine);
+						cumulus.LogMessage("EditExtraDew: Data received - " + newLine);
 						context.Response.StatusCode = 500;
 					}
 				}
@@ -1541,11 +1541,11 @@ namespace CumulusMX
 						//await station.DatabaseAsync.DeleteAsync(newRec);
 						if (res == 1)
 						{
-							Cumulus.LogMessage($"EditExtraDew: Deleted database entry {row[0]}");
+							cumulus.LogMessage($"EditExtraDew: Deleted database entry {row[0]}");
 						}
 						else
 						{
-							Cumulus.LogMessage($"EditExtraDew: ERROR - Faied to update database entry {row[0]}");
+							cumulus.LogMessage($"EditExtraDew: ERROR - Faied to update database entry {row[0]}");
 							context.Response.StatusCode = 502;
 							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 						}
@@ -1593,7 +1593,7 @@ namespace CumulusMX
 
 						if (!found)
 						{
-							Cumulus.LogMessage($"EditExtraDew: Error deleting entry, line not found for - {row[0]}");
+							cumulus.LogMessage($"EditExtraDew: Error deleting entry, line not found for - {row[0]}");
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
 						}
 
@@ -1608,13 +1608,13 @@ namespace CumulusMX
 						{
 							// write logfile back again
 							File.WriteAllLines(logfile, lines);
-							Cumulus.LogMessage($"EditExtraDew: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-							Cumulus.LogMessage($"EditExtraDew: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+							cumulus.LogMessage($"EditExtraDew: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							cumulus.LogMessage($"EditExtraDew: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 						}
 						catch (Exception ex)
 						{
 							cumulus.LogExceptionMessage(ex, "EditExtraDew: Entry deletion failed. Error");
-							Cumulus.LogMessage($"EditExtraDew: Entry data = - {orgLine}");
+							cumulus.LogMessage($"EditExtraDew: Entry data = - {orgLine}");
 							context.Response.StatusCode = 500;
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 						}
@@ -1623,7 +1623,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage($"EditExtraDew: Unrecognised action = " + newData.action);
+				cumulus.LogMessage($"EditExtraDew: Unrecognised action = " + newData.action);
 				context.Response.StatusCode = 500;
 				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
 			}
@@ -1718,7 +1718,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage(ex.ToString());
+				cumulus.LogMessage(ex.ToString());
 			}
 
 			return "";
@@ -1748,11 +1748,11 @@ namespace CumulusMX
 					//await station.DatabaseAsync.UpdateAsync(newRec);
 					if (res == 1)
 					{
-						Cumulus.LogMessage($"EditUserTemp: Changed database entry {logDateStr}");
+						cumulus.LogMessage($"EditUserTemp: Changed database entry {logDateStr}");
 					}
 					else
 					{
-						Cumulus.LogMessage($"EditUserTemp: ERROR - Faied to update database entry {logDateStr}");
+						cumulus.LogMessage($"EditUserTemp: ERROR - Faied to update database entry {logDateStr}");
 						context.Response.StatusCode = 500;
 						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 					}
@@ -1789,7 +1789,7 @@ namespace CumulusMX
 
 					if (!found)
 					{
-						Cumulus.LogMessage($"EditUserTemp: Error editing entry, line not found for - {logDateStr}");
+						cumulus.LogMessage($"EditUserTemp: Error editing entry, line not found for - {logDateStr}");
 						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
 					}
 
@@ -1805,13 +1805,13 @@ namespace CumulusMX
 					{
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditUserTemp: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-						Cumulus.LogMessage($"EditUserTemp: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						cumulus.LogMessage($"EditUserTemp: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						cumulus.LogMessage($"EditUserTemp: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditUserTemp: Failed, error");
-						Cumulus.LogMessage("EditUserTemp: Data received - " + newLine);
+						cumulus.LogMessage("EditUserTemp: Data received - " + newLine);
 						context.Response.StatusCode = 500;
 					}
 				}
@@ -1830,11 +1830,11 @@ namespace CumulusMX
 						//await station.DatabaseAsync.DeleteAsync(newRec);
 						if (res == 1)
 						{
-							Cumulus.LogMessage($"EditUserTemp: Deleted database entry {row[0]}");
+							cumulus.LogMessage($"EditUserTemp: Deleted database entry {row[0]}");
 						}
 						else
 						{
-							Cumulus.LogMessage($"EditUserTemp: ERROR - Faied to update database entry {row[0]}");
+							cumulus.LogMessage($"EditUserTemp: ERROR - Faied to update database entry {row[0]}");
 							context.Response.StatusCode = 502;
 							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 						}
@@ -1882,7 +1882,7 @@ namespace CumulusMX
 
 						if (!found)
 						{
-							Cumulus.LogMessage($"EditUserTemp: Error deleting entry, line not found for - {row[0]}");
+							cumulus.LogMessage($"EditUserTemp: Error deleting entry, line not found for - {row[0]}");
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
 						}
 
@@ -1897,13 +1897,13 @@ namespace CumulusMX
 						{
 							// write logfile back again
 							File.WriteAllLines(logfile, lines);
-							Cumulus.LogMessage($"EditUserTemp: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-							Cumulus.LogMessage($"EditUserTemp: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+							cumulus.LogMessage($"EditUserTemp: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							cumulus.LogMessage($"EditUserTemp: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 						}
 						catch (Exception ex)
 						{
 							cumulus.LogExceptionMessage(ex, "EditUserTemp: Entry deletion failed. Error");
-							Cumulus.LogMessage($"EditUserTemp: Entry data = - {orgLine}");
+							cumulus.LogMessage($"EditUserTemp: Entry data = - {orgLine}");
 							context.Response.StatusCode = 500;
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 						}
@@ -1912,7 +1912,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage($"EditUserTemp: Unrecognised action = " + newData.action);
+				cumulus.LogMessage($"EditUserTemp: Unrecognised action = " + newData.action);
 				context.Response.StatusCode = 500;
 				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
 			}
@@ -2007,7 +2007,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage(ex.ToString());
+				cumulus.LogMessage(ex.ToString());
 			}
 
 			return "";
@@ -2038,11 +2038,11 @@ namespace CumulusMX
 					//await station.DatabaseAsync.UpdateAsync(newRec);
 					if (res == 1)
 					{
-						Cumulus.LogMessage($"EditSoilTemp: Changed database entry {logDateStr}");
+						cumulus.LogMessage($"EditSoilTemp: Changed database entry {logDateStr}");
 					}
 					else
 					{
-						Cumulus.LogMessage($"EditSoilTemp: ERROR - Faied to update database entry {logDateStr}");
+						cumulus.LogMessage($"EditSoilTemp: ERROR - Faied to update database entry {logDateStr}");
 						context.Response.StatusCode = 500;
 						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 					}
@@ -2079,7 +2079,7 @@ namespace CumulusMX
 
 					if (!found)
 					{
-						Cumulus.LogMessage($"EditSoilTemp: Error editing entry, line not found for - {logDateStr}");
+						cumulus.LogMessage($"EditSoilTemp: Error editing entry, line not found for - {logDateStr}");
 						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
 					}
 
@@ -2095,13 +2095,13 @@ namespace CumulusMX
 					{
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditSoilTemp: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-						Cumulus.LogMessage($"EditSoilTemp: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						cumulus.LogMessage($"EditSoilTemp: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						cumulus.LogMessage($"EditSoilTemp: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditUserTemp: Failed, error");
-						Cumulus.LogMessage("EditSoilTemp: Data received - " + newLine);
+						cumulus.LogMessage("EditSoilTemp: Data received - " + newLine);
 						context.Response.StatusCode = 500;
 					}
 				}
@@ -2120,11 +2120,11 @@ namespace CumulusMX
 						//await station.DatabaseAsync.DeleteAsync(newRec);
 						if (res == 1)
 						{
-							Cumulus.LogMessage($"EditSoilTemp: Deleted database entry {row[0]}");
+							cumulus.LogMessage($"EditSoilTemp: Deleted database entry {row[0]}");
 						}
 						else
 						{
-							Cumulus.LogMessage($"EditSoilTemp: ERROR - Faied to update database entry {row[0]}");
+							cumulus.LogMessage($"EditSoilTemp: ERROR - Faied to update database entry {row[0]}");
 							context.Response.StatusCode = 502;
 							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 						}
@@ -2172,7 +2172,7 @@ namespace CumulusMX
 
 						if (!found)
 						{
-							Cumulus.LogMessage($"EditSoilTemp: Error deleting entry, line not found for - {row[0]}");
+							cumulus.LogMessage($"EditSoilTemp: Error deleting entry, line not found for - {row[0]}");
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
 						}
 
@@ -2187,13 +2187,13 @@ namespace CumulusMX
 						{
 							// write logfile back again
 							File.WriteAllLines(logfile, lines);
-							Cumulus.LogMessage($"EditSoilTemp: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-							Cumulus.LogMessage($"EditSoilTemp: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+							cumulus.LogMessage($"EditSoilTemp: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							cumulus.LogMessage($"EditSoilTemp: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 						}
 						catch (Exception ex)
 						{
 							cumulus.LogExceptionMessage(ex, "EditSoilTemp: Entry deletion failed. Error");
-							Cumulus.LogMessage($"EditSoilTemp: Entry data = - {orgLine}");
+							cumulus.LogMessage($"EditSoilTemp: Entry data = - {orgLine}");
 							context.Response.StatusCode = 500;
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 						}
@@ -2202,7 +2202,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage($"EditUserTemp: Unrecognised action = " + newData.action);
+				cumulus.LogMessage($"EditUserTemp: Unrecognised action = " + newData.action);
 				context.Response.StatusCode = 500;
 				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
 			}
@@ -2297,7 +2297,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage(ex.ToString());
+				cumulus.LogMessage(ex.ToString());
 			}
 
 			return "";
@@ -2328,11 +2328,11 @@ namespace CumulusMX
 					//await station.DatabaseAsync.UpdateAsync(newRec);
 					if (res == 1)
 					{
-						Cumulus.LogMessage($"EditSoilMoist: Changed database entry {logDateStr}");
+						cumulus.LogMessage($"EditSoilMoist: Changed database entry {logDateStr}");
 					}
 					else
 					{
-						Cumulus.LogMessage($"EditSoilMoist: ERROR - Faied to update database entry {logDateStr}");
+						cumulus.LogMessage($"EditSoilMoist: ERROR - Faied to update database entry {logDateStr}");
 						context.Response.StatusCode = 500;
 						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 					}
@@ -2369,7 +2369,7 @@ namespace CumulusMX
 
 					if (!found)
 					{
-						Cumulus.LogMessage($"EditSoilMoist: Error editing entry, line not found for - {logDateStr}");
+						cumulus.LogMessage($"EditSoilMoist: Error editing entry, line not found for - {logDateStr}");
 						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
 					}
 
@@ -2385,13 +2385,13 @@ namespace CumulusMX
 					{
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditSoilMoist: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-						Cumulus.LogMessage($"EditSoilMoist: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						cumulus.LogMessage($"EditSoilMoist: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						cumulus.LogMessage($"EditSoilMoist: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditSoilMoist: Failed, error");
-						Cumulus.LogMessage("EditSoilMoist: Data received - " + newLine);
+						cumulus.LogMessage("EditSoilMoist: Data received - " + newLine);
 						context.Response.StatusCode = 500;
 					}
 				}
@@ -2410,11 +2410,11 @@ namespace CumulusMX
 						//await station.DatabaseAsync.DeleteAsync(newRec);
 						if (res == 1)
 						{
-							Cumulus.LogMessage($"EditSoilMoist: Deleted database entry {row[0]}");
+							cumulus.LogMessage($"EditSoilMoist: Deleted database entry {row[0]}");
 						}
 						else
 						{
-							Cumulus.LogMessage($"EditSoilMoist: ERROR - Faied to update database entry {row[0]}");
+							cumulus.LogMessage($"EditSoilMoist: ERROR - Faied to update database entry {row[0]}");
 							context.Response.StatusCode = 502;
 							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 						}
@@ -2463,7 +2463,7 @@ namespace CumulusMX
 
 						if (!found)
 						{
-							Cumulus.LogMessage($"EditSoilMoist: Error deleting entry, line not found for - {row[0]}");
+							cumulus.LogMessage($"EditSoilMoist: Error deleting entry, line not found for - {row[0]}");
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
 						}
 
@@ -2478,13 +2478,13 @@ namespace CumulusMX
 						{
 							// write logfile back again
 							File.WriteAllLines(logfile, lines);
-							Cumulus.LogMessage($"EditSoilMoist: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-							Cumulus.LogMessage($"EditSoilMoist: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+							cumulus.LogMessage($"EditSoilMoist: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							cumulus.LogMessage($"EditSoilMoist: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 						}
 						catch (Exception ex)
 						{
 							cumulus.LogExceptionMessage(ex, "EditSoilMoist: Entry deletion failed. Error");
-							Cumulus.LogMessage($"EditSoilMoist: Entry data = - {orgLine}");
+							cumulus.LogMessage($"EditSoilMoist: Entry data = - {orgLine}");
 							context.Response.StatusCode = 500;
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 						}
@@ -2493,7 +2493,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage($"EditSoilMoist: Unrecognised action = " + newData.action);
+				cumulus.LogMessage($"EditSoilMoist: Unrecognised action = " + newData.action);
 				context.Response.StatusCode = 500;
 				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
 			}
@@ -2587,7 +2587,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage(ex.ToString());
+				cumulus.LogMessage(ex.ToString());
 			}
 
 			return "";
@@ -2618,11 +2618,11 @@ namespace CumulusMX
 					//await station.DatabaseAsync.UpdateAsync(newRec);
 					if (res == 1)
 					{
-						Cumulus.LogMessage($"EditLeafTemp: Changed database entry {logDateStr}");
+						cumulus.LogMessage($"EditLeafTemp: Changed database entry {logDateStr}");
 					}
 					else
 					{
-						Cumulus.LogMessage($"EditLeafTemp: ERROR - Faied to update database entry {logDateStr}");
+						cumulus.LogMessage($"EditLeafTemp: ERROR - Faied to update database entry {logDateStr}");
 						context.Response.StatusCode = 500;
 						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 					}
@@ -2659,7 +2659,7 @@ namespace CumulusMX
 
 					if (!found)
 					{
-						Cumulus.LogMessage($"EditLeafTemp: Error editing entry, line not found for - {logDateStr}");
+						cumulus.LogMessage($"EditLeafTemp: Error editing entry, line not found for - {logDateStr}");
 						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
 					}
 
@@ -2675,13 +2675,13 @@ namespace CumulusMX
 					{
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditLeafTemp: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-						Cumulus.LogMessage($"EditLeafTemp: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						cumulus.LogMessage($"EditLeafTemp: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						cumulus.LogMessage($"EditLeafTemp: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditLeafTemp: Failed, error");
-						Cumulus.LogMessage("EditLeafTemp: Data received - " + newLine);
+						cumulus.LogMessage("EditLeafTemp: Data received - " + newLine);
 						context.Response.StatusCode = 500;
 					}
 				}
@@ -2700,11 +2700,11 @@ namespace CumulusMX
 						//await station.DatabaseAsync.DeleteAsync(newRec);
 						if (res == 1)
 						{
-							Cumulus.LogMessage($"EditLeafTemp: Deleted database entry {row[0]}");
+							cumulus.LogMessage($"EditLeafTemp: Deleted database entry {row[0]}");
 						}
 						else
 						{
-							Cumulus.LogMessage($"EditLeafTemp: ERROR - Faied to update database entry {row[0]}");
+							cumulus.LogMessage($"EditLeafTemp: ERROR - Faied to update database entry {row[0]}");
 							context.Response.StatusCode = 502;
 							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 						}
@@ -2752,7 +2752,7 @@ namespace CumulusMX
 
 						if (!found)
 						{
-							Cumulus.LogMessage($"EditLeafTemp: Error deleting entry, line not found for - {row[0]}");
+							cumulus.LogMessage($"EditLeafTemp: Error deleting entry, line not found for - {row[0]}");
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
 						}
 
@@ -2767,13 +2767,13 @@ namespace CumulusMX
 						{
 							// write logfile back again
 							File.WriteAllLines(logfile, lines);
-							Cumulus.LogMessage($"EditLeafTemp: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-							Cumulus.LogMessage($"EditLeafTemp: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+							cumulus.LogMessage($"EditLeafTemp: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							cumulus.LogMessage($"EditLeafTemp: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 						}
 						catch (Exception ex)
 						{
 							cumulus.LogExceptionMessage(ex, "EditLeafTemp: Entry deletion failed. Error");
-							Cumulus.LogMessage($"EditLeafTemp: Entry data = - {orgLine}");
+							cumulus.LogMessage($"EditLeafTemp: Entry data = - {orgLine}");
 							context.Response.StatusCode = 500;
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 						}
@@ -2782,7 +2782,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage($"EditLeafTemp: Unrecognised action = " + newData.action);
+				cumulus.LogMessage($"EditLeafTemp: Unrecognised action = " + newData.action);
 				context.Response.StatusCode = 500;
 				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
 			}
@@ -2877,7 +2877,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage(ex.ToString());
+				cumulus.LogMessage(ex.ToString());
 			}
 
 			return "";
@@ -2908,11 +2908,11 @@ namespace CumulusMX
 					//await station.DatabaseAsync.UpdateAsync(newRec);
 					if (res == 1)
 					{
-						Cumulus.LogMessage($"EditLeafWet: Changed database entry {logDateStr}");
+						cumulus.LogMessage($"EditLeafWet: Changed database entry {logDateStr}");
 					}
 					else
 					{
-						Cumulus.LogMessage($"EditLeafWet: ERROR - Faied to update database entry {logDateStr}");
+						cumulus.LogMessage($"EditLeafWet: ERROR - Faied to update database entry {logDateStr}");
 						context.Response.StatusCode = 500;
 						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 					}
@@ -2949,7 +2949,7 @@ namespace CumulusMX
 
 					if (!found)
 					{
-						Cumulus.LogMessage($"EditLeafWet: Error editing entry, line not found for - {logDateStr}");
+						cumulus.LogMessage($"EditLeafWet: Error editing entry, line not found for - {logDateStr}");
 						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
 					}
 
@@ -2965,13 +2965,13 @@ namespace CumulusMX
 					{
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditLeafWet: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-						Cumulus.LogMessage($"EditLeafWet: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						cumulus.LogMessage($"EditLeafWet: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						cumulus.LogMessage($"EditLeafWet: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditLeafWet: Failed, error");
-						Cumulus.LogMessage("EditLeafWet: Data received - " + newLine);
+						cumulus.LogMessage("EditLeafWet: Data received - " + newLine);
 						context.Response.StatusCode = 500;
 					}
 				}
@@ -2990,11 +2990,11 @@ namespace CumulusMX
 						//await station.DatabaseAsync.DeleteAsync(newRec);
 						if (res == 1)
 						{
-							Cumulus.LogMessage($"EditLeafWet: Deleted database entry {row[0]}");
+							cumulus.LogMessage($"EditLeafWet: Deleted database entry {row[0]}");
 						}
 						else
 						{
-							Cumulus.LogMessage($"EditLeafWet: ERROR - Faied to update database entry {row[0]}");
+							cumulus.LogMessage($"EditLeafWet: ERROR - Faied to update database entry {row[0]}");
 							context.Response.StatusCode = 502;
 							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 						}
@@ -3042,7 +3042,7 @@ namespace CumulusMX
 
 						if (!found)
 						{
-							Cumulus.LogMessage($"EditLeafWet: Error deleting entry, line not found for - {row[0]}");
+							cumulus.LogMessage($"EditLeafWet: Error deleting entry, line not found for - {row[0]}");
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
 						}
 
@@ -3057,14 +3057,14 @@ namespace CumulusMX
 						{
 							// write logfile back again
 							File.WriteAllLines(logfile, lines);
-							Cumulus.LogMessage($"EditLeafWet: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-							Cumulus.LogMessage($"EditLeafWet: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+							cumulus.LogMessage($"EditLeafWet: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							cumulus.LogMessage($"EditLeafWet: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 
 						}
 						catch (Exception ex)
 						{
 							cumulus.LogExceptionMessage(ex, "EditLeafWet: Entry deletion failed. Error");
-							Cumulus.LogMessage($"EditLeafWet: Entry data = - {orgLine}");
+							cumulus.LogMessage($"EditLeafWet: Entry data = - {orgLine}");
 							context.Response.StatusCode = 500;
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 						}
@@ -3073,7 +3073,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage($"EditLeafWet: Unrecognised action = " + newData.action);
+				cumulus.LogMessage($"EditLeafWet: Unrecognised action = " + newData.action);
 				context.Response.StatusCode = 500;
 				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
 			}
@@ -3167,7 +3167,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage(ex.ToString());
+				cumulus.LogMessage(ex.ToString());
 			}
 
 			return "";
@@ -3198,11 +3198,11 @@ namespace CumulusMX
 					//await station.DatabaseAsync.UpdateAsync(newRec);
 					if (res == 1)
 					{
-						Cumulus.LogMessage($"EditAirQual: Changed database entry {logDateStr}");
+						cumulus.LogMessage($"EditAirQual: Changed database entry {logDateStr}");
 					}
 					else
 					{
-						Cumulus.LogMessage($"EditAirQual: ERROR - Faied to update database entry {logDateStr}");
+						cumulus.LogMessage($"EditAirQual: ERROR - Faied to update database entry {logDateStr}");
 						context.Response.StatusCode = 500;
 						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 					}
@@ -3239,7 +3239,7 @@ namespace CumulusMX
 
 					if (!found)
 					{
-						Cumulus.LogMessage($"EditAirQual: Error editing entry, line not found for - {logDateStr}");
+						cumulus.LogMessage($"EditAirQual: Error editing entry, line not found for - {logDateStr}");
 						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
 					}
 
@@ -3260,13 +3260,13 @@ namespace CumulusMX
 					{
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditAirQual: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-						Cumulus.LogMessage($"EditAirQual: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						cumulus.LogMessage($"EditAirQual: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						cumulus.LogMessage($"EditAirQual: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditAirQual: Failed, error");
-						Cumulus.LogMessage("EditAirQual: Data received - " + newLine);
+						cumulus.LogMessage("EditAirQual: Data received - " + newLine);
 						context.Response.StatusCode = 500;
 					}
 				}
@@ -3287,11 +3287,11 @@ namespace CumulusMX
 						//await station.DatabaseAsync.DeleteAsync(newRec);
 						if (res == 1)
 						{
-							Cumulus.LogMessage($"EditAirQual: Deleted database entry {row[0]}");
+							cumulus.LogMessage($"EditAirQual: Deleted database entry {row[0]}");
 						}
 						else
 						{
-							Cumulus.LogMessage($"EditAirQual: ERROR - Faied to update database entry {row[0]}");
+							cumulus.LogMessage($"EditAirQual: ERROR - Faied to update database entry {row[0]}");
 							context.Response.StatusCode = 502;
 							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 						}
@@ -3340,7 +3340,7 @@ namespace CumulusMX
 
 						if (!found)
 						{
-							Cumulus.LogMessage($"EditAirQual: Error deleting entry, line not found for - {row[0]}");
+							cumulus.LogMessage($"EditAirQual: Error deleting entry, line not found for - {row[0]}");
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
 						}
 
@@ -3355,14 +3355,14 @@ namespace CumulusMX
 						{
 							// write logfile back again
 							File.WriteAllLines(logfile, lines);
-							Cumulus.LogMessage($"EditAirQual: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-							Cumulus.LogMessage($"EditAirQual: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+							cumulus.LogMessage($"EditAirQual: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							cumulus.LogMessage($"EditAirQual: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 
 						}
 						catch (Exception ex)
 						{
 							cumulus.LogExceptionMessage(ex, "EditAirQual: Entry deletion failed. Error");
-							Cumulus.LogMessage($"EditAirQual: Entry data = - {orgLine}");
+							cumulus.LogMessage($"EditAirQual: Entry data = - {orgLine}");
 							context.Response.StatusCode = 500;
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 						}
@@ -3371,7 +3371,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage($"EditAirQual: Unrecognised action = " + newData.action);
+				cumulus.LogMessage($"EditAirQual: Unrecognised action = " + newData.action);
 				context.Response.StatusCode = 500;
 				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
 			}
@@ -3465,7 +3465,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage(ex.ToString());
+				cumulus.LogMessage(ex.ToString());
 			}
 
 			return "";
@@ -3496,11 +3496,11 @@ namespace CumulusMX
 					//await station.DatabaseAsync.UpdateAsync(newRec);
 					if (res == 1)
 					{
-						Cumulus.LogMessage($"EditCo2: Changed database entry {logDateStr}");
+						cumulus.LogMessage($"EditCo2: Changed database entry {logDateStr}");
 					}
 					else
 					{
-						Cumulus.LogMessage($"EditCo2: ERROR - Faied to update database entry {logDateStr}");
+						cumulus.LogMessage($"EditCo2: ERROR - Faied to update database entry {logDateStr}");
 						context.Response.StatusCode = 500;
 						return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 					}
@@ -3537,7 +3537,7 @@ namespace CumulusMX
 
 					if (!found)
 					{
-						Cumulus.LogMessage($"EditCo2: Error editing entry, line not found for - {logDateStr}");
+						cumulus.LogMessage($"EditCo2: Error editing entry, line not found for - {logDateStr}");
 						return "{\"errors\": { \"Logfile\": [\"<br>Failed to edit record. Error: Log file line not found - " + logDateStr + "]}}";
 					}
 
@@ -3553,13 +3553,13 @@ namespace CumulusMX
 					{
 						// write logfile back again
 						File.WriteAllLines(logfile, lines);
-						Cumulus.LogMessage($"EditCo2: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-						Cumulus.LogMessage($"EditCo2: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+						cumulus.LogMessage($"EditCo2: Edit Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+						cumulus.LogMessage($"EditCo2: Edit Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 					}
 					catch (Exception ex)
 					{
 						cumulus.LogExceptionMessage(ex, "EditCo2: Failed, error");
-						Cumulus.LogMessage("EditCo2: Data received - " + newLine);
+						cumulus.LogMessage("EditCo2: Data received - " + newLine);
 						context.Response.StatusCode = 500;
 					}
 				}
@@ -3578,11 +3578,11 @@ namespace CumulusMX
 						//await station.DatabaseAsync.DeleteAsync(newRec);
 						if (res == 1)
 						{
-							Cumulus.LogMessage($"EditCo2: Deleted database entry {row[0]}");
+							cumulus.LogMessage($"EditCo2: Deleted database entry {row[0]}");
 						}
 						else
 						{
-							Cumulus.LogMessage($"EditCo2: ERROR - Faied to update database entry {row[0]}");
+							cumulus.LogMessage($"EditCo2: ERROR - Faied to update database entry {row[0]}");
 							context.Response.StatusCode = 502;
 							return "{\"errors\": { \"SQLite\":[\"<br>Failed to update database.\"] }, \"data\":" + newRec.ToJson() + "}";
 						}
@@ -3630,7 +3630,7 @@ namespace CumulusMX
 
 						if (!found)
 						{
-							Cumulus.LogMessage($"EditCo2: Error deleting entry, line not found for - {row[0]}");
+							cumulus.LogMessage($"EditCo2: Error deleting entry, line not found for - {row[0]}");
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: Log file line not found - " + row[0] + "]}}";
 						}
 
@@ -3645,14 +3645,14 @@ namespace CumulusMX
 						{
 							// write logfile back again
 							File.WriteAllLines(logfile, lines);
-							Cumulus.LogMessage($"EditCo2: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
-							Cumulus.LogMessage($"EditCo2: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
+							cumulus.LogMessage($"EditCo2: Delete Log file [{logfile}] line {lineNum + 1}, original = {orgLine}");
+							cumulus.LogMessage($"EditCo2: Delete Log file [{logfile}] line {lineNum + 1},      new = {newLine}");
 
 						}
 						catch (Exception ex)
 						{
 							cumulus.LogExceptionMessage(ex, "EditCo2: Entry deletion failed. Error");
-							Cumulus.LogMessage($"EditCo2: Entry data = - {orgLine}");
+							cumulus.LogMessage($"EditCo2: Entry data = - {orgLine}");
 							context.Response.StatusCode = 500;
 							return "{\"errors\": { \"Logfile\": [\"<br>Failed to delete record. Error: " + ex.Message + "\"]}}";
 						}
@@ -3661,7 +3661,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage($"EditCo2: Unrecognised action = " + newData.action);
+				cumulus.LogMessage($"EditCo2: Unrecognised action = " + newData.action);
 				context.Response.StatusCode = 500;
 				return "{\"errors\":{\"Logfile\":[\"<br>Failed, unrecognised action = " + newData.action + "\"]}}";
 			}

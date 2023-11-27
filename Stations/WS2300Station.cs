@@ -33,7 +33,7 @@ namespace CumulusMX
 			cumulus.Manufacturer = cumulus.LACROSSE;
 			calculaterainrate = true;
 
-			Cumulus.LogMessage("WS2300: Attempting to open " + cumulus.ComportName);
+			cumulus.LogMessage("WS2300: Attempting to open " + cumulus.ComportName);
 
 			comport = new SerialPort(cumulus.ComportName, 2400, Parity.None, 8, StopBits.One)
 			{
@@ -47,7 +47,7 @@ namespace CumulusMX
 			try
 			{
 				comport.Open();
-				Cumulus.LogMessage("COM port opened");
+				cumulus.LogMessage("COM port opened");
 			}
 			catch (Exception ex)
 			{
@@ -67,7 +67,7 @@ namespace CumulusMX
 
 		public override void startReadingHistoryData()
 		{
-			Cumulus.LogMessage("Start reading history data");
+			cumulus.LogMessage("Start reading history data");
 			//lastArchiveTimeUTC = getLastArchiveTime();
 
 			LoadLastHoursFromDataLogs(cumulus.LastUpdateTime);
@@ -116,29 +116,29 @@ namespace CumulusMX
 			Timestamp ts;
 			int numrecs;
 
-			Cumulus.LogMessage("Reading history info");
+			cumulus.LogMessage("Reading history info");
 			int rec = Ws2300ReadHistoryDetails(out interval, out _, out ts, out numrecs);
 
 			if (rec < 0)
-				Cumulus.LogMessage("Failed to read history data");
+				cumulus.LogMessage("Failed to read history data");
 			else
 			{
-				Cumulus.LogMessage("History info obtained");
+				cumulus.LogMessage("History info obtained");
 				datalist = new List<HistoryData>();
 
 				/*
 				double pressureoffset = ws2300PressureOffset();
 
 				if (pressureoffset > -1000)
-					Cumulus.LogMessage("Pressure offset = " + pressureoffset);
+					cumulus.LogMessage("Pressure offset = " + pressureoffset);
 				else
 				{
 					pressureoffset = 0;
-					Cumulus.LogMessage("Failed to read pressure offset, using zero");
+					cumulus.LogMessage("Failed to read pressure offset, using zero");
 				}
 				*/
 
-				Cumulus.LogMessage("Downloading history data");
+				cumulus.LogMessage("Downloading history data");
 
 				datalist.Clear();
 
@@ -164,7 +164,7 @@ namespace CumulusMX
 						Ws2300ReadHistoryRecord(rec, out address, out intemp, out outtemp, out press, out inhum, out outhum, out raincount, out windspeed, out bearing, out dewpoint,
 							out windchill) < 0)
 					{
-						Cumulus.LogMessage("Error reading history record");
+						cumulus.LogMessage("Error reading history record");
 						numrecs = 0;
 						datalist.Clear();
 					}
@@ -200,7 +200,7 @@ namespace CumulusMX
 				}
 			}
 
-			Cumulus.LogMessage("Number of history entries = " + datalist.Count);
+			cumulus.LogMessage("Number of history entries = " + datalist.Count);
 
 			if (datalist.Count > 0)
 			{
@@ -235,7 +235,7 @@ namespace CumulusMX
 
 				DateTime timestamp = historydata.timestamp;
 
-				Cumulus.LogMessage("Processing data for " + timestamp);
+				cumulus.LogMessage("Processing data for " + timestamp);
 				// Check for roll-over
 
 				int h = timestamp.Hour;
@@ -248,7 +248,7 @@ namespace CumulusMX
 				if ((h == rollHour) && !rolloverdone)
 				{
 					// do roll-over
-					Cumulus.LogMessage("WS2300: Day roll-over " + timestamp);
+					cumulus.LogMessage("WS2300: Day roll-over " + timestamp);
 					DayReset(timestamp);
 
 					rolloverdone = true;
@@ -330,7 +330,7 @@ namespace CumulusMX
 					rainrate = 0;
 				}
 
-				Cumulus.LogMessage("WS2300: History rain total = " + historydata.rainTotal);
+				cumulus.LogMessage("WS2300: History rain total = " + historydata.rainTotal);
 
 				DoRain(historydata.rainTotal, rainrate, timestamp);
 
@@ -359,7 +359,7 @@ namespace CumulusMX
 				// Wind run ======================================================================
 				if (WindAverage.HasValue)
 				{
-					Cumulus.LogMessage("Windrun: " + WindAverage.Value.ToString(cumulus.WindAvgFormat) + cumulus.Units.WindText + " for " + historydata.interval + " minutes = " +
+					cumulus.LogMessage("Windrun: " + WindAverage.Value.ToString(cumulus.WindAvgFormat) + cumulus.Units.WindText + " for " + historydata.interval + " minutes = " +
 									(WindAverage.Value * WindRunHourMult[cumulus.Units.Wind] * historydata.interval / 60.0).ToString(cumulus.WindRunFormat) + cumulus.Units.WindRunText);
 
 					WindRunToday += (WindAverage.Value * WindRunHourMult[cumulus.Units.Wind] * historydata.interval / 60.0);
@@ -392,7 +392,7 @@ namespace CumulusMX
 				_ = cumulus.DoLogFile(timestamp, false);
 				_ = cumulus.DoCustomIntervalLogs(timestamp);
 				_ = cumulus.DoExtraLogFile(timestamp);
-				cumulus.MySqlSettings.DoRealtimeData(999, false, timestamp);
+				cumulus.MySqlFunction.DoRealtimeData(999, false, timestamp);
 
 				AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex, Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, rainrate, -1, -1);
 				UpdatePressureTrendString();
@@ -466,7 +466,7 @@ namespace CumulusMX
 
 			if (rainref < 0)
 			{
-				Cumulus.LogMessage("WS2300: Unable to read current rain total");
+				cumulus.LogMessage("WS2300: Unable to read current rain total");
 				interval = 0;
 				countdown = 0;
 				timelast = new Timestamp();
@@ -475,12 +475,12 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage("WS2300: current rain total from station = " + rainref);
+				cumulus.LogMessage("WS2300: current rain total from station = " + rainref);
 				raincountref = Ws2300RainHistoryRef();
 
 				if (raincountref < 0)
 				{
-					Cumulus.LogMessage("WS2300: Unable to read current rain counter");
+					cumulus.LogMessage("WS2300: Unable to read current rain counter");
 					interval = 0;
 					countdown = 0;
 					timelast = new Timestamp();
@@ -489,7 +489,7 @@ namespace CumulusMX
 				}
 				else
 				{
-					Cumulus.LogMessage("WS2300: current rain counter from station = " + raincountref);
+					cumulus.LogMessage("WS2300: current rain counter from station = " + raincountref);
 
 					interval = (data[1] & 0xF) * 256 + data[0] + 1;
 					countdown = data[2] * 16 + (data[1] >> 4) + 1;
@@ -513,7 +513,7 @@ namespace CumulusMX
 			int address = 0x440;
 			int bytes = 2;
 
-			Cumulus.LogMessage("WS2300: Reading rain history ref");
+			cumulus.LogMessage("WS2300: Reading rain history ref");
 			if (Ws2300ReadWithRetries(address, bytes, data, command) != bytes)
 				return -1000;
 			else
@@ -530,10 +530,10 @@ namespace CumulusMX
 			int tempint;
 
 			address = 0x6C6 + record * 19;
-			Cumulus.LogMessage("Reading history record " + record);
+			cumulus.LogMessage("Reading history record " + record);
 			if (Ws2300ReadWithRetries(address, bytes, data, command) != bytes)
 			{
-				Cumulus.LogMessage("Failed to read history record");
+				cumulus.LogMessage("Failed to read history record");
 				tempindoor = 0;
 				tempoutdoor = 0;
 				pressure = 0;
@@ -554,7 +554,7 @@ namespace CumulusMX
 				msg.Append(' ');
 			}
 
-			Cumulus.LogMessage(msg.ToString());
+			cumulus.LogMessage(msg.ToString());
 			tempint = (data[4] << 12) + (data[3] << 4) + (data[2] >> 4);
 
 			pressure = 1000 + (tempint % 10000) / 10.0;
@@ -1278,7 +1278,7 @@ namespace CumulusMX
 			// Now populate the 5th byte with the converted number of bytes
 			commandData[4] = ws2300encodeNumberOfBytes(numberofbytes);
 
-			//Cumulus.LogMessage("WS2300ReadData");
+			//cumulus.LogMessage("WS2300ReadData");
 			for (i = 0; i < 4; i++)
 			{
 				if (Ws2300WriteSerial(commandData[i]) != 1)

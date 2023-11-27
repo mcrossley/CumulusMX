@@ -37,7 +37,7 @@ namespace CumulusMX.ThirdParty
 
 			try
 			{
-				HttpResponseMessage response = await httpClient.GetAsync(url);
+				using var response = await Cumulus.MyHttpClient.GetAsync(url);
 				var responseBodyAsText = await response.Content.ReadAsStringAsync();
 				var msg = "";
 				switch ((int)response.StatusCode)
@@ -48,39 +48,39 @@ namespace CumulusMX.ThirdParty
 						break;
 					case 400:
 						msg = "Bad request";
-						cumulus.ThirdPartyUploadAlarm.LastError = "WeatherCloud: " + msg;
+						cumulus.ThirdPartyUploadAlarm.LastMessage = "WeatherCloud: " + msg;
 						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 						break;
 					case 401:
 						msg = "Incorrect WID or Key";
-						cumulus.ThirdPartyUploadAlarm.LastError = "WeatherCloud: " + msg;
+						cumulus.ThirdPartyUploadAlarm.LastMessage = "WeatherCloud: " + msg;
 						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 						break;
 					case 429:
 						msg = "Too many requests";
-						cumulus.ThirdPartyUploadAlarm.LastError = "WeatherCloud: " + msg;
+						cumulus.ThirdPartyUploadAlarm.LastMessage = "WeatherCloud: " + msg;
 						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 						break;
 					case 500:
 						msg = "Server error";
-						cumulus.ThirdPartyUploadAlarm.LastError = "WeatherCloud: " + msg;
+						cumulus.ThirdPartyUploadAlarm.LastMessage = "WeatherCloud: " + msg;
 						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 						break;
 					default:
 						msg = "Unknown error";
-						cumulus.ThirdPartyUploadAlarm.LastError = "WeatherCloud: " + msg;
+						cumulus.ThirdPartyUploadAlarm.LastMessage = "WeatherCloud: " + msg;
 						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 						break;
 				}
 				if ((int)response.StatusCode == 200)
 					cumulus.LogDebugMessage($"WeatherCloud: Response = {msg} ({response.StatusCode}): {responseBodyAsText}");
 				else
-					Cumulus.LogMessage($"WeatherCloud: ERROR - Response = {msg} ({response.StatusCode}): {responseBodyAsText}");
+					cumulus.LogMessage($"WeatherCloud: ERROR - Response = {msg} ({response.StatusCode}): {responseBodyAsText}");
 			}
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "WeatherCloud: ERROR");
-				cumulus.ThirdPartyUploadAlarm.LastError = "WeatherCloud: " + ex.Message;
+				cumulus.ThirdPartyUploadAlarm.LastMessage = "WeatherCloud: " + ex.Message;
 				cumulus.ThirdPartyUploadAlarm.Triggered = true;
 			}
 			finally
@@ -96,15 +96,15 @@ namespace CumulusMX.ThirdParty
 
 			//Temperature
 			if (station.IndoorTemp.HasValue)
-				sb.Append("&tempin=" + (int)Math.Round(WeatherStation.ConvertUserTempToC(station.IndoorTemp).Value * 10));
+				sb.Append("&tempin=" + (int) Math.Round(WeatherStation.ConvertUserTempToC(station.IndoorTemp).Value * 10));
 			if (station.Temperature.HasValue)
-				sb.Append("&temp=" + (int)Math.Round(WeatherStation.ConvertUserTempToC(station.Temperature).Value * 10));
+				sb.Append("&temp=" + (int) Math.Round(WeatherStation.ConvertUserTempToC(station.Temperature).Value * 10));
 			if (station.WindChill.HasValue)
-				sb.Append("&chill=" + (int)Math.Round(WeatherStation.ConvertUserTempToC(station.WindChill).Value * 10));
+				sb.Append("&chill=" + (int )Math.Round(WeatherStation.ConvertUserTempToC(station.WindChill).Value * 10));
 			if (station.Dewpoint.HasValue)
-				sb.Append("&dew=" + (int)Math.Round(WeatherStation.ConvertUserTempToC(station.Dewpoint).Value * 10));
+				sb.Append("&dew=" + (int) Math.Round(WeatherStation.ConvertUserTempToC(station.Dewpoint).Value * 10));
 			if (station.HeatIndex.HasValue)
-				sb.Append("&heat=" + (int)Math.Round(WeatherStation.ConvertUserTempToC(station.HeatIndex).Value * 10));
+				sb.Append("&heat=" + (int) Math.Round(WeatherStation.ConvertUserTempToC(station.HeatIndex).Value * 10));
 
 			// Humidity
 			if (station.IndoorHum.HasValue)
@@ -114,10 +114,10 @@ namespace CumulusMX.ThirdParty
 
 			// Wind
 			if (station.WindLatest.HasValue)
-				sb.Append("&wspd=" + (int)Math.Round(WeatherStation.ConvertUserWindToMS(station.WindLatest).Value * 10));
+				sb.Append("&wspd=" + (int) Math.Round(WeatherStation.ConvertUserWindToMS(station.WindLatest).Value * 10));
 			if (station.RecentMaxGust.HasValue)
-				sb.Append("&wspdhi=" + (int)Math.Round(WeatherStation.ConvertUserWindToMS(station.RecentMaxGust).Value * 10));
-			sb.Append("&wspdavg=" + (int)Math.Round(WeatherStation.ConvertUserWindToMS(station.WindAverage).Value * 10));
+				sb.Append("&wspdhi=" + (int) Math.Round(WeatherStation.ConvertUserWindToMS(station.RecentMaxGust).Value * 10));
+			sb.Append("&wspdavg=" + (int) Math.Round(WeatherStation.ConvertUserWindToMS(station.WindAverage).Value * 10));
 
 			// Wind Direction
 			sb.Append("&wdir=" + station.Bearing);
@@ -125,18 +125,18 @@ namespace CumulusMX.ThirdParty
 
 			// Pressure
 			if (station.Pressure.HasValue)
-				sb.Append("&bar=" + (int)Math.Round(WeatherStation.ConvertUserPressToMB(station.Pressure).Value * 10));
+				sb.Append("&bar=" + (int) Math.Round(WeatherStation.ConvertUserPressToMB(station.Pressure).Value * 10));
 
 			// rain
 			if (station.RainToday.HasValue)
-				sb.Append("&rain=" + (int)Math.Round(WeatherStation.ConvertUserRainToMM(station.RainToday).Value * 10));
+				sb.Append("&rain=" + (int) Math.Round(WeatherStation.ConvertUserRainToMM(station.RainToday).Value * 10));
 			if (station.RainRate.HasValue)
-				sb.Append("&rainrate=" + (int)Math.Round(WeatherStation.ConvertUserRainToMM(station.RainRate).Value * 10));
+				sb.Append("&rainrate=" + (int) Math.Round(WeatherStation.ConvertUserRainToMM(station.RainRate).Value * 10));
 
 			// ET
 			if (SendSolar && cumulus.Manufacturer == cumulus.DAVIS)
 			{
-				sb.Append("&et=" + (int)Math.Round(WeatherStation.ConvertUserRainToMM(station.ET).Value * 10));
+				sb.Append("&et=" + (int) Math.Round(WeatherStation.ConvertUserRainToMM(station.ET).Value * 10));
 			}
 
 			// solar
@@ -148,7 +148,7 @@ namespace CumulusMX.ThirdParty
 			// uv
 			if (SendUV && station.UV.HasValue)
 			{
-				sb.Append("&uvi=" + (int)Math.Round(station.UV.Value * 10));
+				sb.Append("&uvi=" + (int) Math.Round(station.UV.Value * 10));
 			}
 
 			// aq

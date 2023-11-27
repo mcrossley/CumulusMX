@@ -33,11 +33,6 @@ namespace CumulusMX
 		private bool customRolloverUpdateInProgress;
 		private bool customTimedUpdateInProgress;
 
-		private readonly TokenParser customSecondsTokenParser = new TokenParser();
-		private readonly TokenParser customMinutesTokenParser = new TokenParser();
-		private readonly TokenParser customRolloverTokenParser = new TokenParser();
-		private readonly TokenParser customTimedTokenParser = new TokenParser();
-
 		internal System.Timers.Timer CustomSecondsTimer;
 
 		// Use thread safe queues for the MySQL command lists
@@ -58,14 +53,9 @@ namespace CumulusMX
 		{
 			station = stn;
 
-			customSecondsTokenParser.OnToken += cumulus.TokenParserOnToken;
 			CustomSecondsTimer = new System.Timers.Timer { Interval = Settings.CustomSecs.Interval * 1000 };
 			CustomSecondsTimer.Elapsed += CustomSecondsTimerTick;
 			CustomSecondsTimer.AutoReset = true;
-
-			customMinutesTokenParser.OnToken += cumulus.TokenParserOnToken;
-			customRolloverTokenParser.OnToken += cumulus.TokenParserOnToken;
-			customTimedTokenParser.OnToken += cumulus.TokenParserOnToken;
 
 			SetupRealtimeTable();
 			SetupMonthlyTable();
@@ -80,7 +70,7 @@ namespace CumulusMX
 				mySqlConn.Open();
 				// get the database name to check 100% we have a connection
 				var db = mySqlConn.Database;
-				Cumulus.LogMessage("MySqlCheckConnection: Connected to server ok, default database = " + db);
+				cumulus.LogMessage("MySqlCheckConnection: Connected to server ok, default database = " + db);
 				mySqlConn.Close();
 				return true;
 			}
@@ -173,12 +163,12 @@ namespace CumulusMX
 					// if debug logging is disabled, then log the failing statement anyway
 					if (!cumulus.DebuggingEnabled)
 					{
-						Cumulus.LogMessage($"{CallingFunction}: SQL = {cmdSql.statement}");
+						cumulus.LogMessage($"{CallingFunction}: SQL = {cmdSql.statement}");
 					}
 
 					cumulus.LogExceptionMessage(ex, $"{CallingFunction}: Error encountered during MySQL operation");
 
-					cumulus.MySqlUploadAlarm.LastError = ex.Message;
+					cumulus.MySqlUploadAlarm.LastMessage = ex.Message;
 					cumulus.MySqlUploadAlarm.Triggered = true;
 
 					// do we save this command/commands on failure to be resubmitted?
@@ -267,12 +257,12 @@ namespace CumulusMX
 				// if debug logging is disabled, then log the failing statement anyway
 				if (!cumulus.DebuggingEnabled)
 				{
-					Cumulus.LogMessage($"{CallingFunction}: SQL = {cmdSql}");
+					cumulus.LogMessage($"{CallingFunction}: SQL = {cmdSql}");
 				}
 
 				cumulus.LogExceptionMessage(ex, $"{CallingFunction}: Error encountered during MySQL operation");
 
-				cumulus.MySqlUploadAlarm.LastError = ex.Message;
+				cumulus.MySqlUploadAlarm.LastMessage = ex.Message;
 				cumulus.MySqlUploadAlarm.Triggered = true;
 
 				// do we save this command/commands on failure to be resubmitted?
@@ -348,20 +338,20 @@ namespace CumulusMX
 					// flag we are processing the queue so the next task doesn't try as well
 					SqlCatchingUp = true;
 
-					Cumulus.LogMessage($"{callingFunction}: Failed MySQL updates are present");
+					cumulus.LogMessage($"{callingFunction}: Failed MySQL updates are present");
 
 					if (CheckConnection())
 					{
 						Thread.Sleep(500);
-						Cumulus.LogMessage($"{callingFunction}: Connection to MySQL server is OK, trying to upload {FailedList.Count} failed commands");
+						cumulus.LogMessage($"{callingFunction}: Connection to MySQL server is OK, trying to upload {FailedList.Count} failed commands");
 
 						await CommandAsync(FailedList, callingFunction, true);
-						Cumulus.LogMessage($"{callingFunction}: Upload of failed MySQL commands complete");
+						cumulus.LogMessage($"{callingFunction}: Upload of failed MySQL commands complete");
 					}
 					else if (Settings.BufferOnfailure)
 					{
 						connectionOK = false;
-						Cumulus.LogMessage($"{callingFunction}: Connection to MySQL server has failed, adding this update to the failed list");
+						cumulus.LogMessage($"{callingFunction}: Connection to MySQL server has failed, adding this update to the failed list");
 						if (callingFunction.StartsWith("Realtime["))
 						{
 							// don't bother buffering the realtime deletes - if present
@@ -405,7 +395,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage($"{callingFunction}: Error - " + ex.Message);
+				cumulus.LogMessage($"{callingFunction}: Error - " + ex.Message);
 				SqlCatchingUp = false;
 			}
 		}
@@ -558,7 +548,7 @@ namespace CumulusMX
 
 		internal void DoDailyData(DateTime timestamp, double AvgTemp)
 		{
-			StringBuilder queryString = new StringBuilder(cumulus.MySqlSettings.DayfileTable.StartOfInsert, 1024);
+			StringBuilder queryString = new StringBuilder(cumulus.MySqlFunction.DayfileTable.StartOfInsert, 1024);
 			queryString.Append(" Values('");
 			queryString.Append(timestamp.AddDays(-1).ToString("yyyy-MM-dd") + "',");
 			if (station.HiLoToday.HighGust.HasValue)
@@ -769,12 +759,14 @@ namespace CumulusMX
 			if ((!station.PressReadyToPlot || !station.TempReadyToPlot || !station.WindReadyToPlot) && !cumulus.StationOptions.NoSensorCheck)
 			{
 				// not all the data is ready and NoSensorCheck is not enabled
-				Cumulus.LogMessage($"CustomSecondsTimerTick: Not all data is ready, aborting process");
+				cumulus.LogMessage($"CustomSecondsTimerTick: Not all data is ready, aborting process");
 			}
 
 			if (!customSecondsUpdateInProgress)
 			{
 				customSecondsUpdateInProgress = true;
+
+				var tokenParser = new TokenParser(cumulus.TokenParserOnToken);
 
 				for (var i = 0; i < 10; i++)
 				{
@@ -782,9 +774,6 @@ namespace CumulusMX
 					{
 						if (!string.IsNullOrEmpty(Settings.CustomSecs.Commands[i]))
 						{
-							var tokenParser = new TokenParser();
-							tokenParser.OnToken += cumulus.TokenParserOnToken;
-
 							tokenParser.InputText = Settings.CustomSecs.Commands[i];
 							await CheckMySQLFailedUploads($"CustomSqlSecs[{i}]", tokenParser.ToStringFromString());
 						}
@@ -805,7 +794,7 @@ namespace CumulusMX
 			if ((!station.PressReadyToPlot || !station.TempReadyToPlot || !station.WindReadyToPlot) && !cumulus.StationOptions.NoSensorCheck)
 			{
 				// not all the data is ready and NoSensorCheck is not enabled
-				Cumulus.LogMessage($"CustomMysqlMinutesTimerTick: Not all data is ready, aborting process");
+				cumulus.LogMessage($"CustomMysqlMinutesTimerTick: Not all data is ready, aborting process");
 				return;
 			}
 
@@ -813,14 +802,14 @@ namespace CumulusMX
 			{
 				customMinutesUpdateInProgress = true;
 
+				var tokenParser = new TokenParser(cumulus.TokenParserOnToken);
+
 				for (var i = 0; i < 10; i++)
 				{
 					try
 					{
 						if (!string.IsNullOrEmpty(Settings.CustomMins.Commands[i]))
 						{
-							var tokenParser = new TokenParser();
-							tokenParser.OnToken += cumulus.TokenParserOnToken;
 							tokenParser.InputText = Settings.CustomMins.Commands[i];
 							await CheckMySQLFailedUploads($"CustomSqlMins[{i}]", tokenParser.ToStringFromString());
 						}
@@ -829,9 +818,6 @@ namespace CumulusMX
 					{
 						cumulus.LogExceptionMessage(ex, $"CustomSqlMins[{i}]: Error");
 					}
-
-					// now do what we came here to do
-					await CommandAsync(customMinutesTokenParser.ToStringFromString(), $"CustomSqlMins[{i}]");
 				}
 
 				customMinutesUpdateInProgress = false;
@@ -843,13 +829,15 @@ namespace CumulusMX
 			if ((!station.PressReadyToPlot || !station.TempReadyToPlot || !station.WindReadyToPlot) && !cumulus.StationOptions.NoSensorCheck)
 			{
 				// not all the data is ready and NoSensorCheck is not enabled
-				Cumulus.LogMessage($"CustomRolloverTimerTick: Not all data is ready, aborting process");
+				cumulus.LogMessage($"CustomRolloverTimerTick: Not all data is ready, aborting process");
 				return;
 			}
 
 			if (!customRolloverUpdateInProgress)
 			{
 				customRolloverUpdateInProgress = true;
+
+				var tokenParser = new TokenParser(cumulus.TokenParserOnToken);
 
 				for (var i = 0; i < 10; i++)
 				{
@@ -858,8 +846,6 @@ namespace CumulusMX
 					{
 						if (!string.IsNullOrEmpty(Settings.CustomRollover.Commands[i]))
 						{
-							var tokenParser = new TokenParser();
-							tokenParser.OnToken += cumulus.TokenParserOnToken;
 							tokenParser.InputText = Settings.CustomRollover.Commands[i];
 							await CheckMySQLFailedUploads($"CustomSqlRollover[{i}]", tokenParser.ToStringFromString());
 						}
@@ -885,7 +871,7 @@ namespace CumulusMX
 			if ((!station.PressReadyToPlot || !station.TempReadyToPlot || !station.WindReadyToPlot) && !cumulus.StationOptions.NoSensorCheck)
 			{
 				// not all the data is ready and NoSensorCheck is not enabled
-				Cumulus.LogMessage($"CustomMySqlTimedUpdate: Not all data is ready, aborting process");
+				cumulus.LogMessage($"CustomMySqlTimedUpdate: Not all data is ready, aborting process");
 				return;
 			}
 
@@ -893,14 +879,14 @@ namespace CumulusMX
 			{
 				customTimedUpdateInProgress = true;
 
+				var tokenParser = new TokenParser(cumulus.TokenParserOnToken);
+
 				for (var i = 0; i < 10; i++)
 				{
 					try
 					{
 						if (!string.IsNullOrEmpty(Settings.CustomTimed.Commands[i]) && Settings.CustomTimed.NextUpdate[i] <= now)
 						{
-							var tokenParser = new TokenParser();
-							tokenParser.OnToken += cumulus.TokenParserOnToken;
 							tokenParser.InputText = Settings.CustomTimed.Commands[i];
 							await CheckMySQLFailedUploads($"CustomSqlTimed[{i}]", tokenParser.ToStringFromString());
 							Settings.CustomTimed.SetNextInterval(i, now);
@@ -913,6 +899,30 @@ namespace CumulusMX
 				}
 				customTimedUpdateInProgress = false;
 			}
+		}
+
+		internal void CustomMySqlStartUp()
+		{
+			cumulus.LogMessage("Starting custom start-up MySQL commands");
+
+			var tokenParser = new TokenParser(cumulus.TokenParserOnToken);
+
+			for (var i = 0; i < 10; i++)
+			{
+				try
+				{
+					if (!string.IsNullOrEmpty(Settings.CustomStartUp.Commands[i]))
+					{
+						tokenParser.InputText = Settings.CustomStartUp.Commands[i];
+						CheckMySQLFailedUploads($"CustomSqlRollover[{i}]", tokenParser.ToStringFromString()).Wait();
+					}
+				}
+				catch (Exception ex)
+				{
+					cumulus.LogExceptionMessage(ex, $"CustomSqlStartUp[{i}]: Error excuting: {Settings.CustomStartUp.Commands[i]} ");
+				}
+			}
+			cumulus.LogMessage("Custom start-up MySQL commands end");
 		}
 
 		internal void SetupRealtimeTable()

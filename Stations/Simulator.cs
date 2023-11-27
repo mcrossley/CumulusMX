@@ -17,9 +17,9 @@ namespace CumulusMX
 		public Simulator(Cumulus cumulus) : base(cumulus)
 		{
 
-			Cumulus.LogMessage("Station type = Simulator");
+			cumulus.LogMessage("Station type = Simulator");
 
-			Cumulus.LogMessage("Last update time = " + cumulus.LastUpdateTime);
+			cumulus.LogMessage("Last update time = " + cumulus.LastUpdateTime);
 
 			random = new Random();
 
@@ -28,7 +28,7 @@ namespace CumulusMX
 			cumulus.StationOptions.CalculatedDP = true;
 			cumulus.StationOptions.CalculatedET = true;
 			cumulus.StationOptions.CalculatedWC = true;
-			cumulus.StationOptions.CalcWind10MinAve = true;
+			cumulus.StationOptions.CalcuateAverageWindSpeed = true;
 			cumulus.StationOptions.UseCumulusPresstrendstr = true;
 			cumulus.StationOptions.UseSpeedForAvgCalc = false;
 
@@ -72,7 +72,7 @@ namespace CumulusMX
 				}
 				catch (ThreadAbortException) // Catch the ThreadAbortException
 				{
-					Cumulus.LogMessage("Simulator Start: ThreadAbortException");
+					cumulus.LogMessage("Simulator Start: ThreadAbortException");
 					// and exit
 					stop = true;
 				}
@@ -83,15 +83,15 @@ namespace CumulusMX
 				}
 			}
 
-			Cumulus.LogMessage("Ending normal reading loop");
+			cumulus.LogMessage("Ending normal reading loop");
 		}
 
 		public override void Stop()
 		{
 			StopMinuteTimer();
 
-			Cumulus.LogMessage("Stopping data generation task");
-			Cumulus.LogMessage("Waiting for data generation to complete");
+			cumulus.LogMessage("Stopping data generation task");
+			cumulus.LogMessage("Waiting for data generation to complete");
 		}
 
 
@@ -218,16 +218,16 @@ namespace CumulusMX
 			public void SetNewData(DateTime readTime)
 			{
 				tempVal = temperature.GetValue(readTime);
-				humVal = (int)humidity.GetValue(readTime);
+				humVal = (int) humidity.GetValue(readTime);
 				windSpeedVal  = Math.Round(windSpeed.GetValue(readTime), 1);
 				if (windSpeedVal > 0)
 				{
-					windBearingVal = ((int)windDirection.GetValue(readTime) % 360) + 1;
+					windBearingVal = ((int) windDirection.GetValue(readTime) % 360) + 1;
 				}
 				rainRateVal = rainRate.GetValue(readTime);
 				pressureVal = pressure.GetValue(readTime);
 				tempInVal = insideTemp.GetValue(readTime);
-				humInVal = (int)insideHum.GetValue(readTime);
+				humInVal = (int) insideHum.GetValue(readTime);
 			}
 		}
 

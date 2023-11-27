@@ -1,31 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+
 using EmbedIO;
-using Org.BouncyCastle.Utilities.Collections;
 using ServiceStack.Text;
-using static Swan.Terminal;
 
 namespace CumulusMX
 {
 	internal class DisplaySettings
 	{
 		private readonly Cumulus cumulus;
-		private WeatherStation station;
 
 		internal DisplaySettings(Cumulus cumulus)
 		{
 			this.cumulus = cumulus;
-		}
-
-		internal void SetStation(WeatherStation station)
-		{
-			this.station = station;
 		}
 
 		internal string GetAlpacaFormData()
@@ -234,7 +222,7 @@ namespace CumulusMX
 			{
 				UV = cumulus.GraphOptions.Colour.UV,
 				Solar = cumulus.GraphOptions.Colour.Solar,
-				CurrentSolarMax= cumulus.GraphOptions.Colour.SolarTheoretical,
+				CurrentSolarMax = cumulus.GraphOptions.Colour.SolarTheoretical,
 				Sunshine = cumulus.GraphOptions.Colour.Sunshine
 			};
 
@@ -344,7 +332,7 @@ namespace CumulusMX
 			// get the response
 			try
 			{
-				Cumulus.LogMessage("Updating display settings");
+				cumulus.LogMessage("Updating display settings");
 
 				var data = new StreamReader(context.Request.InputStream).ReadToEnd();
 
@@ -357,7 +345,7 @@ namespace CumulusMX
 			catch (Exception ex)
 			{
 				var msg = "Error de-serializing Station Settings JSON: " + ex.Message;
-				Cumulus.LogMessage(msg);
+				cumulus.LogErrorMessage(msg);
 				cumulus.LogDebugMessage("Station Data: " + json);
 				context.Response.StatusCode = 500;
 				return msg;
@@ -461,7 +449,7 @@ namespace CumulusMX
 					cumulus.GraphOptions.Colour.MinPress = settings.Graphs.colour.dailypress.Min;
 
 					cumulus.GraphOptions.Colour.MaxOutHum = settings.Graphs.colour.dailyhum.Max;
-					cumulus.GraphOptions.Colour.MinOutHum= settings.Graphs.colour.dailyhum.Min;
+					cumulus.GraphOptions.Colour.MinOutHum = settings.Graphs.colour.dailyhum.Min;
 
 					cumulus.GraphOptions.Colour.Pm2p5 = settings.Graphs.colour.aq.Pm2p5;
 					cumulus.GraphOptions.Colour.Pm10 = settings.Graphs.colour.aq.Pm10;
@@ -487,7 +475,7 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					var msg = "Error processing Graph settings: " + ex.Message;
-					Cumulus.LogMessage(msg);
+					cumulus.LogErrorMessage(msg);
 					errorMsg += msg + "\n\n";
 					context.Response.StatusCode = 500;
 				}
@@ -510,7 +498,7 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					var msg = "Error processing Display Options settings: " + ex.Message;
-					Cumulus.LogMessage(msg);
+					cumulus.LogErrorMessage(msg);
 					errorMsg += msg + "\n\n";
 					context.Response.StatusCode = 500;
 				}
@@ -518,7 +506,7 @@ namespace CumulusMX
 			catch (Exception ex)
 			{
 				var msg = "Error processing Display settings: " + ex.Message;
-				Cumulus.LogMessage(msg);
+				cumulus.LogErrorMessage(msg);
 				cumulus.LogDebugMessage("Display Data: " + json);
 				errorMsg += msg;
 				context.Response.StatusCode = 500;
@@ -700,7 +688,7 @@ namespace CumulusMX
 			public string AvgTemp { get; set; }
 			public string MaxTemp { get; set; }
 			public string MinTemp { get; set; }
-			public string MaxDewPoint{ get; set; }
+			public string MaxDewPoint { get; set; }
 			public string MinDewPoint { get; set; }
 			public string MaxHeatIndex { get; set; }
 			public string MinWindChill { get; set; }

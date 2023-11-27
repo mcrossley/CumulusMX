@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+
 using MQTTnet;
 using MQTTnet.Client;
 using ServiceStack;
@@ -14,6 +15,7 @@ namespace CumulusMX
 		private static Cumulus cumulus;
 		private static MqttClient mqttClient;
 		private static bool configured;
+		private static Dictionary<String, String> publishedTopics = new Dictionary<string, string>();
 
 		public static bool Configured { get => configured; set => configured = value; }
 
@@ -23,7 +25,7 @@ namespace CumulusMX
 
 			var mqttFactory = new MqttFactory();
 
-			mqttClient = (MqttClient)mqttFactory.CreateMqttClient();
+			mqttClient = (MqttClient) mqttFactory.CreateMqttClient();
 
 			var clientId = Guid.NewGuid().ToString();
 
@@ -53,7 +55,7 @@ namespace CumulusMX
 
 			mqttClient.DisconnectedAsync += (async e =>
 			{
-				Cumulus.LogMessage("Error: MQTT disconnected from the server");
+				cumulus.LogMessage("Error: MQTT disconnected from the server");
 				await Task.Delay(TimeSpan.FromSeconds(5));
 
 				cumulus.LogDebugMessage("MQTT attempting to reconnect with server");
@@ -64,7 +66,7 @@ namespace CumulusMX
 				}
 				catch
 				{
-					Cumulus.LogMessage("Error: MQTT reconnection to server failed");
+					cumulus.LogMessage("Error: MQTT reconnection to server failed");
 				}
 			});
 
@@ -87,7 +89,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage("MQTT: Error - Not connected to MQTT server - message not sent");
+				cumulus.LogMessage("MQTT: Error - Not connected to MQTT server - message not sent");
 			}
 		}
 
@@ -132,13 +134,40 @@ namespace CumulusMX
 			{
 				foreach (var feed in templateObj.topics)
 				{
-					var mqttTokenParser = new TokenParser { Encoding = new System.Text.UTF8Encoding(false) };
-					mqttTokenParser.OnToken += cumulus.TokenParserOnToken;
-					mqttTokenParser.InputText = feed.data;
+					bool useAltResult = false;
+
+					var mqttTokenParser = new TokenParser(cumulus.TokenParserOnToken)
+					{
+						Encoding = new System.Text.UTF8Encoding(false),
+						InputText = feed.data
+					};
+
+					if ((feedType == "DataUpdate") && (feed.doNotTriggerOnTags != null))
+					{
+						useAltResult = true;
+						mqttTokenParser.AltResultNoParseList = feed.doNotTriggerOnTags;
+					}
+
 					string message = mqttTokenParser.ToStringFromString();
 
-					// send the message
-					_ = SendMessageAsync(feed.topic, message, feed.retain);
+					if (useAltResult)
+					{
+						if (!(publishedTopics.ContainsKey(feed.data) && (publishedTopics[feed.data] == mqttTokenParser.AltResult)))
+						{
+							// send the message
+							_ = SendMessageAsync(feed.topic, message, feed.retain);
+
+							if (publishedTopics.ContainsKey(feed.data))
+								publishedTopics[feed.data] = mqttTokenParser.AltResult;
+							else
+								publishedTopics.Add(feed.data, mqttTokenParser.AltResult);
+						}
+					}
+					else
+					{
+						// send the message
+						_ = SendMessageAsync(feed.topic, message, feed.retain);
+					}
 				}
 			}
 			catch (Exception ex)

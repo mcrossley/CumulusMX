@@ -15,11 +15,11 @@ namespace CumulusMX
 {
 	public static class HttpStations
 	{
-		internal static HttpStationWund stationWund { private get; set; }
-		internal static HttpStationEcowitt stationEcowitt { private get; set; }
-		internal static HttpStationEcowitt stationEcowittExtra { private get; set; }
-		internal static HttpStationAmbient stationAmbient { private get; set; }
-		internal static HttpStationAmbient stationAmbientExtra { private get; set; }
+		internal static Stations.HttpStationWund stationWund { private get; set; }
+		internal static Stations.HttpStationEcowitt stationEcowitt { private get; set; }
+		internal static Stations.HttpStationEcowitt stationEcowittExtra { private get; set; }
+		internal static Stations.HttpStationAmbient stationAmbient { private get; set; }
+		internal static Stations.HttpStationAmbient stationAmbientExtra { private get; set; }
 
 
 		// HTTP Station

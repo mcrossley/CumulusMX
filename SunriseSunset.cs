@@ -95,9 +95,9 @@ namespace CumulusMX
 				year--;
 			}
 
-			b = (int)Math.Floor(year / 400.0) - (int)Math.Floor(year / 100.0) + (int)Math.Floor(year / 4.0);
+			b = (int) Math.Floor(year / 400.0) - (int) Math.Floor(year / 100.0) + (int) Math.Floor(year / 4.0);
 			a = 365.0 * year - 679004.0;
-			return a + b + (int)Math.Floor(30.6001 * (month + 1)) + day;
+			return a + b + (int) Math.Floor(30.6001 * (month + 1)) + day;
 		}
 
 		private static double Frac(double x)
@@ -106,7 +106,7 @@ namespace CumulusMX
 			//  returns the fractional part of x as used in minimoon and minisun
 			//
 			double a;
-			a = x - (int)Math.Floor(x);
+			a = x - (int) Math.Floor(x);
 			return a;
 		}
 
@@ -120,7 +120,7 @@ namespace CumulusMX
 			double a;
 			double b;
 			b = x / 360;
-			a = 360 * (b - (int)Math.Floor(b));
+			a = 360 * (b - (int) Math.Floor(b));
 			if (a < 0)
 			{
 				a += 360;

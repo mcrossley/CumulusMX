@@ -4,15 +4,15 @@ using System.Diagnostics;
 using System.IO.Ports;
 using System.Threading;
 
-namespace CumulusMX
+namespace CumulusMX.Stations
 {
 	class WM918Station : WeatherStation
 	{
-		private const int  WM918HumidData = 0x8F;
-		private const int  WM918TempData  = 0x9F;
-		private const int  WM918BaroData  = 0xAF;
-		private const int  WM918RainData  = 0xBF;
-		private const int  WM918WindData  = 0xCF;
+		private const int WM918HumidData = 0x8F;
+		private const int WM918TempData = 0x9F;
+		private const int WM918BaroData = 0xAF;
+		private const int WM918RainData = 0xBF;
+		private const int WM918WindData = 0xCF;
 
 		private readonly int[] WM918PacketLength = { 0, 0, 0, 0, 0, 0, 0, 0, 35, 34, 31, 14, 27, 0, 0, 0, 255 };
 
@@ -27,7 +27,7 @@ namespace CumulusMX
 			// station supplies rain rate
 			calculaterainrate = false;
 
-			Cumulus.LogMessage("Station type = WM918");
+			cumulus.LogMessage("Station type = WM918");
 		}
 
 		public override void DoStartup()
@@ -88,7 +88,7 @@ namespace CumulusMX
 
 		public override void Start()
 		{
-			Cumulus.LogMessage("Start normal reading loop");
+			cumulus.LogMessage("Start normal reading loop");
 
 			int nextByte;
 
@@ -158,14 +158,14 @@ namespace CumulusMX
 			}
 			finally
 			{
-				Cumulus.LogMessage("Closing serial port");
+				cumulus.LogMessage("Closing serial port");
 				comport.Close();
 			}
 		}
 
 		public override void startReadingHistoryData()
 		{
-			Cumulus.LogMessage("Opening COM port " + cumulus.ComportName);
+			cumulus.LogMessage("Opening COM port " + cumulus.ComportName);
 
 			comport = new SerialPort(cumulus.ComportName, 9600, Parity.None, 8, StopBits.One)
 			{
@@ -216,7 +216,7 @@ namespace CumulusMX
 
 			if (s.Count < 14)
 			{
-				Cumulus.LogMessage("WM918 packet too short. Length = " + s.Count);
+				cumulus.LogWarningMessage("WM918 packet too short. Length = " + s.Count);
 				result = false;
 			}
 			else
@@ -225,7 +225,7 @@ namespace CumulusMX
 
 				if (csum != s[^1])
 				{
-					Cumulus.LogMessage("Invalid checksum. Expected " + csum + ", got " + s[^1]);
+					cumulus.LogErrorMessage("Invalid checksum. Expected " + csum + ", got " + s[^1]);
 					result = false;
 				}
 				else
@@ -267,7 +267,7 @@ namespace CumulusMX
 						{
 							Trace.Write(" " + buff[i].ToString("X2"));
 						}
-						Cumulus.LogMessage(" ");
+						cumulus.LogMessage(" ");
 						return;
 				}
 				UpdateStatusPanel(now);
@@ -275,12 +275,12 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage("Invalid packet:");
+				cumulus.LogMessage("Invalid packet:");
 				for (int i = 0; i < buff.Count; i++)
 				{
 					Trace.Write(" " + buff[i].ToString("X2"));
 				}
-				Cumulus.LogMessage(" ");
+				cumulus.LogMessage(" ");
 			}
 		}
 
@@ -295,11 +295,11 @@ namespace CumulusMX
 			// Wind Chill W1W2 (WS bit 1 gives sign)
 			// Checksum C1C2
 
-			double current = ConvertWindMSToUser((double)(BCDchartoint(buff[1]) + ((BCDchartoint(buff[2]) % 10) * 100)) / 10);
-			double average = ConvertWindMSToUser((double)(BCDchartoint(buff[4]) + ((BCDchartoint(buff[5]) % 10) * 100)) / 10);
+			double current = ConvertWindMSToUser((double) (BCDchartoint(buff[1]) + ((BCDchartoint(buff[2]) % 10) * 100)) / 10);
+			double average = ConvertWindMSToUser((double) (BCDchartoint(buff[4]) + ((BCDchartoint(buff[5]) % 10) * 100)) / 10);
 			int bearing = BCDchartoint(buff[2]) / 10 + (BCDchartoint(buff[3]) * 10);
 
-			DoWind(current,bearing,average,DateTime.Now);
+			DoWind(current, bearing, average, DateTime.Now);
 
 			// Extract wind chill
 			int wc = BCDchartoint(buff[16]);
@@ -308,7 +308,7 @@ namespace CumulusMX
 
 			if (wc > -70)
 			{
-				DoWindChill(ConvertTempCToUser(wc),DateTime.Now);
+				DoWindChill(ConvertTempCToUser(wc), DateTime.Now);
 			}
 		}
 
@@ -324,14 +324,14 @@ namespace CumulusMX
 			// Sea-Level pressure S1S2S3S4.SD
 			// Checksum C1C2
 
-			DoDewpoint(ConvertTempCToUser(BCDchartoint(buff[18])),DateTime.Now);
+			DoDewpoint(ConvertTempCToUser(BCDchartoint(buff[18])), DateTime.Now);
 
 			double locPress = BCDchartoint(buff[1]) + (BCDchartoint(buff[2])*100);
 			StationPressure = ConvertPressMBToUser(locPress);
 
 			double pressure = ConvertPressMBToUser((BCDchartoint(buff[3]) / 10) + (BCDchartoint(buff[4]) * 10) + ((BCDchartoint(buff[5]) % 10) * 1000)).Value;
 
-			DoPressure(pressure,DateTime.Now);
+			DoPressure(pressure, DateTime.Now);
 
 			UpdatePressureTrendString();
 
@@ -339,17 +339,15 @@ namespace CumulusMX
 
 			// Forecast
 			int num = buff[6] & 0xF;
-			switch (num)
+
+			forecast = num switch
 			{
-				case 1: forecast = "Sunny";
-					break;
-				case 2: forecast = "Cloudy";
-					break;
-				case 4: forecast = "Partly Cloudy";
-					break;
-				case 8: forecast = "Rain";
-					break;
-			}
+				1 => "Sunny",
+				2 => "Cloudy",
+				4 => "Partly Cloudy",
+				8 => "Rain",
+				_ => forecast
+			};
 
 			DoForecast(forecast, false);
 		}
@@ -405,7 +403,7 @@ namespace CumulusMX
 			double raincounter = ConvertRainMMToUser(BCDchartoint(buff[5]) + (BCDchartoint(buff[6]) * 100));
 			double rainrate = ConvertRainMMToUser(BCDchartoint(buff[1]) + ((BCDchartoint(buff[2]) % 10) * 100));
 
-			DoRain(raincounter,rainrate,DateTime.Now);
+			DoRain(raincounter,rainrate, DateTime.Now);
 		}
 
 		private void WM918Humid(List<int> buff)

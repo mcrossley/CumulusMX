@@ -1,12 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
+
+using static ServiceStack.Diagnostics.Events;
 
 namespace CumulusMX.ThirdParty
 {
@@ -59,7 +59,7 @@ namespace CumulusMX.ThirdParty
 
 			try
 			{
-				HttpResponseMessage response = await httpClient.GetAsync(URL);
+				using var response = await Cumulus.MyHttpClient.GetAsync(URL);
 				var responseBodyAsText = await response.Content.ReadAsStringAsync();
 				if (response.StatusCode != HttpStatusCode.OK)
 				{
@@ -68,8 +68,8 @@ namespace CumulusMX.ThirdParty
 					ErrorFlagCount++;
 					if (!RapidFireEnabled || ErrorFlagCount >= 12)
 					{
-						Cumulus.LogMessage("Wunderground: Response = " + response.StatusCode + ": " + responseBodyAsText);
-						cumulus.ThirdPartyUploadAlarm.LastError = "Wunderground: HTTP response - " + response.StatusCode;
+						cumulus.LogMessage("Wunderground: Response = " + response.StatusCode + ": " + responseBodyAsText);
+						cumulus.ThirdPartyUploadAlarm.LastMessage = "Wunderground: HTTP response - " + response.StatusCode;
 						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 						ErrorFlagCount = 0;
 					}
@@ -83,7 +83,7 @@ namespace CumulusMX.ThirdParty
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "Wunderground: ERROR");
-				cumulus.ThirdPartyUploadAlarm.LastError = "Wunderground: " + ex.Message;
+				cumulus.ThirdPartyUploadAlarm.LastMessage = "Wunderground: " + ex.Message;
 				cumulus.ThirdPartyUploadAlarm.Triggered = true;
 			}
 			finally
@@ -236,7 +236,9 @@ namespace CumulusMX.ThirdParty
 			Data.Append($"&softwaretype=Cumulus%20v{cumulus.Version}");
 			Data.Append("&action=updateraw");
 			if (cumulus.Wund.RapidFireEnabled && !CatchingUp)
+			{
 				Data.Append("&realtime=1&rtfreq=5");
+			}
 
 			Data.Replace(",", ".");
 			URL.Append(Data);
@@ -247,9 +249,9 @@ namespace CumulusMX.ThirdParty
 		private void TimerTick(object sender, ElapsedEventArgs e)
 		{
 			if (!string.IsNullOrWhiteSpace(ID))
+			{
 				_ = DoUpdate(DateTime.Now);
+			}
 		}
-
-
 	}
 }

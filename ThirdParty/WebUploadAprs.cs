@@ -26,7 +26,7 @@ namespace CumulusMX.ThirdParty
 				return;
 			}
 
-			Cumulus.LogMessage("Updating CWOP");
+			cumulus.LogDebugMessage("Updating CWOP");
 			try
 			{
 				using var client = new TcpClient(cumulus.APRS.Server, cumulus.APRS.Port);
@@ -151,7 +151,7 @@ namespace CumulusMX.ThirdParty
 			}
 
 			Trig.DegToDMS(lat, out d, out m, out s);
-			int hh = (int)Math.Round(s * 100 / 60.0);
+			int hh = (int) Math.Round(s * 100 / 60.0);
 
 			return String.Format("{0:D2}{1:D2}.{2:D2}{3}", d, m, hh, dir);
 		}
@@ -179,7 +179,7 @@ namespace CumulusMX.ThirdParty
 			}
 
 			Trig.DegToDMS(lon, out d, out m, out s);
-			int hh = (int)Math.Round(s * 100 / 60.0);
+			int hh = (int) Math.Round(s * 100 / 60.0);
 
 			return String.Format("{0:D3}{1:D2}.{2:D2}{3}", d, m, hh, dir);
 		}

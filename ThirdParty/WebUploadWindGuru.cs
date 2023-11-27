@@ -38,13 +38,13 @@ namespace CumulusMX.ThirdParty
 
 			try
 			{
-				HttpResponseMessage response = await httpClient.GetAsync(url);
+				using var response = await Cumulus.MyHttpClient.GetAsync(url);
 				var responseBodyAsText = await response.Content.ReadAsStringAsync();
 				cumulus.LogDebugMessage("WindGuru: " + response.StatusCode + ": " + responseBodyAsText);
 				if (response.StatusCode != HttpStatusCode.OK)
 				{
-					Cumulus.LogMessage("WindGuru: ERROR - " + response.StatusCode + ": " + responseBodyAsText);
-					cumulus.ThirdPartyUploadAlarm.LastError = "WindGuru: HTTP response - " + response.StatusCode;
+					cumulus.LogMessage("WindGuru: ERROR - " + response.StatusCode + ": " + responseBodyAsText);
+					cumulus.ThirdPartyUploadAlarm.LastMessage = "WindGuru: HTTP response - " + response.StatusCode;
 					cumulus.ThirdPartyUploadAlarm.Triggered = true;
 				}
 				else
@@ -55,7 +55,7 @@ namespace CumulusMX.ThirdParty
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "WindGuru: ERROR");
-				cumulus.ThirdPartyUploadAlarm.LastError = "WindGuru: " + ex.Message;
+				cumulus.ThirdPartyUploadAlarm.LastMessage = "WindGuru: " + ex.Message;
 				cumulus.ThirdPartyUploadAlarm.Triggered = true;
 			}
 			finally
@@ -79,19 +79,19 @@ namespace CumulusMX.ThirdParty
 			double minwind = 999;
 			for (int i = 0; i < WeatherStation.MaxWindRecent; i++)
 			{
-				if (station.WindRecent[i].Timestamp >= DateTime.Now.AddMinutes(-cumulus.WindGuru.Interval))
+				if (station.RecentWind[i].Timestamp >= DateTime.Now.AddMinutes(-cumulus.WindGuru.Interval))
 				{
 					numvalues++;
-					totalwind += station.WindRecent[i].Gust;
+					totalwind += station.RecentWind[i].Gust;
 
-					if (station.WindRecent[i].Gust > maxwind)
+					if (station.RecentWind[i].Gust > maxwind)
 					{
-						maxwind = station.WindRecent[i].Gust;
+						maxwind = station.RecentWind[i].Gust;
 					}
 
-					if (station.WindRecent[i].Gust < minwind)
+					if (station.RecentWind[i].Gust < minwind)
 					{
-						minwind = station.WindRecent[i].Gust;
+						minwind = station.RecentWind[i].Gust;
 					}
 				}
 			}

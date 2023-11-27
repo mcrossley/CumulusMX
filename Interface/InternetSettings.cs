@@ -3,7 +3,9 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 using System.Web;
+
 using EmbedIO;
 using ServiceStack;
 
@@ -50,7 +52,7 @@ namespace CumulusMX
 			// process the settings
 			try
 			{
-				Cumulus.LogMessage("Updating internet settings");
+				cumulus.LogMessage("Updating internet settings");
 
 				// website settings
 				try
@@ -58,17 +60,17 @@ namespace CumulusMX
 					cumulus.FtpOptions.Enabled = settings.website.enabled;
 					if (cumulus.FtpOptions.Enabled)
 					{
-						if (cumulus.FtpOptions.FtpMode != Cumulus.FtpProtocols.PHP && (Cumulus.FtpProtocols)settings.website.sslftp == Cumulus.FtpProtocols.PHP)
+						if (cumulus.FtpOptions.FtpMode != Cumulus.FtpProtocols.PHP && (Cumulus.FtpProtocols) settings.website.sslftp == Cumulus.FtpProtocols.PHP)
 						{
 							// switching to PHP, make sure the HTTPclients are initialised
 							if (cumulus.phpUploadHttpClient == null)
 							{
 								cumulus.SetupPhpUploadClients();
-								cumulus.TestPhpUploadCompression();
+								Task.Run(() => cumulus.TestPhpUploadCompression());
 							}
 						}
 
-						cumulus.FtpOptions.FtpMode = (Cumulus.FtpProtocols)settings.website.sslftp;
+						cumulus.FtpOptions.FtpMode = (Cumulus.FtpProtocols) settings.website.sslftp;
 						cumulus.UTF8encode = settings.website.general.utf8encode;
 
 						if (cumulus.FtpOptions.FtpMode == Cumulus.FtpProtocols.FTP || cumulus.FtpOptions.FtpMode == Cumulus.FtpProtocols.FTPS || cumulus.FtpOptions.FtpMode == Cumulus.FtpProtocols.SFTP)
@@ -109,6 +111,7 @@ namespace CumulusMX
 							cumulus.FtpOptions.PhpUrl = settings.website.phpurl;
 							cumulus.FtpOptions.PhpSecret = settings.website.phpsecret;
 							cumulus.FtpOptions.PhpIgnoreCertErrors = settings.website.advanced.phpignorecerts;
+							cumulus.FtpOptions.PhpUseGet = settings.website.advanced.phpuseget;
 							cumulus.FtpOptions.MaxConcurrentUploads = settings.website.advanced.maxuploads;
 						}
 					}
@@ -165,6 +168,8 @@ namespace CumulusMX
 							cumulus.StdWebFiles[i].FTP = settings.websettings.interval.stdfiles.files[i].ftp;
 							cumulus.StdWebFiles[i].Copy = settings.websettings.interval.stdfiles.files[i].copy;
 						}
+
+						cumulus.WxnowComment = settings.websettings.interval.stdfiles.wxnowcomment;
 
 						for (var i = 0; i < cumulus.GraphDataFiles.Length; i++)
 						{
@@ -313,12 +318,13 @@ namespace CumulusMX
 						cumulus.SmtpOptions.Port = settings.emailsettings.port;
 						cumulus.SmtpOptions.SslOption = settings.emailsettings.ssloption;
 						cumulus.SmtpOptions.RequiresAuthentication = settings.emailsettings.authenticate;
-						cumulus.SmtpOptions.IgnoreCertErrors = settings.emailsettings.ignorecerterrors;
 						cumulus.SmtpOptions.User = settings.emailsettings.user;
 						if (settings.emailsettings.password != hidden)
 						{
 							cumulus.SmtpOptions.Password = settings.emailsettings.password;
 						}
+						cumulus.SmtpOptions.IgnoreCertErrors = settings.emailsettings.ignorecerterrors;
+
 						if (cumulus.emailer == null)
 						{
 							cumulus.emailer = new EmailSender(cumulus);
@@ -401,6 +407,7 @@ namespace CumulusMX
 				disableftpsexplicit = cumulus.FtpOptions.DisableExplicit,
 				ignorecerts = cumulus.FtpOptions.IgnoreCertErrors,
 				phpignorecerts = cumulus.FtpOptions.PhpIgnoreCertErrors,
+				phpuseget = cumulus.FtpOptions.PhpUseGet,
 				maxuploads = cumulus.FtpOptions.MaxConcurrentUploads
 			};
 
@@ -432,7 +439,8 @@ namespace CumulusMX
 
 			var websettingsintervalstd = new IntervalFilesjson()
 			{
-				files = new FileSettingsjson[cumulus.StdWebFiles.Length]
+				files = new FileSettingsjson[cumulus.StdWebFiles.Length],
+				wxnowcomment = cumulus.WxnowComment
 			};
 
 			var websettingsintervalgraph = new IntervalFilesjson()
@@ -576,9 +584,9 @@ namespace CumulusMX
 				port = cumulus.SmtpOptions.Port,
 				ssloption = cumulus.SmtpOptions.SslOption,
 				authenticate = cumulus.SmtpOptions.RequiresAuthentication,
-				ignorecerterrors = cumulus.SmtpOptions.IgnoreCertErrors,
 				user = cumulus.SmtpOptions.User,
-				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.SmtpOptions.Password : hidden
+				password = cumulus.ProgramOptions.DisplayPasswords ? cumulus.SmtpOptions.Password : hidden,
+				ignorecerterrors = cumulus.SmtpOptions.IgnoreCertErrors
 			};
 
 			var misc = new MiscJson()
@@ -720,6 +728,7 @@ namespace CumulusMX
 			public bool ignorecerts { get; set; }
 			public bool phpignorecerts { get; set; }
 			public int maxuploads { get; set; }
+			public bool phpuseget {  get; set; }
 		}
 
 		private class WebsiteJson
@@ -778,7 +787,7 @@ namespace CumulusMX
 		private class IntervalFilesjson
 		{
 			public FileSettingsjson[] files { get; set; }
-
+			public string wxnowcomment { get; set; }
 		}
 
 		private class RealtimeJson
@@ -867,6 +876,5 @@ namespace CumulusMX
 			public string forumurl { get; set; }
 			public string webcamurl { get; set; }
 		}
-
 	}
 }

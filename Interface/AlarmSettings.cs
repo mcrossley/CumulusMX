@@ -1,7 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+
 using EmbedIO;
+
 using ServiceStack;
 
 namespace CumulusMX
@@ -183,6 +185,19 @@ namespace CumulusMX
 					Action = cumulus.SensorAlarm.Action,
 					ActionParams = cumulus.SensorAlarm.ActionParams
 				},
+				newRecord = new ValuesJson()
+				{
+					Enabled = cumulus.NewRecordAlarm.Enabled,
+					SoundEnabled = cumulus.NewRecordAlarm.Sound,
+					Sound = cumulus.NewRecordAlarm.SoundFile,
+					Notify = cumulus.NewRecordAlarm.Notify,
+					Email = cumulus.NewRecordAlarm.Email,
+					Latches = cumulus.NewRecordAlarm.Latch,
+					LatchHrs = cumulus.NewRecordAlarm.LatchHours,
+					Threshold = cumulus.NewRecordAlarm.TriggerThreshold,
+					Action = cumulus.NewRecordAlarm.Action,
+					ActionParams = cumulus.NewRecordAlarm.ActionParams
+				},
 				dataStopped = new ValuesJson()
 				{
 					Enabled = cumulus.DataStoppedAlarm.Enabled,
@@ -259,6 +274,19 @@ namespace CumulusMX
 					Threshold = cumulus.MySqlUploadAlarm.TriggerThreshold,
 					Action = cumulus.MySqlUploadAlarm.Action,
 					ActionParams = cumulus.MySqlUploadAlarm.ActionParams
+				},
+				ftpUpload = new ValuesJson()
+				{
+					Enabled = cumulus.FtpAlarm.Enabled,
+					SoundEnabled = cumulus.FtpAlarm.Sound,
+					Sound = cumulus.FtpAlarm.SoundFile,
+					Notify = cumulus.FtpAlarm.Notify,
+					Email = cumulus.FtpAlarm.Email,
+					Latches = cumulus.FtpAlarm.Latch,
+					LatchHrs = cumulus.FtpAlarm.LatchHours,
+					Threshold = cumulus.FtpAlarm.TriggerThreshold,
+					Action = cumulus.FtpAlarm.Action,
+					ActionParams = cumulus.FtpAlarm.ActionParams
 				}
 			};
 
@@ -266,7 +294,8 @@ namespace CumulusMX
 			{
 				fromEmail = cumulus.AlarmFromEmail,
 				destEmail = cumulus.AlarmDestEmail.Join(";"),
-				useHtml = cumulus.AlarmEmailHtml
+				useHtml = cumulus.AlarmEmailHtml,
+				useBcc = cumulus.AlarmEmailUseBcc
 			};
 
 			var retObject = new SettingsJson()
@@ -278,6 +307,158 @@ namespace CumulusMX
 
 			return retObject.ToJson();
 		}
+
+		public string GetAlarmInfo()
+		{
+			//var InvC = new CultureInfo("");
+
+			var data = new InfoDataJson()
+			{
+				tempBelow = new InfoJson()
+				{
+					Enabled = cumulus.LowTempAlarm.Enabled,
+					SoundEnabled = cumulus.LowTempAlarm.Sound,
+					Sound = cumulus.LowTempAlarm.SoundFile,
+					Notify = cumulus.LowTempAlarm.Notify
+				},
+				tempAbove = new InfoJson()
+				{
+					Enabled = cumulus.HighTempAlarm.Enabled,
+					SoundEnabled = cumulus.HighTempAlarm.Sound,
+					Sound = cumulus.HighTempAlarm.SoundFile,
+					Notify = cumulus.HighTempAlarm.Notify
+				},
+				tempChange = new InfoJson()
+				{
+					Enabled = cumulus.TempChangeAlarm.Enabled,
+					SoundEnabled = cumulus.TempChangeAlarm.Sound,
+					Sound = cumulus.TempChangeAlarm.SoundFile,
+					Notify = cumulus.TempChangeAlarm.Notify
+				},
+				pressBelow = new InfoJson()
+				{
+					Enabled = cumulus.LowPressAlarm.Enabled,
+					SoundEnabled = cumulus.LowPressAlarm.Sound,
+					Sound = cumulus.LowPressAlarm.SoundFile,
+					Notify = cumulus.LowPressAlarm.Notify
+				},
+				pressAbove = new InfoJson()
+				{
+					Enabled = cumulus.HighPressAlarm.Enabled,
+					SoundEnabled = cumulus.HighPressAlarm.Sound,
+					Sound = cumulus.HighPressAlarm.SoundFile,
+					Notify = cumulus.HighPressAlarm.Notify
+				},
+				pressChange = new InfoJson()
+				{
+					Enabled = cumulus.PressChangeAlarm.Enabled,
+					SoundEnabled = cumulus.PressChangeAlarm.Sound,
+					Sound = cumulus.PressChangeAlarm.SoundFile,
+					Notify = cumulus.PressChangeAlarm.Notify
+				},
+				rainAbove = new InfoJson()
+				{
+					Enabled = cumulus.HighRainTodayAlarm.Enabled,
+					SoundEnabled = cumulus.HighRainTodayAlarm.Sound,
+					Sound = cumulus.HighRainTodayAlarm.SoundFile,
+					Notify = cumulus.HighRainTodayAlarm.Notify
+				},
+				rainRateAbove = new InfoJson()
+				{
+					Enabled = cumulus.HighRainRateAlarm.Enabled,
+					SoundEnabled = cumulus.HighRainRateAlarm.Sound,
+					Sound = cumulus.HighRainRateAlarm.SoundFile,
+					Notify = cumulus.HighRainRateAlarm.Notify
+				},
+				isRaining = new InfoJson()
+				{
+					Enabled = cumulus.IsRainingAlarm.Enabled,
+					SoundEnabled = cumulus.IsRainingAlarm.Sound,
+					Sound = cumulus.IsRainingAlarm.SoundFile,
+					Notify = cumulus.IsRainingAlarm.Notify
+				},
+				gustAbove = new InfoJson()
+				{
+					Enabled = cumulus.HighGustAlarm.Enabled,
+					SoundEnabled = cumulus.HighGustAlarm.Sound,
+					Sound = cumulus.HighGustAlarm.SoundFile,
+					Notify = cumulus.HighGustAlarm.Notify
+				},
+				windAbove = new InfoJson()
+				{
+					Enabled = cumulus.HighWindAlarm.Enabled,
+					SoundEnabled = cumulus.HighWindAlarm.Sound,
+					Sound = cumulus.HighWindAlarm.SoundFile,
+					Notify = cumulus.HighWindAlarm.Notify
+				},
+				contactLost = new InfoJson()
+				{
+					Enabled = cumulus.SensorAlarm.Enabled,
+					SoundEnabled = cumulus.SensorAlarm.Sound,
+					Sound = cumulus.SensorAlarm.SoundFile,
+					Notify = cumulus.SensorAlarm.Notify
+				},
+				newRecord = new InfoJson()
+				{
+					Enabled = cumulus.NewRecordAlarm.Enabled,
+					SoundEnabled = cumulus.NewRecordAlarm.Sound,
+					Sound = cumulus.NewRecordAlarm.SoundFile,
+					Notify = cumulus.NewRecordAlarm.Notify
+				},
+				dataStopped = new InfoJson()
+				{
+					Enabled = cumulus.DataStoppedAlarm.Enabled,
+					SoundEnabled = cumulus.DataStoppedAlarm.Sound,
+					Sound = cumulus.DataStoppedAlarm.SoundFile,
+					Notify = cumulus.DataStoppedAlarm.Notify
+				},
+				batteryLow = new InfoJson()
+				{
+					Enabled = cumulus.BatteryLowAlarm.Enabled,
+					SoundEnabled = cumulus.BatteryLowAlarm.Sound,
+					Sound = cumulus.BatteryLowAlarm.SoundFile,
+					Notify = cumulus.BatteryLowAlarm.Notify
+				},
+				spike = new InfoJson()
+				{
+					Enabled = cumulus.SpikeAlarm.Enabled,
+					SoundEnabled = cumulus.SpikeAlarm.Sound,
+					Sound = cumulus.SpikeAlarm.SoundFile,
+					Notify = cumulus.SpikeAlarm.Notify
+				},
+				upgrade = new InfoJson()
+				{
+					Enabled = cumulus.UpgradeAlarm.Enabled,
+					SoundEnabled = cumulus.UpgradeAlarm.Sound,
+					Sound = cumulus.UpgradeAlarm.SoundFile,
+					Notify = cumulus.UpgradeAlarm.Notify
+				},
+				httpUpload = new InfoJson()
+				{
+					Enabled = cumulus.ThirdPartyUploadAlarm.Enabled,
+					SoundEnabled = cumulus.ThirdPartyUploadAlarm.Sound,
+					Sound = cumulus.ThirdPartyUploadAlarm.SoundFile,
+					Notify = cumulus.ThirdPartyUploadAlarm.Notify
+				},
+				mySqlUpload = new InfoJson()
+				{
+					Enabled = cumulus.MySqlUploadAlarm.Enabled,
+					SoundEnabled = cumulus.MySqlUploadAlarm.Sound,
+					Sound = cumulus.MySqlUploadAlarm.SoundFile,
+					Notify = cumulus.MySqlUploadAlarm.Notify
+				},
+				ftpUpload = new InfoJson()
+				{
+					Enabled = cumulus.FtpAlarm.Enabled,
+					SoundEnabled = cumulus.FtpAlarm.Sound,
+					Sound = cumulus.FtpAlarm.SoundFile,
+					Notify = cumulus.FtpAlarm.Notify
+				}
+			};
+
+			return data.ToJson();
+		}
+
 
 		public string UpdateSettings(IHttpContext context)
 		{
@@ -311,7 +492,7 @@ namespace CumulusMX
 			try
 			{
 				// process the settings
-				Cumulus.LogMessage("Updating Alarm settings");
+				cumulus.LogMessage("Updating Alarm settings");
 
 				var emailRequired = false;
 
@@ -446,6 +627,18 @@ namespace CumulusMX
 				cumulus.HighWindAlarm.Action = settings.windAbove.Action.Trim();
 				cumulus.HighWindAlarm.ActionParams = settings.windAbove.ActionParams.Trim();
 
+				cumulus.NewRecordAlarm.Enabled = settings.newRecord.Enabled;
+				cumulus.NewRecordAlarm.Sound = settings.newRecord.SoundEnabled;
+				cumulus.NewRecordAlarm.SoundFile = settings.newRecord.Sound.Trim();
+				cumulus.NewRecordAlarm.Notify = settings.newRecord.Notify;
+				cumulus.NewRecordAlarm.Email = settings.newRecord.Email;
+				cumulus.NewRecordAlarm.Latch = settings.newRecord.Latches;
+				cumulus.NewRecordAlarm.LatchHours = settings.newRecord.LatchHrs;
+				cumulus.NewRecordAlarm.TriggerThreshold = settings.newRecord.Threshold;
+				emailRequired = emailRequired || (cumulus.NewRecordAlarm.Email && cumulus.NewRecordAlarm.Enabled);
+				cumulus.NewRecordAlarm.Action = settings.newRecord.Action.Trim();
+				cumulus.NewRecordAlarm.ActionParams = settings.newRecord.ActionParams.Trim();
+
 				cumulus.SensorAlarm.Enabled = settings.contactLost.Enabled;
 				cumulus.SensorAlarm.Sound = settings.contactLost.SoundEnabled;
 				cumulus.SensorAlarm.SoundFile = settings.contactLost.Sound.Trim();
@@ -529,11 +722,23 @@ namespace CumulusMX
 				cumulus.MySqlUploadAlarm.Action = settings.mySqlUpload.Action.Trim();
 				cumulus.MySqlUploadAlarm.ActionParams = settings.mySqlUpload.ActionParams.Trim();
 
+				cumulus.FtpAlarm.Enabled = settings.ftpUpload.Enabled;
+				cumulus.FtpAlarm.Sound = settings.ftpUpload.SoundEnabled;
+				cumulus.FtpAlarm.SoundFile = settings.ftpUpload.Sound.Trim();
+				cumulus.FtpAlarm.Notify = settings.ftpUpload.Notify;
+				cumulus.FtpAlarm.Email = settings.ftpUpload.Email;
+				cumulus.FtpAlarm.Latch = settings.ftpUpload.Latches;
+				cumulus.FtpAlarm.LatchHours = settings.ftpUpload.LatchHrs;
+				cumulus.FtpAlarm.TriggerThreshold = settings.ftpUpload.Threshold;
+				emailRequired = emailRequired || (cumulus.FtpAlarm.Email && cumulus.FtpAlarm.Enabled);
+				cumulus.FtpAlarm.Action = settings.ftpUpload.Action.Trim();
+				cumulus.FtpAlarm.ActionParams = settings.ftpUpload.ActionParams.Trim();
+
 				// validate the from email
 				if (emailRequired && !EmailSender.CheckEmailAddress(result.email.fromEmail.Trim()))
 				{
 					var msg = "ERROR: Alarm email option enabled and an invalid Alarm from email address entered";
-					Cumulus.LogMessage(msg);
+					cumulus.LogWarningMessage(msg);
 					context.Response.StatusCode = 500;
 					return msg;
 				}
@@ -550,13 +755,14 @@ namespace CumulusMX
 					if (!EmailSender.CheckEmailAddress(emails[i]))
 					{
 						var msg = "ERROR: Invalid Alarm destination email address entered - " + emails[i];
-						Cumulus.LogMessage(msg);
+						cumulus.LogWarningMessage(msg);
 						context.Response.StatusCode = 500;
 						return msg;
 					}
 				}
 				cumulus.AlarmDestEmail = emails;
 				cumulus.AlarmEmailHtml = result.email.useHtml;
+				cumulus.AlarmEmailUseBcc = result.email.useBcc;
 
 				// Save the settings
 				cumulus.WriteIniFile();
@@ -586,13 +792,13 @@ namespace CumulusMX
 
 				var result = json.FromJson<EmailJson>();
 				// process the settings
-				Cumulus.LogMessage("Sending test email...");
+				cumulus.LogMessage("Sending test email...");
 
 				// validate the from email
 				if (!EmailSender.CheckEmailAddress(result.fromEmail.Trim()))
 				{
 					var msg = "ERROR: Invalid Alarm from email address entered";
-					Cumulus.LogMessage(msg);
+					cumulus.LogMessage(msg);
 					context.Response.StatusCode = 500;
 					return msg;
 				}
@@ -606,7 +812,7 @@ namespace CumulusMX
 					if (!EmailSender.CheckEmailAddress(dest[i]))
 					{
 						var msg = "ERROR: Invalid Alarm destination email address entered";
-						Cumulus.LogMessage(msg);
+						cumulus.LogMessage(msg);
 						context.Response.StatusCode = 500;
 						return msg;
 					}
@@ -616,7 +822,7 @@ namespace CumulusMX
 
 				if (ret == "OK")
 				{
-					Cumulus.LogMessage("Test email sent without error");
+					cumulus.LogMessage("Test email sent without error");
 				}
 				else
 				{
@@ -654,6 +860,8 @@ namespace CumulusMX
 			public ValuesJson thirdParty { get; set; }
 			public ValuesJson mySqlUpload { get; set; }
 			public ValuesJson isRaining { get; set; }
+			public ValuesJson ftpUpload { get; set; }
+			public ValuesJson newRecord { get; set; }
 		}
 
 		private class ValuesJson
@@ -671,11 +879,44 @@ namespace CumulusMX
 			public string ActionParams { get; set; }
 		}
 
+		private class InfoDataJson
+		{
+			public InfoJson tempBelow { get; set; }
+			public InfoJson tempAbove { get; set; }
+			public InfoJson tempChange { get; set; }
+			public InfoJson pressBelow { get; set; }
+			public InfoJson pressAbove { get; set; }
+			public InfoJson pressChange { get; set; }
+			public InfoJson rainAbove { get; set; }
+			public InfoJson rainRateAbove { get; set; }
+			public InfoJson gustAbove { get; set; }
+			public InfoJson windAbove { get; set; }
+			public InfoJson newRecord { get; set; }
+			public InfoJson contactLost { get; set; }
+			public InfoJson dataStopped { get; set; }
+			public InfoJson batteryLow { get; set; }
+			public InfoJson spike { get; set; }
+			public InfoJson upgrade { get; set; }
+			public InfoJson httpUpload { get; set; }
+			public InfoJson mySqlUpload { get; set; }
+			public InfoJson isRaining { get; set; }
+			public InfoJson ftpUpload { get; set; }
+		}
+
+		private class InfoJson
+		{
+			public bool Enabled { get; set; }
+			public bool SoundEnabled { get; set; }
+			public string Sound { get; set; }
+			public bool Notify { get; set; }
+		}
+
 		private class EmailJson
 		{
 			public string fromEmail { get; set; }
 			public string destEmail { get; set; }
 			public bool useHtml { get; set; }
+			public bool useBcc { get; set; }
 		}
 
 		private class UnitsJson

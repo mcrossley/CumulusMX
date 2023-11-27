@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
-using FluentFTP.Helpers;
 
 namespace CumulusMX
 {
@@ -35,7 +34,7 @@ namespace CumulusMX
 		private bool m_Lazy = false;
 
 		// *** Local cache ***
-		private readonly Dictionary<string, Dictionary<string, string>> m_Sections = new Dictionary<string,Dictionary<string, string>>();
+		private readonly Dictionary<string, Dictionary<string, string>> m_Sections = new Dictionary<string, Dictionary<string, string>>();
 
 		// *** Local cache modified flag ***
 		private bool m_CacheModified = false;
@@ -56,7 +55,7 @@ namespace CumulusMX
 		}
 
 		// *** Initialization ***
-		private void Initialize (string FileName, bool Lazy)
+		private void Initialize(string FileName, bool Lazy)
 		{
 			m_FileName = FileName;
 			m_Lazy = Lazy;
@@ -206,7 +205,7 @@ namespace CumulusMX
 					{
 						if ((uint)ex.HResult == 0x80070020) // -2147024864
 						{
-							Cumulus.LogMessage("Ini.Flush: Error file is in use");
+							Program.cumulus.LogMessage("Ini.Flush: Error file is in use");
 							retries--;
 							System.Threading.Thread.Sleep(250);
 						}
@@ -273,7 +272,7 @@ namespace CumulusMX
 				{
 					// *** If it doesn't, add it ***
 					Section = new Dictionary<string, string>();
-					m_Sections.Add(SectionName,Section);
+					m_Sections.Add(SectionName, Section);
 				}
 
 				// *** Modify the value ***
@@ -340,7 +339,7 @@ namespace CumulusMX
 			StringBuilder sb = new StringBuilder();
 			foreach (byte b in Value)
 			{
-				string hex = Convert.ToString(b,16);
+				string hex = Convert.ToString(b, 16);
 				int l = hex.Length;
 				if (l > 2)
 				{
@@ -365,7 +364,7 @@ namespace CumulusMX
 
 			l /= 2;
 			byte[] Result = new byte[l];
-			for (int i=0; i<l; i++) Result[i] = Convert.ToByte(Value.Substring(i*2,2),16);
+			for (int i = 0; i < l; i++) Result[i] = Convert.ToByte(Value.Substring(i * 2, 2), 16);
 			return Result;
 		}
 
@@ -499,7 +498,7 @@ namespace CumulusMX
 
 		internal double GetValue(string SectionName, string Key, double DefaultValue)
 		{
-			string StringValue=GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
+			string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
 			double Value;
 			if (double.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value)) return Value;
 			return DefaultValue;
@@ -580,6 +579,7 @@ namespace CumulusMX
 				return DefaultValue;
 			}
 		}
+
 
 		internal DateTime GetValue(string SectionName, string Key, DateTime DefaultValue)
 		{

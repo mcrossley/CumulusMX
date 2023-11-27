@@ -51,12 +51,12 @@ namespace CumulusMX
 				}
 				catch (Exception ex)
 				{
-					Cumulus.LogMessage($"Error writing {cumulus.GraphDataFiles[i].LocalFileName}: {ex}");
+					cumulus.LogMessage($"Error writing {cumulus.GraphDataFiles[i].LocalFileName}: {ex}");
 				}
 			}
 		}
 
-		public string CreateGraphDataJson(string filename, bool incremental)
+		internal string CreateGraphDataJson(string filename, bool incremental)
 		{
 			// Chart data for Highcharts graphs
 
@@ -133,7 +133,7 @@ namespace CumulusMX
 			}
 		}
 
-		public void CreateDailyGraphDataFiles()
+		internal void CreateDailyGraphDataFiles()
 		{
 			// skip 0 & 1 = config files
 			// daily rain = 8
@@ -163,7 +163,7 @@ namespace CumulusMX
 			}
 		}
 
-		public string CreateEodGraphDataJson(string filename)
+		internal string CreateEodGraphDataJson(string filename)
 		{
 			switch (filename)
 			{
@@ -188,7 +188,7 @@ namespace CumulusMX
 		}
 
 		//		internal string GetSolarGraphData(DateTime ts)
-		public string GetSolarGraphData(bool incremental, bool local, DateTime? start = null)
+		internal string GetSolarGraphData(bool incremental, bool local, DateTime? start = null)
 		{
 			var sb = new StringBuilder("{");
 			var sbUv = new StringBuilder("\"UV\":[");
@@ -205,7 +205,7 @@ namespace CumulusMX
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp > ?", dateFrom);
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp > ? order by Timestamp", dateFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -255,7 +255,7 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		public string GetRainGraphData(bool incremental, DateTime? start = null)
+		internal string GetRainGraphData(bool incremental, DateTime? start = null)
 		{
 			var sb = new StringBuilder("{");
 			var sbRain = new StringBuilder("\"rfall\":[");
@@ -271,7 +271,7 @@ namespace CumulusMX
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp > ?", dateFrom);
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp > ? order by Timestamp", dateFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -310,7 +310,7 @@ namespace CumulusMX
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp > ?", dateFrom);
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp > ? order by Timestamp", dateFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -368,7 +368,7 @@ namespace CumulusMX
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp > ?", dateFrom);
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp > ? order by Timestamp", dateFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -406,7 +406,7 @@ namespace CumulusMX
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp > ?", dateFrom);
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp > ? order by Timestamp", dateFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -444,7 +444,7 @@ namespace CumulusMX
 			}
 
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dateFrom);
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=? order by Timestamp", dateFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -481,7 +481,7 @@ namespace CumulusMX
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=?", dateFrom);
+			var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp >=? order by Timestamp", dateFrom);
 
 			for (var i = 0; i < data.Count; i++)
 			{
@@ -613,10 +613,10 @@ namespace CumulusMX
 			}
 
 			// Check if we are to generate AQ data at all. Only if a primary sensor is defined and it isn't the Indoor AirLink
-			if (cumulus.StationOptions.PrimaryAqSensor > (int)Cumulus.PrimaryAqSensor.Undefined
-				&& cumulus.StationOptions.PrimaryAqSensor != (int)Cumulus.PrimaryAqSensor.AirLinkIndoor)
+			if (cumulus.StationOptions.PrimaryAqSensor > (int) Cumulus.PrimaryAqSensor.Undefined
+				&& cumulus.StationOptions.PrimaryAqSensor != (int) Cumulus.PrimaryAqSensor.AirLinkIndoor)
 			{
-				var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp > ?", dateFrom);
+				var data = station.Database.Query<RecentData>("select * from RecentData where Timestamp > ? order by Timestamp", dateFrom);
 
 				for (var i = 0; i < data.Count; i++)
 				{
@@ -650,7 +650,7 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetExtraTempGraphData(bool incremental, bool local, DateTime? start = null)
+		internal string GetExtraTempGraphData(bool incremental, bool local, DateTime? start = null, DateTime? end = null)
 		{
 			bool append = false;
 			var InvC = new CultureInfo("");
@@ -677,12 +677,18 @@ namespace CumulusMX
 			{
 				dateFrom = start ?? cumulus.GraphDataFiles[13].LastDataTime;
 			}
+			else if (start.HasValue && end.HasValue)
+			{
+				dateFrom = start.Value;
+			}
 			else
 			{
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<ExtraTemp>("select * from ExtraTemp where Timestamp > ?", dateFrom);
+			var dateTo = end ?? DateTime.Now;
+
+			var data = station.Database.Query<ExtraTemp>("select * from ExtraTemp where Timestamp > ? and Timestamp <= ? order by Timestamp", dateFrom, dateTo);
 
 			foreach (var row in data)
 			{
@@ -713,7 +719,7 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetExtraDewPointGraphData(bool incremental, bool local, DateTime? start = null)
+		internal string GetExtraDewPointGraphData(bool incremental, bool local, DateTime? start = null, DateTime? end = null)
 		{
 			bool append = false;
 			var InvC = new CultureInfo("");
@@ -739,12 +745,18 @@ namespace CumulusMX
 			{
 				dateFrom = start ?? cumulus.GraphDataFiles[15].LastDataTime;
 			}
+			else if (start.HasValue && end.HasValue)
+			{
+				dateFrom = start.Value;
+			}
 			else
 			{
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<ExtraDewPoint>("select * from ExtraDewPoint where Timestamp > ?", dateFrom);
+			var dateTo = end ?? DateTime.Now;
+
+			var data = station.Database.Query<ExtraDewPoint>("select * from ExtraDewPoint where Timestamp > ? and Timestamp <= ? order by Timestamp", dateFrom, dateTo);
 
 			foreach (var row in data)
 			{
@@ -775,7 +787,7 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetExtraHumGraphData(bool incremental, bool local, DateTime? start = null)
+		internal string GetExtraHumGraphData(bool incremental, bool local, DateTime? start = null, DateTime? end = null)
 		{
 			bool append = false;
 			var InvC = new CultureInfo("");
@@ -801,12 +813,18 @@ namespace CumulusMX
 			{
 				dateFrom = start ?? cumulus.GraphDataFiles[14].LastDataTime;
 			}
+			else if (start.HasValue && end.HasValue)
+			{
+				dateFrom = start.Value;
+			}
 			else
 			{
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<ExtraHum>("select * from ExtraHum where Timestamp > ?", dateFrom);
+			var dateTo = end ?? DateTime.Now;
+
+			var data = station.Database.Query<ExtraHum>("select * from ExtraHum where Timestamp > ? and Timestamp <= ? order by Timestamp", dateFrom, dateTo);
 
 			foreach (var row in data)
 			{
@@ -837,7 +855,7 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetSoilTempGraphData(bool incremental, bool local, DateTime? start = null)
+		internal string GetSoilTempGraphData(bool incremental, bool local, DateTime? start = null, DateTime? end = null)
 		{
 			bool append = false;
 			var InvC = new CultureInfo("");
@@ -863,12 +881,18 @@ namespace CumulusMX
 			{
 				dateFrom = start ?? cumulus.GraphDataFiles[16].LastDataTime;
 			}
+			else if (start.HasValue && end.HasValue)
+			{
+				dateFrom = start.Value;
+			}
 			else
 			{
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<SoilTemp>("select * from SoilTemp where Timestamp > ?", dateFrom);
+			var dateTo = end ?? DateTime.Now;
+
+			var data = station.Database.Query<SoilTemp>("select * from SoilTemp where Timestamp > ? and Timestamp <= ? order by Timestamp", dateFrom, dateTo);
 
 			foreach (var row in data)
 			{
@@ -899,10 +923,9 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetSoilMoistGraphData(bool incremental, bool local, DateTime? start = null)
+		internal string GetSoilMoistGraphData(bool incremental, bool local, DateTime? start = null, DateTime? end = null)
 		{
 			bool append = false;
-			var InvC = new CultureInfo("");
 			var sb = new StringBuilder("{", 10240);
 
 			/* returns data in the form of an object with properties for each data series
@@ -925,12 +948,18 @@ namespace CumulusMX
 			{
 				dateFrom = start ?? cumulus.GraphDataFiles[17].LastDataTime;
 			}
+			else if (start.HasValue && end.HasValue)
+			{
+				dateFrom = start.Value;
+			}
 			else
 			{
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<SoilMoist>("select * from SoilMoist where Timestamp > ?", dateFrom);
+			var dateTo = end ?? DateTime.Now;
+
+			var data = station.Database.Query<SoilMoist>("select * from SoilMoist where Timestamp > ? and Timestamp <= ? order by Timestamp", dateFrom, dateTo);
 
 			foreach (var row in data)
 			{
@@ -958,10 +987,9 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetLeafWetnessGraphData(bool incremental, bool local, DateTime? start = null)
+		internal string GetLeafWetnessGraphData(bool incremental, bool local, DateTime? start = null, DateTime? end = null)
 		{
 			bool append = false;
-			var InvC = new CultureInfo("");
 			var sb = new StringBuilder("{", 10240);
 
 			/* returns data in the form of an object with properties for each data series
@@ -984,12 +1012,18 @@ namespace CumulusMX
 			{
 				dateFrom = start ?? cumulus.GraphDataFiles[20].LastDataTime;
 			}
+			else if (start.HasValue && end.HasValue)
+			{
+				dateFrom = start.Value;
+			}
 			else
 			{
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<LeafWet>("select * from LeafWet where Timestamp > ?", dateFrom);
+			var dateTo = end ?? DateTime.Now;
+
+			var data = station.Database.Query<LeafWet>("select * from LeafWet where Timestamp > ? and Timestamp <= ? order by Timestamp", dateFrom, dateTo);
 
 			foreach (var row in data)
 			{
@@ -1017,7 +1051,7 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		internal string GetUserTempGraphData(bool incremental, bool local, DateTime? start = null)
+		internal string GetUserTempGraphData(bool incremental, bool local, DateTime? start = null, DateTime? end = null)
 		{
 			bool append = false;
 			var InvC = new CultureInfo("");
@@ -1044,12 +1078,18 @@ namespace CumulusMX
 			{
 				dateFrom = start ?? cumulus.GraphDataFiles[18].LastDataTime;
 			}
+			else if (start.HasValue && end.HasValue)
+			{
+				dateFrom = start.Value;
+			}
 			else
 			{
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<UserTemp>("select * from UserTemp where Timestamp > ?", dateFrom);
+			var dateTo = end ?? DateTime.Now;
+
+			var data = station.Database.Query<UserTemp>("select * from UserTemp where Timestamp > ? and Timestamp <= ? order by Timestamp", dateFrom, dateTo);
 
 			foreach (var row in data)
 			{
@@ -1080,7 +1120,7 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
-		public string GetCo2SensorGraphData(bool incremental, bool local, DateTime? start = null)
+		internal string GetCo2SensorGraphData(bool incremental, bool local, DateTime? start = null)
 		{
 			bool append = false;
 			var InvC = new CultureInfo("");
@@ -1106,7 +1146,7 @@ namespace CumulusMX
 				dateFrom = DateTime.Now.AddHours(-cumulus.GraphHours);
 			}
 
-			var data = station.Database.Query<CO2Data>("select * from CO2Data where Timestamp > ?", dateFrom);
+			var data = station.Database.Query<CO2Data>("select * from CO2Data where Timestamp > ? order by Timestamp", dateFrom);
 
 			foreach (var row in data)
 			{
@@ -1222,6 +1262,339 @@ namespace CumulusMX
 			return sb.ToString();
 		}
 
+		internal string GetIntervalTempGraphData(bool local, DateTime? start = null, DateTime? end = null)
+		{
+			bool append = false;
+			var InvC = new CultureInfo("");
+			var sb = new StringBuilder("{", 10240);
+			var sbIn = new StringBuilder("\"intemp\":[");
+			var sbDew = new StringBuilder("\"dew\":[");
+			var sbApp = new StringBuilder("\"apptemp\":[");
+			var sbFeel = new StringBuilder("\"feelslike\":[");
+			var sbChill = new StringBuilder("\"wchill\":[");
+			var sbHeat = new StringBuilder("\"heatindex\":[");
+			var sbTemp = new StringBuilder("\"temp\":[");
+			var sbHumidex = new StringBuilder("\"humidex\":[");
+
+			var dateFrom = start ?? cumulus.RecordsBeganDateTime;
+			var dateTo = end ?? DateTime.Now.Date;
+			dateTo = dateTo.AddDays(1);
+
+			var data = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >=? and Timestamp <= ? order by Timestamp", dateFrom, dateTo);
+
+			for (var i = 0; i < data.Count; i++)
+			{
+				var recDate = data[i].Timestamp * 1000;
+
+				if (cumulus.GraphOptions.Visible.InTemp.IsVisible(local))
+					sbIn.Append($"[{recDate},{(data[i].InsideTemp.HasValue ? data[i].InsideTemp.Value.ToString(cumulus.TempFormat, InvC) : "null")}],");
+
+				if (cumulus.GraphOptions.Visible.DewPoint.IsVisible(local))
+					sbDew.Append($"[{recDate},{(data[i].DewPoint.HasValue ? data[i].DewPoint.Value.ToString(cumulus.TempFormat, InvC) : "null")}],");
+
+				if (cumulus.GraphOptions.Visible.AppTemp.IsVisible(local))
+					sbApp.Append($"[{recDate},{(data[i].Apparent.HasValue ? data[i].Apparent.Value.ToString(cumulus.TempFormat, InvC) : "null")}],");
+
+				if (cumulus.GraphOptions.Visible.FeelsLike.IsVisible(local))
+					sbFeel.Append($"[{recDate},{(data[i].FeelsLike.HasValue ? data[i].FeelsLike.Value.ToString(cumulus.TempFormat, InvC) : "null")}],");
+
+				if (cumulus.GraphOptions.Visible.WindChill.IsVisible(local))
+					sbChill.Append($"[{recDate},{(data[i].WindChill.HasValue ? data[i].WindChill.Value.ToString(cumulus.TempFormat, InvC) : "null")}],");
+
+				if (cumulus.GraphOptions.Visible.HeatIndex.IsVisible(local))
+					sbHeat.Append($"[{recDate},{(data[i].HeatIndex.HasValue ? data[i].HeatIndex.Value.ToString(cumulus.TempFormat, InvC) : "null")}],");
+
+				if (cumulus.GraphOptions.Visible.Temp.IsVisible(local))
+					sbTemp.Append($"[{recDate},{(data[i].Temp.HasValue ? data[i].Temp.Value.ToString(cumulus.TempFormat, InvC) : "null")}],");
+
+				if (cumulus.GraphOptions.Visible.Humidex.IsVisible(local))
+					sbHumidex.Append($"[{recDate},{(data[i].Humidex.HasValue ? data[i].Humidex.Value.ToString(cumulus.TempFormat, InvC) : "null")}],");
+			}
+
+			if (cumulus.GraphOptions.Visible.InTemp.IsVisible(local))
+			{
+				if (sbIn[^1] == ',')
+					sbIn.Length--;
+
+				sbIn.Append(']');
+				sb.Append(sbIn);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.Visible.DewPoint.IsVisible(local))
+			{
+				if (sbDew[^1] == ',')
+					sbDew.Length--;
+
+				sbDew.Append(']');
+				sb.Append((append ? "," : "") + sbDew);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.Visible.AppTemp.IsVisible(local))
+			{
+				if (sbApp[^1] == ',')
+					sbApp.Length--;
+
+				sbApp.Append(']');
+				sb.Append((append ? "," : "") + sbApp);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.Visible.FeelsLike.IsVisible(local))
+			{
+				if (sbFeel[^1] == ',')
+					sbFeel.Length--;
+
+				sbFeel.Append(']');
+				sb.Append((append ? "," : "") + sbFeel);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.Visible.WindChill.IsVisible(local))
+			{
+				if (sbChill[^1] == ',')
+					sbChill.Length--;
+
+				sbChill.Append(']');
+				sb.Append((append ? "," : "") + sbChill);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.Visible.HeatIndex.IsVisible(local))
+			{
+				if (sbHeat[^1] == ',')
+					sbHeat.Length--;
+
+				sbHeat.Append(']');
+				sb.Append((append ? "," : "") + sbHeat);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.Visible.Temp.IsVisible(local))
+			{
+				if (sbTemp[^1] == ',')
+					sbTemp.Length--;
+
+				sbTemp.Append(']');
+				sb.Append((append ? "," : "") + sbTemp);
+				append = true;
+			}
+
+			if (cumulus.GraphOptions.Visible.Humidex.IsVisible(local))
+			{
+				if (sbHumidex[^1] == ',')
+					sbHumidex.Length--;
+
+				sbHumidex.Append(']');
+				sb.Append((append ? "," : "") + sbHumidex);
+			}
+
+			sb.Append('}');
+			return sb.ToString();
+		}
+
+		internal string GetIntervalHumGraphData(bool local, DateTime? start = null, DateTime? end = null)
+		{
+			var sb = new StringBuilder("{", 10240);
+			var sbOut = new StringBuilder("\"hum\":[");
+			var sbIn = new StringBuilder("\"inhum\":[");
+
+			var dateFrom = start ?? cumulus.RecordsBeganDateTime;
+			var dateTo = end ?? DateTime.Now.Date;
+			dateTo = dateTo.AddDays(1);
+
+			var data = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >=? and Timestamp <= ? order by Timestamp", dateFrom, dateTo);
+
+			for (var i = 0; i < data.Count; i++)
+			{
+				var recDate = data[i].Timestamp * 1000;
+
+				if (cumulus.GraphOptions.Visible.OutHum.IsVisible(local))
+				{
+					sbOut.Append($"[{recDate},{(data[i].Humidity.HasValue ? data[i].Humidity.Value : "null")}],");
+				}
+				if (cumulus.GraphOptions.Visible.InHum.IsVisible(local))
+				{
+					sbIn.Append($"[{recDate},{(data[i].InsideHumidity.HasValue ? data[i].InsideHumidity.Value : "null")}],");
+				}
+			}
+
+			if (cumulus.GraphOptions.Visible.OutHum.IsVisible(local))
+			{
+				if (sbOut[^1] == ',')
+					sbOut.Length--;
+
+				sbOut.Append(']');
+
+				sb.Append(sbOut);
+			}
+
+			if (cumulus.GraphOptions.Visible.InHum.IsVisible(local))
+			{
+				if (sbIn[^1] == ',')
+					sbIn.Length--;
+
+				sbIn.Append(']');
+
+				if (cumulus.GraphOptions.Visible.OutHum.IsVisible(local))
+					sb.Append(',');
+
+				sb.Append(sbIn);
+			}
+
+			sb.Append('}');
+			return sb.ToString();
+		}
+
+		internal string GetIntervalSolarGraphData(bool local, DateTime? start = null, DateTime? end = null)
+		{
+			var sb = new StringBuilder("{");
+			var sbUv = new StringBuilder("\"UV\":[");
+			var sbSol = new StringBuilder("\"SolarRad\":[");
+			var sbMax = new StringBuilder("\"CurrentSolarMax\":[");
+
+			var dateFrom = start ?? cumulus.RecordsBeganDateTime;
+			var dateTo = end ?? DateTime.Now.Date;
+			dateTo = dateTo.AddDays(1);
+
+			var data = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >=? and Timestamp <= ? order by Timestamp", dateFrom, dateTo);
+
+			for (var i = 0; i < data.Count; i++)
+			{
+				var recDate = data[i].Timestamp * 1000;
+
+				if (cumulus.GraphOptions.Visible.UV.IsVisible(local))
+				{
+					sbUv.Append($"[{recDate},{(data[i].UV.HasValue ? data[i].UV.Value.ToString(cumulus.UVFormat, InvC) : "null")}],");
+				}
+
+				if (cumulus.GraphOptions.Visible.Solar.IsVisible(local))
+				{
+					sbSol.Append($"[{recDate},{(data[i].SolarRad.HasValue ? data[i].SolarRad.Value : "null")}],");
+					sbMax.Append($"[{recDate},{(data[i].SolarMax.HasValue ? data[i].SolarMax.Value : "null")}],");
+				}
+			}
+
+
+			if (cumulus.GraphOptions.Visible.UV.IsVisible(local))
+			{
+				if (sbUv[^1] == ',')
+					sbUv.Length--;
+
+				sbUv.Append(']');
+				sb.Append(sbUv);
+			}
+			if (cumulus.GraphOptions.Visible.Solar.IsVisible(local))
+			{
+				if (sbSol[^1] == ',')
+				{
+					sbSol.Length--;
+					sbMax.Length--;
+				}
+
+				sbSol.Append(']');
+				sbMax.Append(']');
+				if (cumulus.GraphOptions.Visible.UV.IsVisible(local))
+				{
+					sb.Append(',');
+				}
+				sb.Append(sbSol);
+				sb.Append(',');
+				sb.Append(sbMax);
+			}
+
+			sb.Append('}');
+			return sb.ToString();
+		}
+
+		internal string GetIntervalPressGraphData(DateTime? start = null, DateTime? end = null)
+		{
+			StringBuilder sb = new StringBuilder("{\"press\":[");
+
+			var dateFrom = start ?? cumulus.RecordsBeganDateTime;
+			var dateTo = end ?? DateTime.Now.Date;
+			dateTo = dateTo.AddDays(1);
+
+			var data = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >=? and Timestamp <= ? order by Timestamp", dateFrom, dateTo);
+
+			for (var i = 0; i < data.Count; i++)
+			{
+				sb.Append($"[{data[i].Timestamp * 1000},{(data[i].Pressure.HasValue ? data[i].Pressure.Value.ToString(cumulus.PressFormat, InvC) : "null")}],");
+			}
+
+			if (sb[^1] == ',')
+				sb.Length--;
+
+			sb.Append("]}");
+			return sb.ToString();
+		}
+
+		internal string GetIntervalWindGraphData(DateTime? start = null, DateTime? end = null)
+		{
+			var sb = new StringBuilder("{\"wgust\":[");
+			var sbSpd = new StringBuilder("\"wspeed\":[");
+
+			var dateFrom = start ?? cumulus.RecordsBeganDateTime;
+			var dateTo = end ?? DateTime.Now.Date;
+			dateTo = dateTo.AddDays(1);
+
+			var data = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >=? and Timestamp <= ? order by Timestamp", dateFrom, dateTo);
+
+			for (var i = 0; i < data.Count; i++)
+			{
+				var recDate = data[i].Timestamp * 1000;
+
+				sb.Append($"[{recDate},{(data[i].WindGust10m.HasValue ? data[i].WindGust10m.Value.ToString(cumulus.WindFormat, InvC) : "null")}],");
+				sbSpd.Append($"[{recDate},{(data[i].WindAvg.HasValue ? data[i].WindAvg.Value.ToString(cumulus.WindAvgFormat, InvC) : "null")}],");
+			}
+
+			if (sb[^1] == ',')
+			{
+				sb.Length--;
+				sbSpd.Length--;
+				sbSpd.Append(']');
+			}
+
+			sb.Append("],");
+			sb.Append(sbSpd);
+			sb.Append('}');
+			return sb.ToString();
+		}
+
+		internal string GetIntervalRainGraphData(DateTime? start = null, DateTime? end = null)
+		{
+			var sb = new StringBuilder("{");
+			var sbRain = new StringBuilder("\"rfall\":[");
+			var sbRate = new StringBuilder("\"rrate\":[");
+
+			var dateFrom = start ?? cumulus.RecordsBeganDateTime;
+			var dateTo = end ?? DateTime.Now.Date;
+			dateTo = dateTo.AddDays(1);
+
+			var data = station.Database.Query<IntervalData>("select * from IntervalData where Timestamp >=? and Timestamp <= ? order by Timestamp", dateFrom, dateTo);
+
+			for (var i = 0; i < data.Count; i++)
+			{
+				var recDate = data[i].Timestamp * 1000;
+
+				sbRain.Append($"[{recDate},{(data[i].RainToday.HasValue ? data[i].RainToday.Value.ToString(cumulus.RainFormat, InvC) : "null")}],");
+				sbRate.Append($"[{recDate},{(data[i].RainRate.HasValue ? data[i].RainRate.Value.ToString(cumulus.RainFormat, InvC) : "null")}],");
+			}
+
+			if (sbRain[^1] == ',')
+			{
+				sbRain.Length--;
+				sbRate.Length--;
+			}
+			sbRain.Append("],");
+			sbRate.Append(']');
+			sb.Append(sbRain);
+			sb.Append(sbRate);
+			sb.Append('}');
+			return sb.ToString();
+		}
+
 		internal string GetAvailGraphData(bool local = true)
 		{
 			var json = new StringBuilder(200);
@@ -1320,16 +1693,16 @@ namespace CumulusMX
 
 			// air quality
 			// Check if we are to generate AQ data at all. Only if a primary sensor is defined and it isn't the Indoor AirLink
-			if (cumulus.StationOptions.PrimaryAqSensor > (int)Cumulus.PrimaryAqSensor.Undefined
-				&& cumulus.StationOptions.PrimaryAqSensor != (int)Cumulus.PrimaryAqSensor.AirLinkIndoor)
+			if (cumulus.StationOptions.PrimaryAqSensor > (int) Cumulus.PrimaryAqSensor.Undefined
+				&& cumulus.StationOptions.PrimaryAqSensor != (int) Cumulus.PrimaryAqSensor.AirLinkIndoor)
 			{
 				json.Append(",\"AirQuality\":[");
 				json.Append("\"PM 2.5\"");
 
 				// Only the AirLink and Ecowitt CO2 servers provide PM10 values at the moment
-				if (cumulus.StationOptions.PrimaryAqSensor == (int)Cumulus.PrimaryAqSensor.AirLinkOutdoor ||
-					cumulus.StationOptions.PrimaryAqSensor == (int)Cumulus.PrimaryAqSensor.AirLinkIndoor ||
-					cumulus.StationOptions.PrimaryAqSensor == (int)Cumulus.PrimaryAqSensor.EcowittCO2)
+				if (cumulus.StationOptions.PrimaryAqSensor == (int) Cumulus.PrimaryAqSensor.AirLinkOutdoor ||
+					cumulus.StationOptions.PrimaryAqSensor == (int) Cumulus.PrimaryAqSensor.AirLinkIndoor ||
+					cumulus.StationOptions.PrimaryAqSensor == (int) Cumulus.PrimaryAqSensor.EcowittCO2)
 				{
 					json.Append(",\"PM 10\"");
 				}
@@ -1668,6 +2041,11 @@ namespace CumulusMX
 		internal string GetSelectaChartOptions()
 		{
 			return JsonSerializer.SerializeToString(cumulus.SelectaChartOptions);
+		}
+
+		internal string GetSelectaPeriodOptions()
+		{
+			return JsonSerializer.SerializeToString(cumulus.SelectaPeriodOptions);
 		}
 
 		internal string GetDailyRainGraphData()

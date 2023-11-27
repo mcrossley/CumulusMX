@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace CumulusMX.ThirdParty
 {
@@ -29,12 +30,12 @@ namespace CumulusMX.ThirdParty
 
 				try
 				{
-					HttpResponseMessage response = await httpClient.GetAsync(URL);
+					using var response = await Cumulus.MyHttpClient.GetAsync(URL);
 					var responseBodyAsText = await response.Content.ReadAsStringAsync();
 					if (response.StatusCode != HttpStatusCode.OK)
 					{
-						Cumulus.LogMessage($"PWS Response: ERROR - Response code = {response.StatusCode},  Body = {responseBodyAsText}");
-						cumulus.ThirdPartyUploadAlarm.LastError = $"PWS: HTTP Response code = {response.StatusCode},  Body = {responseBodyAsText}";
+						cumulus.LogWarningMessage($"PWS Response: ERROR - Response code = {response.StatusCode},  Body = {responseBodyAsText}");
+						cumulus.ThirdPartyUploadAlarm.LastMessage = $"PWS: HTTP Response code = {response.StatusCode},  Body = {responseBodyAsText}";
 						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 					}
 					else
@@ -46,7 +47,7 @@ namespace CumulusMX.ThirdParty
 				catch (Exception ex)
 				{
 					cumulus.LogExceptionMessage(ex, "PWS update error");
-					cumulus.ThirdPartyUploadAlarm.LastError = "PWS: " + ex.Message;
+					cumulus.ThirdPartyUploadAlarm.LastMessage = "PWS: " + ex.Message;
 					cumulus.ThirdPartyUploadAlarm.Triggered = true;
 				}
 				finally
@@ -62,7 +63,7 @@ namespace CumulusMX.ThirdParty
 			StringBuilder URL = new StringBuilder("http://www.pwsweather.com/pwsupdate/pwsupdate.php?ID=", 1024);
 
 			pwstring = PW;
-			URL.Append(ID + "&PASSWORD=" + PW);
+			URL.Append(ID + "&PASSWORD=" + HttpUtility.UrlEncode(PW));
 			URL.Append("&dateutc=" + dateUTC);
 
 			StringBuilder Data = new StringBuilder(1024);

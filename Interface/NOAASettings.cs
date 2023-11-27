@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+
 using EmbedIO;
 using ServiceStack;
 
@@ -20,7 +21,7 @@ namespace CumulusMX
 			//var InvC = new CultureInfo("");
 			var normalmeantemps = new NormalMeanTempsJson()
 			{
-				jan = Math.Round(cumulus.NOAAconf.TempNorms[1],cumulus.TempDPlaces),
+				jan = Math.Round(cumulus.NOAAconf.TempNorms[1], cumulus.TempDPlaces),
 				feb = Math.Round(cumulus.NOAAconf.TempNorms[2], cumulus.TempDPlaces),
 				mar = Math.Round(cumulus.NOAAconf.TempNorms[3], cumulus.TempDPlaces),
 				apr = Math.Round(cumulus.NOAAconf.TempNorms[4], cumulus.TempDPlaces),
@@ -144,7 +145,7 @@ namespace CumulusMX
 			// process the settings
 			try
 			{
-				Cumulus.LogMessage("Updating NOAA settings");
+				cumulus.LogMessage("Updating NOAA settings");
 
 				cumulus.NOAAconf.Create = settings.autosave;
 				if (cumulus.NOAAconf.Create)

@@ -2,7 +2,7 @@
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
+
 
 namespace CumulusMX.Stations
 {
@@ -111,6 +111,9 @@ namespace CumulusMX.Stations
 					socket.Close();
 				}
 			}
+			catch (ObjectDisposedException)
+			{
+			}
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "Error closing TCP port");
@@ -139,9 +142,6 @@ namespace CumulusMX.Stations
 			var bytesRead = 0;
 			var cmdName = command.ToString();
 
-			var readBuffer = new byte[2028];
-			var totBytes = 0;
-
 			byte[] bytes;
 			if (data == null)
 			{
@@ -166,18 +166,18 @@ namespace CumulusMX.Stations
 				bytesRead = stream.Read(buffer, 0, buffer.Length);
 
 				// Check the response is to our command and checksum is OK
-				if (bytesRead == 0 || buffer[2] != (byte)command || !ChecksumOk(buffer, (int)Enum.Parse(typeof(CommandRespSize), cmdName)))
+				if (bytesRead == 0 || buffer[2] != (byte) command || !ChecksumOk(buffer, (int) Enum.Parse(typeof(CommandRespSize), cmdName)))
 				{
-					if (totBytes > 0)
+					if (bytesRead > 0)
 					{
-						Cumulus.LogMessage($"DoCommand({cmdName}): Invalid response");
+						cumulus.LogWarningMessage($"DoCommand({cmdName}): Invalid response");
 						cumulus.LogDebugMessage($"command resp={buffer[2]}, checksum=" + (ChecksumOk(buffer, (int)Enum.Parse(typeof(CommandRespSize), cmdName)) ? "OK" : "BAD"));
 						cumulus.LogDataMessage("Received - " + BitConverter.ToString(buffer, 0, bytesRead - 1));
 						WeatherStation.LogRawStationData(BitConverter.ToString(buffer, 0, bytesRead - 1), false);
 					}
 					else
 					{
-						Cumulus.LogMessage($"DoCommand({cmdName}): No response received");
+						cumulus.LogWarningMessage($"DoCommand({cmdName}): No response received");
 					}
 					return null;
 				}
@@ -189,17 +189,17 @@ namespace CumulusMX.Stations
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, $"DoCommand({cmdName}): Error");
-				Cumulus.LogMessage("Attempting to reopen the TCP port");
+				cumulus.LogMessage("Attempting to reopen the TCP port");
 				Thread.Sleep(1000);
 				OpenTcpPort(ipAddress, tcpPort);
 				return null;
 			}
 			// Return the data we want out of the buffer
-			if (totBytes > 0)
+			if (bytesRead > 0)
 			{
-				cumulus.LogDataMessage("Received - " + BitConverter.ToString(buffer[..totBytes]));
-				WeatherStation.LogRawStationData(BitConverter.ToString(buffer[..totBytes]), false);
-				return buffer[..totBytes];
+				cumulus.LogDataMessage("Received - " + BitConverter.ToString(buffer[..bytesRead]));
+				WeatherStation.LogRawStationData(BitConverter.ToString(buffer[..bytesRead]), false);
+				return buffer[..bytesRead];
 			}
 
 			return null;
@@ -230,11 +230,11 @@ namespace CumulusMX.Stations
 			// sanity check the size
 			if (size + 3 + lengthBytes > data.Length)
 			{
-				Cumulus.LogMessage($"Ckecksum: Error - Calculated data length [{size}] exceeds the buffer size!");
+				Program.cumulus.LogErrorMessage($"Checksum: Error - Calculated data length [{size}] exceeds the buffer size!");
 				return false;
 			}
 
-			byte checksum = (byte)(data[2] + data[3]);
+			byte checksum = (byte) (data[2] + data[3]);
 			for (var i = 4; i <= size; i++)
 			{
 				checksum += data[i];
@@ -242,12 +242,13 @@ namespace CumulusMX.Stations
 
 			if (checksum != data[size + 1])
 			{
-				Cumulus.LogMessage("Checksum: Error - Bad checksum");
+				Program.cumulus.LogErrorMessage("Checksum: Error - Bad checksum");
 				return false;
 			}
 
 			return true;
 		}
+
 
 		public bool Connected
 		{
@@ -275,7 +276,6 @@ namespace CumulusMX.Stations
 				}
 			}
 		}
-
 
 		internal enum Commands : byte
 		{
@@ -577,7 +577,12 @@ namespace CumulusMX.Stations
 			public CommandPayload(Commands command) : this()
 			{
 				// header, header, command, size, checksum
-				Data = new byte[] { 0xff, 0xff, (byte)command, 3, (byte)(command + 3) };
+				Data = new byte[] { 0xff, 0xff, (byte) command, 3, (byte) (command + 3) };
+			}
+public byte[] Serialise()
+			{
+				// allocate a byte array for the struct data
+				return Data;
 			}
 		}
 
@@ -593,13 +598,13 @@ namespace CumulusMX.Stations
 
 				Data = new byte[5 + data.Length];
 
-				Data[0] = (byte)0xff;
-				Data[1] = (byte)0xff;
-				Data[2] = (byte)command;
-				Data[3] = (byte)(3 + data.Length);
+				Data[0] = (byte) 0xff;
+				Data[1] = (byte) 0xff;
+				Data[2] = (byte) command;
+				Data[3] = (byte) (3 + data.Length);
 				data.CopyTo(Data, 4);
 
-				var Checksum = (byte)(command + Data[3]);
+				var Checksum = (byte) (command + Data[3]);
 				for (int i = 0; i < data.Length; i++)
 				{
 					Checksum += data[i];
@@ -610,17 +615,17 @@ namespace CumulusMX.Stations
 
 		internal static UInt16 ConvertBigEndianUInt16(byte[] array, int start)
 		{
-			return (UInt16)(array[start] << 8 | array[start + 1]);
+			return (UInt16) (array[start] << 8 | array[start + 1]);
 		}
 
 		internal static Int16 ConvertBigEndianInt16(byte[] array, int start)
 		{
-			return (Int16)((array[start] << 8) + array[start + 1]);
+			return (Int16) ((array[start] << 8) + array[start + 1]);
 		}
 
 		internal static UInt32 ConvertBigEndianUInt32(byte[] array, int start)
 		{
-			return (UInt32)(array[start++] << 24 | array[start++] << 16 | array[start++] << 8 | array[start]);
+			return (UInt32) (array[start++] << 24 | array[start++] << 16 | array[start++] << 8 | array[start]);
 		}
 
 		internal static byte[] ConvertUInt16ToLittleEndianByteArray(UInt16 ui16)

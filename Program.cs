@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Globalization;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.ServiceProcess;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.ServiceProcess;
+using System.Threading;
 using System.Threading.Tasks;
 
 //#error version
@@ -75,7 +75,7 @@ namespace CumulusMX
 				if (cumulus != null)
 				{
 					Cumulus.LogConsoleMessage("Cumulus terminating", ConsoleColor.Red);
-					Cumulus.LogMessage("Cumulus terminating");
+					cumulus.LogMessage("Cumulus terminating");
 					cumulus.Stop();
 					svcTextListener.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + "Cumulus has shutdown");
 					svcTextListener.Flush();
@@ -100,12 +100,16 @@ namespace CumulusMX
 				if (cumulus != null)
 				{
 					Cumulus.LogConsoleMessage("Ctrl+C pressed", ConsoleColor.Red);
-					Cumulus.LogMessage("Ctrl + C pressed");
+					cumulus.LogMessage("Ctrl + C pressed");
+					cumulus.Stop();
+					//allow main to run off
+					Thread.Sleep(500);
 				}
 				else
 				{
 					Trace.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + "Ctrl+C pressed");
 				}
+				Trace.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + "Cumulus has shutdown");
 				ev.Cancel = true;
 				exitSystem = true;
 			};

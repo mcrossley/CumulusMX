@@ -75,7 +75,7 @@ namespace CumulusMX
 			//double chill = windSpeedKph < 4.828 ? tempC : 13.12 + 0.6215 * tempC - 11.37 * Math.Pow(windSpeedKph, 0.16) + 0.3965 * tempC * Math.Pow(windSpeedKph, 0.16);
 			double chill = WindChill(tempC, windSpeedKph, false).Value;
 			double svp = SaturationVapourPressure1980(tempC.Value);   // Saturation Vapour Pressure in hPa
-			double avp = (float)humidity / 100.0 * svp / 10.0;             // Actual Vapour Pressure in kPa
+			double avp = (float) humidity / 100.0 * svp / 10.0;             // Actual Vapour Pressure in kPa
 			if (windSpeedKph > 72) windSpeedKph = 72;           // Windspeed limited to 20 m/s = 72 km/h
 			double apptemp = (1.04 * tempC.Value) + (2 * avp) - (windSpeedKph.Value * 0.1805553) - 2.7;
 			double feels;
@@ -205,7 +205,8 @@ namespace CumulusMX
 			double Tw;
 			double Tw1 = tempC;
 
-			do {
+			do
+			{
 				Tw = Tw1;
 				var Ewg = SaturationVapourPressure1980(Tw);
 				var eg = Ewg - pressureHpa * (tempC - Tw) * 0.00066 * (1 + (0.00115 * Tw));
@@ -241,7 +242,7 @@ namespace CumulusMX
 				return tempC;
 
 			// Davis algorithm
-			double lnVapor = Math.Log(ActualVapourPressure2008(tempC.Value, (int)humidity));
+			double lnVapor = Math.Log(ActualVapourPressure2008(tempC.Value, (int) humidity));
 			return ((243.12 * lnVapor) - 440.1) / (19.43 - lnVapor);
 		}
 

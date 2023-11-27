@@ -2,7 +2,9 @@
 using System.Globalization;
 using System.IO;
 using System.Net;
+
 using EmbedIO;
+
 using ServiceStack;
 
 namespace CumulusMX
@@ -44,15 +46,15 @@ namespace CumulusMX
 			try
 			{
 				// process the settings
-				Cumulus.LogMessage("Updating calibration settings");
+				cumulus.LogMessage("Updating calibration settings");
 
 				// offsets
 				cumulus.Calib.Press.Offset = Convert.ToDouble(settings.pressure.offset, invC);
 				cumulus.Calib.Temp.Offset = Convert.ToDouble(settings.temp.offset, invC);
 				cumulus.Calib.InTemp.Offset = Convert.ToDouble(settings.tempin.offset, invC);
-				cumulus.Calib.Hum.Offset = settings.hum.offset;
-				cumulus.Calib.InHum.Offset = Convert.ToDouble(settings.humin.offset, invC);
-				cumulus.Calib.WindDir.Offset = settings.winddir.offset;
+				cumulus.Calib.Hum.Offset = (int) settings.hum.offset;
+				cumulus.Calib.InHum.Offset = (int) settings.humin.offset;
+				cumulus.Calib.WindDir.Offset = (int) settings.winddir.offset;
 				cumulus.Calib.Solar.Offset = Convert.ToDouble(settings.solar.offset);
 				cumulus.Calib.UV.Offset = Convert.ToDouble(settings.uv.offset, invC);
 				cumulus.Calib.WetBulb.Offset = Convert.ToDouble(settings.wetbulb.offset, invC);
@@ -108,7 +110,7 @@ namespace CumulusMX
 				cumulus.SpikeAlarm.Triggered = false;
 
 				// Log the new values
-				Cumulus.LogMessage("Setting new calibration values...");
+				cumulus.LogMessage("Setting new calibration values...");
 				cumulus.LogOffsetsMultipliers();
 
 				context.Response.StatusCode = 200;

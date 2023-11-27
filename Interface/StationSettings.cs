@@ -1,13 +1,14 @@
 ﻿using System;
-using System.IO;
-using System.Net;
-using System.Threading;
-using ServiceStack.Text;
-using System.Reflection;
-using EmbedIO;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Net;
+using System.Reflection;
+using System.Threading;
+
+using EmbedIO;
 using ServiceStack;
+using ServiceStack.Text;
 
 namespace CumulusMX
 {
@@ -49,12 +50,13 @@ namespace CumulusMX
 			// Common Settings
 			var options = new OptionsJson()
 			{
-				calcwindaverage = cumulus.StationOptions.CalcWind10MinAve,
+				calcwindaverage = cumulus.StationOptions.CalcuateAverageWindSpeed,
 				use100for98hum = cumulus.StationOptions.Humidity98Fix,
 				calculatedewpoint = cumulus.StationOptions.CalculatedDP,
 				calculatewindchill = cumulus.StationOptions.CalculatedWC,
 				calculateet = cumulus.StationOptions.CalculatedET,
 				cumuluspresstrendnames = cumulus.StationOptions.UseCumulusPresstrendstr,
+				extrasensors = cumulus.StationOptions.LogExtraSensors,
 				ignorelacrosseclock = cumulus.StationOptions.WS2300IgnoreStationClock,
 				roundwindspeeds = cumulus.StationOptions.RoundWindSpeed,
 				nosensorcheck = cumulus.StationOptions.NoSensorCheck,
@@ -164,9 +166,9 @@ namespace CumulusMX
 
 			for (var i = 0; i < 10; i++)
 			{
-				if (!string.IsNullOrEmpty(cumulus.EcowittSettings.EcowittForwarders[i]))
+				if (!string.IsNullOrEmpty(cumulus.EcowittSettings.Forwarders[i]))
 				{
-					ecowitt.forward.Add(new JsonEcowittForward() { url = cumulus.EcowittSettings.EcowittForwarders[i] });
+					ecowitt.forward.Add(new JsonEcowittForward() { url = cumulus.EcowittSettings.Forwarders[i] });
 				}
 			}
 
@@ -314,7 +316,8 @@ namespace CumulusMX
 			var wllAdvanced = new WLLAdvancedJson()
 			{
 				raingaugetype = cumulus.DavisOptions.RainGaugeType,
-				tcpport = cumulus.DavisOptions.TCPPort
+				tcpport = cumulus.DavisOptions.TCPPort,
+				datastopped = cumulus.WllTriggerDataStoppedOnBroadcast
 			};
 
 			var wllApi = new WLLApiJson()
@@ -451,7 +454,7 @@ namespace CumulusMX
 				coordinate = longitude;
 				hem = "East";
 			}
-			int secs = (int)(coordinate * 60 * 60);
+			int secs = (int) (coordinate * 60 * 60);
 
 			s = secs % 60;
 
@@ -495,7 +498,7 @@ namespace CumulusMX
 			// get the response
 			try
 			{
-				Cumulus.LogMessage("Updating station settings");
+				cumulus.LogMessage("Updating station settings");
 
 				var data = new StreamReader(context.Request.InputStream).ReadToEnd();
 
@@ -664,12 +667,13 @@ namespace CumulusMX
 				// Options
 				try
 				{
-					cumulus.StationOptions.CalcWind10MinAve = settings.Options.calcwindaverage;
+					cumulus.StationOptions.CalcuateAverageWindSpeed = settings.Options.calcwindaverage;
 					cumulus.StationOptions.Humidity98Fix = settings.Options.use100for98hum;
 					cumulus.StationOptions.CalculatedDP = settings.Options.calculatedewpoint;
 					cumulus.StationOptions.CalculatedWC = settings.Options.calculatewindchill;
 					cumulus.StationOptions.CalculatedET = settings.Options.calculateet;
 					cumulus.StationOptions.UseCumulusPresstrendstr = settings.Options.cumuluspresstrendnames;
+					cumulus.StationOptions.LogExtraSensors = settings.Options.extrasensors;
 					cumulus.StationOptions.WS2300IgnoreStationClock = settings.Options.ignorelacrosseclock;
 					cumulus.StationOptions.RoundWindSpeed = settings.Options.roundwindspeeds;
 					cumulus.StationOptions.NoSensorCheck = settings.Options.nosensorcheck;
@@ -755,64 +759,73 @@ namespace CumulusMX
 				{
 					if (settings.daviswll != null)
 					{
-						cumulus.DavisOptions.ConnectionType = 2; // Always TCP/IP for WLL
-						cumulus.WLLAutoUpdateIpAddress = settings.daviswll.network.autoDiscover;
-						cumulus.DavisOptions.IPAddr = string.IsNullOrWhiteSpace(settings.daviswll.network.ipaddress) ? null : settings.daviswll.network.ipaddress.Trim();
+						if (settings.general.stationtype == 11) // WLL only
+						{
+							cumulus.DavisOptions.ConnectionType = 2; // Always TCP/IP for WLL
+							cumulus.WLLAutoUpdateIpAddress = settings.daviswll.network.autoDiscover;
+							cumulus.DavisOptions.IPAddr = string.IsNullOrWhiteSpace(settings.daviswll.network.ipaddress) ? null : settings.daviswll.network.ipaddress.Trim();
+
+							cumulus.DavisOptions.TCPPort = settings.daviswll.advanced.tcpport;
+							cumulus.WllTriggerDataStoppedOnBroadcast = settings.daviswll.advanced.datastopped;
+						}
 
 						cumulus.WllApiKey = string.IsNullOrWhiteSpace(settings.daviswll.api.apiKey) ? null : settings.daviswll.api.apiKey.Trim();
 						if (settings.daviswll.api.apiSecret != hidden)
 							cumulus.WllApiSecret = string.IsNullOrWhiteSpace(settings.daviswll.api.apiSecret) ? null : settings.daviswll.api.apiSecret.Trim();
 						cumulus.WllStationId = settings.daviswll.api.apiStationId;
 
-						cumulus.WllPrimaryRain = settings.daviswll.primary.rain;
-						cumulus.WllPrimarySolar = settings.daviswll.primary.solar;
-						cumulus.WllPrimaryTempHum = settings.daviswll.primary.temphum;
-						cumulus.WllPrimaryUV = settings.daviswll.primary.uv;
-						cumulus.WllPrimaryWind = settings.daviswll.primary.wind;
+						if (settings.general.stationtype == 11 || settings.general.stationtype == 19) // WLL & Cloud WLL/WLC only
+						{
+							cumulus.WllPrimaryRain = settings.daviswll.primary.rain;
+							cumulus.WllPrimarySolar = settings.daviswll.primary.solar;
+							cumulus.WllPrimaryTempHum = settings.daviswll.primary.temphum;
+							cumulus.WllPrimaryUV = settings.daviswll.primary.uv;
+							cumulus.WllPrimaryWind = settings.daviswll.primary.wind;
 
-						cumulus.WllExtraLeafTx1 = settings.daviswll.soilLeaf.extraLeaf.leafTx1;
-						cumulus.WllExtraLeafTx2 = settings.daviswll.soilLeaf.extraLeaf.leafTx2;
-						cumulus.WllExtraLeafIdx1 = settings.daviswll.soilLeaf.extraLeaf.leafIdx1;
-						cumulus.WllExtraLeafIdx2 = settings.daviswll.soilLeaf.extraLeaf.leafIdx2;
+							cumulus.WllExtraLeafTx1 = settings.daviswll.soilLeaf.extraLeaf.leafTx1;
+							cumulus.WllExtraLeafTx2 = settings.daviswll.soilLeaf.extraLeaf.leafTx2;
+							cumulus.WllExtraLeafIdx1 = settings.daviswll.soilLeaf.extraLeaf.leafIdx1;
+							cumulus.WllExtraLeafIdx2 = settings.daviswll.soilLeaf.extraLeaf.leafIdx2;
 
-						cumulus.WllExtraSoilMoistureIdx1 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistIdx1;
-						cumulus.WllExtraSoilMoistureIdx2 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistIdx2;
-						cumulus.WllExtraSoilMoistureIdx3 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistIdx3;
-						cumulus.WllExtraSoilMoistureIdx4 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistIdx4;
-						cumulus.WllExtraSoilMoistureTx1 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistTx1;
-						cumulus.WllExtraSoilMoistureTx2 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistTx2;
-						cumulus.WllExtraSoilMoistureTx3 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistTx3;
-						cumulus.WllExtraSoilMoistureTx4 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistTx4;
+							cumulus.WllExtraSoilMoistureIdx1 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistIdx1;
+							cumulus.WllExtraSoilMoistureIdx2 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistIdx2;
+							cumulus.WllExtraSoilMoistureIdx3 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistIdx3;
+							cumulus.WllExtraSoilMoistureIdx4 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistIdx4;
+							cumulus.WllExtraSoilMoistureTx1 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistTx1;
+							cumulus.WllExtraSoilMoistureTx2 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistTx2;
+							cumulus.WllExtraSoilMoistureTx3 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistTx3;
+							cumulus.WllExtraSoilMoistureTx4 = settings.daviswll.soilLeaf.extraSoilMoist.soilMoistTx4;
 
-						cumulus.WllExtraSoilTempIdx1 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempIdx1;
-						cumulus.WllExtraSoilTempIdx2 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempIdx2;
-						cumulus.WllExtraSoilTempIdx3 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempIdx3;
-						cumulus.WllExtraSoilTempIdx4 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempIdx4;
-						cumulus.WllExtraSoilTempTx1 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempTx1;
-						cumulus.WllExtraSoilTempTx2 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempTx2;
-						cumulus.WllExtraSoilTempTx3 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempTx3;
-						cumulus.WllExtraSoilTempTx4 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempTx4;
+							cumulus.WllExtraSoilTempIdx1 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempIdx1;
+							cumulus.WllExtraSoilTempIdx2 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempIdx2;
+							cumulus.WllExtraSoilTempIdx3 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempIdx3;
+							cumulus.WllExtraSoilTempIdx4 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempIdx4;
+							cumulus.WllExtraSoilTempTx1 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempTx1;
+							cumulus.WllExtraSoilTempTx2 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempTx2;
+							cumulus.WllExtraSoilTempTx3 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempTx3;
+							cumulus.WllExtraSoilTempTx4 = settings.daviswll.soilLeaf.extraSoilTemp.soilTempTx4;
 
-						cumulus.WllExtraTempTx[0] = settings.daviswll.extraTemp.extraTempTx1;
-						cumulus.WllExtraTempTx[1] = settings.daviswll.extraTemp.extraTempTx2;
-						cumulus.WllExtraTempTx[2] = settings.daviswll.extraTemp.extraTempTx3;
-						cumulus.WllExtraTempTx[3] = settings.daviswll.extraTemp.extraTempTx4;
-						cumulus.WllExtraTempTx[4] = settings.daviswll.extraTemp.extraTempTx5;
-						cumulus.WllExtraTempTx[5] = settings.daviswll.extraTemp.extraTempTx6;
-						cumulus.WllExtraTempTx[6] = settings.daviswll.extraTemp.extraTempTx7;
-						cumulus.WllExtraTempTx[7] = settings.daviswll.extraTemp.extraTempTx8;
+							cumulus.WllExtraTempTx[0] = settings.daviswll.extraTemp.extraTempTx1;
+							cumulus.WllExtraTempTx[1] = settings.daviswll.extraTemp.extraTempTx2;
+							cumulus.WllExtraTempTx[2] = settings.daviswll.extraTemp.extraTempTx3;
+							cumulus.WllExtraTempTx[3] = settings.daviswll.extraTemp.extraTempTx4;
+							cumulus.WllExtraTempTx[4] = settings.daviswll.extraTemp.extraTempTx5;
+							cumulus.WllExtraTempTx[5] = settings.daviswll.extraTemp.extraTempTx6;
+							cumulus.WllExtraTempTx[6] = settings.daviswll.extraTemp.extraTempTx7;
+							cumulus.WllExtraTempTx[7] = settings.daviswll.extraTemp.extraTempTx8;
 
-						cumulus.WllExtraHumTx[0] = settings.daviswll.extraTemp.extraHumTx1;
-						cumulus.WllExtraHumTx[1] = settings.daviswll.extraTemp.extraHumTx2;
-						cumulus.WllExtraHumTx[2] = settings.daviswll.extraTemp.extraHumTx3;
-						cumulus.WllExtraHumTx[3] = settings.daviswll.extraTemp.extraHumTx4;
-						cumulus.WllExtraHumTx[4] = settings.daviswll.extraTemp.extraHumTx5;
-						cumulus.WllExtraHumTx[5] = settings.daviswll.extraTemp.extraHumTx6;
-						cumulus.WllExtraHumTx[6] = settings.daviswll.extraTemp.extraHumTx7;
-						cumulus.WllExtraHumTx[7] = settings.daviswll.extraTemp.extraHumTx8;
+							cumulus.WllExtraHumTx[0] = settings.daviswll.extraTemp.extraHumTx1;
+							cumulus.WllExtraHumTx[1] = settings.daviswll.extraTemp.extraHumTx2;
+							cumulus.WllExtraHumTx[2] = settings.daviswll.extraTemp.extraHumTx3;
+							cumulus.WllExtraHumTx[3] = settings.daviswll.extraTemp.extraHumTx4;
+							cumulus.WllExtraHumTx[4] = settings.daviswll.extraTemp.extraHumTx5;
+							cumulus.WllExtraHumTx[5] = settings.daviswll.extraTemp.extraHumTx6;
+							cumulus.WllExtraHumTx[6] = settings.daviswll.extraTemp.extraHumTx7;
+							cumulus.WllExtraHumTx[7] = settings.daviswll.extraTemp.extraHumTx8;
+						}
 
 						cumulus.DavisOptions.RainGaugeType = settings.daviswll.advanced.raingaugetype;
-						cumulus.DavisOptions.TCPPort = settings.daviswll.advanced.tcpport;
+
 
 						// Automatically enable extra logging?
 						// Should we auto disable it too?
@@ -907,11 +920,11 @@ namespace CumulusMX
 						{
 							if (i < settings.ecowitt.forward.Count)
 							{
-								cumulus.EcowittSettings.EcowittForwarders[i] = string.IsNullOrWhiteSpace(settings.ecowitt.forward[i].url) ? null : settings.ecowitt.forward[i].url.Trim();
+								cumulus.EcowittSettings.Forwarders[i] = string.IsNullOrWhiteSpace(settings.ecowitt.forward[i].url) ? null : settings.ecowitt.forward[i].url.Trim();
 							}
 							else
 							{
-								cumulus.EcowittSettings.EcowittForwarders[i] = null;
+								cumulus.EcowittSettings.Forwarders[i] = null;
 							}
 						}
 					}
@@ -1234,7 +1247,7 @@ namespace CumulusMX
 				{
 					if (cumulus.StationType != settings.general.stationtype)
 					{
-						Cumulus.LogMessage("Station type changed, restart required");
+						cumulus.LogMessage("Station type changed, restart required");
 						Cumulus.LogConsoleMessage("*** Station type changed, restart required ***", ConsoleColor.Yellow, true);
 					}
 					cumulus.StationType = settings.general.stationtype;
@@ -1300,7 +1313,7 @@ namespace CumulusMX
 
 				if (cumulus.WebUpdating == 1)
 				{
-					Cumulus.LogMessage("Upload Now: Warning, a previous web update is still in progress, first chance, skipping attempt");
+					cumulus.LogMessage("Upload Now: Warning, a previous web update is still in progress, first chance, skipping attempt");
 					return "A web update is already in progress";
 				}
 
@@ -1310,7 +1323,7 @@ namespace CumulusMX
 				{
 					try
 					{
-						Cumulus.LogMessage("Upload Now: Warning, a previous web update is still in progress, second chance, aborting connection");
+						cumulus.LogMessage("Upload Now: Warning, a previous web update is still in progress, second chance, aborting connection");
 						if (cumulus.ftpThread.ThreadState == ThreadState.Running)
 							cumulus.ftpThread.Interrupt();
 
@@ -1323,7 +1336,6 @@ namespace CumulusMX
 						return returnMsg;
 					}
 				}
-
 
 				// Graph configs may have changed, so force re-create and upload the json files - just flag everything!
 				cumulus.LogDebugMessage("Upload Now: Flagging the graph data files for recreation and upload/copy");
@@ -1399,7 +1411,7 @@ namespace CumulusMX
 			// get the response
 			try
 			{
-				Cumulus.LogMessage("Updating select-a-chart settings");
+				cumulus.LogMessage("Updating select-a-chart settings");
 
 				var data = new StreamReader(context.Request.InputStream).ReadToEnd();
 
@@ -1434,6 +1446,50 @@ namespace CumulusMX
 
 			return context.Response.StatusCode == 200 ? "success" : errorMsg;
 		}
+
+		internal string SetSelectaPeriodOptions(IHttpContext context)
+		{
+			var errorMsg = "";
+			context.Response.StatusCode = 200;
+			// get the response
+			try
+			{
+				cumulus.LogMessage("Updating select-a-period settings");
+
+				var data = new StreamReader(context.Request.InputStream).ReadToEnd();
+
+				var json = WebUtility.UrlDecode(data);
+
+				// de-serialize it to the settings structure
+				var settings = JsonSerializer.DeserializeFromString<SelectaChartJson>(json);
+
+				// process the settings
+				try
+				{
+					cumulus.SelectaPeriodOptions.series = settings.series;
+					cumulus.SelectaPeriodOptions.colours = settings.colours;
+				}
+				catch (Exception ex)
+				{
+					var msg = "Error select-a-period Options: " + ex.Message;
+					cumulus.LogErrorMessage(msg);
+					errorMsg += msg + "\n\n";
+					context.Response.StatusCode = 500;
+				}
+
+				// Save the settings
+				cumulus.WriteIniFile();
+			}
+			catch (Exception ex)
+			{
+				cumulus.LogErrorMessage("Update selecaperiod options error: " + ex.Message);
+				context.Response.StatusCode = 500;
+				return ex.Message;
+			}
+
+			return context.Response.StatusCode == 200 ? "success" : errorMsg;
+		}
+
 
 		internal string GetWSport()
 		{
@@ -1536,6 +1592,9 @@ namespace CumulusMX
 			public bool cumuluspresstrendnames { get; set; }
 			public bool roundwindspeeds { get; set; }
 			public bool ignorelacrosseclock { get; set; }
+			public bool extrasensors { get; set; }
+			public bool debuglogging { get; set; }
+			public bool datalogging { get; set; }
 			public bool stopsecondinstance { get; set; }
 			public bool nosensorcheck { get; set; }
 			public int leafwetisrainingidx { get; set; }
@@ -1629,8 +1688,6 @@ namespace CumulusMX
 			public string localaddr { get; set; }
 			public int interval { get; set; }
 			public List<JsonEcowittForward> forward { get; set; }
-			public int primaryTHsensor { get; set; }
-			public int primaryRainSensor { get; set; }
 		}
 
 		internal class JsonEcowittForward
@@ -1742,6 +1799,7 @@ namespace CumulusMX
 		{
 			public int raingaugetype { get; set; }
 			public int tcpport { get; set; }
+			public bool datastopped { get; set; }
 		}
 
 		public class WLLNetworkJson

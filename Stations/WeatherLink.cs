@@ -192,10 +192,10 @@ namespace CumulusMX
 		public void Load(byte[] byteArray)
 		{
 			PressureTrend = Convert.ToInt32((sbyte) byteArray[3]); // Sbyte - signed byte
-			Pressure = (double) (BitConverter.ToInt16(byteArray, 7))/1000; // Uint16
-			InsideTemperature = (double) (BitConverter.ToInt16(byteArray, 9))/10; // Uint16
+			Pressure = (double) (BitConverter.ToInt16(byteArray, 7)) / 1000; // Uint16
+			InsideTemperature = (double) (BitConverter.ToInt16(byteArray, 9)) / 10; // Uint16
 			InsideHumidity = Convert.ToInt32(byteArray[11]); // Byte - unsigned byte
-			OutsideTemperature = (double) (BitConverter.ToInt16(byteArray, 12))/10; // Uint16
+			OutsideTemperature = (double) (BitConverter.ToInt16(byteArray, 12)) / 10; // Uint16
 			OutsideHumidity = Convert.ToInt32(byteArray[33]); // Byte - unsigned byte
 			WindDirection = BitConverter.ToInt16(byteArray, 16); // Uint16
 			CurrentWindSpeed = Convert.ToInt32(byteArray[14]); // Byte - unsigned byte
@@ -204,7 +204,7 @@ namespace CumulusMX
 			MonthRain = (double) (BitConverter.ToInt16(byteArray, 52)); // Uint16
 			YearRain = (double) (BitConverter.ToInt16(byteArray, 54)); // Uint16
 			RainRate = (double) (BitConverter.ToInt16(byteArray, 41)); // Uint16
-			StormRain = (double)(BitConverter.ToInt16(byteArray, 46));
+			StormRain = (double) (BitConverter.ToInt16(byteArray, 46));
 			ForecastRule = Convert.ToInt32(byteArray[90]);
 			LeafTemp1 = Convert.ToInt32(byteArray[29]);
 			LeafTemp2 = Convert.ToInt32(byteArray[30]);
@@ -236,14 +236,14 @@ namespace CumulusMX
 			SoilMoisture2 = Convert.ToInt32(byteArray[63]);
 			SoilMoisture3 = Convert.ToInt32(byteArray[64]);
 			SoilMoisture4 = Convert.ToInt32(byteArray[65]);
-			UVIndex = (double) (Convert.ToInt32(byteArray[43]))/10;
+			UVIndex = (double) (Convert.ToInt32(byteArray[43])) / 10;
 			SolarRad = BitConverter.ToInt16(byteArray, 44);
-			var dayET = (double)(BitConverter.ToInt16(byteArray, 56)) / 1000;
-			var yearET = (double)(BitConverter.ToInt16(byteArray,60)) / 100;
+			var dayET = (double) (BitConverter.ToInt16(byteArray, 56)) / 1000;
+			var yearET = (double) (BitConverter.ToInt16(byteArray, 60)) / 100;
 			// It appears that the annual ET in the loop data does not include today
 			AnnualET = yearET + dayET;
 			TXbattStatus = byteArray[86];
-			ConBatVoltage = ((BitConverter.ToInt16(byteArray, 87)*300)/512.0)/100.0;
+			ConBatVoltage = ((BitConverter.ToInt16(byteArray, 87) * 300) / 512.0) / 100.0;
 
 			try
 			{
@@ -515,12 +515,12 @@ namespace CumulusMX
 
 		public void Load(byte[] byteArray, out DateTime lastArchiveDate)
 		{
-			Pressure = (double) (BitConverter.ToInt16(byteArray, 14))/1000.0; // Uint16
-			InsideTemperature = (double) (BitConverter.ToInt16(byteArray, 20))/10.0; // Uint16
+			Pressure = (double) (BitConverter.ToInt16(byteArray, 14)) / 1000.0; // Uint16
+			InsideTemperature = (double) (BitConverter.ToInt16(byteArray, 20)) / 10.0; // Uint16
 			InsideHumidity = Convert.ToInt32(byteArray[22]); // Byte - unsigned byte
-			OutsideTemperature = (double) (BitConverter.ToInt16(byteArray, 4))/10.0; // Uint16
-			HiOutsideTemp = (double) (BitConverter.ToInt16(byteArray, 6))/10.0; // Uint16
-			LoOutsideTemp = (double) (BitConverter.ToInt16(byteArray, 8))/10.0; // Uint16
+			OutsideTemperature = (double) (BitConverter.ToInt16(byteArray, 4)) / 10.0; // Uint16
+			HiOutsideTemp = (double) (BitConverter.ToInt16(byteArray, 6)) / 10.0; // Uint16
+			LoOutsideTemp = (double) (BitConverter.ToInt16(byteArray, 8)) / 10.0; // Uint16
 			OutsideHumidity = Convert.ToInt32(byteArray[23]); // Byte - unsigned byte
 			HiWindDirection = Convert.ToInt32(byteArray[26]); // Uint16
 			WindDirection = Convert.ToInt32(byteArray[27]); // Uint16
@@ -548,9 +548,9 @@ namespace CumulusMX
 			SoilMoisture2 = Convert.ToInt32(byteArray[49]);
 			SoilMoisture3 = Convert.ToInt32(byteArray[50]);
 			SoilMoisture4 = Convert.ToInt32(byteArray[51]);
-			AvgUVIndex = Convert.ToInt32(byteArray[28])/10.0;
-			ET = (double) (Convert.ToInt32(byteArray[29]))/1000;
-			HiUVIndex = Convert.ToInt32(byteArray[32])/10.0;
+			AvgUVIndex = Convert.ToInt32(byteArray[28]) / 10.0;
+			ET = (double) (Convert.ToInt32(byteArray[29])) / 1000;
+			HiUVIndex = Convert.ToInt32(byteArray[32]) / 10.0;
 
 			// Get timestamp
 			int datevalue = BitConverter.ToInt16(byteArray, 0);
@@ -745,7 +745,7 @@ namespace CumulusMX
 			//    }
 			//    catch (Exception ex)
 			//    {
-			//        Cumulus.LogMessage(ex.ToString());
+			//        cumulus.LogMessage(ex.ToString());
 			//        Trace.Flush();
 			//    }
 			//}

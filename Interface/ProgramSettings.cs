@@ -3,7 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
+
 using EmbedIO;
 using ServiceStack.Text;
 
@@ -60,7 +60,8 @@ namespace CumulusMX
 				emaillogging = cumulus.SmtpOptions.Logging,
 				spikelogging = cumulus.ErrorLogSpikeRemoval,
 				rawextralogging = cumulus.ProgramOptions.LogRawExtraData,
-				rawstationlogging = cumulus.ProgramOptions.LogRawStationData
+				rawstationlogging = cumulus.ProgramOptions.LogRawStationData,
+				errorlistlevel = (int) cumulus.ErrorListLoggingLevel
 			};
 
 			var options = new GeneralOptionsJson()
@@ -76,6 +77,13 @@ namespace CumulusMX
 				timeFormat = cumulus.ProgramOptions.TimeFormat
 			};
 
+			var security = new Security()
+			{
+				securesettings = cumulus.ProgramOptions.SecureSettings,
+				username = cumulus.ProgramOptions.SettingsUsername,
+				password = cumulus.ProgramOptions.SettingsPassword,
+			};
+
 			var settings = new SettingsJson()
 			{
 				accessible = cumulus.ProgramOptions.EnableAccessibility,
@@ -83,7 +91,8 @@ namespace CumulusMX
 				shutdown = shutdown,
 				logging = logging,
 				options = options,
-				culture = culture
+				culture = culture,
+				security = security
 			};
 
 			return JsonSerializer.SerializeToString(settings);
@@ -99,7 +108,7 @@ namespace CumulusMX
 			// get the response
 			try
 			{
-				Cumulus.LogMessage("Updating Program settings");
+				cumulus.LogMessage("Updating Program settings");
 
 				var data = new StreamReader(context.Request.InputStream).ReadToEnd();
 
@@ -141,6 +150,7 @@ namespace CumulusMX
 				cumulus.ProgramOptions.DataLogging = settings.logging.datalogging;
 				cumulus.SmtpOptions.Logging = settings.logging.emaillogging;
 				cumulus.ErrorLogSpikeRemoval = settings.logging.spikelogging;
+				cumulus.ErrorListLoggingLevel = (Cumulus.LogLevel) settings.logging.errorlistlevel;
 
 				cumulus.ProgramOptions.WarnMultiple = settings.options.stopsecondinstance;
 				cumulus.ProgramOptions.ListWebTags = settings.options.listwebtags;
@@ -148,6 +158,10 @@ namespace CumulusMX
 				cumulus.ProgramOptions.DisplayPasswords = settings.options.displaypasswords;
 
 				cumulus.ProgramOptions.Culture.RemoveSpaceFromDateSeparator = settings.culture.removespacefromdateseparator;
+
+				cumulus.ProgramOptions.SecureSettings = settings.security.securesettings;
+				cumulus.ProgramOptions.SettingsUsername = (settings.security.username ?? string.Empty).Trim();
+				cumulus.ProgramOptions.SettingsPassword = (settings.security.password ?? string.Empty).Trim();
 
 				if (cumulus.ProgramOptions.TimeFormat == "t")
 					cumulus.ProgramOptions.TimeFormatLong = "T";
@@ -232,6 +246,7 @@ namespace CumulusMX
 			public LoggingOptionsJson logging { get; set; }
 			public GeneralOptionsJson options { get; set; }
 			public CultureOptionsJson culture { get; set; }
+			public Security security { get; set; }
 		}
 
 		public class ProgramTask
@@ -261,6 +276,7 @@ namespace CumulusMX
 			public bool spikelogging { get; set; }
 			public bool rawstationlogging { get; set; }
 			public bool rawextralogging { get; set; }
+			public int errorlistlevel { get; set; }
 		}
 
 		private class GeneralOptionsJson
@@ -281,6 +297,12 @@ namespace CumulusMX
 			public bool datastoppedexit { get; set; }
 			public int datastoppedmins { get; set; }
 			public ProgramTask shutdowntask { get; set; }
+		}
+		private class Security
+		{
+			public bool securesettings { get; set;}
+			public string username { get; set; }
+			public string password { get; set; }
 		}
 	}
 }

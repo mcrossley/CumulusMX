@@ -29,14 +29,14 @@ namespace CumulusMX.ThirdParty
 
 			for (int i = 0; i < CatchupList.Count; i++)
 			{
-				Cumulus.LogMessage("Uploading OpenWeatherMap archive #" + (i + 1));
+				cumulus.LogMessage("Uploading OpenWeatherMap archive #" + (i + 1));
 				cumulus.LogDebugMessage("OpenWeatherMap: URL = " + logUrl);
 				cumulus.LogDataMessage("OpenWeatherMap: Body = " + CatchupList[i]);
 
 				try
 				{
 					var data = new StringContent(CatchupList[i], Encoding.UTF8, "application/json");
-					HttpResponseMessage response = await httpClient.PostAsync(url, data);
+					using var response = await Cumulus.MyHttpClient.PostAsync(url, data);
 					var responseBodyAsText = await response.Content.ReadAsStringAsync();
 					var status = response.StatusCode == HttpStatusCode.NoContent ? "OK" : "Error";  // Returns a 204 response for OK!
 					cumulus.LogDebugMessage($"OpenWeatherMap: Response code = {status} - {response.StatusCode}");
@@ -50,7 +50,7 @@ namespace CumulusMX.ThirdParty
 				}
 			}
 
-			Cumulus.LogMessage("End of OpenWeatherMap archive upload");
+			cumulus.LogMessage("End of OpenWeatherMap archive upload");
 			CatchupList.Clear();
 			CatchingUp = false;
 			Updating = false;
@@ -78,14 +78,14 @@ namespace CumulusMX.ThirdParty
 			try
 			{
 				var data = new StringContent(jsonData, Encoding.UTF8, "application/json");
-				HttpResponseMessage response = await httpClient.PostAsync(url, data);
+				HttpResponseMessage response = await Cumulus.MyHttpClient.PostAsync(url, data);
 				var responseBodyAsText = await response.Content.ReadAsStringAsync();
 				var status = response.StatusCode == HttpStatusCode.NoContent ? "OK" : "Error";  // Returns a 204 response for OK!
 				cumulus.LogDebugMessage($"OpenWeatherMap: Response code = {status} - {response.StatusCode}");
 				if (response.StatusCode != HttpStatusCode.NoContent)
 				{
-					Cumulus.LogMessage($"OpenWeatherMap: ERROR - Response code = {response.StatusCode}, Response data = {responseBodyAsText}");
-					cumulus.ThirdPartyUploadAlarm.LastError = $"OpenWeatherMap: HTTP response - {response.StatusCode}, Response data = {responseBodyAsText}";
+					cumulus.LogMessage($"OpenWeatherMap: ERROR - Response code = {response.StatusCode}, Response data = {responseBodyAsText}");
+					cumulus.ThirdPartyUploadAlarm.LastMessage = $"OpenWeatherMap: HTTP response - {response.StatusCode}, Response data = {responseBodyAsText}";
 					cumulus.ThirdPartyUploadAlarm.Triggered = true;
 				}
 				else
@@ -96,7 +96,7 @@ namespace CumulusMX.ThirdParty
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "OpenWeatherMap: ERROR");
-				cumulus.ThirdPartyUploadAlarm.LastError = "OpenWeatherMap: " + ex.Message;
+				cumulus.ThirdPartyUploadAlarm.LastMessage = "OpenWeatherMap: " + ex.Message;
 				cumulus.ThirdPartyUploadAlarm.Triggered = true;
 			}
 			finally
@@ -177,13 +177,13 @@ namespace CumulusMX.ThirdParty
 				sb.Append($"\"longitude\":{cumulus.Longitude.ToString(invC)},");
 				sb.Append($"\"altitude\":{(int)WeatherStation.AltitudeM(cumulus.Altitude)}}}");
 
-				Cumulus.LogMessage($"OpenWeatherMap: Creating new station");
-				Cumulus.LogMessage($"OpenWeatherMap: - {sb}");
+				cumulus.LogMessage($"OpenWeatherMap: Creating new station");
+				cumulus.LogMessage($"OpenWeatherMap: - {sb}");
 
 
 				var data = new StringContent(sb.ToString(), Encoding.UTF8, "application/json");
 
-				HttpResponseMessage response = httpClient.PostAsync(url, data).Result;
+				HttpResponseMessage response = Cumulus.MyHttpClient.PostAsync(url, data).Result;
 				var responseBodyAsText = response.Content.ReadAsStringAsync().Result;
 				var status = response.StatusCode == HttpStatusCode.Created ? "OK" : "Error";  // Returns a 201 response for OK
 				cumulus.LogDebugMessage($"OpenWeatherMap: Create station response code = {status} - {response.StatusCode}");
@@ -194,13 +194,13 @@ namespace CumulusMX.ThirdParty
 					// It worked, save the result
 					var respJson = JsonSerializer.DeserializeFromString<OpenWeatherMapNewStation>(responseBodyAsText);
 
-					Cumulus.LogMessage($"OpenWeatherMap: Created new station, id = {respJson.ID}, name = {respJson.name}");
+					cumulus.LogMessage($"OpenWeatherMap: Created new station, id = {respJson.ID}, name = {respJson.name}");
 					ID = respJson.ID;
 					cumulus.WriteIniFile();
 				}
 				else
 				{
-					Cumulus.LogMessage($"OpenWeatherMap: Failed to create new station. Error - {response.StatusCode}, text - {responseBodyAsText}");
+					cumulus.LogMessage($"OpenWeatherMap: Failed to create new station. Error - {response.StatusCode}, text - {responseBodyAsText}");
 				}
 			}
 			catch (Exception ex)
@@ -220,13 +220,13 @@ namespace CumulusMX.ThirdParty
 				if (stations.Length == 0)
 				{
 					// No stations defined, we will create one
-					Cumulus.LogMessage($"OpenWeatherMap: No station defined, attempting to create one");
+					cumulus.LogMessage($"OpenWeatherMap: No station defined, attempting to create one");
 					CreateOpenWeatherMapStation();
 				}
 				else if (stations.Length == 1)
 				{
 					// We have one station defined, lets use it!
-					Cumulus.LogMessage($"OpenWeatherMap: No station defined, but found one associated with this API key, using this station - {stations[0].id} : {stations[0].name}");
+					cumulus.LogMessage($"OpenWeatherMap: No station defined, but found one associated with this API key, using this station - {stations[0].id} : {stations[0].name}");
 					ID = stations[0].id;
 					// save the setting
 					cumulus.WriteIniFile();
@@ -236,12 +236,12 @@ namespace CumulusMX.ThirdParty
 					// multiple stations defined, the user must select which one to use
 					var msg = $"Multiple OpenWeatherMap stations found, please select the correct station id and enter it into your configuration";
 					Cumulus.LogConsoleMessage(msg);
-					Cumulus.LogMessage("OpenWeatherMap: " + msg);
+					cumulus.LogMessage("OpenWeatherMap: " + msg);
 					foreach (var station in stations)
 					{
 						msg = $"  Station Id = {station.id}, Name = {station.name}";
 						Cumulus.LogConsoleMessage(msg);
-						Cumulus.LogMessage("OpenWeatherMap: " + msg);
+						cumulus.LogMessage("OpenWeatherMap: " + msg);
 					}
 				}
 			}
@@ -273,6 +273,5 @@ namespace CumulusMX.ThirdParty
 			public int altitude { get; set; }
 			public int source_type { get; set; }
 		}
-
 	}
 }

@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Globalization;
+
 using EmbedIO;
 
-namespace CumulusMX
+namespace CumulusMX.Stations
 {
 	class HttpStationWund : WeatherStation
 	{
@@ -14,7 +15,7 @@ namespace CumulusMX
 
 		public HttpStationWund(Cumulus cumulus) : base(cumulus)
 		{
-			Cumulus.LogMessage("Starting HTTP Station (Wunderground)");
+			cumulus.LogMessage("Starting HTTP Station (Wunderground)");
 
 			cumulus.StationOptions.CalculatedWC = true;
 			cumulus.Units.AirQualityUnitText = "µg/m³";
@@ -106,7 +107,7 @@ namespace CumulusMX
 					if (gust == null || dir == null || avg == null ||
 						 gust == "-9999" || dir == "-9999" || avg == "-9999")
 					{
-						Cumulus.LogMessage($"ProcessData: Error, missing wind data");
+						cumulus.LogWarningMessage($"ProcessData: Error, missing wind data");
 					}
 
 					var gustVal = gust == null || gust == "-9999" ? null : ConvertWindMPHToUser(Convert.ToDouble(gust, invNum));
@@ -134,12 +135,12 @@ namespace CumulusMX
 					int? val = humIn == null || humIn == "-9999" ? null : Convert.ToInt32(humIn, invNum);
 					DoIndoorHumidity(val);
 					if (val == null)
-						Cumulus.LogMessage($"ProcessData: Error, missing indoor humidity");
+						cumulus.LogWarningMessage($"ProcessData: Error, missing indoor humidity");
 
 					val = humOut == null || humOut == "-9999" ? null : Convert.ToInt32(humOut, invNum);
 					DoHumidity(val, recDate);
 					if (val == null)
-						Cumulus.LogMessage($"ProcessData: Error, missing outdoor humidity");
+						cumulus.LogWarningMessage($"ProcessData: Error, missing outdoor humidity");
 				}
 				catch (Exception ex)
 				{
@@ -158,7 +159,7 @@ namespace CumulusMX
 					double? val = press == null || press == "-9999" ? null : ConvertPressINHGToUser(Convert.ToDouble(press, invNum));
 					DoPressure(val, recDate);
 					if (val == null)
-						Cumulus.LogMessage($"ProcessData: Error, missing baro pressure");
+						cumulus.LogWarningMessage($"ProcessData: Error, missing baro pressure");
 					else
 						UpdatePressureTrendString();
 				}
@@ -179,7 +180,7 @@ namespace CumulusMX
 					double? val = temp == null || temp == "-9999" ? null : ConvertTempFToUser(Convert.ToDouble(temp, invNum));
 					DoIndoorTemp(val);
 					if (val == null)
-						Cumulus.LogMessage($"ProcessData: Error, missing indoor temp");
+						cumulus.LogWarningMessage($"ProcessData: Error, missing indoor temp");
 				}
 				catch (Exception ex)
 				{
@@ -198,7 +199,7 @@ namespace CumulusMX
 					double? val = temp == null || temp == "-9999" ? null : ConvertTempFToUser(Convert.ToDouble(temp, invNum));
 					DoTemperature(val, recDate);
 					if (val == null)
-						Cumulus.LogMessage($"ProcessData: Error, missing outdoor temp");
+						cumulus.LogWarningMessage($"ProcessData: Error, missing outdoor temp");
 				}
 				catch (Exception ex)
 				{
@@ -218,7 +219,7 @@ namespace CumulusMX
 
 					if (rain == null || rain == "-9999")
 					{
-						Cumulus.LogMessage($"ProcessData: Error, missing rainfall");
+						cumulus.LogWarningMessage($"ProcessData: Error, missing rainfall");
 					}
 					else
 					{
@@ -273,7 +274,7 @@ namespace CumulusMX
 					}
 					else
 					{
-						Cumulus.LogMessage("ProcessData: Insufficient data to calculate Apparent/Feels like Temps");
+						cumulus.LogWarningMessage("ProcessData: Insufficient data to calculate Apparent/Feels like Temps");
 					}
 				}
 
@@ -287,7 +288,7 @@ namespace CumulusMX
 				}
 				else
 				{
-					Cumulus.LogMessage("ProcessData: Insufficient data to calculate Humidex");
+					cumulus.LogWarningMessage("ProcessData: Insufficient data to calculate Humidex");
 				}
 
 				DoForecast(string.Empty, false);

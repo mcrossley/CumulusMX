@@ -33,12 +33,12 @@ namespace CumulusMX.ThirdParty
 
 				try
 				{
-					HttpResponseMessage response = await httpClient.GetAsync(URL);
+					using var response = await Cumulus.MyHttpClient.GetAsync(URL);
 					var responseBodyAsText = await response.Content.ReadAsStringAsync();
 					if (response.StatusCode != HttpStatusCode.OK)
 					{
-						Cumulus.LogMessage($"WOW Response: ERROR - Response code = {response.StatusCode}, body = {responseBodyAsText}");
-						cumulus.ThirdPartyUploadAlarm.LastError = $"WOW: HTTP response - Response code = {response.StatusCode}, body = {responseBodyAsText}";
+						cumulus.LogMessage($"WOW Response: ERROR - Response code = {response.StatusCode}, body = {responseBodyAsText}");
+						cumulus.ThirdPartyUploadAlarm.LastMessage = $"WOW: HTTP response - Response code = {response.StatusCode}, body = {responseBodyAsText}";
 						cumulus.ThirdPartyUploadAlarm.Triggered = true;
 					}
 					else
@@ -50,7 +50,7 @@ namespace CumulusMX.ThirdParty
 				catch (Exception ex)
 				{
 					cumulus.LogExceptionMessage(ex, "WOW update error");
-					cumulus.ThirdPartyUploadAlarm.LastError = "WOW: " + ex.Message;
+					cumulus.ThirdPartyUploadAlarm.LastMessage = "WOW: " + ex.Message;
 					cumulus.ThirdPartyUploadAlarm.Triggered = true;
 				}
 				finally

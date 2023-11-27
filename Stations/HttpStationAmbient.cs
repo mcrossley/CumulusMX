@@ -1,9 +1,11 @@
 ﻿using System;
-using System.Globalization;
 using System.Collections.Specialized;
+using System.Globalization;
+
 using EmbedIO;
 
-namespace CumulusMX
+
+namespace CumulusMX.Stations
 {
 	class HttpStationAmbient : WeatherStation
 	{
@@ -18,19 +20,18 @@ namespace CumulusMX
 
 			if (station == null)
 			{
-				Cumulus.LogMessage("Creating HTTP Station (Ambient)");
+				cumulus.LogMessage("Creating HTTP Station (Ambient)");
 			}
 			else
 			{
-				Cumulus.LogMessage("Creating Extra Sensors - HTTP Station (Ambient)");
+				cumulus.LogMessage("Creating Extra Sensors - HTTP Station (Ambient)");
 			}
 
 
 			//cumulus.StationOptions.CalculatedWC = true;
 			// Ambient does not provide average wind speeds
-			cumulus.StationOptions.CalcWind10MinAve = true;
+			cumulus.StationOptions.CalcuateAverageWindSpeed = true;
 			//cumulus.StationOptions.UseSpeedForAvgCalc = false;
-
 			// Ambient does not send the rain rate, so we will calculate it
 			calculaterainrate = true;
 			// Ambient does not send DP, so force MX to calculate it
@@ -62,14 +63,15 @@ namespace CumulusMX
 		{
 			if (station == null)
 			{
-				Cumulus.LogMessage("Starting HTTP Station (Ambient)");
+				cumulus.LogMessage("Starting HTTP Station (Ambient)");
 				DoDayResetIfNeeded();
 				timerStartNeeded = true;
 			}
 			else
 			{
-				Cumulus.LogMessage("Starting Extra Sensors - HTTP Station (Ambient)");
+				cumulus.LogMessage("Starting Extra Sensors - HTTP Station (Ambient)");
 			}
+			starting = false;
 		}
 
 		public override void Stop()
@@ -101,12 +103,12 @@ namespace CumulusMX
 			var procName = main ? "ProcessData" : "ProcessExtraData";
 			var thisStation = main ? this : station;
 
-
 			if (starting || stopping)
 			{
 				context.Response.StatusCode = 200;
 				return "success";
 			}
+
 
 			try
 			{
@@ -148,7 +150,7 @@ namespace CumulusMX
 
 						if (gust == null || dir == null || avg == null)
 						{
-							Cumulus.LogMessage($"ProcessData: Error, missing wind data");
+							cumulus.LogWarningMessage($"ProcessData: Error, missing wind data");
 						}
 						else
 						{
@@ -179,7 +181,7 @@ namespace CumulusMX
 						if (humIn == null)
 						{
 							DoIndoorHumidity(null);
-							Cumulus.LogMessage($"ProcessData: Error, missing indoor humidity");
+							cumulus.LogMessage($"ProcessData: Error, missing indoor humidity");
 						}
 						else
 						{
@@ -190,7 +192,7 @@ namespace CumulusMX
 						if (humOut == null)
 						{
 							DoHumidity(null, recDate);
-							Cumulus.LogMessage($"ProcessData: Error, missing outdoor humidity");
+							cumulus.LogMessage($"ProcessData: Error, missing outdoor humidity");
 						}
 						else
 						{
@@ -217,7 +219,7 @@ namespace CumulusMX
 
 						if (press == null)
 						{
-							Cumulus.LogMessage("ProcessData: Error, missing baro pressure");
+							cumulus.LogWarningMessage("ProcessData: Error, missing baro pressure");
 						}
 						else
 						{
@@ -252,7 +254,7 @@ namespace CumulusMX
 
 						if (temp == null)
 						{
-							Cumulus.LogMessage($"ProcessData: Error, missing indoor temp");
+							cumulus.LogWarningMessage($"ProcessData: Error, missing indoor temp");
 						}
 						else
 						{
@@ -278,7 +280,7 @@ namespace CumulusMX
 						if (temp == null)
 						{
 							DoTemperature(null, recDate);
-							Cumulus.LogMessage($"ProcessData: Error, missing outdoor temp");
+							cumulus.LogMessage($"ProcessData: Error, missing outdoor temp");
 						}
 						else
 						{
@@ -311,7 +313,7 @@ namespace CumulusMX
 
 						if (rain == null)
 						{
-							Cumulus.LogMessage($"ProcessData: Error, missing rainfall");
+							cumulus.LogWarningMessage($"ProcessData: Error, missing rainfall");
 						}
 						else
 						{
@@ -333,9 +335,20 @@ namespace CumulusMX
 					{
 						// dewptf
 						var dewpnt = data["dewptf"];
-						var val = dewpnt == null ? null : ConvertTempFToUser(Convert.ToDouble(dewpnt, invNum));
-						DoDewpoint(val, recDate);
 
+						if (cumulus.StationOptions.CalculatedDP)
+						{
+							DoDewpoint(0, recDate);
+						}
+						else if (dewpnt == null)
+						{
+							cumulus.LogWarningMessage($"ProcessData: Error, missing dew point");
+						}
+						else
+						{
+							var val = dewpnt == null ? null : ConvertTempFToUser(Convert.ToDouble(dewpnt, invNum));
+							DoDewpoint(val, recDate);
+						}
 					}
 					catch (Exception ex)
 					{
@@ -349,9 +362,24 @@ namespace CumulusMX
 					try
 					{
 						// windchillf
-						var chill = data["windchillf"];
-						var val = chill == null ? null : ConvertTempFToUser(Convert.ToDouble(chill, invNum));
-						DoWindChill(val, recDate);
+
+						if (cumulus.StationOptions.CalculatedWC && data["tempf"] != null && data["windspeedmph"] != null)
+						{
+							DoWindChill(0, recDate);
+						}
+						else
+						{
+							var chill = data["windchillf"];
+							if (chill == null)
+							{
+								cumulus.LogWarningMessage($"ProcessData: Error, missing dew point");
+							}
+							else
+							{
+								var val = chill == null ? null : ConvertTempFToUser(Convert.ToDouble(chill, invNum));
+								DoWindChill(val, recDate);
+							}
+						}
 					}
 					catch (Exception ex)
 					{
@@ -375,12 +403,12 @@ namespace CumulusMX
 						}
 						else
 						{
-							Cumulus.LogMessage("ProcessData: Insufficient data to calculate Apparent/Feels Like temps");
+							cumulus.LogWarningMessage("ProcessData: Insufficient data to calculate Apparent/Feels Like temps");
 						}
 					}
 					else
 					{
-						Cumulus.LogMessage("ProcessData: Insufficient data to calculate Humidex and Apparent/Feels Like temps");
+						cumulus.LogWarningMessage("ProcessData: Insufficient data to calculate Humidex and Apparent/Feels Like temps");
 					}
 				}
 
@@ -443,6 +471,7 @@ namespace CumulusMX
 						cumulus.LogExceptionMessage(ex, $"{procName}: Error in UV data");
 					}
 				}
+
 
 				// === Soil Temp ===
 				if (main || cumulus.AmbientExtraUseSoilTemp)
@@ -860,6 +889,5 @@ namespace CumulusMX
 					station.ExtraDewPoint[i] = null;
 			}
 		}
-
 	}
 }

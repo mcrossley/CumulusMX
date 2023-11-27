@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 using ServiceStack.Text;
 
 namespace CumulusMX
@@ -131,6 +133,10 @@ namespace CumulusMX
 
 			var start = new DateTime(year, month, 1);
 			var end = start.AddMonths(1);
+			// allow for 9am rollover
+			start = start.AddHours(cumulus.GetHourInc(start));
+			end = end.AddHours(cumulus.GetHourInc(end));
+
 			try
 			{
 				var rows = station.Database.Query<DbWindAvgDir>("select WindAvg, WindAvgDir from IntervalData where Timestamp >= ? and Timestamp < ?", start.ToUniversalTime(), end.ToUniversalTime());
@@ -408,14 +414,14 @@ namespace CumulusMX
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, $"CreateMonthlyReport: Error");
-				Cumulus.LogMessage("Please report this error");
+				cumulus.LogMessage("Please report this error");
 			}
 
 
 			double avgwindspeed;
 			if (windsamples > 0)
 			{
-				avgwindspeed = totalwindspeed/windsamples;
+				avgwindspeed = totalwindspeed / windsamples;
 			}
 			else
 			{
@@ -444,7 +450,7 @@ namespace CumulusMX
 						}
 						catch
 						{
-							Cumulus.LogMessage("Error in NOAA dominant wind direction calculation ");
+							cumulus.LogMessage("Error in NOAA dominant wind direction calculation ");
 						}
 
 						if (dayList[i].winddomdir == 0)
@@ -458,8 +464,8 @@ namespace CumulusMX
 				if (dayList[i].windsamples > 0)
 					// there"s an average speed available
 				{
-					totalwinddirX += (dayList[i].avgwindspeed*Math.Sin(Trig.DegToRad(dayList[i].winddomdir)));
-					totalwinddirY += (dayList[i].avgwindspeed*Math.Cos(Trig.DegToRad(dayList[i].winddomdir)));
+					totalwinddirX += (dayList[i].avgwindspeed * Math.Sin(Trig.DegToRad(dayList[i].winddomdir)));
+					totalwinddirY += (dayList[i].avgwindspeed * Math.Cos(Trig.DegToRad(dayList[i].winddomdir)));
 				}
 			}
 
@@ -473,7 +479,7 @@ namespace CumulusMX
 			}
 			catch
 			{
-				Cumulus.LogMessage("Error in NOAA dominant wind direction calculation ");
+				cumulus.LogMessage("Error in NOAA dominant wind direction calculation ");
 				overalldomdir = 0;
 			}
 
@@ -528,9 +534,13 @@ namespace CumulusMX
 					repLine.Append(i.ToString("D2"));
 
 					if (dayList[i].meantemp <= -999)
+					{
 						repLine.Append("    --");
+					}
 					else
+					{
 						repLine.Append(string.Format(numFormat, "{0,6:F1}",dayList[i].meantemp));
+					}
 
 					if (dayList[i].maxtemp <= -999)
 					{
@@ -918,7 +928,7 @@ namespace CumulusMX
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, $"Error in DayData row at {rowDateTime}");
-				Cumulus.LogMessage("Please edit the Database to correct the error");
+				cumulus.LogMessage("Please edit the Database to correct the error");
 			}
 
 			// Now output everything

@@ -64,7 +64,7 @@ namespace CumulusMX
 
 		protected override void OnStop()
 		{
-			Cumulus.LogMessage("Shutting down due to SERVICE STOP");
+			Program.cumulus.LogMessage("Shutting down due to SERVICE STOP");
 			Cumulus.LogConsoleMessage("Shutting down due to SERVICE STOP");
 			Program.cumulus.Stop();
 			Program.exitSystem = true;
@@ -72,7 +72,7 @@ namespace CumulusMX
 
 		protected override void OnShutdown()
 		{
-			Cumulus.LogMessage("Shutting down due to SYSTEM SHUTDOWN");
+			Program.cumulus.LogMessage("Shutting down due to SYSTEM SHUTDOWN");
 			Cumulus.LogConsoleMessage("Shutting down due to SYSTEM SHUTDOWN");
 			Program.cumulus.Stop();
 			Program.exitSystem = true;
@@ -88,35 +88,35 @@ namespace CumulusMX
 			switch (powerStatus)
 			{
 				case PowerBroadcastStatus.BatteryLow:
-					Cumulus.LogMessage("POWER: Detected system BATTERY LOW");
+					Program.cumulus.LogWarningMessage("POWER: Detected system BATTERY LOW");
 					break;
 				case PowerBroadcastStatus.OemEvent:
-					Cumulus.LogMessage("POWER: Detected system OEM EVENT");
+					Program.cumulus.LogWarningMessage("POWER: Detected system OEM EVENT");
 					break;
 				case PowerBroadcastStatus.PowerStatusChange:
-					Cumulus.LogMessage("POWER: Detected system POWER STATUS CHANGE");
+					Program.cumulus.LogWarningMessage("POWER: Detected system POWER STATUS CHANGE");
 					break;
 				case PowerBroadcastStatus.QuerySuspend:
-					Cumulus.LogMessage("POWER: Detected system QUERY SUSPEND");
+					Program.cumulus.LogWarningMessage("POWER: Detected system QUERY SUSPEND");
 					break;
 				case PowerBroadcastStatus.QuerySuspendFailed:
-					Cumulus.LogMessage("POWER: Detected system QUERY SUSPEND FAILED");
+					Program.cumulus.LogWarningMessage("POWER: Detected system QUERY SUSPEND FAILED");
 					break;
 				case PowerBroadcastStatus.ResumeAutomatic:
-					Cumulus.LogMessage("POWER: Detected system RESUME AUTOMATIC");
+					Program.cumulus.LogWarningMessage("POWER: Detected system RESUME AUTOMATIC");
 					break;
 				case PowerBroadcastStatus.ResumeCritical:
-					Cumulus.LogMessage("POWER: Detected system RESUME CRITICAL, stopping service");
+					Program.cumulus.LogCriticalMessage("POWER: Detected system RESUME CRITICAL, stopping service");
 					Cumulus.LogConsoleMessage("Detected system RESUME CRITICAL, stopping service");
 					// A critical suspend will not have shutdown Cumulus, so do it now
 					Stop();
 					Program.exitSystem = true;
 					break;
 				case PowerBroadcastStatus.ResumeSuspend:
-					Cumulus.LogMessage("POWER: Detected system RESUMING FROM STANDBY");
+					Program.cumulus.LogWarningMessage("POWER: Detected system RESUMING FROM STANDBY");
 					break;
 				case PowerBroadcastStatus.Suspend:
-					Cumulus.LogMessage("POWER: Detected system GOING TO STANDBY, stopping service");
+					Program.cumulus.LogWarningMessage("POWER: Detected system GOING TO STANDBY, stopping service");
 					Cumulus.LogConsoleMessage("Detected system GOING TO STANDBY, stopping service");
 					Stop();
 					Program.exitSystem = true;

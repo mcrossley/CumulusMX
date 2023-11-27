@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
@@ -16,33 +14,26 @@ namespace CumulusMX
 		private readonly Cumulus cumulus;
 		private readonly WeatherStation station;
 
-		private static readonly HttpClientHandler httpHandler = new HttpClientHandler() { SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13 };
-		private static readonly HttpClient httpClient = new HttpClient(httpHandler);
-
 		private static readonly string historyUrl = "https://api.ecowitt.net/api/v3/device/history?";
+		private static readonly string currentUrl = "https://api.ecowitt.net/api/v3/device/real_time?";
+		private static readonly string stationUrl = "https://api.ecowitt.net/api/v3/device/list?";
 
 		private static readonly int EcowittApiFudgeFactor = 5; // Number of minutes that Ecowitt API data is delayed
+
+		private DateTime LastCurrentDataTime = DateTime.MinValue;
+		private DateTime LastCameraImageTime = DateTime.MinValue;
+		private DateTime LastCameraCallTime = DateTime.MinValue;
 
 		public EcowittApi(Cumulus cuml, WeatherStation stn)
 		{
 			cumulus = cuml;
 			station = stn;
 
-			// Configure a web proxy if required
-			if (!string.IsNullOrEmpty(cumulus.HTTPProxyName))
-			{
-				httpHandler.Proxy = new WebProxy(cumulus.HTTPProxyName, cumulus.HTTPProxyPort);
-				httpHandler.UseProxy = true;
-				if (!string.IsNullOrEmpty(cumulus.HTTPProxyUser))
-				{
-					httpHandler.Credentials = new NetworkCredential(cumulus.HTTPProxyUser, cumulus.HTTPProxyPassword);
-				}
-			}
-
-			httpClient.DefaultRequestHeaders.ConnectionClose = true;
+			//httpClient.DefaultRequestHeaders.ConnectionClose = true;
 
 			// Let's decode the Unix ts to DateTime
-			JsConfig.Init(new Config {
+			JsConfig.Init(new Config
+			{
 				DateHandler = DateHandler.UnixTime
 			});
 
@@ -66,11 +57,13 @@ namespace CumulusMX
 
 		internal bool GetHistoricData(DateTime startTime, DateTime endTime, CancellationToken token)
 		{
-			Cumulus.LogMessage("API.GetHistoricData: Get Ecowitt Historic Data");
+			// DOC: https://doc.ecowitt.net/web/#/apiv3en?page_id=19
+
+			cumulus.LogMessage("API.GetHistoricData: Get Ecowitt Historic Data");
 
 			if (string.IsNullOrEmpty(cumulus.EcowittSettings.AppKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.UserApiKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.MacAddress))
 			{
-				Cumulus.LogMessage("API.GetHistoricData: Missing Ecowitt API data in the configuration, aborting!");
+				cumulus.LogWarningMessage("API.GetHistoricData: Missing Ecowitt API data in the configuration, aborting!");
 				cumulus.LastUpdateTime = DateTime.Now;
 				return false;
 			}
@@ -82,7 +75,14 @@ namespace CumulusMX
 
 			sb.Append($"application_key={cumulus.EcowittSettings.AppKey}");
 			sb.Append($"&api_key={cumulus.EcowittSettings.UserApiKey}");
-			sb.Append($"&mac={cumulus.EcowittSettings.MacAddress}");
+			if (ulong.TryParse(cumulus.EcowittSettings.MacAddress, out _))
+			{
+				sb.Append($"&imei={cumulus.EcowittSettings.MacAddress}");
+			}
+			else
+			{
+				sb.Append($"&mac={cumulus.EcowittSettings.MacAddress}");
+			}
 			sb.Append($"&start_date={apiStartDate.ToString("yyyy-MM-dd'%20'HH:mm:ss")}");
 			sb.Append($"&end_date={apiEndDate.ToString("yyyy-MM-dd'%20'HH:mm:ss")}");
 
@@ -102,7 +102,7 @@ namespace CumulusMX
 				_ => "?",
 			};
 			sb.Append($"&wind_speed_unitid={windUnit}");
-			sb.Append($"&rainfall_unitid={cumulus.Units.Rain + 12}");
+			sb.Append($"&rainfall_unitid={cumulus.Units.Rain + 12}"); // 13=inches, 14=mm
 
 			// available callbacks:
 			//	outdoor, indoor, solar_and_uvi, rainfall, wind, pressure, lightning
@@ -175,13 +175,14 @@ namespace CumulusMX
 			var url = sb.ToString();
 
 			var msg = $"Processing history data from {startTime:yyyy-MM-dd HH:mm} to {endTime.AddMinutes(5):yyyy-MM-dd HH:mm}...";
-			Cumulus.LogMessage($"API.GetHistoricData: " + msg);
+			cumulus.LogMessage($"API.GetHistoricData: " + msg);
 			Cumulus.LogConsoleMessage(msg);
 
 			var logUrl = url.Replace(cumulus.EcowittSettings.AppKey, "<<App-key>>").Replace(cumulus.EcowittSettings.UserApiKey, "<<User-key>>");
 			cumulus.LogDebugMessage($"Ecowitt URL = {logUrl}");
 
-			EcowittHistoricResp histObj;
+			HistoricResp histObj;
+
 			try
 			{
 				string responseBody;
@@ -191,18 +192,18 @@ namespace CumulusMX
 				do
 				{
 					// we want to do this synchronously, so .Result
-					using (HttpResponseMessage response = httpClient.GetAsync(url).Result)
+					using (var response = Cumulus.MyHttpClient.GetAsync(url).Result)
 					{
 						responseBody = response.Content.ReadAsStringAsync().Result;
-						responseCode = (int)response.StatusCode;
+						responseCode = (int) response.StatusCode;
 						cumulus.LogDebugMessage($"API.GetHistoricData: Ecowitt API Historic Response code: {responseCode}");
 						cumulus.LogDataMessage($"API.GetHistoricData: Ecowitt API Historic Response: {responseBody}");
 					}
 
 					if (responseCode != 200)
 					{
-						var historyError = responseBody.FromJson<EcowitHistErrorResp>();
-						Cumulus.LogMessage($"API.GetHistoricData: Ecowitt API Historic Error: {historyError.code}, {historyError.msg}");
+						var historyError = responseBody.FromJson<ErrorResp>();
+						cumulus.LogMessage($"API.GetHistoricData: Ecowitt API Historic Error: {historyError.code}, {historyError.msg}, Cumulus.LogLevel.Warning");
 						Cumulus.LogConsoleMessage($" - Error {historyError.code}: {historyError.msg}", ConsoleColor.Red);
 						cumulus.LastUpdateTime = endTime;
 						return false;
@@ -211,7 +212,7 @@ namespace CumulusMX
 
 					if (responseBody == "{}")
 					{
-						Cumulus.LogMessage("API.GetHistoricData: Ecowitt API Historic: No data was returned.");
+						cumulus.LogMessage("API.GetHistoricData: Ecowitt API Historic: No data was returned.");
 						Cumulus.LogConsoleMessage(" - No historic data available");
 						cumulus.LastUpdateTime = endTime;
 						return false;
@@ -219,7 +220,7 @@ namespace CumulusMX
 					else if (responseBody.StartsWith("{\"code\":")) // sanity check
 					{
 						// get the sensor data
-						histObj = responseBody.FromJson<EcowittHistoricResp>();
+						histObj = responseBody.FromJson<HistoricResp>();
 
 						if (histObj != null)
 						{
@@ -257,24 +258,24 @@ namespace CumulusMX
 									return false;
 								}
 
-								Cumulus.LogMessage("API.GetHistoricData: System Busy or Rate Limited, waiting 5 seconds before retry...");
+								cumulus.LogMessage("API.GetHistoricData: System Busy or Rate Limited, waiting 5 seconds before retry...");
 								Task.Delay(5000, token).Wait();
 							}
 							else
 							{
-								cumulus.LastUpdateTime = endTime;
 								return false;
 							}
 						}
 						else
 						{
+							cumulus.LastUpdateTime = endTime;
 							return false;
 						}
 
 					}
 					else // No idea what we got, dump it to the log
 					{
-						Cumulus.LogMessage("API.GetHistoricData: Invalid historic message received");
+						cumulus.LogMessage("API.GetHistoricData: Invalid historic message received");
 						cumulus.LogDataMessage("API.GetHistoricData: Received: " + responseBody);
 						cumulus.LastUpdateTime = endTime;
 						return false;
@@ -322,7 +323,7 @@ namespace CumulusMX
 						case "indoor":
 							try
 							{
-								var indoor = entry.Value.FromJsv<EcowittHistoricTempHum>();
+								var indoor = entry.Value.FromJsv<HistoricTempHum>();
 
 								// do the temperature
 								if (indoor.temperature != null && indoor.temperature.list != null)
@@ -384,7 +385,7 @@ namespace CumulusMX
 						case "outdoor":
 							try
 							{
-								var outdoor = entry.Value.FromJsv<EcowittHistoricOutdoor>();
+								var outdoor = entry.Value.FromJsv<HistoricOutdoor>();
 
 								// Temperature
 								if (outdoor.temperature != null && outdoor.temperature.list != null)
@@ -472,7 +473,7 @@ namespace CumulusMX
 						case "wind":
 							try
 							{
-								var wind = entry.Value.FromJsv<EcowittHistoricDataWind>();
+								var wind = entry.Value.FromJsv<HistoricDataWind>();
 
 								// Speed
 								if (wind.wind_speed != null && wind.wind_speed.list != null)
@@ -559,7 +560,7 @@ namespace CumulusMX
 						case "pressure":
 							try
 							{
-								var pressure = entry.Value.FromJsv<EcowittHistoricDataPressure>();
+								var pressure = entry.Value.FromJsv<HistoricDataPressure>();
 
 								// relative
 								if (pressure.relative != null && pressure.relative.list != null)
@@ -598,7 +599,7 @@ namespace CumulusMX
 							{
 								if (cumulus.Gw1000PrimaryRainSensor == 0)
 								{
-									var rain = entry.Value.FromJsv<EcowittHistoricDataRainfall>();
+									var rain = entry.Value.FromJsv<HistoricDataRainfall>();
 
 									// rain rate
 									if (rain.rain_rate != null && rain.rain_rate.list != null)
@@ -663,7 +664,7 @@ namespace CumulusMX
 							{
 								if (cumulus.Gw1000PrimaryRainSensor == 1)
 								{
-									var rain = entry.Value.FromJsv<EcowittHistoricDataRainfall>();
+									var rain = entry.Value.FromJsv<HistoricDataRainfall>();
 
 									// rain rate
 									if (rain.rain_rate != null && rain.rain_rate.list != null)
@@ -726,7 +727,7 @@ namespace CumulusMX
 						case "solar_and_uvi":
 							try
 							{
-								var solar = entry.Value.FromJsv<EcowittHistoricDataSolar>();
+								var solar = entry.Value.FromJsv<HistoricDataSolar>();
 
 								// solar
 								if (solar.solar != null && solar.solar.list != null)
@@ -797,7 +798,7 @@ namespace CumulusMX
 						case "temp_and_humidity_ch8":
 							try
 							{
-								var tandh = entry.Value.FromJsv<EcowittHistoricTempHum>();
+								var tandh = entry.Value.FromJsv<HistoricTempHum>();
 								chan = int.Parse(entry.Key[^1..]);
 
 								// temperature
@@ -863,7 +864,7 @@ namespace CumulusMX
 						case "soil_ch8":
 							try
 							{
-								var soilm = entry.Value.FromJsv<EcowittHistoricDataSoil>();
+								var soilm = entry.Value.FromJsv<HistoricDataSoil>();
 								chan = int.Parse(entry.Key[^1..]);
 
 								if (soilm.soilmoisture != null && soilm.soilmoisture.list != null)
@@ -906,7 +907,7 @@ namespace CumulusMX
 						case "temp_ch8":
 							try
 							{
-								var usert = entry.Value.FromJsv<EcowittHistoricDataTemp>();
+								var usert = entry.Value.FromJsv<HistoricDataTemp>();
 								chan = int.Parse(entry.Key[^1..]);
 
 								if (usert.temperature != null && usert.temperature.list != null)
@@ -949,7 +950,7 @@ namespace CumulusMX
 						case "leaf_ch8":
 							try
 							{
-								var leaf = entry.Value.FromJsv<EcowittHistoricDataLeaf>();
+								var leaf = entry.Value.FromJsv<HistoricDataLeaf>();
 								chan = int.Parse(entry.Key[^1..]);
 
 								if (leaf.leaf_wetness != null && leaf.leaf_wetness.list != null)
@@ -988,7 +989,7 @@ namespace CumulusMX
 						case "pm25_ch4":
 							try
 							{
-								var pm25 = entry.Value.FromJsv<EcowittHistoricDataPm25Aqi>();
+								var pm25 = entry.Value.FromJsv<HistoricDataPm25Aqi>();
 								chan = int.Parse(entry.Key[^1..]);
 
 								if (pm25.pm25 != null && pm25.pm25.list != null)
@@ -1024,7 +1025,7 @@ namespace CumulusMX
 						case "indoor_co2":
 							try
 							{
-								var indoorCo2 = entry.Value.FromJsv<EcowittHistoricDataCo2>();
+								var indoorCo2 = entry.Value.FromJsv<HistoricDataCo2>();
 
 								// CO2
 								if (indoorCo2.co2 != null && indoorCo2.co2.list != null)
@@ -1086,7 +1087,7 @@ namespace CumulusMX
 						case "co2_aqi_combo":
 							try
 							{
-								var co2combo = entry.Value.FromJsv<EcowittHistoricDataCo2>();
+								var co2combo = entry.Value.FromJsv<HistoricDataCo2>();
 
 								// CO2
 								if (co2combo.co2 != null && co2combo.co2.list != null)
@@ -1148,7 +1149,7 @@ namespace CumulusMX
 						case "pm25_aqi_combo":
 							try
 							{
-								var pm25combo = entry.Value.FromJsv<EcowittHistoricDataPm25Aqi>();
+								var pm25combo = entry.Value.FromJsv<HistoricDataPm25Aqi>();
 
 								if (pm25combo.pm25 != null && pm25combo.pm25.list != null)
 								{
@@ -1184,7 +1185,7 @@ namespace CumulusMX
 						case "pm10_aqi_combo":
 							try
 							{
-								var pm10combo = entry.Value.FromJsv<EcowittHistoricDataPm10Aqi>();
+								var pm10combo = entry.Value.FromJsv<HistoricDataPm10Aqi>();
 
 								if (pm10combo.pm10 != null && pm10combo.pm10.list != null)
 								{
@@ -1220,7 +1221,7 @@ namespace CumulusMX
 						case "lightning":
 							try
 							{
-								var lightning = entry.Value.FromJsv<EcowittHistoricDataLightning>();
+								var lightning = entry.Value.FromJsv<HistoricDataLightning>();
 
 								// Distance
 								if (lightning.distance != null && lightning.distance.list != null)
@@ -1281,7 +1282,7 @@ namespace CumulusMX
 
 						default:
 							if (!string.IsNullOrWhiteSpace(entry.Key) && entry.Key != "]")
-								Cumulus.LogMessage($"ProcessHistoryData: Unknown sensor type found [{entry.Key}]");
+								cumulus.LogMessage($"ProcessHistoryData: Unknown sensor type found [{entry.Key}]");
 							break;
 					}
 				}
@@ -1303,7 +1304,7 @@ namespace CumulusMX
 					return;
 				}
 
-				Cumulus.LogMessage("Processing data for " + rec.Key);
+				cumulus.LogMessage("Processing data for " + rec.Key);
 
 				var h = rec.Key.Hour;
 
@@ -1314,7 +1315,7 @@ namespace CumulusMX
 				if (h == rollHour && !rolloverdone)
 				{
 					// do rollover
-					Cumulus.LogMessage("Day rollover " + rec.Key.ToShortTimeString());
+					cumulus.LogMessage("Day rollover " + rec.Key.ToShortTimeString());
 					station.DayReset(rec.Key);
 
 					rolloverdone = true;
@@ -1355,7 +1356,7 @@ namespace CumulusMX
 				// add in 'following interval' minutes worth of wind speed to windrun
 				if (station.WindAverage.HasValue)
 				{
-					Cumulus.LogMessage("Windrun: " + station.WindAverage.Value.ToString(cumulus.WindFormat) + cumulus.Units.WindText + " for " + 5 + " minutes = " +
+					cumulus.LogMessage("Windrun: " + station.WindAverage.Value.ToString(cumulus.WindFormat) + cumulus.Units.WindText + " for " + 5 + " minutes = " +
 									(station.WindAverage.Value * station.WindRunHourMult[cumulus.Units.Wind] * 5 / 60.0).ToString(cumulus.WindRunFormat) + cumulus.Units.WindRunText);
 
 					station.WindRunToday += station.WindAverage.Value * station.WindRunHourMult[cumulus.Units.Wind] * 5 / 60.0;
@@ -1389,7 +1390,7 @@ namespace CumulusMX
 				if (cumulus.StationOptions.CalculatedET && rec.Key.Minute == 0)
 				{
 					// Start of a new hour, and we want to calculate ET in Cumulus
-					station.CalculateEvaoptranspiration(rec.Key);
+					station.CalculateEvapotranspiration(rec.Key);
 				}
 
 				station.DoTrendValues(rec.Key);
@@ -1403,6 +1404,9 @@ namespace CumulusMX
 		private void ApplyHistoricData(KeyValuePair<DateTime, HistoricData> rec)
 		{
 			// === Wind ==
+						// WindGust = max for period
+			// WindSpd = avg for period
+			// WindDir = avg for period
 			try
 			{
 				station.DoWind(rec.Value.WindGust, rec.Value.WindDir, rec.Value.WindSpd, rec.Key);
@@ -1413,12 +1417,19 @@ namespace CumulusMX
 			}
 
 			// === Humidity ===
+			// = avg for period
 			try
 			{
 				station.DoIndoorHumidity(rec.Value.IndoorHum);
+
 				if (cumulus.Gw1000PrimaryTHSensor == 0)
 				{
 					station.DoHumidity(rec.Value.Humidity, rec.Key);
+				}
+				else if (cumulus.Gw1000PrimaryTHSensor == 99)
+				{
+					// user has mapped indoor humidity to outdoor
+					station.DoHumidity(rec.Value.IndoorHum.Value, rec.Key);
 				}
 			}
 			catch (Exception ex)
@@ -1427,6 +1438,7 @@ namespace CumulusMX
 			}
 
 			// === Pressure ===
+			// = avg for period
 			try
 			{
 				station.DoPressure(rec.Value.Pressure, rec.Key);
@@ -1438,9 +1450,16 @@ namespace CumulusMX
 			}
 
 			// === Indoor temp ===
+			// = avg for period
 			try
 			{
 				station.DoIndoorTemp(rec.Value.IndoorTemp);
+
+				// user has mapped indoor temperature to outdoor
+				if (cumulus.Gw1000PrimaryTHSensor == 99)
+				{
+					station.DoTemperature(rec.Value.Temp, rec.Key);
+				}
 			}
 			catch (Exception ex)
 			{
@@ -1448,6 +1467,7 @@ namespace CumulusMX
 			}
 
 			// === Outdoor temp ===
+			// = avg for period
 			try
 			{
 				if (cumulus.Gw1000PrimaryTHSensor == 0)
@@ -1487,6 +1507,7 @@ namespace CumulusMX
 			}
 
 			// === Solar ===
+			// = max for period
 			try
 			{
 				station.DoSolarRad(rec.Value.Solar.Value, rec.Key);
@@ -1497,6 +1518,7 @@ namespace CumulusMX
 			}
 
 			// === UVI ===
+			// = max for period
 			try
 			{
 				station.DoUV(rec.Value.UVI, rec.Key);
@@ -1667,8 +1689,450 @@ namespace CumulusMX
 			{
 				cumulus.LogExceptionMessage(ex, "ApplyHistoricData: Error in Humidex/Apparant/Feels Like");
 			}
+		}
 
 
+		// returns the data structure and the number of seconds to wait before the next update
+		internal CurrentDataData GetCurrentData(CancellationToken token, ref int delay)
+		{
+			// Doc: https://doc.ecowitt.net/web/#/apiv3en?page_id=17
+
+			cumulus.LogMessage("API.GetCurrentData: Get Ecowitt Current Data");
+
+			var sb = new StringBuilder(currentUrl);
+
+			sb.Append($"application_key={cumulus.EcowittSettings.AppKey}");
+			sb.Append($"&api_key={cumulus.EcowittSettings.UserApiKey}");
+			if (ulong.TryParse(cumulus.EcowittSettings.MacAddress, out _))
+			{
+				sb.Append($"&imei={cumulus.EcowittSettings.MacAddress}");
+			}
+			else
+			{
+				sb.Append($"&mac={cumulus.EcowittSettings.MacAddress}");
+			}
+
+			// Request the data in the correct units
+			sb.Append($"&temp_unitid={cumulus.Units.Temp + 1}"); // 1=C, 2=F
+			sb.Append($"&pressure_unitid={(cumulus.Units.Press == 2 ? "4" : "3")}"); // 3=hPa, 4=inHg, 5=mmHg
+			string windUnit;
+			switch (cumulus.Units.Wind)
+			{
+				case 0: // m/s
+					windUnit = "6";
+					break;
+				case 1: // mph
+					windUnit = "9";
+					break;
+				case 2: // km/h
+					windUnit = "7";
+					break;
+				case 3: // knots
+					windUnit = "8";
+					break;
+				default:
+					windUnit = "?";
+					break;
+			}
+			sb.Append($"&wind_speed_unitid={windUnit}");
+			sb.Append($"&rainfall_unitid={cumulus.Units.Rain + 12}");
+
+			// available callbacks:
+			// all
+			//	outdoor, indoor, solar_and_uvi, rainfall, wind, pressure, lightning
+			//	indoor_co2, co2_aqi_combo, pm25_aqi_combo, pm10_aqi_combo, temp_and_humidity_aqi_combo
+			//	pm25_ch[1-4]
+			//	temp_and_humidity_ch[1-8]
+			//	soil_ch[1-8]
+			//	temp_ch[1-8]
+			//	leaf_ch[1-8]
+			//	batt
+
+			sb.Append("&call_back=all");
+
+			var url = sb.ToString();
+
+			var logUrl = url.Replace(cumulus.EcowittSettings.AppKey, "<<App-key>>").Replace(cumulus.EcowittSettings.UserApiKey, "<<User-key>>");
+			cumulus.LogDebugMessage($"Ecowitt URL = {logUrl}");
+
+			CurrentData currObj;
+
+			try
+			{
+				string responseBody;
+				int responseCode;
+
+				// we want to do this synchronously, so .Result
+				using (var response = Cumulus.MyHttpClient.GetAsync(url).Result)
+				{
+					responseBody = response.Content.ReadAsStringAsync().Result;
+					responseCode = (int) response.StatusCode;
+					cumulus.LogDebugMessage($"API.GetCurrentData: Ecowitt API Current Response code: {responseCode}");
+					cumulus.LogDataMessage($"API.GetCurrentData: Ecowitt API Current Response: {responseBody}");
+				}
+
+				if (responseCode != 200)
+				{
+					var currentError = responseBody.FromJson<ErrorResp>();
+					cumulus.LogWarningMessage($"API.GetCurrentData: Ecowitt API Current Error: {currentError.code}, {currentError.msg}");
+					Cumulus.LogConsoleMessage($" - Error {currentError.code}: {currentError.msg}", ConsoleColor.Red);
+					delay = 10;
+					return null;
+				}
+
+
+				if (responseBody == "{}")
+				{
+					cumulus.LogWarningMessage("API.GetCurrentData: Ecowitt API Current: No data was returned.");
+					Cumulus.LogConsoleMessage(" - No current data available");
+					delay = 10;
+					return null;
+				}
+				else if (responseBody.StartsWith("{\"code\":")) // sanity check
+				{
+					// get the sensor data
+					currObj = responseBody.FromJson<CurrentData>();
+
+					if (currObj != null)
+					{
+						// success
+						if (currObj.code == 0)
+						{
+							if (currObj.data == null)
+							{
+								// There was no data returned.
+								delay = 10;
+								return null;
+							}
+						}
+						else if (currObj.code == -1 || currObj.code == 45001)
+						{
+							// -1 = system busy, 45001 = rate limited
+
+							cumulus.LogMessage("API.GetCurrentData: System Busy or Rate Limited, waiting 5 secs before retry...");
+							delay = 5;
+							return null;
+						}
+						else
+						{
+							delay = 10;
+							return null;
+						}
+					}
+					else
+					{
+						delay = 10;
+						return null;
+					}
+
+				}
+				else // No idea what we got, dump it to the log
+				{
+					cumulus.LogErrorMessage("API.GetCurrentData: Invalid current message received");
+					cumulus.LogDataMessage("API.GetCurrentData: Received: " + responseBody);
+					delay = 10;
+					return null;
+				}
+
+				if (!token.IsCancellationRequested)
+				{
+					// pressure values should always be present, so use them for the data timestamp, if not try the outdoor temp
+					var dataTime = Utils.FromUnixTime(currObj.data.pressure == null ? currObj.data.outdoor.temperature.time : currObj.data.pressure.absolute.time);
+					cumulus.LogDebugMessage($"EcowittCloud: Last data update {dataTime:s}");
+
+					if (dataTime != LastCurrentDataTime)
+					{
+						//ProcessCurrentData(currObj.data, token);
+						LastCurrentDataTime = dataTime;
+
+						// how many seconds to the next update?
+						// the data is updated once a minute, so wait for 5 seonds after the next update
+
+						var lastUpdate = (DateTime.Now - LastCurrentDataTime).TotalSeconds;
+						if (lastUpdate > 65)
+						{
+							// hum the data is already out of date, query again after a short delay
+							delay = 10;
+							return null;
+						}
+						else
+						{
+							delay = (int)(60 - lastUpdate + 3);
+							return currObj.data;
+						}
+					}
+					else
+					{
+						delay = 10;
+						return null;
+					}
+				}
+
+				delay = 20;
+				return null;
+			}
+			catch (Exception ex)
+			{
+				cumulus.LogErrorMessage("API.GetCurrentData: Exception: " + ex.Message);
+				delay = 10;
+				return null;
+			}
+		}
+
+
+		internal string GetCurrentCameraImageUrl(CancellationToken token, string defaultUrl)
+		{
+			// Doc: https://doc.ecowitt.net/web/#/apiv3en?page_id=17
+
+			cumulus.LogMessage("API.GetCurrentCameraImageUrl: Get Ecowitt Current Camera Data");
+
+			if (string.IsNullOrEmpty(cumulus.EcowittSettings.AppKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.UserApiKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.CameraMacAddress))
+			{
+				cumulus.LogWarningMessage("API.GetCurrentCameraImageUrl: Missing Ecowitt API data in the configuration, aborting!");
+				return defaultUrl;
+			}
+
+
+			// rate limit to one call per minute
+			if (LastCameraCallTime.AddMinutes(1) > DateTime.Now)
+			{
+				cumulus.LogMessage("API.GetCurrentCameraImageUrl: Last call was less than 1 minute ago, using last image URL");
+				return defaultUrl;
+			}
+
+			LastCameraCallTime = DateTime.Now;
+
+			if (LastCameraImageTime.AddMinutes(5) > DateTime.Now)
+			{
+				cumulus.LogMessage("API.GetCurrentCameraImageUrl: Last image was less than 5 minutes ago, using last image URL");
+				return defaultUrl;
+			}
+
+			var sb = new StringBuilder(currentUrl);
+
+			sb.Append($"application_key={cumulus.EcowittSettings.AppKey}");
+			sb.Append($"&api_key={cumulus.EcowittSettings.UserApiKey}");
+			sb.Append($"&mac={cumulus.EcowittSettings.CameraMacAddress}");
+			sb.Append("&call_back=camera");
+
+			var url = sb.ToString();
+
+			var logUrl = url.Replace(cumulus.EcowittSettings.AppKey, "<<App-key>>").Replace(cumulus.EcowittSettings.UserApiKey, "<<User-key>>");
+			cumulus.LogDebugMessage($"Ecowitt URL = {logUrl}");
+
+			CurrentData currObj;
+
+			try
+			{
+				string responseBody;
+				int responseCode;
+
+				// we want to do this synchronously, so .Result
+				using (var response = Cumulus.MyHttpClient.GetAsync(url).Result)
+				{
+					responseBody = response.Content.ReadAsStringAsync().Result;
+					responseCode = (int) response.StatusCode;
+					cumulus.LogDebugMessage($"API.GetCurrentCameraImageUrl: Ecowitt API Current Camera Response code: {responseCode}");
+					cumulus.LogDataMessage($"API.GetCurrentCameraImageUrl: Ecowitt API Current Camera Response: {responseBody}");
+				}
+
+				if (responseCode != 200)
+				{
+					var currentError = responseBody.FromJson<ErrorResp>();
+					cumulus.LogWarningMessage($"API.GetCurrentCameraImageUrl: Ecowitt API Current Camera Error: {currentError.code}, {currentError.msg}");
+					Cumulus.LogConsoleMessage($" - Error {currentError.code}: {currentError.msg}", ConsoleColor.Red);
+					return defaultUrl;
+				}
+
+
+				if (responseBody == "{}")
+				{
+					cumulus.LogWarningMessage("API.GetCurrentCameraImageUrl: Ecowitt API Current Camera Data: No data was returned.");
+					Cumulus.LogConsoleMessage(" - No current data available");
+					return defaultUrl;
+				}
+				else if (responseBody.StartsWith("{\"code\":")) // sanity check
+				{
+					// get the sensor data
+					currObj = responseBody.FromJson<CurrentData>();
+
+					if (currObj != null)
+					{
+						// success
+						if (currObj.code == 0)
+						{
+							if (currObj.data == null)
+							{
+								// There was no data returned.
+								return defaultUrl;
+							}
+						}
+						else if (currObj.code == -1 || currObj.code == 45001)
+						{
+							// -1 = system busy, 45001 = rate limited
+
+							cumulus.LogMessage("API.GetCurrentCameraImageUrl: System Busy or Rate Limited, waiting 5 secs before retry...");
+							return defaultUrl;
+						}
+						else
+						{
+							return defaultUrl;
+						}
+					}
+					else
+					{
+						return defaultUrl;
+					}
+
+				}
+				else // No idea what we got, dump it to the log
+				{
+					cumulus.LogErrorMessage("API.GetCurrentCameraImageUrl: Invalid current message received");
+					cumulus.LogDataMessage("API.GetCurrentCameraImageUrl: Received: " + responseBody);
+					return defaultUrl;
+				}
+
+				if (!token.IsCancellationRequested)
+				{
+					if (currObj.data.camera == null)
+					{
+						cumulus.LogWarningMessage("API.GetCurrentCameraImageUrl: Ecowitt API Current Camera Data: No camera data was returned.");
+						return defaultUrl;
+					}
+
+					LastCameraImageTime = Utils.FromUnixTime(currObj.data.camera.photo.time);
+					cumulus.LogDebugMessage($"API.GetCurrentCameraImageUrl: Last image update {LastCameraImageTime:s}");
+					return currObj.data.camera.photo.url;
+				}
+
+				return defaultUrl;
+			}
+			catch (Exception ex)
+			{
+				cumulus.LogErrorMessage("API.GetCurrentData: Exception: " + ex.Message);
+				return defaultUrl;
+			}
+		}
+
+		internal bool GetStationList(CancellationToken token)
+		{
+			cumulus.LogMessage("API.GetStationList: Get Ecowitt Station List");
+
+			if (string.IsNullOrEmpty(cumulus.EcowittSettings.AppKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.UserApiKey))
+			{
+				cumulus.LogWarningMessage("API.GetCurrentCameraImageUrl: Missing Ecowitt API data in the configuration, aborting!");
+				return false;
+			}
+
+			var sb = new StringBuilder(stationUrl);
+
+			sb.Append($"application_key={cumulus.EcowittSettings.AppKey}");
+			sb.Append($"&api_key={cumulus.EcowittSettings.UserApiKey}");
+
+			var url = sb.ToString();
+
+			var logUrl = url.Replace(cumulus.EcowittSettings.AppKey, "<<App-key>>").Replace(cumulus.EcowittSettings.UserApiKey, "<<User-key>>");
+			cumulus.LogDebugMessage($"Ecowitt URL = {logUrl}");
+
+			StationList stnObj;
+
+			try
+			{
+				string responseBody;
+				int responseCode;
+
+				// we want to do this synchronously, so .Result
+				using (var response = Cumulus.MyHttpClient.GetAsync(url).Result)
+				{
+					responseBody = response.Content.ReadAsStringAsync().Result;
+					responseCode = (int)response.StatusCode;
+					cumulus.LogDebugMessage($"API.GetStationList: Ecowitt API Station List Response code: {responseCode}");
+					cumulus.LogDataMessage($"API.GetStationList: Ecowitt API Station List Response: {responseBody}");
+				}
+
+				if (responseCode != 200)
+				{
+					var currentError = responseBody.FromJson<ErrorResp>();
+					cumulus.LogWarningMessage($"API.GetStationList: Ecowitt API Station List Error: {currentError.code}, {currentError.msg}");
+					Cumulus.LogConsoleMessage($" - Error {currentError.code}: {currentError.msg}", ConsoleColor.Red);
+					return false;
+				}
+
+				if (responseBody == "{}")
+				{
+					cumulus.LogWarningMessage("API.GetStationList: Ecowitt API Station List: No data was returned.");
+					Cumulus.LogConsoleMessage(" - No current data available");
+					return false;
+				}
+				else if (responseBody.StartsWith("{\"code\":")) // sanity check
+				{
+					// get the sensor data
+					stnObj = responseBody.FromJson<StationList>();
+
+					if (stnObj != null)
+					{
+						// success
+						if (stnObj.code == 0)
+						{
+							if (stnObj.data == null)
+							{
+								// There was no data returned.
+								return false;
+							}
+						}
+						else if (stnObj.code == -1 || stnObj.code == 45001)
+						{
+							// -1 = system busy, 45001 = rate limited
+
+							cumulus.LogMessage("API.GetStationList: System Busy or Rate Limited, waiting 5 secs before retry...");
+							return false;
+						}
+						else
+						{
+							return false;
+						}
+					}
+					else
+					{
+						return false;
+					}
+
+				}
+				else // No idea what we got, dump it to the log
+				{
+					cumulus.LogErrorMessage("API.GetStationList: Invalid message received");
+					cumulus.LogDataMessage("API.GetStationList: Received: " + responseBody);
+					return false;
+				}
+
+				if (!token.IsCancellationRequested)
+				{
+					if (stnObj.data.list == null)
+					{
+						cumulus.LogWarningMessage("API.GetStationList: Ecowitt API: No station data was returned.");
+						return false;
+					}
+
+					foreach (var stn in stnObj.data.list)
+					{
+						cumulus.LogDebugMessage($"API.GetStationList: Station: id={stn.id}, mac/imei={stn.mac ?? stn.imei}, name={stn.name}, type={stn.type}");
+						if (stn.type == 2)
+						{
+							// we have a camera
+							cumulus.EcowittSettings.CameraMacAddress = stn.mac;
+						}
+					}
+
+					return cumulus.EcowittSettings.CameraMacAddress != null;
+				}
+
+				return false;
+			}
+			catch (Exception ex)
+			{
+				cumulus.LogErrorMessage("API.GetStationList: Exception: " + ex.Message);
+				return false;
+			}
 		}
 
 		/*
@@ -1703,7 +2167,7 @@ namespace CumulusMX
 		}
 		*/
 
-		private class EcowitHistErrorResp
+		private class ErrorResp
 		{
 			public int code { get; set; }
 			public string msg { get; set; }
@@ -1711,7 +2175,7 @@ namespace CumulusMX
 			public object data { get; set; }
 		}
 
-		internal class EcowittHistoricResp
+		internal class HistoricResp
 		{
 			public int code { get; set; }
 			public string msg { get; set; }
@@ -1776,90 +2240,90 @@ namespace CumulusMX
 		}
 		*/
 
-		internal class EcowittHistoricDataTypeInt
+		internal class HistoricDataTypeInt
 		{
 			public string unit { get; set; }
 			public Dictionary<DateTime, int?> list { get; set; }
 		}
 
-		internal class EcowittHistoricDataTypeDbl
+		internal class HistoricDataTypeDbl
 		{
 			public string unit { get; set; }
 			public Dictionary<DateTime, double?> list { get; set; }
 		}
 
-		internal class EcowittHistoricTempHum
+		internal class HistoricTempHum
 		{
-			public EcowittHistoricDataTypeDbl temperature { get; set; }
-			public EcowittHistoricDataTypeInt humidity { get; set; }
+			public HistoricDataTypeDbl temperature { get; set; }
+			public HistoricDataTypeInt humidity { get; set; }
 		}
 
-		internal class EcowittHistoricOutdoor : EcowittHistoricTempHum
+		internal class HistoricOutdoor : HistoricTempHum
 		{
-			public EcowittHistoricDataTypeDbl dew_point { get; set; }
+			public HistoricDataTypeDbl dew_point { get; set; }
 		}
 
-		internal class EcowittHistoricDataPressure
+		internal class HistoricDataPressure
 		{
-			public EcowittHistoricDataTypeDbl relative { get; set; }
+			public HistoricDataTypeDbl relative { get; set; }
 		}
 
-		internal class EcowittHistoricDataWind
+		internal class HistoricDataWind
 		{
-			public EcowittHistoricDataTypeInt wind_direction { get; set; }
-			public EcowittHistoricDataTypeDbl wind_speed { get; set; }
-			public EcowittHistoricDataTypeDbl wind_gust { get; set; }
+			public HistoricDataTypeInt wind_direction { get; set; }
+			public HistoricDataTypeDbl wind_speed { get; set; }
+			public HistoricDataTypeDbl wind_gust { get; set; }
 		}
 
-		internal class EcowittHistoricDataSolar
+		internal class HistoricDataSolar
 		{
-			public EcowittHistoricDataTypeDbl solar { get; set; }
-			public EcowittHistoricDataTypeDbl uvi { get; set; }
+			public HistoricDataTypeDbl solar { get; set; }
+			public HistoricDataTypeDbl uvi { get; set; }
 		}
 
-		internal class EcowittHistoricDataRainfall
+		internal class HistoricDataRainfall
 		{
-			public EcowittHistoricDataTypeDbl rain_rate { get; set; }
-			public EcowittHistoricDataTypeDbl yearly { get; set; }
+			public HistoricDataTypeDbl rain_rate { get; set; }
+			public HistoricDataTypeDbl yearly { get; set; }
 		}
 
-		internal class EcowittHistoricDataSoil
+		internal class HistoricDataSoil
 		{
-			public EcowittHistoricDataTypeInt soilmoisture { get; set; }
+			public HistoricDataTypeInt soilmoisture { get; set; }
 		}
 
-		internal class EcowittHistoricDataTemp
+		internal class HistoricDataTemp
 		{
-			public EcowittHistoricDataTypeDbl temperature { get; set; }
+			public HistoricDataTypeDbl temperature { get; set; }
 		}
 
-		internal class EcowittHistoricDataLeaf
+		internal class HistoricDataLeaf
 		{
-			public EcowittHistoricDataTypeInt leaf_wetness { get; set; }
+			public HistoricDataTypeInt leaf_wetness { get; set; }
 		}
 
-		internal class EcowittHistoricDataLightning
+		internal class HistoricDataLightning
 		{
-			public EcowittHistoricDataTypeDbl distance { get; set; }
-			public EcowittHistoricDataTypeInt count	{ get; set; }
+			public HistoricDataTypeDbl distance { get; set; }
+			public HistoricDataTypeInt count { get; set; }
 		}
 
 		[DataContract]
-		internal class EcowittHistoricDataCo2
+		internal class HistoricDataCo2
 		{
-			public EcowittHistoricDataTypeInt co2 { get; set; }
-			[DataMember(Name= "24_hours_average")]
-			public EcowittHistoricDataTypeInt average24h { get; set; }
+			public HistoricDataTypeInt co2 { get; set; }
+			[DataMember(Name = "24_hours_average")]
+			public HistoricDataTypeInt average24h { get; set; }
 		}
 
-		internal class EcowittHistoricDataPm25Aqi
+		internal class HistoricDataPm25Aqi
 		{
-			public EcowittHistoricDataTypeDbl pm25 { get; set; }
+			public HistoricDataTypeDbl pm25 { get; set; }
 		}
 
-		internal class EcowittHistoricDataPm10Aqi
+		internal class HistoricDataPm10Aqi
 		{
-			public EcowittHistoricDataTypeDbl pm10 { get; set; }
+			public HistoricDataTypeDbl pm10 { get; set; }
 		}
 
 		internal class HistoricData
@@ -1904,6 +2368,319 @@ namespace CumulusMX
 				UserTemp = new double?[9];
 				LeafWetness = new int?[9];
 			}
+		}
+
+
+
+
+		private class CurrentData
+		{
+			public int code { get; set; }
+			public string msg { get; set; }
+			public long time { get; set; }
+
+			public CurrentDataData data { get; set; }
+		}
+
+		internal class CurrentDataData
+		{
+			public CurrentOutdoor outdoor { get; set; }
+			public CurrentTempHum indoor { get; set; }
+			public CurrentSolar solar_and_uvi { get; set; }
+			public CurrentRain rainfall { get; set; }
+			public CurrentRain rainfall_piezo { get; set; }
+			public CurrentWind wind { get; set; }
+			public CurrentPress pressure { get; set; }
+			public CurrentLightning lightning { get; set; }
+			public CurrentCo2 indoor_co2 { get; set; }
+			public CurrentCo2 co2_aqi_combo { get; set; }
+			public CurrentPm25 pm25_aqi_combo { get; set; }
+			public CurrentPm10 pm10_aqi_combo { get; set; }
+			public CurrentTempHum t_rh_aqi_combo { get; set; }
+			public CurrentLeak water_leak { get; set; }
+			public CurrentPm25 pm25_ch1 { get; set; }
+			public CurrentPm25 pm25_ch2 { get; set; }
+			public CurrentPm25 pm25_ch3 { get; set; }
+			public CurrentPm25 pm25_ch4 { get; set; }
+			public CurrentTempHum temp_and_humidity_ch1 { get; set; }
+			public CurrentTempHum temp_and_humidity_ch2 { get; set; }
+			public CurrentTempHum temp_and_humidity_ch3 { get; set; }
+			public CurrentTempHum temp_and_humidity_ch4 { get; set; }
+			public CurrentTempHum temp_and_humidity_ch5 { get; set; }
+			public CurrentTempHum temp_and_humidity_ch6 { get; set; }
+			public CurrentTempHum temp_and_humidity_ch7 { get; set; }
+			public CurrentTempHum temp_and_humidity_ch8 { get; set; }
+			public CurrentSoil soil_ch1 { get; set; }
+			public CurrentSoil soil_ch2 { get; set; }
+			public CurrentSoil soil_ch3 { get; set; }
+			public CurrentSoil soil_ch4 { get; set; }
+			public CurrentSoil soil_ch5 { get; set; }
+			public CurrentSoil soil_ch6 { get; set; }
+			public CurrentSoil soil_ch7 { get; set; }
+			public CurrentSoil soil_ch8 { get; set; }
+			public CurrentTemp temp_ch1 { get; set; }
+			public CurrentTemp temp_ch2 { get; set; }
+			public CurrentTemp temp_ch3 { get; set; }
+			public CurrentTemp temp_ch4 { get; set; }
+			public CurrentTemp temp_ch5 { get; set; }
+			public CurrentTemp temp_ch6 { get; set; }
+			public CurrentTemp temp_ch7 { get; set; }
+			public CurrentTemp temp_ch8 { get; set; }
+			public CurrentLeaf leaf_ch1 { get; set; }
+			public CurrentLeaf leaf_ch2 { get; set; }
+			public CurrentLeaf leaf_ch3 { get; set; }
+			public CurrentLeaf leaf_ch4 { get; set; }
+			public CurrentLeaf leaf_ch5 { get; set; }
+			public CurrentLeaf leaf_ch6 { get; set; }
+			public CurrentLeaf leaf_ch7 { get; set; }
+			public CurrentLeaf leaf_ch8 { get; set; }
+			public CurrentBattery battery { get; set; }
+			public CurrentCamera camera { get; set; }
+		}
+
+		internal class CurrentOutdoor
+		{
+			public CurrentSensorValDbl temperature { get; set; }
+			public CurrentSensorValDbl feels_like { get; set; }
+			public CurrentSensorValDbl app_temp { get; set; }
+			public CurrentSensorValDbl dew_point { get; set; }
+			public CurrentSensorValInt humidity { get; set; }
+		}
+
+		internal class CurrentTemp
+		{
+			public CurrentSensorValDbl temperature { get; set; }
+		}
+
+		internal class CurrentTempHum
+		{
+			public CurrentSensorValDbl temperature { get; set; }
+			public CurrentSensorValInt humidity { get; set; }
+
+		}
+
+		internal class CurrentSolar
+		{
+			public CurrentSensorValDbl solar { get; set; }
+			public CurrentSensorValInt uvi { get; set; }
+		}
+
+		internal class CurrentRain
+		{
+			public CurrentSensorValDbl rain_rate { get; set; }
+			public CurrentSensorValDbl daily { get; set; }
+
+			[IgnoreDataMember]
+			public CurrentSensorValDbl Event { get; set; }
+
+			[DataMember(Name = "event")]
+			public CurrentSensorValDbl EventVal
+			{
+				get => Event;
+				set { Event = value; }
+			}
+
+
+			public CurrentSensorValDbl hourly { get; set; }
+			public CurrentSensorValDbl yearly { get; set; }
+		}
+
+		internal class CurrentWind
+		{
+			public CurrentSensorValDbl wind_speed { get; set; }
+			public CurrentSensorValDbl wind_gust { get; set; }
+			public CurrentSensorValInt wind_direction { get; set; }
+		}
+
+		internal class CurrentPress
+		{
+			public CurrentSensorValDbl relative { get; set; }
+			public CurrentSensorValDbl absolute { get; set; }
+		}
+
+		internal class CurrentLightning
+		{
+			public CurrentSensorValInt distance { get; set; }
+			public CurrentSensorValInt count { get; set; }
+		}
+
+		internal class CurrentCo2
+		{
+			public CurrentSensorValInt co2 { get; set; }
+
+			[IgnoreDataMember]
+			public int Avg24h { get; set; }
+
+			[DataMember(Name = "24_hours_average")]
+			public int Average
+			{
+				get => Avg24h;
+				set { Avg24h = value; }
+			}
+		}
+
+		internal class CurrentPm25
+		{
+			public CurrentSensorValInt real_time_aqi { get; set; }
+			public CurrentSensorValInt pm25 { get; set; }
+
+			[IgnoreDataMember]
+			public CurrentSensorValInt Avg24h { get; set; }
+
+			[DataMember(Name = "24_hours_aqi")]
+			public CurrentSensorValInt AvgVal
+			{
+				get => Avg24h;
+				set { Avg24h = value; }
+			}
+		}
+
+		internal class CurrentPm10
+		{
+			public CurrentSensorValInt real_time_aqi { get; set; }
+			public CurrentSensorValInt pm10 { get; set; }
+
+			[IgnoreDataMember]
+			public CurrentSensorValInt Avg24h { get; set; }
+
+			[DataMember(Name = "24_hours_aqi")]
+			public CurrentSensorValInt AvgVal
+			{
+				get => Avg24h;
+				set { Avg24h = value; }
+			}
+		}
+
+		internal class CurrentLeak
+		{
+			public CurrentSensorValInt leak_ch1 { get; set; }
+			public CurrentSensorValInt leak_ch2 { get; set; }
+			public CurrentSensorValInt leak_ch3 { get; set; }
+			public CurrentSensorValInt leak_ch4 { get; set; }
+		}
+
+		internal class CurrentSoil
+		{
+			public CurrentSensorValInt soilmoisture { get; set; }
+		}
+
+		internal class CurrentLeaf
+		{
+			public CurrentSensorValInt leaf_wetness { get; set; }
+		}
+
+		internal class CurrentBattery
+		{
+			public CurrentSensorValInt t_rh_p_sensor { get; set; }
+			public CurrentSensorValDbl ws1900_console { get; set; }
+			public CurrentSensorValDbl ws1800_console { get; set; }
+			public CurrentSensorValInt ws6006_console { get; set; }
+			public CurrentSensorValDbl console { get; set; }
+			public CurrentSensorValInt outdoor_t_rh_sensor { get; set; }
+			public CurrentSensorValDbl wind_sensor { get; set; }
+			public CurrentSensorValDbl haptic_array_battery { get; set; }
+			public CurrentSensorValDbl haptic_array_capacitor { get; set; }
+			public CurrentSensorValDbl sonic_array { get; set; }
+			public CurrentSensorValDbl rainfall_sensor { get; set; }
+			public CurrentSensorValInt sensor_array { get; set; }
+			public CurrentSensorValInt lightning_sensor { get; set; }
+			public CurrentSensorValInt aqi_combo_sensor { get; set; }
+			public CurrentSensorValInt water_leak_sensor_ch1 { get; set; }
+			public CurrentSensorValInt water_leak_sensor_ch2 { get; set; }
+			public CurrentSensorValInt water_leak_sensor_ch3 { get; set; }
+			public CurrentSensorValInt water_leak_sensor_ch4 { get; set; }
+			public CurrentSensorValInt pm25_sensor_ch1 { get; set; }
+			public CurrentSensorValInt pm25_sensor_ch2 { get; set; }
+			public CurrentSensorValInt pm25_sensor_ch3 { get; set; }
+			public CurrentSensorValInt pm25_sensor_ch4 { get; set; }
+			public CurrentSensorValInt temp_humidity_sensor_ch1 { get; set; }
+			public CurrentSensorValInt temp_humidity_sensor_ch2 { get; set; }
+			public CurrentSensorValInt temp_humidity_sensor_ch3 { get; set; }
+			public CurrentSensorValInt temp_humidity_sensor_ch4 { get; set; }
+			public CurrentSensorValInt temp_humidity_sensor_ch5 { get; set; }
+			public CurrentSensorValInt temp_humidity_sensor_ch6 { get; set; }
+			public CurrentSensorValInt temp_humidity_sensor_ch7 { get; set; }
+			public CurrentSensorValInt temp_humidity_sensor_ch8 { get; set; }
+			public CurrentSensorValDbl soilmoisture_sensor_ch1 { get; set; }
+			public CurrentSensorValDbl soilmoisture_sensor_ch2 { get; set; }
+			public CurrentSensorValDbl soilmoisture_sensor_ch3 { get; set; }
+			public CurrentSensorValDbl soilmoisture_sensor_ch4 { get; set; }
+			public CurrentSensorValDbl soilmoisture_sensor_ch5 { get; set; }
+			public CurrentSensorValDbl soilmoisture_sensor_ch6 { get; set; }
+			public CurrentSensorValDbl soilmoisture_sensor_ch7 { get; set; }
+			public CurrentSensorValDbl soilmoisture_sensor_ch8 { get; set; }
+			public CurrentSensorValDbl temperature_sensor_ch1 { get; set; }
+			public CurrentSensorValDbl temperature_sensor_ch2 { get; set; }
+			public CurrentSensorValDbl temperature_sensor_ch3 { get; set; }
+			public CurrentSensorValDbl temperature_sensor_ch4 { get; set; }
+			public CurrentSensorValDbl temperature_sensor_ch5 { get; set; }
+			public CurrentSensorValDbl temperature_sensor_ch6 { get; set; }
+			public CurrentSensorValDbl temperature_sensor_ch7 { get; set; }
+			public CurrentSensorValDbl temperature_sensor_ch8 { get; set; }
+			public CurrentSensorValDbl leaf_wetness_sensor_ch1 { get; set; }
+			public CurrentSensorValDbl leaf_wetness_sensor_ch2 { get; set; }
+			public CurrentSensorValDbl leaf_wetness_sensor_ch3 { get; set; }
+			public CurrentSensorValDbl leaf_wetness_sensor_ch4 { get; set; }
+			public CurrentSensorValDbl leaf_wetness_sensor_ch5 { get; set; }
+			public CurrentSensorValDbl leaf_wetness_sensor_ch6 { get; set; }
+			public CurrentSensorValDbl leaf_wetness_sensor_ch7 { get; set; }
+			public CurrentSensorValDbl leaf_wetness_sensor_ch8 { get; set; }
+		}
+
+		internal class CurrentCamera
+		{
+			public CurrentCameraVal photo { get; set; }
+		}
+
+		internal class CurrentSensorValDbl
+		{
+			public long time { get; set; }
+			public string unit { get; set; }
+			public double value { get; set; }
+		}
+
+		internal class CurrentSensorValInt
+		{
+			public long time { get; set; }
+			public string unit { get; set; }
+			public int value { get; set; }
+		}
+
+		internal class CurrentCameraVal
+		{
+			public long time { get; set; }
+			public string url { get; set; }
+		}
+
+		internal class StationList
+		{
+			public int code { get; set; }
+			public string msg { get; set; }
+			public long time { get; set; }
+
+			public StationListData data { get; set; }
+		}
+
+		internal class StationListData
+		{
+			public int total { get; set; }
+			public int totalPage { get; set; }
+			public int pageNum { get; set; }
+			public StationListDataStations[] list { get; set; }
+		}
+
+		internal class StationListDataStations
+		{
+			public int id { get; set; }
+			public string name { get; set; }
+			public string mac { get; set; }
+			public string imei { get; set; }
+			public int type { get; set; }
+			public string date_zone_id { get; set; }
+			public long createtime { get; set; }
+			public double longitude { get; set; }
+			public double latitude { get; set; }
+			public string stationtype { get; set; }
 		}
 	}
 }

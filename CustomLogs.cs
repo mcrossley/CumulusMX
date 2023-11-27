@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+
 using EmbedIO;
 using ServiceStack;
 
@@ -99,7 +97,7 @@ namespace CumulusMX
 			// process the settings
 			try
 			{
-				Cumulus.LogMessage("Updating custom interval log settings");
+				cumulus.LogMessage("Updating custom interval log settings");
 
 				for (var i = 0; i < 10; i++)
 				{
@@ -164,7 +162,7 @@ namespace CumulusMX
 			// process the settings
 			try
 			{
-				Cumulus.LogMessage("Updating custom daily log settings");
+				cumulus.LogMessage("Updating custom daily log settings");
 
 				for (var i = 0; i < 10; i++)
 				{

@@ -73,7 +73,7 @@ namespace CumulusMX
 				retVal = Interpolate(0, 12, pmVal) * 50;
 			}
 			//return (Ihigh - Ilow) / (Chigh - Clow) * (pmVal - Clow) + Ilow;
-			return (int)Math.Round(retVal);
+			return (int) Math.Round(retVal);
 		}
 
 		/*
@@ -145,7 +145,7 @@ namespace CumulusMX
 				retVal = Interpolate(0, 54, pmVal) * 50;
 			}
 			//return (Ihigh - Ilow) / (Chigh - Clow) * (pmVal - Clow) + Ilow;
-			return (int)Math.Round(retVal);
+			return (int) Math.Round(retVal);
 		}
 
 

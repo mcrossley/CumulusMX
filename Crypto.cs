@@ -60,8 +60,8 @@ namespace CumulusMX
 			}
 			catch (Exception e)
 			{
-				Cumulus.LogMessage($"Data was not encrypted. An error occurred processing '{description}'");
-				Cumulus.LogMessage(e.ToString());
+				Program.cumulus.LogMessage($"Data was not encrypted. An error occurred processing '{description}'");
+				Program.cumulus.LogMessage(e.ToString());
 				return null;
 			}
 		}
@@ -89,8 +89,8 @@ namespace CumulusMX
 			}
 			catch (Exception e)
 			{
-				Cumulus.LogMessage($"Data was not decrypted. An error occurred processing '{description}'");
-				Cumulus.LogMessage(e.ToString());
+				Program.cumulus.LogMessage($"Data was not decrypted. An error occurred processing '{description}'");
+				Program.cumulus.LogMessage(e.ToString());
 				return null;
 			}
 		}

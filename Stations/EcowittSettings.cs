@@ -7,6 +7,7 @@
 		public string LocalAddr { get; set; }
 		public int CustomInterval { get; set; }
 		public bool ExtraEnabled { get; set; }
+		public bool CloudExtraEnabled { get; set; }
 		public bool ExtraUseSolar { get; set; }
 		public bool ExtraUseUv { get; set; }
 		public bool ExtraUseTempHum { get; set; }
@@ -18,6 +19,8 @@
 		public bool ExtraUseCo2 { get; set; }
 		public bool ExtraUseLightning { get; set; }
 		public bool ExtraUseLeak { get; set; }
+		public bool ExtraUseCamera { get; set; }
+		public string CameraMacAddress { get; set; }
 		public string AppKey { get; set; }
 		public string UserApiKey { get; set; }
 		public string MacAddress { get; set; }
@@ -26,6 +29,8 @@
 		public string ExtraLocalAddr { get; set; }
 		public int ExtraCustomInterval { get; set; }
 		public int[] MapWN34 = new int[9];
-		public string[] EcowittForwarders = new string[10];
+		public string[] Forwarders = new string[10];
+		public bool ExtraUseMainForwarders { get; set; }
+		public string[] ExtraForwarders = new string[10];
 	}
 }

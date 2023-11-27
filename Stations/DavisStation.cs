@@ -1,12 +1,12 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Ports;
+using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Globalization;
-using System.Linq;
 
 namespace CumulusMX
 {
@@ -15,8 +15,6 @@ namespace CumulusMX
 		private readonly bool isSerial;
 		private readonly string ipaddr;
 		private readonly int port;
-		private bool savedUseSpeedForAvgCalc;
-		//private int min;
 		private int previousMinuteDisconnect = 60;
 		private const int ACK = 6;
 		private const int NACK = 33;
@@ -52,13 +50,13 @@ namespace CumulusMX
 
 			bool connectedOK;
 
-			Cumulus.LogMessage("Station type = Davis");
-			Cumulus.LogMessage("LOOP2 " + (cumulus.DavisOptions.UseLoop2 ? "enabled" : "disabled"));
+			cumulus.LogMessage("Station type = Davis");
+			cumulus.LogMessage("LOOP2 " + (cumulus.DavisOptions.UseLoop2 ? "enabled" : "disabled"));
 
 			if (isSerial)
 			{
-				Cumulus.LogMessage("Serial device = " + cumulus.ComportName);
-				Cumulus.LogMessage("Serial speed = " + cumulus.DavisOptions.BaudRate);
+				cumulus.LogMessage("Serial device = " + cumulus.ComportName);
+				cumulus.LogMessage("Serial speed = " + cumulus.DavisOptions.BaudRate);
 
 				InitSerial();
 
@@ -69,8 +67,8 @@ namespace CumulusMX
 				ipaddr = cumulus.DavisOptions.IPAddr;
 				port = Convert.ToInt32(cumulus.DavisOptions.TCPPort);
 
-				Cumulus.LogMessage("IP address = " + ipaddr + " Port = " + port);
-				Cumulus.LogMessage("periodic disconnect = " + cumulus.DavisOptions.PeriodicDisconnectInterval);
+				cumulus.LogMessage("IP address = " + ipaddr + " Port = " + port);
+				cumulus.LogMessage("periodic disconnect = " + cumulus.DavisOptions.PeriodicDisconnectInterval);
 
 				InitTCP();
 
@@ -80,12 +78,12 @@ namespace CumulusMX
 
 			if (connectedOK)
 			{
-				Cumulus.LogMessage("Connected OK");
+				cumulus.LogMessage("Connected OK");
 				Cumulus.LogConsoleMessage("Connected to station");
 			}
 			else
 			{
-				Cumulus.LogMessage("Not Connected");
+				cumulus.LogMessage("Not Connected");
 				Cumulus.LogConsoleMessage("Unable to connect to station");
 			}
 
@@ -100,20 +98,20 @@ namespace CumulusMX
 			{
 				DavisFirmwareVersion = GetFirmwareVersion();
 			}
-			Cumulus.LogMessage("FW version = " + DavisFirmwareVersion);
+			cumulus.LogMessage("FW version = " + DavisFirmwareVersion);
 			try
 			{
 				if (DavisFirmwareVersion == "???" && cumulus.DavisOptions.UseLoop2)
 				{
-					Cumulus.LogMessage("Unable to determine the firmware version, LOOP2 may not be supported");
+					cumulus.LogWarningMessage("Unable to determine the firmware version, LOOP2 may not be supported");
 				}
-				else if((float.Parse(DavisFirmwareVersion, CultureInfo.InvariantCulture.NumberFormat) < (float)1.9) && cumulus.DavisOptions.UseLoop2)
+				else if ((float.Parse(DavisFirmwareVersion, CultureInfo.InvariantCulture.NumberFormat) < 1.9) && cumulus.DavisOptions.UseLoop2)
 				{
-					Cumulus.LogMessage("LOOP2 is enabled in Cumulus.ini but this firmware version does not support it. Consider disabling it in Cumulus.ini");
+					cumulus.LogWarningMessage("LOOP2 is enabled in Cumulus.ini but this firmware version does not support it. Consider disabling it in Cumulus.ini");
 					Cumulus.LogConsoleMessage("Your console firmware version does not support LOOP2. Consider disabling it in Cumulus.ini", ConsoleColor.Yellow);
 				}
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "Error parsing firmware string for version number");
 			}
@@ -124,17 +122,14 @@ namespace CumulusMX
 				DecodeReceptionStats(recepStats);
 			}
 
-			// check the logger interval
-			CheckLoggerInterval();
-
-			Cumulus.LogMessage("Last update time = " + cumulus.LastUpdateTime);
+			cumulus.LogMessage("Last update time = " + cumulus.LastUpdateTime);
 
 			var consoleclock = GetTime();
 			var nowTime = DateTime.Now;
 
 			if (consoleclock > DateTime.MinValue)
 			{
-				Cumulus.LogMessage("Console clock: " + consoleclock);
+				cumulus.LogMessage("Console clock: " + consoleclock);
 
 				var timeDiff = nowTime.Subtract(consoleclock).TotalSeconds;
 
@@ -142,11 +137,11 @@ namespace CumulusMX
 				{
 					if (cumulus.StationOptions.SyncTime)
 					{
-						Cumulus.LogMessage($"Console clock: Console is {(int)timeDiff} seconds adrift, resetting it...");
+						cumulus.LogWarningMessage($"Console clock: Console is {(int) timeDiff} seconds adrift, resetting it...");
 
 						SetTime();
 						// Pause whilst the console sorts itself out
-						Cumulus.LogMessage("Console clock: Pausing to allow Davis console to process the new date/time");
+						cumulus.LogMessage("Console clock: Pausing to allow Davis console to process the new date/time");
 						Cumulus.LogConsoleMessage("Pausing to allow Davis console to process the new date/time");
 						Thread.Sleep(1000 * 5);
 
@@ -154,26 +149,26 @@ namespace CumulusMX
 
 						if (consoleclock > DateTime.MinValue)
 						{
-							Cumulus.LogMessage("Console clock: " + consoleclock);
+							cumulus.LogMessage("Console clock: " + consoleclock);
 						}
 						else
 						{
-							Cumulus.LogMessage("Console clock: Failed to read console time");
+							cumulus.LogWarningMessage("Console clock: Failed to read console time");
 						}
 					}
 					else
 					{
-						Cumulus.LogMessage($"Console clock: Console is {(int)timeDiff} seconds adrift but automatic setting is disabled - you should set the clock manually.");
+						cumulus.LogWarningMessage($"Console clock: Console is {(int) timeDiff} seconds adrift but automatic setting is disabled - you should set the clock manually.");
 					}
 				}
 				else
 				{
-					Cumulus.LogMessage($"Console clock: Accurate to +/- 30 seconds, no need to set it (diff={(int)nowTime.Subtract(consoleclock).TotalSeconds}s)");
+					cumulus.LogMessage($"Console clock: Accurate to +/- 30 seconds, no need to set it (diff={(int) nowTime.Subtract(consoleclock).TotalSeconds}s)");
 				}
 			}
 			else
 			{
-				Cumulus.LogMessage("Console clock: Failed to read console time");
+				cumulus.LogWarningMessage("Console clock: Failed to read console time");
 			}
 		}
 
@@ -196,7 +191,7 @@ namespace CumulusMX
 				DoDayResetIfNeeded();
 				DoTrendValues(DateTime.Now);
 
-				Cumulus.LogMessage("Starting Davis ");
+				cumulus.LogMessage("Starting Davis ");
 				bw = new BackgroundWorker();
 				bw.DoWork += bw_DoStart;
 				bw.RunWorkerAsync();
@@ -206,6 +201,10 @@ namespace CumulusMX
 				// Read the data from the logger
 				startReadingHistoryData();
 			}
+
+			// check the logger interval
+			// do this after reading the history so we do not wipe it out before we read it!
+			CheckLoggerInterval();
 		}
 
 		private void DecodeReceptionStats(string recepStats)
@@ -229,7 +228,7 @@ namespace CumulusMX
 
 		private string GetFirmwareVersion()
 		{
-			Cumulus.LogMessage("Reading firmware version");
+			cumulus.LogMessage("Reading firmware version");
 			string response = "";
 			string data = "";
 			int ch;
@@ -262,7 +261,7 @@ namespace CumulusMX
 					}
 					catch (TimeoutException)
 					{
-						Cumulus.LogMessage("GetFirmwareVersion: Timed out waiting for a response");
+						cumulus.LogErrorMessage("GetFirmwareVersion: Timed out waiting for a response");
 					}
 					catch (Exception ex)
 					{
@@ -303,7 +302,7 @@ namespace CumulusMX
 					{
 						if (ex.Message.Contains("did not properly respond after a period of time")) // TODO: Change to using error code
 						{
-							Cumulus.LogMessage("GetFirmwareVersion: Timed out waiting for a response");
+							cumulus.LogWarningMessage("GetFirmwareVersion: Timed out waiting for a response");
 						}
 						else
 						{
@@ -328,7 +327,7 @@ namespace CumulusMX
 
 		private void CheckLoggerInterval()
 		{
-			Cumulus.LogMessage("CheckLoggerInterval: Reading logger interval");
+			cumulus.LogMessage("CheckLoggerInterval: Reading logger interval");
 			var bytesRead = 0;
 			byte[] readBuffer = new byte[40];
 
@@ -349,7 +348,7 @@ namespace CumulusMX
 
 						if (!WaitForACK(comport))
 						{
-							Cumulus.LogMessage("CheckLoggerInterval: No ACK in response to requesting logger interval");
+							cumulus.LogWarningMessage("CheckLoggerInterval: No ACK in response to requesting logger interval");
 							return;
 						}
 
@@ -358,17 +357,17 @@ namespace CumulusMX
 						{
 							// Read the current character
 							var ch = comport.ReadChar();
-							readBuffer[bytesRead] = (byte)ch;
+							readBuffer[bytesRead] = (byte) ch;
 							bytesRead++;
-						} while (bytesRead < 3) ;
+						} while (bytesRead < 3);
 					}
 					catch (TimeoutException)
 					{
-						Cumulus.LogMessage("CheckLoggerInterval: Timed out waiting for a response");
+						cumulus.LogWarningMessage("CheckLoggerInterval: Timed out waiting for a response");
 					}
 					catch (Exception ex)
 					{
-						Cumulus.LogMessage("CheckLoggerInterval: Error - " + ex.Message);
+						cumulus.LogExceptionMessage(ex, "CheckLoggerInterval: Error");
 						awakeStopWatch.Stop();
 					}
 				}
@@ -388,7 +387,7 @@ namespace CumulusMX
 
 						if (!WaitForACK(stream))
 						{
-							Cumulus.LogMessage("CheckLoggerInterval: No ACK in response to requesting logger interval");
+							cumulus.LogWarningMessage("CheckLoggerInterval: No ACK in response to requesting logger interval");
 							return;
 						}
 
@@ -396,16 +395,16 @@ namespace CumulusMX
 						{
 							// Read the current character
 							var ch = stream.ReadByte();
-							readBuffer[bytesRead] = (byte)ch;
+							readBuffer[bytesRead] = (byte) ch;
 							bytesRead++;
-							//Cumulus.LogMessage("Received " + ch.ToString("X2"));
+							//cumulus.LogMessage("Received " + ch.ToString("X2"));
 						} while (bytesRead < 3);
 					}
 					catch (System.IO.IOException ex)
 					{
 						if (ex.Message.Contains("did not properly respond after a period")) // TODO: Chnage to using error code
 						{
-							Cumulus.LogMessage("CheckLoggerInterval: Timed out waiting for a response");
+							cumulus.LogWarningMessage("CheckLoggerInterval: Timed out waiting for a response");
 						}
 						else
 						{
@@ -432,7 +431,7 @@ namespace CumulusMX
 				loggerInterval = readBuffer[0];
 				var msg = $"** WARNING: Your station logger interval {loggerInterval} mins does not match your Cumulus MX logging interval {cumulus.logints[cumulus.DataLogInterval]} mins";
 				Cumulus.LogConsoleMessage(msg);
-				Cumulus.LogMessage("CheckLoggerInterval: " + msg);
+				cumulus.LogWarningMessage("CheckLoggerInterval: " + msg);
 
 				if (cumulus.DavisOptions.SetLoggerInterval)
 				{
@@ -443,7 +442,7 @@ namespace CumulusMX
 
 		private void SetLoggerInterval(int interval)
 		{
-			Cumulus.LogMessage($"SetLoggerInterval: Setting logger interval to {interval} minutes");
+			cumulus.LogMessage($"SetLoggerInterval: Setting logger interval to {interval} minutes");
 
 			// response should be just an ACK
 			if (isSerial)
@@ -457,17 +456,17 @@ namespace CumulusMX
 
 						if (!WaitForACK(comport))
 						{
-							Cumulus.LogMessage("SetLoggerInterval: No ACK in response to setting logger interval");
+							cumulus.LogWarningMessage("SetLoggerInterval: No ACK in response to setting logger interval");
 							return;
 						}
 
 						// logger updated OK, so change our internal tracking value too
 						loggerInterval = interval;
-						Cumulus.LogMessage("SetLoggerInterval: Logger interval changed OK");
+						cumulus.LogMessage("SetLoggerInterval: Logger interval changed OK");
 					}
 					catch (TimeoutException)
 					{
-						Cumulus.LogMessage("SetLoggerInterval: Timed out waiting for a response");
+						cumulus.LogWarningMessage("SetLoggerInterval: Timed out waiting for a response");
 					}
 					catch (Exception ex)
 					{
@@ -491,19 +490,19 @@ namespace CumulusMX
 
 						if (!WaitForACK(stream))
 						{
-							Cumulus.LogMessage("SetLoggerInterval: No ACK in response to setting logger interval");
+							cumulus.LogWarningMessage("SetLoggerInterval: No ACK in response to setting logger interval");
 							return;
 						}
 
 						// logger updated OK, so change our internal tracking value too
 						loggerInterval = interval;
-						Cumulus.LogMessage("SetLoggerInterval: Logger interval changed OK");
+						cumulus.LogMessage("SetLoggerInterval: Logger interval changed OK");
 					}
 					catch (System.IO.IOException ex)
 					{
 						if (ex.Message.Contains("did not properly respond after a period")) //TODO: Change to using error code
 						{
-							Cumulus.LogMessage("SetLoggerInterval: Timed out waiting for a response");
+							cumulus.LogWarningMessage("SetLoggerInterval: Timed out waiting for a response");
 						}
 						else
 						{
@@ -525,7 +524,7 @@ namespace CumulusMX
 		{
 			// e.g. <LF><CR>OK<LF><CR> 21629 15 0 3204 128<LF><CR>
 			//       0   1  23 4   5  6
-			Cumulus.LogMessage("Reading reception stats");
+			cumulus.LogMessage("Reading reception stats");
 			lastRecepStatsTime = DateTime.Now;
 			string response = "";
 			var bytesRead = 0;
@@ -549,14 +548,14 @@ namespace CumulusMX
 								// Read the current character
 								ch = comport.ReadChar();
 								response += Convert.ToChar(ch);
-								readBuffer[bytesRead] = (byte)ch;
+								readBuffer[bytesRead] = (byte) ch;
 								bytesRead++;
 							} while (ch != CR);
 						}
 					}
 					catch (TimeoutException)
 					{
-						Cumulus.LogMessage("GetReceptionStats: Timed out waiting for a response");
+						cumulus.LogWarningMessage("GetReceptionStats: Timed out waiting for a response");
 					}
 					catch (Exception ex)
 					{
@@ -588,7 +587,7 @@ namespace CumulusMX
 								// Read the current character
 								ch = stream.ReadByte();
 								response += Convert.ToChar(ch);
-								readBuffer[bytesRead] = (byte)ch;
+								readBuffer[bytesRead] = (byte) ch;
 								bytesRead++;
 							} while (ch != CR);
 						}
@@ -597,7 +596,7 @@ namespace CumulusMX
 					{
 						if (ex.Message.Contains("did not properly respond after a period")) //TODO: Change to using error code
 						{
-							Cumulus.LogMessage("GetReceptionStats: Timed out waiting for a response");
+							cumulus.LogWarningMessage("GetReceptionStats: Timed out waiting for a response");
 						}
 						else
 						{
@@ -666,7 +665,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				cumulus.LogDebugMessage("OpenTcpPort: TCP Logger connect failed");
+				cumulus.LogWarningMessage("OpenTcpPort: TCP Logger connect failed");
 			}
 
 			return client;
@@ -714,11 +713,11 @@ namespace CumulusMX
 		{
 			cumulus.NormalRunning = true;
 			//lastArchiveTimeUTC = getLastArchiveTime();
-			Cumulus.LogMessage("Reading history data from log files");
+			cumulus.LogMessage("Reading history data from log files");
 
 			LoadLastHoursFromDataLogs(cumulus.LastUpdateTime);
 
-			Cumulus.LogMessage("Reading archive data from logger");
+			cumulus.LogMessage("Reading archive data from logger");
 			bw = new BackgroundWorker();
 			//histprog = new historyProgressWindow();
 			//histprog.Owner = mainWindow;
@@ -732,7 +731,7 @@ namespace CumulusMX
 
 		public override void Stop()
 		{
-			Cumulus.LogMessage("Closing connection");
+			cumulus.LogMessage("Closing connection");
 			try
 			{
 				stop = true;
@@ -763,12 +762,12 @@ namespace CumulusMX
 			//histprog.histprogPB.Value = 100;
 			//histprog.Close();
 			//mainWindow.FillLastHourGraphData();
-			Cumulus.LogMessage("Logger archive reading thread completed");
+			cumulus.LogMessage("Logger archive reading thread completed");
 			if (e.Error != null)
 			{
-				Cumulus.LogMessage("Archive reading thread apparently terminated with an error: " + e.Error.Message);
+				cumulus.LogErrorMessage("Archive reading thread apparently terminated with an error: " + e.Error.Message);
 			}
-			//Cumulus.LogMessage("Updating highs and lows");
+			//cumulus.LogMessage("Updating highs and lows");
 			//using (cumulusEntities dataContext = new cumulusEntities())
 			//{
 			//    UpdateHighsAndLows(dataContext);
@@ -778,8 +777,6 @@ namespace CumulusMX
 			//{
 			//    CalcRecentMaxGust = false;
 			//}
-			// restore this setting
-			cumulus.StationOptions.UseSpeedForAvgCalc = savedUseSpeedForAvgCalc;
 			StartLoop();
 			DoDayResetIfNeeded();
 			DoTrendValues(DateTime.Now);
@@ -809,11 +806,20 @@ namespace CumulusMX
 			try
 			{
 				// set this temporarily, so speed is done from average and not peak gust from logger
-				savedUseSpeedForAvgCalc = cumulus.StationOptions.UseSpeedForAvgCalc;
-				cumulus.StationOptions.UseSpeedForAvgCalc = true;
 				do
 				{
 					GetArchiveData();
+
+					// The VP" seems to need a nudge after a DMPAFT command
+					if (isSerial)
+					{
+						WakeVP(comport, true);
+					}
+					else
+					{
+						WakeVP(socket, true);
+					}
+
 					archiveRun++;
 				} while (archiveRun < maxArchiveRuns);
 			}
@@ -905,7 +911,7 @@ namespace CumulusMX
 
 		public override void Start()
 		{
-			Cumulus.LogMessage("Start normal reading loop");
+			cumulus.LogMessage("Start normal reading loop");
 			int loopcount = cumulus.DavisOptions.ForceVPBarUpdate ? 20 : 50;
 			const int loop2count = 1;
 			bool reconnecting = false;
@@ -922,34 +928,34 @@ namespace CumulusMX
 
 						if (consoleclock > DateTime.MinValue)
 						{
-							Cumulus.LogMessage("Console clock: " + consoleclock);
+							cumulus.LogMessage("Console clock: " + consoleclock);
 						}
 						else
 						{
-							Cumulus.LogMessage("Console clock: Failed to read console time");
+							cumulus.LogWarningMessage("Console clock: Failed to read console time");
 						}
 
 						if (Math.Abs(nowTime.Subtract(consoleclock).TotalSeconds) >= 30)
 						{
 							SetTime();
 
-							Cumulus.LogMessage("Console clock: Pausing to allow console to process the new date/time");
+							cumulus.LogMessage("Console clock: Pausing to allow console to process the new date/time");
 							Thread.Sleep(1000 * 5);
 
 							consoleclock = GetTime();
 
 							if (consoleclock > DateTime.MinValue)
 							{
-								Cumulus.LogMessage("Console clock: " + consoleclock);
+								cumulus.LogMessage("Console clock: " + consoleclock);
 							}
 							else
 							{
-								Cumulus.LogMessage("Console clock: Failed to read console time");
+								cumulus.LogWarningMessage("Console clock: Failed to read console time");
 							}
 						}
 						else
 						{
-							Cumulus.LogMessage($"Console clock: Accurate to +/- 30 seconds, no need to set it (diff={(int)nowTime.Subtract(consoleclock).TotalSeconds}s)");
+							cumulus.LogMessage($"Console clock: Accurate to +/- 30 seconds, no need to set it (diff={(int) nowTime.Subtract(consoleclock).TotalSeconds}s)");
 						}
 
 						clockSetNeeded = false;
@@ -975,7 +981,7 @@ namespace CumulusMX
 							// try opening it again
 							try
 							{
-								Cumulus.LogMessage("Attempting to re-open the comm port");
+								cumulus.LogMessage("Attempting to re-open the comm port");
 								InitSerial();
 							}
 							catch (Exception ex)
@@ -984,7 +990,7 @@ namespace CumulusMX
 							}
 							if (comport == null || !comport.IsOpen)
 							{
-								Cumulus.LogMessage("Failed to connect to the station, waiting 30 seconds before trying again");
+								cumulus.LogMessage("Failed to connect to the station, waiting 30 seconds before trying again");
 								Thread.Sleep(30000);
 								continue;
 							}
@@ -1018,7 +1024,7 @@ namespace CumulusMX
 						{
 							if (reconnecting)
 							{
-								Cumulus.LogMessage("Failed to connect to the station, waiting 30 seconds before trying again");
+								cumulus.LogMessage("Failed to connect to the station, waiting 30 seconds before trying again");
 								Thread.Sleep(30000);
 							}
 							continue;
@@ -1038,18 +1044,18 @@ namespace CumulusMX
 				}
 				catch (ThreadAbortException) // Catch the ThreadAbortException
 				{
-					Cumulus.LogMessage("Davis Start: ThreadAbortException");
+					cumulus.LogMessage("Davis Start: ThreadAbortException");
 					// and exit
 					stop = true;
 				}
 				catch (Exception ex)
 				{
 					// any others, log them and carry on
-					Cumulus.LogMessage("Davis Start: Exception - " + ex.Message);
+					cumulus.LogExceptionMessage(ex, "Davis Start: Error");
 				}
 			}
 
-			Cumulus.LogMessage("Ending normal reading loop");
+			cumulus.LogMessage("Ending normal reading loop");
 
 			if (isSerial)
 			{
@@ -1097,7 +1103,7 @@ namespace CumulusMX
 								// Read the current character
 								var ch = comport.ReadChar();
 								response += Convert.ToChar(ch);
-								readBuffer[bytesRead] = (byte)ch;
+								readBuffer[bytesRead] = (byte) ch;
 								bytesRead++;
 
 							} while (bytesRead < 7);
@@ -1136,7 +1142,7 @@ namespace CumulusMX
 								response += Convert.ToChar(ch);
 								readBuffer[bytesRead] = (byte)ch;
 								bytesRead++;
-								//Cumulus.LogMessage("Received " + ch.ToString("X2"));
+								//cumulus.LogMessage("Received " + ch.ToString("X2"));
 							} while (stream.DataAvailable);
 						}
 					}
@@ -1144,7 +1150,7 @@ namespace CumulusMX
 					{
 						if (ex.Message.Contains("did not properly respond after a period")) // TODO: Chnage to using error code
 						{
-							cumulus.LogDebugMessage("SendBarRead: Timed out waiting for a response");
+							cumulus.LogWarningMessage("SendBarRead: Timed out waiting for a response");
 						}
 						else
 						{
@@ -1169,7 +1175,7 @@ namespace CumulusMX
 
 			if (response.Length > 2)
 			{
-				cumulus.LogDebugMessage("BARREAD Received - " + response[0..^2]);
+				cumulus.LogWarningMessage("BARREAD Bad data received - " + response[0..^2]);
 			}
 		}
 
@@ -1177,14 +1183,14 @@ namespace CumulusMX
 		{
 			bool foundAck = false;
 
-			Cumulus.LogMessage("SendLoopCommand: Starting - " + commandString);
+			cumulus.LogMessage("SendLoopCommand: Starting - " + commandString);
 
 			try
 			{
 				if (serialPort.IsOpen && !stop)
 				{
 					_ = WakeVP(serialPort);
-					//Cumulus.LogMessage("Sending command: " + commandString);
+					//cumulus.LogMessage("Sending command: " + commandString);
 
 					int passCount = 1;
 					const int maxPasses = 4;
@@ -1215,7 +1221,7 @@ namespace CumulusMX
 						return true;
 
 					// Failed to get a response from the loop command after all the retries, try resetting the connection
-					cumulus.LogDebugMessage($"SendLoopCommand: Failed to get a response after {passCount - 1} attempts, reconnecting the station");
+					cumulus.LogWarningMessage($"SendLoopCommand: Failed to get a response after {passCount - 1} attempts, reconnecting the station");
 					InitSerial();
 					cumulus.LogDebugMessage("SendLoopCommand: Reconnected to station");
 				}
@@ -1242,13 +1248,13 @@ namespace CumulusMX
 			int passCount = 1;
 			const int maxPasses = 4;
 
-			Cumulus.LogMessage("SendLoopCommand: Starting - " + commandString.Replace("\n", ""));
+			cumulus.LogMessage("SendLoopCommand: Starting - " + commandString.Replace("\n", ""));
 
 			try
 			{
 				if (!tcpPort.Connected)
 				{
-					cumulus.LogDebugMessage("SendLoopCommand: Error, TCP not connected!");
+					cumulus.LogErrorMessage("SendLoopCommand: Error, TCP not connected!");
 					cumulus.LogDebugMessage("SendLoopCommand: Attempting to reconnect to logger");
 					InitTCP();
 					cumulus.LogDebugMessage("SendLoopCommand: Reconnected to logger");
@@ -1286,7 +1292,7 @@ namespace CumulusMX
 				if (foundAck) return true;
 
 				// Failed to get a response from the loop command after all the retries, try resetting the connection
-				cumulus.LogDebugMessage($"SendLoopCommand: Failed to get a response after {passCount-1} attempts, reconnecting the station");
+				cumulus.LogWarningMessage($"SendLoopCommand: Failed to get a response after {passCount-1} attempts, reconnecting the station");
 				InitTCP();
 				cumulus.LogDebugMessage("SendLoopCommand: Reconnected to station");
 			}
@@ -1307,7 +1313,7 @@ namespace CumulusMX
 
 		private void GetAndProcessLoopData(int number)
 		{
-			//Cumulus.LogMessage("processing loop data");
+			//cumulus.LogMessage("processing loop data");
 			const int loopDataLength = 99;
 
 			CommTimer tmrComm = new CommTimer();
@@ -1337,7 +1343,7 @@ namespace CumulusMX
 					{
 						if (!comport.IsOpen)
 						{
-							Cumulus.LogMessage("LOOP: Comm port is closed");
+							cumulus.LogWarningMessage("LOOP: Comm port is closed");
 							cumulus.LogDebugMessage("LOOP: Attempting to reconnect to station");
 							InitSerial();
 							cumulus.LogDebugMessage("LOOP: Reconnected to station");
@@ -1353,19 +1359,19 @@ namespace CumulusMX
 						tmrComm.Stop();
 						if (comport.BytesToRead < loopDataLength)
 						{
-							Cumulus.LogMessage($"LOOP: {i + 1} - Expected data not received, expected 99 bytes, got {comport.BytesToRead}");
+							cumulus.LogMessage($"LOOP: {i + 1} - Expected data not received, expected 99 bytes, got {comport.BytesToRead}");
 						}
 
 						_ = comport.Read(loopString, 0, loopDataLength);
 					}
 					catch (TimeoutException)
 					{
-						Cumulus.LogMessage($"LOOP: {i + 1} - Timed out waiting for LOOP data");
+						cumulus.LogMessage($"LOOP: {i + 1} - Timed out waiting for LOOP data");
 						return;
 					}
 					catch (Exception ex)
 					{
-						Cumulus.LogMessage("LOOP: Exception - " + ex);
+						cumulus.LogExceptionMessage(ex, "LOOP: Error");
 						cumulus.LogDebugMessage("LOOP: Attempting to reconnect to station");
 						InitSerial();
 						cumulus.LogDebugMessage("LOOP: Reconnected to station");
@@ -1422,7 +1428,7 @@ namespace CumulusMX
 
 						if (socket.Available < loopDataLength)
 						{
-							Cumulus.LogMessage($"LOOP: {i + 1} - Expected data not received, expected 99 bytes, got {socket.Available}");
+							cumulus.LogMessage($"LOOP: {i + 1} - Expected data not received, expected 99 bytes, got {socket.Available}");
 						}
 
 						// Read the first 99 bytes of the buffer into the array
@@ -1432,23 +1438,23 @@ namespace CumulusMX
 					{
 						if (ex.Message.Contains("did not properly respond after a period")) // TODO: Change to using error code
 						{
-							Cumulus.LogMessage("LOOP: Timed out waiting for LOOP data");
+							cumulus.LogMessage("LOOP: Timed out waiting for LOOP data");
 						}
 						else
 						{
 							cumulus.LogExceptionMessage(ex, "LOOP: Receive error");
-							Cumulus.LogMessage("LOOP: Reconnecting to station");
+							cumulus.LogMessage("LOOP: Reconnecting to station");
 							InitTCP();
-							Cumulus.LogMessage("LOOP: Reconnected to station");
+							cumulus.LogMessage("LOOP: Reconnected to station");
 						}
 						return;
 					}
 					catch (Exception ex)
 					{
-						Cumulus.LogMessage("LOOP: Receive error - " + ex);
-						Cumulus.LogMessage("LOOP: Reconnecting to station");
+						cumulus.LogMessage("LOOP: Receive error - " + ex);
+						cumulus.LogMessage("LOOP: Reconnecting to station");
 						InitTCP();
-						Cumulus.LogMessage("LOOP: Reconnected to station");
+						cumulus.LogMessage("LOOP: Reconnected to station");
 						return;
 					}
 				}
@@ -1507,7 +1513,7 @@ namespace CumulusMX
 
 				if (!CrcOk(loopString))
 				{
-					Cumulus.LogMessage($"LOOP: {i + 1} - Packet CRC invalid");
+					cumulus.LogMessage($"LOOP: {i + 1} - Packet CRC invalid");
 					continue;
 				}
 
@@ -1522,7 +1528,7 @@ namespace CumulusMX
 				loopData.Load(loopString);
 
 				// Process it
-				//Cumulus.LogMessage(DateTime.Now.ToLongTimeString() + " Processing Data, i=" + i);
+				//cumulus.LogMessage(DateTime.Now.ToLongTimeString() + " Processing Data, i=" + i);
 				//Trace.Flush();
 
 				DateTime now = DateTime.Now;
@@ -1598,20 +1604,6 @@ namespace CumulusMX
 					}
 
 					DoWind(wind, winddir, avgwind, now);
-
-					if (!CalcRecentMaxGust)
-					{
-						// See if the current speed is higher than the current 10-min max
-						// We can then update the figure before the next LOOP2 packet is read
-
-						_ = CheckHighGust(WindLatest, winddir, now);
-
-						if (WindLatest > RecentMaxGust)
-						{
-							RecentMaxGust = WindLatest;
-							cumulus.LogDebugMessage("LOOP: Setting max gust from loop value: " + RecentMaxGust.Value.ToString(cumulus.WindFormat));
-						}
-					}
 				}
 				else
 				{
@@ -1746,7 +1738,7 @@ namespace CumulusMX
 				UpdateMQTT();
 			}
 
-			//Cumulus.LogMessage("end processing loop data");
+			//cumulus.LogMessage("end processing loop data");
 		}
 
 		private static string ProcessTxBatt(byte txStatus)
@@ -1788,7 +1780,7 @@ namespace CumulusMX
 
 						if (comport.BytesToRead < loopDataLength)
 						{
-							Cumulus.LogMessage($"LOOP2: Expected data not received, expected 99 bytes, got {comport.BytesToRead}");
+							cumulus.LogWarningMessage($"LOOP2: Expected data not received, expected 99 bytes, got {comport.BytesToRead}");
 						}
 
 						// Read the data from the buffer into the array
@@ -1796,12 +1788,12 @@ namespace CumulusMX
 					}
 					catch (TimeoutException)
 					{
-						Cumulus.LogMessage("LOOP2: Timed out waiting for LOOP2 data");
+						cumulus.LogWarningMessage("LOOP2: Timed out waiting for LOOP2 data");
 						continue;
 					}
 					catch (Exception ex)
 					{
-						Cumulus.LogMessage("LOOP2: Error - " + ex);
+						cumulus.LogExceptionMessage(ex, "LOOP2: Error");
 						cumulus.LogDebugMessage("LOOP2: Attempting to reconnect to logger");
 						InitSerial();
 						cumulus.LogDebugMessage("LOOP2: Reconnected to logger");
@@ -1821,7 +1813,7 @@ namespace CumulusMX
 
 						if (socket.Available < loopDataLength)
 						{
-							Cumulus.LogMessage($"LOOP2: Expected data not received, expected 99 bytes got {socket.Available}");
+							cumulus.LogWarningMessage($"LOOP2: Expected data not received, expected 99 bytes got {socket.Available}");
 						}
 						// Read the first 99 bytes of the buffer into the array
 						_ = socket.GetStream().Read(loopString, 0, loopDataLength);
@@ -1830,7 +1822,7 @@ namespace CumulusMX
 					{
 						if (ex.Message.Contains("did not properly respond after a period")) //TODO: Change to use error code
 						{
-							cumulus.LogDebugMessage("LOOP2: Timed out waiting for LOOP2 data");
+							cumulus.LogWarningMessage("LOOP2: Timed out waiting for LOOP2 data");
 							continue;
 						}
 
@@ -1853,13 +1845,13 @@ namespace CumulusMX
 				// Check it is a LOOP packet, starts with "LOO" and 5th byte == 1: LOOP2
 				if (!(loopString[0] == 'L' && loopString[1] == 'O' && loopString[2] == 'O' && Convert.ToByte(loopString[4]) == 1))
 				{
-					cumulus.LogDebugMessage("LOOP2: Invalid packet format");
+					cumulus.LogWarningMessage("LOOP2: Invalid packet format");
 					continue;
 				}
 
 				if (!CrcOk(loopString))
 				{
-					cumulus.LogDebugMessage("LOOP2: Packet CRC invalid");
+					cumulus.LogWarningMessage("LOOP2: Packet CRC invalid");
 					continue;
 				}
 
@@ -1876,7 +1868,7 @@ namespace CumulusMX
 				loopData.Load(loopString);
 
 				// Process it
-				//Cumulus.LogMessage(DateTime.Now.ToLongTimeString() + " Processing Data, i=" + i);
+				//cumulus.LogMessage(DateTime.Now.ToLongTimeString() + " Processing Data, i=" + i);
 				//Trace.Flush();
 
 				DateTime now = DateTime.Now;
@@ -1886,7 +1878,7 @@ namespace CumulusMX
 				// first sanity check - one user was getting zero values!
 				if (loopData.AbsolutePressure < 20)
 				{
-					cumulus.LogDebugMessage("LOOP2: Ignoring absolute pressure value < 20 inHg");
+					cumulus.LogWarningMessage("LOOP2: Ignoring absolute pressure value < 20 inHg");
 					// no absolute, so just make altimeter = sl pressure
 					AltimeterPressure = Pressure;
 					StationPressure = 0;
@@ -1907,7 +1899,7 @@ namespace CumulusMX
 						cumulus.LogSpikeRemoval("Station Pressure difference greater than specified; reading ignored");
 						cumulus.LogSpikeRemoval($"NewVal={pressMB:F1} OldVal={previousPressStation:F1} SpikePressDiff={cumulus.Spike.PressDiff:F1} HighLimit={cumulus.Limit.PressHigh:F1} LowLimit={cumulus.Limit.PressLow:F1}");
 						lastSpikeRemoval = DateTime.Now;
-						cumulus.SpikeAlarm.LastError = $"Station Pressure difference greater than spike value - NewVal={pressMB:F1} OldVal={previousPressStation:F1}";
+						cumulus.SpikeAlarm.LastMessage = $"Station Pressure difference greater than spike value - NewVal={pressMB:F1} OldVal={previousPressStation:F1}";
 						cumulus.SpikeAlarm.Triggered = true;
 					}
 				}
@@ -1928,25 +1920,22 @@ namespace CumulusMX
 				if (loopData.WindGust10Min < 200 && cumulus.StationOptions.PeakGustMinutes >= 10)
 				{
 					// Extract 10-min gust and see if it is higher than we have recorded.
-					var gust10min = cumulus.Calib.WindSpeed.Calibrate(ConvertWindMPHToUser(loopData.WindGust10Min));
-
-					var gustdir = loopData.WindGustDir;
+					var rawGust10min = ConvertWindMPHToUser(loopData.WindGust10Min);
+					var gust10min = cumulus.Calib.WindGust.Calibrate(rawGust10min);
+					var gustdir = (int) cumulus.Calib.WindDir.Calibrate(loopData.WindGustDir);
 
 					cumulus.LogDebugMessage("LOOP2: 10-min gust: " + (gust10min.HasValue ? gust10min.Value.ToString(cumulus.WindFormat) : "null"));
 
-					if (gust10min > (RecentMaxGust ?? 0))
+					if (CheckHighGust(gust10min, gustdir, now))
 					{
-						cumulus.LogDebugMessage("LOOP2: Using 10-min gust from loop2");
-						if (CheckHighGust(gust10min, gustdir, now))
-						{
-							// add to recent values so normal calculation includes this value
-							WindRecent[nextwind].Gust = gust10min.Value;
-							WindRecent[nextwind].Speed = WindAverage.Value;
-							WindRecent[nextwind].Timestamp = now;
-							nextwind = (nextwind + 1) % MaxWindRecent;
+						cumulus.LogDebugMessage($"LOOP2: Setting max gust from loop2 10-min value: {gust10min.Value.ToString(cumulus.WindFormat)} was: {RecentMaxGust.Value.ToString(cumulus.WindFormat)}");
+						RecentMaxGust = gust10min;
 
-							RecentMaxGust = gust10min;
-						}
+						// add to recent values so normal calculation includes this value
+						RecentWind[nextwind].Gust = rawGust10min.Value;
+						RecentWind[nextwind].Speed = -1;
+						RecentWind[nextwind].Timestamp = now;
+						nextwind = (nextwind + 1) % MaxWindRecent;
 					}
 				}
 
@@ -1957,13 +1946,13 @@ namespace CumulusMX
 				//UpdateStatusPanel(DateTime.Now);
 			}
 
-			//Cumulus.LogMessage("end processing loop2 data");
+			//cumulus.LogMessage("end processing loop2 data");
 		}
 
 
 		private void GetArchiveData()
 		{
-			Cumulus.LogMessage("GetArchiveData: Downloading Archive Data");
+			cumulus.LogMessage("GetArchiveData: Downloading Archive Data");
 
 			Console.WriteLine("Downloading Archive Data");
 
@@ -1971,12 +1960,13 @@ namespace CumulusMX
 			const int NAK = 0x21;
 			const int ESC = 0x1b;
 			const int maxPasses = 4;
-			byte[] ACKstring = {ACK};
-			byte[] NAKstring = {NAK};
-			byte[] ESCstring = {ESC};
+			byte[] ACKstring = { ACK };
+			byte[] NAKstring = { NAK };
+			byte[] ESCstring = { ESC };
 			const int pageSize = 267;
 			const int recordSize = 52;
 			bool ack;
+			bool starting = true;
 
 			NetworkStream stream = null;
 
@@ -1985,7 +1975,7 @@ namespace CumulusMX
 
 			int rollHour = Math.Abs(cumulus.GetHourInc());
 
-			Cumulus.LogMessage("GetArchiveData: Roll-over hour = " + rollHour);
+			cumulus.LogMessage("GetArchiveData: Roll-over hour = " + rollHour);
 
 			bool rolloverdone = luhour == rollHour;
 
@@ -1998,7 +1988,7 @@ namespace CumulusMX
 			if (nextLoggerTime > DateTime.Now)
 			{
 				// nothing to do, presumably we were just restarted
-				Cumulus.LogMessage($"GetArchiveData: Last logger entry is later than our last update time, skipping logger download");
+				cumulus.LogMessage($"GetArchiveData: Last logger entry is later than our last update time, skipping logger download");
 				return;
 			}
 
@@ -2006,7 +1996,7 @@ namespace CumulusMX
 			int vantageDateStamp = nextLoggerTime.Day + nextLoggerTime.Month * 32 + (nextLoggerTime.Year - 2000) * 512;
 			int vantageTimeStamp = (100 * nextLoggerTime.Hour + nextLoggerTime.Minute);
 
-			Cumulus.LogMessage($"GetArchiveData: Last Archive Date: {nextLoggerTime}");
+			cumulus.LogMessage($"GetArchiveData: Last Archive Date: {nextLoggerTime}");
 			cumulus.LogDebugMessage("GetArchiveData: Date: " + vantageDateStamp);
 			cumulus.LogDebugMessage("GetArchiveData: Time: " + vantageTimeStamp);
 
@@ -2019,20 +2009,20 @@ namespace CumulusMX
 
 					if (!WakeVP(comport))
 					{
-						Cumulus.LogMessage("GetArchiveData: Unable to wake VP");
+						cumulus.LogWarningMessage("GetArchiveData: Unable to wake VP");
 					}
 
 					// send the command
 					comport.DiscardInBuffer();
 
-					Cumulus.LogMessage("GetArchiveData: Sending DMPAFT");
+					cumulus.LogMessage("GetArchiveData: Sending DMPAFT");
 					comport.WriteLine("DMPAFT");
 
 					// wait for the ACK
 					ack = WaitForACK(comport);
 					if (!ack)
 					{
-						Cumulus.LogMessage("GetArchiveData: No Ack in response to DMPAFT");
+						cumulus.LogWarningMessage("GetArchiveData: No Ack in response to DMPAFT");
 						retries++;
 					}
 				} while (!ack && retries < 2);
@@ -2048,17 +2038,17 @@ namespace CumulusMX
 					{
 						if (!WakeVP(socket))
 						{
-							Cumulus.LogMessage("GetArchiveData: Unable to wake VP");
+							cumulus.LogWarningMessage("GetArchiveData: Unable to wake VP");
 						}
 
-						Cumulus.LogMessage("GetArchiveData: Sending DMPAFT");
+						cumulus.LogMessage("GetArchiveData: Sending DMPAFT");
 						const string dmpaft = "DMPAFT\n";
 						stream.Write(Encoding.ASCII.GetBytes(dmpaft), 0, dmpaft.Length);
 
 						ack = WaitForACK(stream);
 						if (!ack)
 						{
-							Cumulus.LogMessage("GetArchiveData: No Ack in response to DMPAFT");
+							cumulus.LogWarningMessage("GetArchiveData: No Ack in response to DMPAFT");
 							retries++;
 						}
 					} while (!ack && retries < 2);
@@ -2076,14 +2066,14 @@ namespace CumulusMX
 
 			if (!ack)
 			{
-				Cumulus.LogMessage("GetArchiveData: No Ack in response to DMPAFT, giving up");
+				cumulus.LogWarningMessage("GetArchiveData: No Ack in response to DMPAFT, giving up");
 				return;
 			}
 
-			Cumulus.LogMessage("GetArchiveData: Received response to DMPAFT, sending start date and time");
+			cumulus.LogMessage("GetArchiveData: Received response to DMPAFT, sending start date and time");
 
 			// Construct date time string to send next
-			byte[] data = {(byte) (vantageDateStamp%256), (byte) (vantageDateStamp/256), (byte) (vantageTimeStamp%256), (byte) (vantageTimeStamp/256), 0, 0};
+			byte[] data = {(byte) (vantageDateStamp % 256), (byte) (vantageDateStamp / 256), (byte) (vantageTimeStamp % 256), (byte) (vantageTimeStamp / 256), 0, 0};
 
 			// calculate and insert CRC
 
@@ -2092,8 +2082,8 @@ namespace CumulusMX
 			Array.Copy(data, datacopy, 4);
 			int crc = calculateCRC(datacopy);
 
-			data[4] = (byte) (crc/256);
-			data[5] = (byte) (crc%256);
+			data[4] = (byte) (crc / 256);
+			data[5] = (byte) (crc % 256);
 
 			cumulus.LogDataMessage("GetArchiveData: Sending: " + BitConverter.ToString(data));
 			LogRawStationData(BitConverter.ToString(data), true);
@@ -2106,11 +2096,11 @@ namespace CumulusMX
 				// wait for the ACK, this can take a while if it is going to dump a large number of records
 				if (!WaitForACK(comport, 5000))
 				{
-					Cumulus.LogMessage("GetArchiveData: No ACK in response to sending date and time");
+					cumulus.LogWarningMessage("GetArchiveData: No ACK in response to sending date and time");
 					return;
 				}
 
-				Cumulus.LogMessage("GetArchiveData: Waiting for response");
+				cumulus.LogMessage("GetArchiveData: Waiting for response");
 				// wait for the response
 				while (comport.BytesToRead < 6)
 				{
@@ -2136,7 +2126,7 @@ namespace CumulusMX
 
 				if (!WaitForACK(stream, 5000))
 				{
-					Cumulus.LogMessage("GetArchiveData: No ACK in response to sending date and time");
+					cumulus.LogWarningMessage("GetArchiveData: No ACK in response to sending date and time");
 					return;
 				}
 
@@ -2155,34 +2145,34 @@ namespace CumulusMX
 			}
 
 			// extract number of pages and offset into first page
-			int numPages = (data[1]*256) + data[0];
-			int offset = (data[3]*256) + data[2];
+			int numPages = (data[1] * 256) + data[0];
+			int offset = (data[3] * 256) + data[2];
 			//int bytesToRead = numPages*pageSize;
 			//int dataOffset = (offset*recordSize) + 1;
 			byte[] buff = new byte[pageSize];
 
-			Cumulus.LogMessage("GetArchiveData: Reading data: " + numPages + " pages , offset = " + offset);
+			cumulus.LogMessage("GetArchiveData: Reading data: " + numPages + " pages , offset = " + offset);
 			if (numPages == 513)
 			{
-				Cumulus.LogMessage("GetArchiveData: Downloading entire logger contents!");
+				cumulus.LogWarningMessage("GetArchiveData: Downloading entire logger contents!");
 				Console.WriteLine(" - Downloading entire logger contents!");
 			}
 
 			// keep track of how many records processed for percentage display
 			// but there may be some old entries in the last page
-			int numtodo = (numPages*5) - offset;
+			int numtodo = (numPages * 5) - offset;
 			int numdone = 0;
 
 			if (numtodo == 0)
 			{
-				Cumulus.LogMessage("GetArchiveData: No Archive data available");
+				cumulus.LogMessage("GetArchiveData: No Archive data available");
 				Console.WriteLine(" - No Archive data available");
 			}
 			else
 			{
 				for (int p = 0; p < numPages; p++)
 				{
-					Cumulus.LogMessage("GetArchiveData: Reading archive page " + p);
+					cumulus.LogMessage("GetArchiveData: Reading archive page " + p);
 					var passCount = 0;
 
 					// send ACK to get next page
@@ -2198,7 +2188,7 @@ namespace CumulusMX
 					{
 						passCount++;
 
-						Cumulus.LogMessage("GetArchiveData: Waiting for response");
+						cumulus.LogMessage("GetArchiveData: Waiting for response");
 						int responsePasses = 0;
 						if (isSerial)
 						{
@@ -2220,13 +2210,13 @@ namespace CumulusMX
 
 							if (tmrComm.timedout)
 							{
-								Cumulus.LogMessage("GetArchiveData: The station has stopped sending archive data, ending attempts");
+								cumulus.LogWarningMessage("GetArchiveData: The station has stopped sending archive data, ending attempts");
 								if (!Program.service)
 									Console.WriteLine(""); // flush the progress line
 								return;
 							}
 							// Read the response
-							Cumulus.LogMessage("GetArchiveData: Reading response");
+							cumulus.LogMessage("GetArchiveData: Reading response");
 							_ = comport.Read(buff, 0, pageSize);
 
 							cumulus.LogDataMessage("GetArchiveData: Response data - " + BitConverter.ToString(buff));
@@ -2253,7 +2243,7 @@ namespace CumulusMX
 
 							if (responsePasses == 20)
 							{
-								Cumulus.LogMessage("The station has stopped sending archive data");
+								cumulus.LogWarningMessage("The station has stopped sending archive data");
 								if (!Program.service)
 									Console.WriteLine(""); // flush the progress line
 								return;
@@ -2279,7 +2269,7 @@ namespace CumulusMX
 					// if we still got bad data after maxPasses, give up
 					if (badCRC)
 					{
-						Cumulus.LogMessage("GetArchiveData: Bad CRC");
+						cumulus.LogWarningMessage("GetArchiveData: Bad CRC");
 						if (isSerial)
 							comport.Write(ESCstring, 0, 1);
 						else
@@ -2305,11 +2295,11 @@ namespace CumulusMX
 						// ...and load it into the archive data...
 						archiveData.Load(record, out timestamp);
 
-						Cumulus.LogMessage("GetArchiveData: Loaded archive record for Page=" + p + " Record=" + r + " Timestamp=" + archiveData.Timestamp);
+						cumulus.LogMessage($"GetArchiveData: Loaded archive record for Page={p} Record={r} Timestamp={archiveData.Timestamp}");
 
 						if (timestamp > lastDataReadTime)
 						{
-							Cumulus.LogMessage("GetArchiveData: Processing archive record for " + timestamp);
+							cumulus.LogMessage("GetArchiveData: Processing archive record for " + timestamp);
 
 							int h = timestamp.Hour;
 
@@ -2332,7 +2322,7 @@ namespace CumulusMX
 							if ((h == rollHour) && !rolloverdone)
 							{
 								// do roll-over
-								Cumulus.LogMessage("GetArchiveData: Day roll-over " + timestamp.ToShortTimeString());
+								cumulus.LogMessage("GetArchiveData: Day roll-over " + timestamp.ToShortTimeString());
 								// If the roll-over processing takes more that ~10 seconds the station times out sending the archive data
 								// If this happens, add another run to the archive processing, so we start it again to pick up records for the next day
 								var watch = new Stopwatch();
@@ -2342,7 +2332,7 @@ namespace CumulusMX
 								if (watch.ElapsedMilliseconds > 10000)
 								{
 									// EOD processing took longer than 10 seconds, add another run
-									cumulus.LogDebugMessage("GetArchiveData: End of day processing took more than 10 seconds, adding another archive data run");
+									cumulus.LogWarningMessage("GetArchiveData: End of day processing took more than 10 seconds, adding another archive data run");
 									maxArchiveRuns++;
 								}
 								rolloverdone = true;
@@ -2363,7 +2353,16 @@ namespace CumulusMX
 								midnightraindone = true;
 							}
 
-							int interval = (int)(timestamp - lastDataReadTime).TotalMinutes;
+							int interval;
+							if (starting && timestamp > nextLoggerTime)
+							{
+								interval = loggerInterval;
+								starting = false;
+							}
+							else
+							{
+								interval = (int) (timestamp - lastDataReadTime).TotalMinutes;
+							}
 
 							if ((archiveData.InsideTemperature > -200) && (archiveData.InsideTemperature < 300))
 							{
@@ -2428,10 +2427,9 @@ namespace CumulusMX
 							if (archiveData.HiWindSpeed < 250 && archiveData.AvgWindSpeed < 250)
 							{
 								int bearing = archiveData.WindDirection;
-								if (bearing == 255)
-								{
-									bearing = 0;
-								}
+								bearing = bearing == 255 ? 0 : (int) (bearing * 22.5);
+
+								AddValuesToRecentWind(avgwind, avgwind, bearing, timestamp.AddMinutes(-interval), timestamp);
 
 								DoWind(wind, (int)(bearing * 22.5), avgwind, timestamp);
 
@@ -2439,7 +2437,7 @@ namespace CumulusMX
 								DoWindChill(null, timestamp);
 
 								// update dominant wind bearing
-								CalculateDominantWindBearing((int)(bearing * 22.5), WindAverage, interval);
+								CalculateDominantWindBearing(bearing, WindAverage, interval);
 							}
 
 							DoDewpoint(null, timestamp);
@@ -2593,7 +2591,7 @@ namespace CumulusMX
 								}
 							}
 
-							Cumulus.LogMessage("GetArchiveData: Page=" + p + " Record=" + r + " Timestamp=" + archiveData.Timestamp);
+							cumulus.LogMessage("GetArchiveData: Page=" + p + " Record=" + r + " Timestamp=" + archiveData.Timestamp);
 
 							if (Temperature.HasValue)
 							{
@@ -2606,8 +2604,8 @@ namespace CumulusMX
 							lastDataReadTime = timestamp;
 
 							_ = cumulus.DoLogFile(timestamp, false);
-							Cumulus.LogMessage("GetArchiveData: Log file entry written");
-							cumulus.MySqlSettings.DoRealtimeData(999, false, timestamp);
+							cumulus.LogMessage("GetArchiveData: Log file entry written");
+							cumulus.MySqlFunction.DoRealtimeData(999, false, timestamp);
 
 							_ = cumulus.DoExtraLogFile(timestamp);
 
@@ -2620,7 +2618,7 @@ namespace CumulusMX
 							if (cumulus.StationOptions.CalculatedET && timestamp.Minute == 0)
 							{
 								// Start of a new hour, and we want to calculate ET in Cumulus
-								CalculateEvaoptranspiration(timestamp);
+								CalculateEvapotranspiration(timestamp);
 							}
 
 							UpdatePressureTrendString();
@@ -2629,13 +2627,16 @@ namespace CumulusMX
 						}
 						else
 						{
-							Cumulus.LogMessage("GetArchiveData: Ignoring old archive data");
+							cumulus.LogMessage("GetArchiveData: Ignoring old archive data");
 						}
 
 						numdone++;
+
 						if (!Program.service)
+						{
 							Console.Write("\r - processed " + ((double)numdone / (double)numtodo).ToString("P0"));
-						Cumulus.LogMessage(numdone + " archive entries processed");
+						}
+						cumulus.LogMessage(numdone + " archive entries processed");
 
 						//bw.ReportProgress(numdone*100/numtodo, "processing");
 					}
@@ -2720,7 +2721,7 @@ namespace CumulusMX
 					if (serialPort.BytesToRead < loopString.Length)
 					{
 						// all data not received
-						Cumulus.LogMessage("!!! loop data not received, bytes received = " + serialPort.BytesToRead);
+						cumulus.LogMessage("!!! loop data not received, bytes received = " + serialPort.BytesToRead);
 						return null;
 					}
 					// Read the first returnLength bytes of the buffer into the array
@@ -2753,10 +2754,10 @@ namespace CumulusMX
 		//      4. If the console has not woken up after 3 attempts, then signal a connection error
 		// After the console has woken up, it will remain awake for 2 minutes. Every time the VP
 		// receives another character, the 2 minute timer will be reset.
-		private bool WakeVP(SerialPort serialPort)
+		private bool WakeVP(SerialPort serialPort, bool force = false)
 		{
 			// Check if we haven't sent a command within the last two minutes - use 1:50 (110,000 ms) to be safe
-			if (awakeStopWatch.IsRunning && awakeStopWatch.ElapsedMilliseconds < 110000)
+			if (awakeStopWatch.IsRunning && awakeStopWatch.ElapsedMilliseconds < 110000 && !force)
 			{
 				cumulus.LogDebugMessage("WakeVP: Not required");
 				awakeStopWatch.Restart();
@@ -2804,7 +2805,7 @@ namespace CumulusMX
 					}
 					catch (TimeoutException)
 					{
-						cumulus.LogDebugMessage("WakeVP: Timed out waiting for response");
+						cumulus.LogWarningMessage("WakeVP: Timed out waiting for response");
 						i++;
 					}
 				}
@@ -2823,23 +2824,23 @@ namespace CumulusMX
 					return (true);
 				}
 
-				Cumulus.LogMessage("WakeVP: *** VP2 Not woken");
+				cumulus.LogWarningMessage("WakeVP: *** VP2 Not woken");
 				return (false);
 			}
 			catch (Exception ex)
 			{
-				Cumulus.LogMessage("WakeVP: Error - " + ex);
+				cumulus.LogExceptionMessage(ex, "WakeVP: Error");
 				return (false);
 			}
 		}
 
-		private bool WakeVP(TcpClient thePort)
+		private bool WakeVP(TcpClient thePort, bool force = false)
 		{
 			const int maxPasses = 3;
 			int retryCount = 0;
 
 			// Check if we haven't sent a command within the last two minutes - use 1:50 () to be safe
-			if (awakeStopWatch.IsRunning && awakeStopWatch.ElapsedMilliseconds < 110000)
+			if (awakeStopWatch.IsRunning && awakeStopWatch.ElapsedMilliseconds < 110000 && !force)
 			{
 				cumulus.LogDebugMessage("WakeVP: Not required");
 				awakeStopWatch.Restart();
@@ -2861,7 +2862,7 @@ namespace CumulusMX
 					// refer back to the socket field of this class
 					try
 					{
-						cumulus.LogDebugMessage("WakeVP: Problem with TCP connection - " + exStream.Message);
+						cumulus.LogExceptionMessage(exStream, "WakeVP: Problem with TCP connection");
 						socket.Client.Close(0);
 					}
 					finally
@@ -2942,7 +2943,7 @@ namespace CumulusMX
 						{
 							if (ex.Message.Contains("did not properly respond after a period")) //TODO: Change to using error code
 							{
-								cumulus.LogDebugMessage("WakeVP: Timed out waiting for a response");
+								cumulus.LogWarningMessage("WakeVP: Timed out waiting for a response");
 								passCount++;
 							}
 							else
@@ -2976,7 +2977,7 @@ namespace CumulusMX
 					Thread.Sleep(1000);
 				}
 
-				Cumulus.LogMessage("WakeVP: *** Console Not woken");
+				cumulus.LogWarningMessage("WakeVP: *** Console Not woken");
 				return (false);
 			}
 			catch (Exception ex)
@@ -3019,7 +3020,7 @@ namespace CumulusMX
 				}
 				catch { }
 
-				Cumulus.LogMessage("InitSerial: Connecting to the station");
+				cumulus.LogMessage("InitSerial: Connecting to the station");
 
 				try
 				{
@@ -3043,7 +3044,7 @@ namespace CumulusMX
 
 				if (comport == null || !comport.IsOpen)
 				{
-					Cumulus.LogMessage("InitSerial: Failed to connect to the station, waiting 30 seconds before trying again");
+					cumulus.LogWarningMessage("InitSerial: Failed to connect to the station, waiting 30 seconds before trying again");
 					Thread.Sleep(30000);
 				}
 
@@ -3092,7 +3093,7 @@ namespace CumulusMX
 					}
 					catch (TimeoutException)
 					{
-						cumulus.LogDebugMessage($"InitSerial: Timed out waiting for a response to TEST ({tryCount})");
+						cumulus.LogWarningMessage($"InitSerial: Timed out waiting for a response to TEST ({tryCount})");
 					}
 					catch (Exception ex)
 					{
@@ -3105,7 +3106,7 @@ namespace CumulusMX
 				if (tryCount < 5)
 				{
 					awakeStopWatch.Restart();
-					Cumulus.LogMessage("InitSerial: Connection confirmed");
+					cumulus.LogMessage("InitSerial: Connection confirmed");
 				}
 			}
 			catch (Exception ex)
@@ -3126,13 +3127,13 @@ namespace CumulusMX
 				}
 				catch {}
 
-				Cumulus.LogMessage("InitTCP: Connecting to the station");
+				cumulus.LogMessage("InitTCP: Connecting to the station");
 
 				socket = OpenTcpPort();
 
 				if (socket == null && !stop)
 				{
-					Cumulus.LogMessage("InitTCP: Failed to connect to the station, waiting 30 seconds before trying again");
+					cumulus.LogErrorMessage("InitTCP: Failed to connect to the station, waiting 30 seconds before trying again");
 					Cumulus.LogConsoleMessage("Failed to connect to the station, waiting 30 seconds before trying again", ConsoleColor.Red, true);
 					Thread.Sleep(30000);
 				}
@@ -3140,7 +3141,7 @@ namespace CumulusMX
 
 			try
 			{
-				Cumulus.LogMessage("InitTCP: Flushing input stream");
+				cumulus.LogMessage("InitTCP: Flushing input stream");
 				NetworkStream stream = socket.GetStream();
 				stream.ReadTimeout = 2500;
 				stream.WriteTimeout = 2500;
@@ -3202,7 +3203,7 @@ namespace CumulusMX
 				if (tryCount < 5)
 				{
 					awakeStopWatch.Restart();
-					Cumulus.LogMessage("InitTCP: Connection confirmed");
+					cumulus.LogMessage("InitTCP: Connection confirmed");
 				}
 			}
 			catch (Exception ex)
@@ -3257,7 +3258,7 @@ namespace CumulusMX
 				try
 				{
 					// Read the current character
-					_ = readBuffer.Append((char)stream.ReadByte());
+					_ = readBuffer.Append((char) stream.ReadByte());
 				}
 				catch (System.IO.IOException ex)
 				{
@@ -3332,7 +3333,7 @@ namespace CumulusMX
 				}
 				catch (TimeoutException)
 				{
-					cumulus.LogDebugMessage($"WaitForAck: ({tryCount}) Timed out");
+					cumulus.LogWarningMessage($"WaitForAck: ({tryCount}) Timed out");
 				}
 				catch (Exception ex)
 				{
@@ -3343,7 +3344,7 @@ namespace CumulusMX
 				}
 			} while (tryCount < 2);
 
-			cumulus.LogDebugMessage("WaitForAck: timed out");
+			cumulus.LogWarningMessage("WaitForAck: timed out");
 			return false;
 		}
 
@@ -3430,7 +3431,7 @@ namespace CumulusMX
 				}
 			} while (tryCount < 2);
 
-			cumulus.LogDebugMessage("WaitForAck: Timed out");
+			cumulus.LogWarningMessage("WaitForAck: Timed out");
 			return false;
 		}
 
@@ -3442,7 +3443,7 @@ namespace CumulusMX
 			// Expected response - <ACK><42><17><15><28><11><98><2 Bytes of CRC>
 			//                     06   ss  mm  hh  dd  MM  yy
 
-			Cumulus.LogMessage("Reading console time");
+			cumulus.LogMessage("Reading console time");
 
 			if (isSerial)
 			{
@@ -3457,7 +3458,7 @@ namespace CumulusMX
 
 						if (!WaitForACK(comport))
 						{
-							Cumulus.LogMessage("getTime: No ACK");
+							cumulus.LogMessage("getTime: No ACK");
 							return DateTime.MinValue;
 						}
 
@@ -3468,12 +3469,12 @@ namespace CumulusMX
 							var ch = comport.ReadChar();
 							readBuffer[bytesRead] = (byte)ch;
 							bytesRead++;
-							//Cumulus.LogMessage("Received " + ch.ToString("X2"));
+							//cumulus.LogMessage("Received " + ch.ToString("X2"));
 						} while (bytesRead < 8);
 					}
 					catch (TimeoutException)
 					{
-						Cumulus.LogMessage("getTime: Timed out waiting for a response");
+						cumulus.LogWarningMessage("getTime: Timed out waiting for a response");
 						return DateTime.MinValue;
 					}
 					catch (Exception ex)
@@ -3498,10 +3499,10 @@ namespace CumulusMX
 
 						if (!WaitForACK(stream))
 						{
-							Cumulus.LogMessage("getTime: No ACK - wait a little longer");
+							cumulus.LogMessage("getTime: No ACK - wait a little longer");
 							if (!WaitForACK(stream))
 							{
-								Cumulus.LogMessage("getTime: No ACK, returning");
+								cumulus.LogMessage("getTime: No ACK, returning");
 								return DateTime.MinValue;
 							}
 						}
@@ -3512,13 +3513,13 @@ namespace CumulusMX
 							// Read the current character
 							readBuffer[bytesRead] = (byte)stream.ReadByte();
 							bytesRead++;
-						} while (bytesRead < 8) ;
+						} while (bytesRead < 8);
 					}
 					catch (System.IO.IOException ex)
 					{
 						if (ex.Message.Contains("did not properly respond after a period")) //TODO: Change to use error code
 						{
-							Cumulus.LogMessage("getTime: Timed out waiting for a response");
+							cumulus.LogWarningMessage("getTime: Timed out waiting for a response");
 						}
 						else
 						{
@@ -3539,12 +3540,12 @@ namespace CumulusMX
 
 			if (bytesRead != 8)
 			{
-				Cumulus.LogMessage("getTime: Expected 8 bytes, got " + bytesRead);
+				cumulus.LogWarningMessage("getTime: Expected 8 bytes, got " + bytesRead);
 			}
 			// CRC doesn't seem to compute?
 			//else if (!crcOK(buffer))
 			//{
-			//	Cumulus.LogMessage("getTime: Invalid CRC!");
+			//	cumulus.LogMessage("getTime: Invalid CRC!");
 			//}
 			else
 			{
@@ -3554,7 +3555,7 @@ namespace CumulusMX
 				}
 				catch (Exception)
 				{
-					Cumulus.LogMessage("getTime: Error in time format");
+					cumulus.LogWarningMessage("getTime: Error in time format");
 				}
 			}
 			return DateTime.MinValue;
@@ -3564,7 +3565,7 @@ namespace CumulusMX
 		{
 			NetworkStream stream = null;
 
-			Cumulus.LogMessage("Setting console time");
+			cumulus.LogMessage("Setting console time");
 
 			try
 			{
@@ -3580,7 +3581,7 @@ namespace CumulusMX
 						// wait for the ACK
 						if (!WaitForACK(comport))
 						{
-							Cumulus.LogMessage("SetTime: No ACK to SETTIME - Not setting the time");
+							cumulus.LogWarningMessage("SetTime: No ACK to SETTIME - Not setting the time");
 							return;
 						}
 					}
@@ -3601,7 +3602,7 @@ namespace CumulusMX
 						// wait for the ACK
 						if (!WaitForACK(stream))
 						{
-							Cumulus.LogMessage("SetTime: No ACK to SETTIME - Not setting the time");
+							cumulus.LogWarningMessage("SetTime: No ACK to SETTIME - Not setting the time");
 							return;
 						}
 					}
@@ -3617,12 +3618,12 @@ namespace CumulusMX
 
 			byte[] writeBuffer = new byte[8];
 
-			writeBuffer[0] = (byte)now.Second;
-			writeBuffer[1] = (byte)now.Minute;
-			writeBuffer[2] = (byte)now.Hour;
-			writeBuffer[3] = (byte)now.Day;
-			writeBuffer[4] = (byte)now.Month;
-			writeBuffer[5] = (byte)(now.Year - 1900);
+			writeBuffer[0] = (byte) now.Second;
+			writeBuffer[1] = (byte) now.Minute;
+			writeBuffer[2] = (byte) now.Hour;
+			writeBuffer[3] = (byte) now.Day;
+			writeBuffer[4] = (byte) now.Month;
+			writeBuffer[5] = (byte) (now.Year - 1900);
 
 			// calculate and insert CRC
 
@@ -3631,8 +3632,8 @@ namespace CumulusMX
 			Array.Copy(writeBuffer, datacopy, 6);
 			int crc = calculateCRC(datacopy);
 
-			writeBuffer[6] = (byte)(crc / 256);
-			writeBuffer[7] = (byte)(crc % 256);
+			writeBuffer[6] = (byte) (crc / 256);
+			writeBuffer[7] = (byte) (crc % 256);
 
 			try
 			{
@@ -3647,11 +3648,11 @@ namespace CumulusMX
 					// wait for the ACK
 					if (WaitForACK(comport))
 					{
-						Cumulus.LogMessage("SetTime: Console time set OK");
+						cumulus.LogMessage("SetTime: Console time set OK");
 					}
 					else
 					{
-						Cumulus.LogMessage("SetTime: Error, console time set failed");
+						cumulus.LogWarningMessage("SetTime: Error, console time set failed");
 					}
 				}
 				else if (stream != null)
@@ -3660,11 +3661,11 @@ namespace CumulusMX
 
 					if (WaitForACK(stream))
 					{
-						Cumulus.LogMessage("SetTime: Console time set OK");
+						cumulus.LogMessage("SetTime: Console time set OK");
 					}
 					else
 					{
-						Cumulus.LogMessage("SetTime: Error, console time set failed");
+						cumulus.LogWarningMessage("SetTime: Error, console time set failed");
 					}
 				}
 			}
@@ -3718,130 +3719,5 @@ namespace CumulusMX
 																			// Assume standard gauge type of 0.01 in or 0.02 mm
 			};
 		}
-
-		/*private string[] forecastStrings =
-		{
-			"Mostly clear and cooler.", "Mostly clear with little temperature change.", "Mostly clear for 12 hours with little temperature change.",
-			"Mostly clear for 12 to 24 hours and cooler.", "Mostly clear with little temperature change.", "Partly cloudy and cooler.",
-			"Partly cloudy with little temperature change.", "Partly cloudy with little temperature change.", "Mostly clear and warmer.",
-			"Partly cloudy with little temperature change.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.", "Increasing clouds and warmer. Precipitation possible within 24 to 48 hours.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds with little temperature change. Precipitation possible within 24 hours.",
-			"Mostly clear with little temperature change.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.",
-			"Increasing clouds with little temperature change. Precipitation possible within 12 hours.",
-			"Mostly clear with little temperature change.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.", "Increasing clouds and warmer. Precipitation possible within 24 hours.",
-			"Mostly clear and warmer. Increasing winds.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.",
-			"Increasing clouds and warmer. Precipitation possible within 12 hours. Increasing winds.", "Mostly clear and warmer. Increasing winds.",
-			"Increasing clouds and warmer.", "Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds and warmer. Precipitation possible within 12 hours. Increasing winds.", "Mostly clear and warmer. Increasing winds.",
-			"Increasing clouds and warmer.", "Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds and warmer. Precipitation possible within 12 hours. Increasing winds.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Mostly clear and warmer. Precipitation possible within 48 hours.", "Mostly clear and warmer.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds with little temperature change. Precipitation possible within 24 to 48 hours.",
-			"Increasing clouds with little temperature change.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.", "Increasing clouds and warmer. Precipitation possible within 12 to 24 hours.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds and warmer. Precipitation possible within 12 to 24 hours. Windy.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.", "Increasing clouds and warmer. Precipitation possible within 12 to 24 hours. Windy.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds and warmer. Precipitation possible within 6 to 12 hours.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.", "Increasing clouds and warmer. Precipitation possible within 6 to 12 hours. Windy.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds and warmer. Precipitation possible within 12 to 24 hours. Windy.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.", "Increasing clouds and warmer. Precipitation possible within 12 hours.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds and warmer. Precipitation likely.", "Clearing and cooler. Precipitation ending within 6 hours.",
-			"Partly cloudy with little temperature change.", "Clearing and cooler. Precipitation ending within 6 hours.",
-			"Mostly clear with little temperature change.", "Clearing and cooler. Precipitation ending within 6 hours.", "Partly cloudy and cooler.",
-			"Partly cloudy with little temperature change.", "Mostly clear and cooler.", "Clearing and cooler. Precipitation ending within 6 hours.",
-			"Mostly clear with little temperature change.", "Clearing and cooler. Precipitation ending within 6 hours.", "Mostly clear and cooler.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds with little temperature change. Precipitation possible within 24 hours.",
-			"Mostly cloudy and cooler. Precipitation continuing.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.", "Mostly cloudy and cooler. Precipitation likely.",
-			"Mostly cloudy with little temperature change. Precipitation continuing.",
-			"Mostly cloudy with little temperature change. Precipitation likely.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.", "Increasing clouds and cooler. Precipitation possible and windy within 6 hours.",
-			"Increasing clouds with little temperature change. Precipitation possible and windy within 6 hours.",
-			"Mostly cloudy and cooler. Precipitation continuing. Increasing winds.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.", "Mostly cloudy and cooler. Precipitation likely. Increasing winds.",
-			"Mostly cloudy with little temperature change. Precipitation continuing. Increasing winds.",
-			"Mostly cloudy with little temperature change. Precipitation likely. Increasing winds.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.",
-			"Increasing clouds and cooler. Precipitation possible within 12 to 24 hours possible wind shift to the W, NW, or N.",
-			"Increasing clouds with little temperature change. Precipitation possible within 12 to 24 hours possible wind shift to the W, NW, or N.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds and cooler. Precipitation possible within 6 hours possible wind shift to the W, NW, or N.",
-			"Increasing clouds with little temperature change. Precipitation possible within 6 hours possible wind shift to the W, NW, or N.",
-			"Mostly cloudy and cooler. Precipitation ending within 12 hours possible wind shift to the W, NW, or N.",
-			"Mostly cloudy and cooler. Possible wind shift to the W, NW, or N.",
-			"Mostly cloudy with little temperature change. Precipitation ending within 12 hours possible wind shift to the W, NW, or N.",
-			"Mostly cloudy with little temperature change. Possible wind shift to the W, NW, or N.",
-			"Mostly cloudy and cooler. Precipitation ending within 12 hours possible wind shift to the W, NW, or N.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Mostly cloudy and cooler. Precipitation possible within 24 hours possible wind shift to the W, NW, or N.",
-			"Mostly cloudy with little temperature change. Precipitation ending within 12 hours possible wind shift to the W, NW, or N.",
-			"Mostly cloudy with little temperature change. Precipitation possible within 24 hours possible wind shift to the W, NW, or N.",
-			"Clearing, cooler and windy. Precipitation ending within 6 hours.", "Clearing, cooler and windy.",
-			"Mostly cloudy and cooler. Precipitation ending within 6 hours. Windy with possible wind shift to the W, NW, or N.",
-			"Mostly cloudy and cooler. Windy with possible wind shift to the W, NW, or N.", "Clearing, cooler and windy.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Mostly cloudy with little temperature change. Precipitation possible within 12 hours. Windy.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds and cooler. Precipitation possible within 12 hours, possibly heavy at times. Windy.",
-			"Mostly cloudy and cooler. Precipitation ending within 6 hours. Windy.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.", "Mostly cloudy and cooler. Precipitation possible within 12 hours. Windy.",
-			"Mostly cloudy and cooler. Precipitation ending in 12 to 24 hours.", "Mostly cloudy and cooler.",
-			"Mostly cloudy and cooler. Precipitation continuing, possible heavy at times. Windy.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.", "Mostly cloudy and cooler. Precipitation possible within 6 to 12 hours. Windy.",
-			"Mostly cloudy with little temperature change. Precipitation continuing, possibly heavy at times. Windy.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Mostly cloudy with little temperature change. Precipitation possible within 6 to 12 hours. Windy.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds with little temperature change. Precipitation possible within 12 hours, possibly heavy at times. Windy.",
-			"Mostly cloudy and cooler. Windy.", "Mostly cloudy and cooler. Precipitation continuing, possibly heavy at times. Windy.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Mostly cloudy and cooler. Precipitation likely, possibly heavy at times. Windy.",
-			"Mostly cloudy with little temperature change. Precipitation continuing, possibly heavy at times. Windy.",
-			"Mostly cloudy with little temperature change. Precipitation likely, possibly heavy at times. Windy.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds and cooler. Precipitation possible within 6 hours. Windy.",
-			"Increasing clouds with little temperature change. Precipitation possible within 6 hours. Windy",
-			"Increasing clouds and cooler. Precipitation continuing. Windy with possible wind shift to the W, NW, or N.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Mostly cloudy and cooler. Precipitation likely. Windy with possible wind shift to the W, NW, or N.",
-			"Mostly cloudy with little temperature change. Precipitation continuing. Windy with possible wind shift to the W, NW, or N.",
-			"Mostly cloudy with little temperature change. Precipitation likely. Windy with possible wind shift to the W, NW, or N.",
-			"Increasing clouds and cooler. Precipitation possible within 6 hours. Windy with possible wind shift to the W, NW, or N.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds and cooler. Precipitation possible within 6 hours possible wind shift to the W, NW, or N.",
-			"Increasing clouds with little temperature change. Precipitation possible within 6 hours. Windy with possible wind shift to the W, NW, or N.",
-			"Increasing clouds with little temperature change. Precipitation possible within 6 hours possible wind shift to the W, NW, or N.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds and cooler. Precipitation possible within 6 hours. Windy with possible wind shift to the W, NW, or N.",
-			"Increasing clouds with little temperature change. Precipitation possible within 6 hours. Windy with possible wind shift to the W, NW, or N.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Increasing clouds and cooler. Precipitation possible within 12 to 24 hours. Windy with possible wind shift to the W, NW, or N.",
-			"Increasing clouds with little temperature change. Precipitation possible within 12 to 24 hours. Windy with possible wind shift to the W, NW, or N.",
-			"Mostly cloudy and cooler. Precipitation possibly heavy at times and ending within 12 hours. Windy with possible wind shift to the W, NW, or N.",
-			"Partly cloudy with little temperature change.", "Mostly clear with little temperature change.",
-			"Mostly cloudy and cooler. Precipitation possible within 6 to 12 hours, possibly heavy at times. Windy with possible wind shift to the W, NW, or N.",
-			"Mostly cloudy with little temperature change. Precipitation ending within 12 hours. Windy with possible wind shift to the W, NW, or N.",
-			"Mostly cloudy with little temperature change. Precipitation possible within 6 to 12 hours, possibly heavy at times. Windy with possible wind shift to the W,NW, or N.",
-			"Mostly cloudy and cooler. Precipitation continuing.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.",
-			"Mostly cloudy and cooler. Precipitation likely. Windy with possible wind shift to the W, NW, or N.",
-			"Mostly cloudy with little temperature change. Precipitation continuing.",
-			"Mostly cloudy with little temperature change. Precipitation likely.", "Partly cloudy with little temperature change.",
-			"Mostly clear with little temperature change.",
-			"Mostly cloudy and cooler. Precipitation possible within 12 hours, possibly heavy at times. Windy.",
-			"FORECAST REQUIRES 3 HOURS OF RECENT DATA", "Mostly clear and cooler.", "Mostly clear and cooler.", "Mostly clear and cooler."
-		};*/
 	}
 }

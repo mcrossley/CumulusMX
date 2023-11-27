@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+
 using EmbedIO;
 using ServiceStack;
 using ServiceStack.Text;
@@ -24,7 +25,7 @@ namespace CumulusMX
 				description = cumulus.LocationDesc,
 				latitude = cumulus.Latitude,
 				longitude = cumulus.Longitude,
-				altitude = (int)cumulus.Altitude,
+				altitude = (int) cumulus.Altitude,
 				altitudeunit = cumulus.AltitudeInFeet ? "feet" : "metres",
 				timezone = cumulus.StationOptions.TimeZone
 			};
@@ -81,8 +82,31 @@ namespace CumulusMX
 				}
 			};
 
+			var daviscloud = new DavisWllJson()
+			{
+				api = new StationSettings.WLLApiJson()
+				{
+					apiKey = cumulus.WllApiKey,
+					apiSecret = cumulus.WllApiSecret,
+					apiStationId = cumulus.WllStationId
+				},
+				primary = new StationSettings.WllPrimaryJson()
+				{
+					wind = cumulus.WllPrimaryWind,
+					temphum = cumulus.WllPrimaryTempHum,
+					rain = cumulus.WllPrimaryRain,
+					solar = cumulus.WllPrimarySolar,
+					uv = cumulus.WllPrimaryUV
+				}
+			};
+
 			var weatherflow = new StationSettings.WeatherFlowJson()
-				{deviceid = cumulus.WeatherFlowOptions.WFDeviceId, tcpport = cumulus.WeatherFlowOptions.WFTcpPort, token = cumulus.WeatherFlowOptions.WFToken, dayshistory = cumulus.WeatherFlowOptions.WFDaysHist};
+			{
+				deviceid = cumulus.WeatherFlowOptions.WFDeviceId,
+				tcpport = cumulus.WeatherFlowOptions.WFTcpPort,
+				token = cumulus.WeatherFlowOptions.WFToken,
+				dayshistory = cumulus.WeatherFlowOptions.WFDaysHist
+			};
 
 			var gw1000 = new StationSettings.Gw1000ConnJson()
 			{
@@ -114,6 +138,12 @@ namespace CumulusMX
 				comportname = cumulus.ComportName
 			};
 
+			var ecowittapi = new StationSettings.EcowittApi()
+			{
+				applicationkey = cumulus.EcowittSettings.AppKey,
+				userkey = cumulus.EcowittSettings.UserApiKey,
+				mac = cumulus.EcowittSettings.MacAddress
+			};
 
 			var station = new StationJson()
 			{
@@ -121,12 +151,14 @@ namespace CumulusMX
 				stationmodel = cumulus.StationModel,
 				davisvp2 = davisvp,
 				daviswll = daviswll,
+				daviscloud = daviscloud,
 				gw1000 = gw1000,
 				fineoffset = fineoffset,
 				easyw = easyweather,
 				imet = imet,
 				wmr928 = wmr,
-				weatherflow = weatherflow
+				weatherflow = weatherflow,
+				ecowittapi = ecowittapi
 			};
 
 			var copy = new InternetCopyJson()
@@ -140,7 +172,7 @@ namespace CumulusMX
 				enabled = cumulus.FtpOptions.Enabled,
 				directory = cumulus.FtpOptions.Directory,
 				ftpport = cumulus.FtpOptions.Port,
-				sslftp = (int)cumulus.FtpOptions.FtpMode,
+				sslftp = (int) cumulus.FtpOptions.FtpMode,
 				hostname = cumulus.FtpOptions.Hostname,
 				password = cumulus.FtpOptions.Password,
 				username = cumulus.FtpOptions.Username,
@@ -190,7 +222,7 @@ namespace CumulusMX
 			var json = "";
 			WizardJson settings;
 
-			Cumulus.LogMessage("Updating settings from the First Time Wizard");
+			cumulus.LogMessage("Updating settings from the First Time Wizard");
 
 			context.Response.StatusCode = 200;
 
@@ -216,7 +248,7 @@ namespace CumulusMX
 			// process the settings
 			try
 			{
-				Cumulus.LogMessage("Updating internet settings");
+				cumulus.LogMessage("Updating internet settings");
 
 				// website settings
 				try
@@ -224,6 +256,8 @@ namespace CumulusMX
 					cumulus.FtpOptions.Enabled = settings.internet.ftp.enabled;
 					if (cumulus.FtpOptions.Enabled)
 					{
+						cumulus.FtpOptions.FtpMode = (Cumulus.FtpProtocols) settings.internet.ftp.sslftp;
+
 						if (cumulus.FtpOptions.FtpMode == Cumulus.FtpProtocols.FTP || cumulus.FtpOptions.FtpMode == Cumulus.FtpProtocols.FTPS || cumulus.FtpOptions.FtpMode == Cumulus.FtpProtocols.SFTP)
 						{
 							cumulus.FtpOptions.Directory = string.IsNullOrWhiteSpace(settings.internet.ftp.directory) ? string.Empty : settings.internet.ftp.directory.Trim();
@@ -428,7 +462,7 @@ namespace CumulusMX
 				{
 					if (cumulus.StationType != settings.station.stationtype)
 					{
-						Cumulus.LogMessage("Station type changed, restart required");
+						cumulus.LogMessage("Station type changed, restart required");
 						Cumulus.LogConsoleMessage("*** Station type changed, restart required ***", ConsoleColor.Yellow);
 					}
 					cumulus.StationType = settings.station.stationtype;
@@ -499,6 +533,33 @@ namespace CumulusMX
 				catch (Exception ex)
 				{
 					var msg = "Error processing WLL settings";
+					cumulus.LogExceptionMessage(ex, msg);
+					errorMsg += msg + "\n\n";
+					context.Response.StatusCode = 500;
+				}
+
+				// Davis Cloud
+				try
+				{
+					if (settings.station.daviscloud != null)
+					{
+						cumulus.WllApiKey = string.IsNullOrWhiteSpace(settings.station.daviscloud.api.apiKey) ? string.Empty : settings.station.daviscloud.api.apiKey.Trim();
+						cumulus.WllApiSecret = string.IsNullOrWhiteSpace(settings.station.daviscloud.api.apiSecret) ? string.Empty : settings.station.daviscloud.api.apiSecret.Trim();
+						cumulus.WllStationId = settings.station.daviscloud.api.apiStationId;
+
+						if (settings.station.daviscloud.primary != null)
+						{
+							cumulus.WllPrimaryRain = settings.station.daviscloud.primary.rain;
+							cumulus.WllPrimarySolar = settings.station.daviscloud.primary.solar;
+							cumulus.WllPrimaryTempHum = settings.station.daviscloud.primary.temphum;
+							cumulus.WllPrimaryUV = settings.station.daviscloud.primary.uv;
+							cumulus.WllPrimaryWind = settings.station.daviscloud.primary.wind;
+						}
+					}
+				}
+				catch (Exception ex)
+				{
+					var msg = "Error processing davis cloud settings: " + ex.Message;
 					cumulus.LogExceptionMessage(ex, msg);
 					errorMsg += msg + "\n\n";
 					context.Response.StatusCode = 500;
@@ -608,6 +669,24 @@ namespace CumulusMX
 					context.Response.StatusCode = 500;
 				}
 
+				// Ecowitt API
+				try
+				{
+					if (settings.station.ecowittapi != null)
+					{
+						cumulus.EcowittSettings.AppKey = string.IsNullOrWhiteSpace(settings.station.ecowittapi.applicationkey) ? null : settings.station.ecowittapi.applicationkey.Trim();
+						cumulus.EcowittSettings.UserApiKey = string.IsNullOrWhiteSpace(settings.station.ecowittapi.userkey) ? null : settings.station.ecowittapi.userkey.Trim();
+						cumulus.EcowittSettings.MacAddress = string.IsNullOrWhiteSpace(settings.station.ecowittapi.mac) ? null : settings.station.ecowittapi.mac.Trim();
+					}
+				}
+				catch (Exception ex)
+				{
+					var msg = "Error processing Ecowitt API settings: " + ex.Message;
+					cumulus.LogExceptionMessage(ex, msg);
+					errorMsg += msg + "\n\n";
+					context.Response.StatusCode = 500;
+				}
+
 				// Save the settings
 				cumulus.WriteIniFile();
 			}
@@ -625,10 +704,10 @@ namespace CumulusMX
 
 		private static string degToString(decimal degrees, bool lat)
 		{
-			var degs = (int)Math.Floor(Math.Abs(degrees));
+			var degs = (int) Math.Floor(Math.Abs(degrees));
 			var minsF = (Math.Abs(degrees) - degs) * 60;
-			var secs = (int)Math.Round((minsF - Math.Floor(minsF)) * 60);
-			var mins = (int)Math.Floor(minsF);
+			var secs = (int) Math.Round((minsF - Math.Floor(minsF)) * 60);
+			var mins = (int) Math.Floor(minsF);
 			string hemi;
 			if (lat)
 				hemi = degrees >= 0 ? "N" : "S";
@@ -680,12 +759,14 @@ namespace CumulusMX
 			public string stationmodel { get; set; }
 			public DavisVpJson davisvp2 { get; set; }
 			public DavisWllJson daviswll { get; set; }
+			public DavisWllJson daviscloud { get; set; }
 			public StationSettings.Gw1000ConnJson gw1000 { get; set; }
 			public FineOffsetJson fineoffset { get; set; }
 			public EasyWeatherJson easyw { get; set; }
 			public ImetJson imet { get; set; }
 			public StationSettings.WMR928Json wmr928 { get; set; }
 			public StationSettings.WeatherFlowJson weatherflow { get; set; }
+			public StationSettings.EcowittApi ecowittapi { get; set; }
 		}
 
 		private class DavisVpJson

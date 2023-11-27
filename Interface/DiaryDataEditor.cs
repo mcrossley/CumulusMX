@@ -2,8 +2,11 @@
 using System.Globalization;
 using System.IO;
 using System.Text;
+
 using EmbedIO;
 using ServiceStack;
+using ServiceStack.Text;
+
 using SQLite;
 
 namespace CumulusMX
@@ -76,7 +79,7 @@ namespace CumulusMX
 
 				// Override the ServiceStack de-serialization function
 				// Check which format provided, attempt to parse as DateTime or return minValue.
-				ServiceStack.Text.JsConfig<DateTime>.DeSerializeFn = datetimeStr =>
+				JsConfig<DateTime>.DeSerializeFn = datetimeStr =>
 				{
 					if (string.IsNullOrWhiteSpace(datetimeStr))
 					{
@@ -116,7 +119,7 @@ namespace CumulusMX
 
 				// Override the ServiceStack de-serialization function
 				// Check which format provided, attempt to parse as DateTime or return minValue.
-				ServiceStack.Text.JsConfig<DateTime>.DeSerializeFn = datetimeStr =>
+				JsConfig<DateTime>.DeSerializeFn = datetimeStr =>
 				{
 					if (string.IsNullOrWhiteSpace(datetimeStr))
 					{

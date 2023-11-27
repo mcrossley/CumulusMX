@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Threading.Tasks;
 using System.Timers;
 
 namespace CumulusMX
@@ -79,7 +78,7 @@ namespace CumulusMX
 		public override void Start()
 		{
 			tmrDataRead.Elapsed += EWGetData;
-			tmrDataRead.Interval = cumulus.EwOptions.Interval*60*1000;
+			tmrDataRead.Interval = cumulus.EwOptions.Interval * 60 * 1000;
 			tmrDataRead.Enabled = true;
 
 			DoDayResetIfNeeded();
@@ -174,7 +173,7 @@ namespace CumulusMX
 
 					if ((lightReading >= 0) && (lightReading <= 300000))
 					{
-						DoSolarRad((int)(lightReading * cumulus.SolarOptions.LuxToWM2), now);
+						DoSolarRad((int) (lightReading * cumulus.SolarOptions.LuxToWM2), now);
 						LightValue = lightReading;
 					}
 
@@ -196,7 +195,7 @@ namespace CumulusMX
 					if (cumulus.StationOptions.CalculatedET && now.Minute == 0)
 					{
 						// Start of a new hour, and we want to calculate ET in Cumulus
-						CalculateEvaoptranspiration(now);
+						CalculateEvapotranspiration(now);
 					}
 
 					UpdateStatusPanel(now);
@@ -206,7 +205,8 @@ namespace CumulusMX
 				{
 					cumulus.LogExceptionMessage(ex, "Error while processing easyweather file");
 				}
-			} else
+			}
+			else
 			{
 				cumulus.LogDebugMessage("Easyweather file not found");
 			}

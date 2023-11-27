@@ -7,10 +7,11 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
 using CumulusMX.Tempest;
 using ServiceStack.Text;
 
-namespace CumulusMX
+namespace CumulusMX.Stations
 {
 	internal class TempestStation : WeatherStation
 	{
@@ -18,7 +19,7 @@ namespace CumulusMX
 		{
 			calculaterainrate = false;
 
-			Cumulus.LogMessage("Station type = Tempest");
+			cumulus.LogMessage("Station type = Tempest");
 
 			// Tempest does not provide pressure trend strings
 			cumulus.StationOptions.UseCumulusPresstrendstr = true;
@@ -28,6 +29,9 @@ namespace CumulusMX
 
 			// Tempest does not provide dew point
 			cumulus.StationOptions.CalculatedDP = true;
+
+			// Tempest does not provide average wind speeds
+			cumulus.StationOptions.CalcuateAverageWindSpeed = true;
 
 			LoadLastHoursFromDataLogs(cumulus.LastUpdateTime);
 		}
@@ -70,12 +74,12 @@ namespace CumulusMX
 
 			if (totalentries == 0)
 			{
-				Cumulus.LogMessage("No history data to process");
+				cumulus.LogMessage("No history data to process");
 				Cumulus.LogConsoleMessage("No history data to process");
 				return;
 			}
 
-			Cumulus.LogMessage("Processing history data, number of entries = " + totalentries);
+			cumulus.LogMessage("Processing history data, number of entries = " + totalentries);
 			Cumulus.LogConsoleMessage(
 				$"Processing history data for {totalentries} records. {DateTime.Now.ToLongTimeString()}");
 
@@ -89,7 +93,7 @@ namespace CumulusMX
 			{
 				var timestamp = historydata.Timestamp;
 
-				Cumulus.LogMessage("Processing data for " + timestamp);
+				cumulus.LogMessage("Processing data for " + timestamp);
 
 				var h = timestamp.Hour;
 
@@ -100,7 +104,7 @@ namespace CumulusMX
 				if (h == rollHour && !rolloverdone)
 				{
 					// do rollover
-					Cumulus.LogMessage("Day rollover " + timestamp.ToShortTimeString());
+					cumulus.LogMessage("Day rollover " + timestamp.ToShortTimeString());
 					DayReset(timestamp);
 
 					rolloverdone = true;
@@ -120,7 +124,7 @@ namespace CumulusMX
 
 				// Pressure =============================================================
 				var alt = AltitudeM(cumulus.Altitude);
-				var seaLevel = MeteoLib.GetSeaLevelPressure(alt, (double) historydata.StationPressure, (double)historydata.Temperature);
+				var seaLevel = MeteoLib.GetSeaLevelPressure(alt, (double) historydata.StationPressure, (double) historydata.Temperature);
 				DoPressure(ConvertPressMBToUser(seaLevel), timestamp);
 
 				// Outdoor Humidity =====================================================
@@ -145,13 +149,14 @@ namespace CumulusMX
 											(60d / historydata.ReportInterval));
 
 				var newRain = Raincounter + ConvertRainMMToUser((double) historydata.Precipitation);
-				Cumulus.LogMessage(
+				cumulus.LogMessage(
 					$"TempestDoRainHist: New Precip: {historydata.Precipitation}, Type: {historydata.PrecipType}, Rate: {rainrate}, LocalDayRain: {historydata.LocalDayRain}, LocalRainChecked: {historydata.LocalRainChecked}, FinalRainChecked: {historydata.FinalRainChecked}");
 
 				DoRain(newRain, rainrate, timestamp);
-				Cumulus.LogMessage(
+				cumulus.LogMessage(
 					$"TempestDoRainHist: Total Precip for Day: {Raincounter}");
 
+				// calculate dp
 				DoDewpoint(null, timestamp);
 				// calculate wind chill
 				DoWindChill(null, timestamp);
@@ -174,7 +179,7 @@ namespace CumulusMX
 				if (WindAverage.HasValue)
 				{
 					// add in 'following interval' minutes worth of wind speed to windrun
-					Cumulus.LogMessage("Windrun: " + WindAverage.Value.ToString(cumulus.WindFormat) + cumulus.Units.WindText + " for " + historydata.ReportInterval + " minutes = " +
+					cumulus.LogMessage("Windrun: " + WindAverage.Value.ToString(cumulus.WindFormat) + cumulus.Units.WindText + " for " + historydata.ReportInterval + " minutes = " +
 									   (WindAverage.Value * WindRunHourMult[cumulus.Units.Wind] * historydata.ReportInterval / 60.0).ToString(cumulus.WindRunFormat) + cumulus.Units.WindRunText);
 
 					WindRunToday += WindAverage.Value * WindRunHourMult[cumulus.Units.Wind] * historydata.ReportInterval / 60.0;
@@ -206,7 +211,7 @@ namespace CumulusMX
 				if (cumulus.StationOptions.CalculatedET && timestamp.Minute == 0)
 				{
 					// Start of a new hour, and we want to calculate ET in Cumulus
-					CalculateEvaoptranspiration(timestamp);
+					CalculateEvapotranspiration(timestamp);
 				}
 
 				DoTrendValues(timestamp);
@@ -218,7 +223,7 @@ namespace CumulusMX
 
 			ticks = Environment.TickCount - ticks;
 			var rate = ((double)totalentries / ticks) * 1000;
-			Cumulus.LogMessage($"End processing history data. Rate: {rate:f2}/second");
+			cumulus.LogMessage($"End processing history data. Rate: {rate:f2}/second");
 			Cumulus.LogConsoleMessage($"Completed processing history data. {DateTime.Now.ToLongTimeString()}, Rate: {rate:f2}/second");
 
 		}
@@ -267,6 +272,9 @@ namespace CumulusMX
 						);
 
 						ts = wp.Observation.Timestamp;
+
+						DoHumidity((int) wp.Observation.Humidity, ts);
+
 						var userTemp = ConvertTempCToUser(Convert.ToDouble(wp.Observation.Temperature));
 
 						DoTemperature(userTemp,ts);
@@ -292,13 +300,10 @@ namespace CumulusMX
 						DoRain(newRain, rainrate, ts);
 						cumulus.LogDebugMessage($"TempestDoRain: Total Precip for Day: {Raincounter}");
 
-						DoHumidity((int)wp.Observation.Humidity,ts);
-
 						DoDewpoint(null, ts);
-						DoWindChill(null, ts);
-
 						DoApparentTemp(ts);
 						DoFeelsLike(ts);
+						DoWindChill(null, ts);
 						DoHumidex(ts);
 						DoCloudBaseHeatIndex(ts);
 
@@ -317,7 +322,7 @@ namespace CumulusMX
 
 						DoWind(ConvertWindMSToUser((double) rw.WindSpeed),
 							rw.WindDirection,
-							ConvertWindMSToUser((double) rw.WindSpeed),
+							-1,
 							rw.Timestamp);
 						UpdateStatusPanel(rw.Timestamp);
 
@@ -417,7 +422,7 @@ namespace CumulusMX.Tempest
 
 		public static void Start(Cumulus c)
 		{
-			cumulus=c;
+			cumulus = c;
 			Task.Run(StartUdpListen);
 		}
 
@@ -487,7 +492,7 @@ namespace CumulusMX.Tempest
 				var tpEnd = end;
 				double ts = tpEnd.Subtract(tpStart).TotalDays;
 
-				while (ts  > 0)
+				while (ts > 0)
 				{
 					long st;
 					long end_time;
@@ -496,7 +501,7 @@ namespace CumulusMX.Tempest
 					if (ts > 4)// load max 4 days at a time
 					{
 						tpStart = tpStart.AddDays(4);
-						end_time = WeatherPacket.ToUnixTimeSeconds(tpStart)-1;// subtract a second so we don't overlap
+						end_time = WeatherPacket.ToUnixTimeSeconds(tpStart) - 1;// subtract a second so we don't overlap
 						ts = tpEnd.Subtract(tpStart).TotalDays;
 					}
 					else
@@ -525,7 +530,7 @@ namespace CumulusMX.Tempest
 					else
 					{
 						var msg = $"Error downloading tempest history: {apiResponse}";
-						Cumulus.LogMessage(msg);
+						cumulus.LogMessage(msg);
 						Cumulus.LogConsoleMessage(msg, ConsoleColor.Red);
 						if (rp.status.status_code == 404)
 						{
@@ -672,14 +677,14 @@ namespace CumulusMX.Tempest
 		{
 			// Unix timestamp is seconds past epoch
 			System.DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
-			dtDateTime = dtDateTime.AddSeconds( epoch ).ToLocalTime();
+			dtDateTime = dtDateTime.AddSeconds(epoch).ToLocalTime();
 			return dtDateTime;
 		}
 
 		public static long ToUnixTimeSeconds(DateTime dt)
 		{
 			TimeSpan t = dt.ToUniversalTime() - new DateTime(1970, 1, 1);
-			return (long)t.TotalSeconds;
+			return (long) t.TotalSeconds;
 		}
 
 		public static decimal GetDecimal(decimal? d)
@@ -737,9 +742,7 @@ namespace CumulusMX.Tempest
 				if (!int.TryParse(packet.firmware_revision.ToString(), out var i)) i = -1;
 				FirmwareRevision = i;
 			}
-			catch
-			{
-			}
+			catch { }
 
 			RSSI = packet.rssi;
 			HubRSSI = packet.hub_rssi;
@@ -842,9 +845,7 @@ namespace CumulusMX.Tempest
 				if (!int.TryParse(packet.firmware_revision.ToString(), out i)) i = -1;
 				FirmwareRevision = i;
 			}
-			catch
-			{
-			}
+			catch { }
 
 			if (packet.obs[0].Length >= 18)
 			{

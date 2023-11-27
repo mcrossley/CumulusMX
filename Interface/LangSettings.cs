@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Net;
+
 using EmbedIO;
 using ServiceStack;
 using ServiceStack.Text;
@@ -122,7 +123,9 @@ namespace CumulusMX
 				dataSpike = cumulus.SpikeAlarm.EmailMsg,
 				upgrade = cumulus.UpgradeAlarm.EmailMsg,
 				httpStopped = cumulus.ThirdPartyUploadAlarm.EmailMsg,
-				mySqlStopped = cumulus.MySqlUploadAlarm.EmailMsg
+				mySqlStopped = cumulus.MySqlUploadAlarm.EmailMsg,
+				newRecord = cumulus.NewRecordAlarm.EmailMsg,
+				ftpStopped = cumulus.FtpAlarm.EmailMsg
 			};
 
 			var settings = new Settings()
@@ -144,7 +147,7 @@ namespace CumulusMX
 				solar = solar,
 				davisForecast = davisForecast,
 				co2 = co2,
-				alarms= alarms
+				alarms = alarms
 			};
 
 
@@ -180,7 +183,7 @@ namespace CumulusMX
 			// process the settings
 			try
 			{
-				Cumulus.LogMessage("Updating localisation settings");
+				cumulus.LogMessage("Updating localisation settings");
 
 				// Zambretti forecast settings
 				try
@@ -297,9 +300,9 @@ namespace CumulusMX
 				{
 					cumulus.Trans.DavisForecast1 = settings.davisForecast.forecast1;
 					for (var i = 1; i <= settings.davisForecast.forecast2.Length; i++)
-						cumulus.Trans.DavisForecast2[i] = settings.davisForecast.forecast2[i-1].Trim();
+						cumulus.Trans.DavisForecast2[i] = settings.davisForecast.forecast2[i - 1].Trim();
 					for (var i = 1; i <= settings.davisForecast.forecast3.Length; i++)
-						cumulus.Trans.DavisForecast3[i] = settings.davisForecast.forecast3[i-1].Trim();
+						cumulus.Trans.DavisForecast3[i] = settings.davisForecast.forecast3[i - 1].Trim();
 				}
 				catch (Exception ex)
 				{
@@ -370,6 +373,8 @@ namespace CumulusMX
 					cumulus.UpgradeAlarm.EmailMsg = settings.alarms.upgrade.Trim();
 					cumulus.ThirdPartyUploadAlarm.EmailMsg = settings.alarms.httpStopped.Trim();
 					cumulus.MySqlUploadAlarm.EmailMsg = settings.alarms.mySqlStopped.Trim();
+					cumulus.NewRecordAlarm.EmailMsg = settings.alarms.newRecord.Trim();
+					cumulus.FtpAlarm.EmailMsg = settings.alarms.ftpStopped.Trim();
 				}
 				catch (Exception ex)
 				{
@@ -497,6 +502,8 @@ namespace CumulusMX
 			public string upgrade { get; set; }
 			public string httpStopped { get; set; }
 			public string mySqlStopped { get; set; }
+			public string newRecord { get; set; }
+			public string ftpStopped { get; set; }
 		}
 
 		private class Settings

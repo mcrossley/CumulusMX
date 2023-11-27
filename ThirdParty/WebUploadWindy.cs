@@ -37,13 +37,13 @@ namespace CumulusMX.ThirdParty
 
 			try
 			{
-				HttpResponseMessage response = await httpClient.GetAsync(url);
+				using var response = await Cumulus.MyHttpClient.GetAsync(url);
 				var responseBodyAsText = await response.Content.ReadAsStringAsync();
 				cumulus.LogDebugMessage("Windy: Response = " + response.StatusCode + ": " + responseBodyAsText);
 				if (response.StatusCode != HttpStatusCode.OK)
 				{
-					Cumulus.LogMessage("Windy: ERROR - Response = " + response.StatusCode + ": " + responseBodyAsText);
-					cumulus.ThirdPartyUploadAlarm.LastError = "Windy: HTTP response - " + response.StatusCode;
+					cumulus.LogMessage("Windy: ERROR - Response = " + response.StatusCode + ": " + responseBodyAsText);
+					cumulus.ThirdPartyUploadAlarm.LastMessage = "Windy: HTTP response - " + response.StatusCode;
 					cumulus.ThirdPartyUploadAlarm.Triggered = true;
 				}
 				else
@@ -54,7 +54,7 @@ namespace CumulusMX.ThirdParty
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "Windy: ERROR");
-				cumulus.ThirdPartyUploadAlarm.LastError = "Windy: " + ex.Message;
+				cumulus.ThirdPartyUploadAlarm.LastMessage = "Windy: " + ex.Message;
 				cumulus.ThirdPartyUploadAlarm.Triggered = true;
 			}
 			finally

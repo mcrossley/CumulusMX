@@ -9,7 +9,9 @@
 //     Date        :  7/20/2008
 // ********************************************************************************
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -30,11 +32,33 @@ namespace CumulusMX
 
 		public Encoding Encoding { set; get; }
 
+		private string _AltList;
+		public string AltResultNoParseList
+		{
+			set
+			{
+				_AltList = value;
+				AltTags = value.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim()).ToList();
+			}
+
+			get
+			{
+				return _AltList;
+			}
+		}
+
+		private List<string> AltTags = null;
+
+		public string AltResult { set; get; }
+
+
 		public delegate void TokenHandler(string strToken, ref string strReplacement);
 		public event TokenHandler OnToken;
 
-		public TokenParser()
+
+		public TokenParser(TokenHandler tokenHandler)
 		{
+			OnToken = tokenHandler;
 		}
 
 		/*
@@ -105,11 +129,11 @@ namespace CumulusMX
 						}
 						catch (Exception e)
 						{
-							Cumulus.LogMessage("Exception: i="+i+" len="+len);
-							Cumulus.LogMessage("inputText.Length="+inputText.Length);
-							Cumulus.LogMessage("token="+token);
-							Cumulus.LogMessage(e.ToString());
-							Cumulus.LogMessage(inputText);
+							cumulus.LogMessage("Exception: i="+i+" len="+len);
+							cumulus.LogMessage("inputText.Length="+inputText.Length);
+							cumulus.LogMessage("token="+token);
+							cumulus.LogMessage(e.ToString());
+							cumulus.LogMessage(inputText);
 							Console.WriteLine("*** token error ***");
 							outText += e.Message;
 						}
@@ -187,7 +211,7 @@ namespace CumulusMX
 							Trace.WriteLine("inputText.Length=" + InputText.Length);
 							Trace.WriteLine("token=" + token);
 							Trace.WriteLine(e.ToString());
-							//Cumulus.LogMessage(InputText);
+							//cumulus.LogMessage(InputText);
 							Console.WriteLine("*** web tag error - see MXdiags file ***");
 							outText += e.Message;
 						}
@@ -205,6 +229,7 @@ namespace CumulusMX
 		{
 			// Preallocate SB memory to double input size
 			StringBuilder outText = new StringBuilder(InputText.Length * 2);
+			StringBuilder altOutText = new StringBuilder(InputText.Length * 2);
 			String token = string.Empty;
 			String replacement = string.Empty;
 
@@ -213,7 +238,7 @@ namespace CumulusMX
 
 			if (len == 0)
 			{
-				Cumulus.LogMessage($"TokenParser error in file: {SourceFile}, InputString is zero length");
+				Program.cumulus.LogMessage($"TokenParser error in file: {SourceFile}, InputString is zero length");
 				return $"TokenParser error in file: {SourceFile}, InputString is zero length";
 			}
 
@@ -223,9 +248,12 @@ namespace CumulusMX
 
 			if (matches.Count > 0)
 			{
-				foreach (Match match in matches)
+				foreach (Match match in matches.Cast<Match>())
 				{
 					outText.Append(InputText[i..match.Index]);
+					if (AltTags != null)
+						altOutText.Append(InputText.AsSpan(i, match.Index - i));
+
 					try
 					{
 						// strip the "<#" ">" characters from the token string
@@ -233,29 +261,42 @@ namespace CumulusMX
 						token = token[2..^1];
 						OnToken(token, ref replacement);
 						outText.Append(replacement);
+						if (AltTags != null)
+						{
+							string[] baseToken = token.Split(' ');
+							if (AltTags.Contains(baseToken[0]))
+								altOutText.Append(match.Value);
+							else
+								altOutText.Append(replacement);
+						}
 					}
 					catch (Exception e)
 					{
-						Cumulus.LogMessage($"Web tag error in file: {SourceFile}");
-						Cumulus.LogMessage($"token={match.Value}");
-						Cumulus.LogMessage($"Position in file (character)={match.Index}");
-						Cumulus.LogMessage($"Exception: i={i} len={len}");
-						Cumulus.LogMessage($"inputText.Length={InputText.Length}");
-						Cumulus.LogMessage(e.ToString());
-						Cumulus.LogMessage("** The output file will contain an error message starting \"**Web tag error\"");
-						//Cumulus.LogMessage(InputText);
+						Program.cumulus.LogMessage($"Web tag error in file: {SourceFile}");
+						Program.cumulus.LogMessage($"token={match.Value}");
+						Program.cumulus.LogMessage($"Position in file (character)={match.Index}");
+						Program.cumulus.LogMessage($"Exception: i={i} len={len}");
+						Program.cumulus.LogMessage($"inputText.Length={InputText.Length}");
+						Program.cumulus.LogMessage(e.ToString());
+						Program.cumulus.LogMessage("** The output file will contain an error message starting \"**Web tag error\"");
+						//cumulus.LogMessage(InputText);
 						Cumulus.LogConsoleMessage($"*** web tag error in file '{SourceFile}' - see MXdiags file ***", ConsoleColor.Red);
 						_ = outText.Append($"**Web tag error, tag starting: <#{token[..(token.Length > 40 ? 39 : token.Length - 1)]}**");
 					}
 					i = match.Index + match.Length;
 				}
 				outText.Append(InputText[i..]);
+				if (AltTags != null)
+					altOutText.Append(InputText.AsSpan(i, InputText.Length - 1));
 			}
 			else
 			{
 				outText.Append(InputText);
+				if (AltTags != null)
+					altOutText.Append(InputText);
 			}
 
+			AltResult = altOutText.ToString();
 			return outText.ToString();
 		}
 

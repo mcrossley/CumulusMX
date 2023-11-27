@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -35,8 +33,6 @@ namespace CumulusMX.ThirdParty
 		internal bool Updating;
 
 
-		internal HttpClientHandler httpHandler = new HttpClientHandler();
-		internal HttpClient httpClient;
 		internal List<string> CatchupList = new List<string>();
 
 		internal Timer IntTimer = new Timer();
@@ -45,8 +41,6 @@ namespace CumulusMX.ThirdParty
 		{
 			this.cumulus = cumulus;
 			Name = name;
-			httpClient = new HttpClient(httpHandler);
-			httpClient.DefaultRequestHeaders.ConnectionClose = true;
 		}
 
 		internal void CatchUpIfRequired()
@@ -76,12 +70,12 @@ namespace CumulusMX.ThirdParty
 
 			for (int i = 0; i < CatchupList.Count; i++)
 			{
-				Cumulus.LogMessage($"Uploading {Name} archive #" + (i + 1));
+				cumulus.LogMessage($"Uploading {Name} archive #" + (i + 1));
 				try
 				{
-					HttpResponseMessage response = await httpClient.GetAsync(CatchupList[i]);
+					using var  response = await Cumulus.MyHttpClient.GetAsync(CatchupList[i]);
 					var responseBodyAsText = await response.Content.ReadAsStringAsync();
-					Cumulus.LogMessage($"{Name} Response: {response.StatusCode}: {response.ReasonPhrase}");
+					cumulus.LogMessage($"{Name} Response: {response.StatusCode}: {response.ReasonPhrase}");
 				}
 				catch (Exception ex)
 				{
@@ -89,7 +83,7 @@ namespace CumulusMX.ThirdParty
 				}
 			}
 
-			Cumulus.LogMessage($"End of {Name} archive upload");
+			cumulus.LogMessage($"End of {Name} archive upload");
 			CatchupList.Clear();
 			CatchingUp = false;
 			Updating = false;
@@ -106,9 +100,11 @@ namespace CumulusMX.ThirdParty
 
 				string LogURL = URL;
 				if (pwstring != null)
-					LogURL = LogURL.Replace(pwstring, new string('*', pwstring.Length));
+				{
+				LogURL = LogURL.Replace(pwstring, new string('*', pwstring.Length));
+				}
 
-				Cumulus.LogMessage($"Creating {Name} URL #{CatchupList.Count} - {LogURL}");
+				cumulus.LogMessage($"Creating {Name} URL #{CatchupList.Count} - {LogURL}");
 			}
 		}
 

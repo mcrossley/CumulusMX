@@ -31,7 +31,7 @@ namespace CumulusMX
 			// station supplies rain rate
 			calculaterainrate = false;
 
-			Cumulus.LogMessage("Station type = WMR928");
+			cumulus.LogMessage("Station type = WMR928");
 		}
 
 		public override void DoStartup()
@@ -42,7 +42,7 @@ namespace CumulusMX
 
 		public override void startReadingHistoryData()
 		{
-			Cumulus.LogMessage("Opening COM port " + cumulus.ComportName);
+			cumulus.LogMessage("Opening COM port " + cumulus.ComportName);
 
 			try
 			{
@@ -73,7 +73,7 @@ namespace CumulusMX
 
 		public override void Start()
 		{
-			Cumulus.LogMessage("Start normal reading loop");
+			cumulus.LogMessage("Start normal reading loop");
 
 			try
 			{
@@ -177,7 +177,7 @@ namespace CumulusMX
 			}
 			finally
 			{
-				Cumulus.LogMessage("Closing serial port");
+				cumulus.LogMessage("Closing serial port");
 				comport.Close();
 			}
 		}
@@ -263,7 +263,7 @@ namespace CumulusMX
 						{
 							Trace.Write(" " + buff[i].ToString("X2"));
 						}
-						Cumulus.LogMessage(" ");
+						cumulus.LogMessage(" ");
 						return;
 				}
 
@@ -272,12 +272,12 @@ namespace CumulusMX
 			}
 			else
 			{
-				Cumulus.LogMessage("Invalid packet:");
+				cumulus.LogMessage("Invalid packet:");
 				for (int i = 0; i < buff.Count; i++)
 				{
 					Trace.Write(" " + buff[i].ToString("X2"));
 				}
-				Cumulus.LogMessage(" ");
+				cumulus.LogMessage(" ");
 			}
 		}
 
@@ -297,7 +297,7 @@ namespace CumulusMX
 
 			if ((channel > 3) || (channel < 1))
 			{
-				Cumulus.LogMessage("WMR928 channel error, ch=" + channel);
+				cumulus.LogMessage("WMR928 channel error, ch=" + channel);
 				channel = 1;
 			}
 
@@ -365,7 +365,7 @@ namespace CumulusMX
 
 			if ((channel > 3) || (channel < 1))
 			{
-				Cumulus.LogMessage("WMR928 channel error, ch=" + channel);
+				cumulus.LogMessage("WMR928 channel error, ch=" + channel);
 				channel = 1;
 			}
 

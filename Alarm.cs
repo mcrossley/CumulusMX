@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace CumulusMX
@@ -16,7 +15,7 @@ namespace CumulusMX
 			{
 				enabled = value;
 
-				// if we are disabled, clear any exisitng alarms
+				// if we are disabled, clear any existng alarms
 				if (!value)
 				{
 					triggered = false;
@@ -49,10 +48,10 @@ namespace CumulusMX
 		public double LatchHours { get; set; }
 		public string EmailMsg { get; set; }
 		public string Units { get; set; }
-		public string LastError { get; set; }
+		public string LastMessage { get; set; }
 		public int TriggerThreshold { get; set; }
 
-		AlarmTypes type;
+		private readonly AlarmTypes type;
 		private protected bool enabled;
 		bool triggered;
 		int triggerCount = 0;
@@ -85,16 +84,16 @@ namespace CumulusMX
 					// If we were not set before, so we need to send an email?
 					if (!triggered)
 					{
-						Cumulus.LogMessage($"Alarm ({Name}): Triggered, value = {Value}");
+						cumulus.LogMessage($"Alarm ({Name}): Triggered, value = {Value}" + (string.IsNullOrEmpty(LastMessage) ? "" : $", Message = {LastMessage}"));
 
 						if (Email && cumulus.SmtpOptions.Enabled && cumulus.emailer != null)
 						{
 
 							// Construct the message - preamble, plus values
 							var msg = cumulus.Trans.AlarmEmailPreamble + "\n" + string.Format(EmailMsg, Value, Units);
-							if (!string.IsNullOrEmpty(LastError))
+							if (!string.IsNullOrEmpty(LastMessage))
 							{
-								msg += "\r\nLast error: " + LastError;
+								msg += "\r\nLast message: " + LastMessage;
 							}
 							_ = Task.Run(async () =>
 							{
@@ -104,9 +103,9 @@ namespace CumulusMX
 									// delay for 0, 60, 120 seconds
 									System.Threading.Thread.Sleep(i * 60000);
 
-									Cumulus.LogMessage($"Alarm ({Name}): Sending email - attempt {i + 1}");
+									cumulus.LogMessage($"Alarm ({Name}): Sending email - attempt {i + 1}");
 
-									if (await cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.Trans.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml))
+									if (await cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.Trans.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml, cumulus.AlarmEmailUseBcc))
 									{
 										break;
 									}
@@ -119,11 +118,12 @@ namespace CumulusMX
 							try
 							{
 								// Prepare the process to run
-								var parser = new TokenParser();
-								parser.OnToken += cumulus.TokenParserOnToken;
-								parser.InputText = ActionParams;
+								var parser = new TokenParser(cumulus.TokenParserOnToken)
+								{
+									InputText = ActionParams
+								};
 								var args = parser.ToStringFromString();
-								Cumulus.LogMessage($"Alarm ({Name}): Starting external program: '{Action}', with parameters: {args}");
+								cumulus.LogMessage($"Alarm ({Name}): Starting external program: '{Action}', with parameters: {args}");
 								Utils.RunExternalTask(Action, args, false);
 							}
 							catch (Exception ex)
@@ -147,7 +147,7 @@ namespace CumulusMX
 						// We are latching, but the latch period has expired, clear the trigger
 						triggered = false;
 						triggerCount = 0;
-						Cumulus.LogMessage($"Alarm ({Name}): Trigger cleared");
+						cumulus.LogMessage($"Alarm ({Name}): Trigger cleared");
 					}
 				}
 				else
@@ -155,7 +155,7 @@ namespace CumulusMX
 					// No latch, just clear the trigger
 					triggered = false;
 					triggerCount = 0;
-					Cumulus.LogMessage($"Alarm ({Name}): Trigger cleared");
+					cumulus.LogMessage($"Alarm ({Name}): Trigger cleared");
 				}
 			}
 		}
@@ -169,11 +169,10 @@ namespace CumulusMX
 
 				if (Enabled)
 				{
-					Cumulus.LogMessage($"Alarm '{Name}' cleared");
+					cumulus.LogMessage($"Alarm '{Name}' cleared");
 				}
 			}
 		}
-
 	}
 
 
@@ -263,7 +262,7 @@ namespace CumulusMX
 				// If we were not set before, so we need to send an email etc?
 				if (!upTriggered)
 				{
-					Cumulus.LogMessage($"Alarm ({Name}): Up triggered, value = {Value}");
+					cumulus.LogMessage($"Alarm ({Name}): Up triggered, value = {Value}" + (string.IsNullOrEmpty(LastMessage) ? "" : $", Message = {LastMessage}"));
 
 					if (Email && cumulus.SmtpOptions.Enabled && cumulus.emailer != null)
 					{
@@ -279,9 +278,9 @@ namespace CumulusMX
 								// delay for 0, 60, 120 seconds
 								System.Threading.Thread.Sleep(i * 60000);
 
-								Cumulus.LogMessage($"Alarm ({Name}): Sending email - attempt {i + 1}");
+								cumulus.LogMessage($"Alarm ({Name}): Sending email - attempt {i + 1}");
 
-								if (await cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.Trans.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml))
+								if (await cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.Trans.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml, cumulus.AlarmEmailUseBcc))
 								{
 									break;
 								}
@@ -293,11 +292,12 @@ namespace CumulusMX
 						try
 						{
 							// Prepare the process to run
-							var parser = new TokenParser();
-							parser.OnToken += cumulus.TokenParserOnToken;
-							parser.InputText = ActionParams;
+							var parser = new TokenParser(cumulus.TokenParserOnToken)
+							{
+								InputText = ActionParams
+							};
 							var args = parser.ToStringFromString();
-							Cumulus.LogMessage($"Alarm ({Name}): Starting external program: '{Action}', with parameters: {args}");
+							cumulus.LogMessage($"Alarm ({Name}): Starting external program: '{Action}', with parameters: {args}");
 							Utils.RunExternalTask(Action, args, false);
 						}
 						catch (Exception ex)
@@ -320,14 +320,14 @@ namespace CumulusMX
 					{
 						// We are latching, but the latch period has expired, clear the trigger
 						upTriggered = false;
-						Cumulus.LogMessage($"Alarm ({Name}): Up trigger cleared");
+						cumulus.LogMessage($"Alarm ({Name}): Up trigger cleared");
 					}
 				}
 				else
 				{
 					// No latch, just clear the trigger
 					upTriggered = false;
-					Cumulus.LogMessage($"Alarm ({Name}): Up trigger cleared");
+					cumulus.LogMessage($"Alarm ({Name}): Up trigger cleared");
 				}
 			}
 		}
@@ -339,7 +339,7 @@ namespace CumulusMX
 				// If we were not set before, so we need to send an email?
 				if (!downTriggered)
 				{
-					Cumulus.LogMessage($"Alarm ({Name}): Down triggered, value = {Value}");
+					cumulus.LogMessage($"Alarm ({Name}): Down triggered, value = {Value}" + (string.IsNullOrEmpty(LastMessage) ? "" : $", Message = {LastMessage}"));
 
 					if (Email && cumulus.SmtpOptions.Enabled && cumulus.emailer != null)
 					{
@@ -354,9 +354,9 @@ namespace CumulusMX
 								// delay for 0, 60, 120 seconds
 								System.Threading.Thread.Sleep(i * 60000);
 
-								Cumulus.LogMessage($"Alarm ({Name}): Sending email - attempt {i + 1}");
+								cumulus.LogMessage($"Alarm ({Name}): Sending email - attempt {i + 1}");
 
-								if (await cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.Trans.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml))
+								if (await cumulus.emailer.SendEmail(cumulus.AlarmDestEmail, cumulus.AlarmFromEmail, cumulus.Trans.AlarmEmailSubject, msg, cumulus.AlarmEmailHtml, cumulus.AlarmEmailUseBcc))
 								{
 									break;
 								}
@@ -369,11 +369,12 @@ namespace CumulusMX
 						try
 						{
 							// Prepare the process to run
-							var parser = new TokenParser();
-							parser.OnToken += cumulus.TokenParserOnToken;
-							parser.InputText = ActionParams;
+							var parser = new TokenParser(cumulus.TokenParserOnToken)
+							{
+								InputText = ActionParams
+							};
 							var args = parser.ToStringFromString();
-							Cumulus.LogMessage($"Alarm ({Name}): Starting external program: '{Action}', with parameters: {args}");
+							cumulus.LogMessage($"Alarm ({Name}): Starting external program: '{Action}', with parameters: {args}");
 							Utils.RunExternalTask(Action, args, false);
 						}
 						catch (Exception ex)
@@ -396,14 +397,14 @@ namespace CumulusMX
 					{
 						// We are latching, but the latch period has expired, clear the trigger
 						downTriggered = false;
-						Cumulus.LogMessage($"Alarm ({Name}): Down trigger cleared");
+						cumulus.LogMessage($"Alarm ({Name}): Down trigger cleared");
 					}
 				}
 				else
 				{
 					// No latch, just clear the trigger
 					downTriggered = false;
-					Cumulus.LogMessage($"Alarm ({Name}): Down trigger cleared");
+					cumulus.LogMessage($"Alarm ({Name}): Down trigger cleared");
 				}
 			}
 		}
@@ -419,7 +420,7 @@ namespace CumulusMX
 
 				if (Enabled)
 				{
-					Cumulus.LogMessage($"Alarm '{Name}' up cleared");
+					cumulus.LogMessage($"Alarm '{Name}' up cleared");
 				}
 			}
 			if (Latch && downTriggered && DateTime.Now > DownTriggeredTime.AddHours(LatchHours))
@@ -428,7 +429,7 @@ namespace CumulusMX
 
 				if (Enabled)
 				{
-					Cumulus.LogMessage($"Alarm '{Name}' down cleared");
+					cumulus.LogMessage($"Alarm '{Name}' down cleared");
 				}
 			}
 		}
