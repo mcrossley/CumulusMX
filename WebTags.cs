@@ -4375,9 +4375,9 @@ namespace CumulusMX
 
 		private string TagHttpUploadAlarm(Dictionary<string, string> tagParams)
 		{
-			if (cumulus.ThirdPartyUploadAlarm.Enabled)
+			if (cumulus.ThirdPartyAlarm.Enabled)
 			{
-				return cumulus.ThirdPartyUploadAlarm.Triggered ? "1" : "0";
+				return cumulus.ThirdPartyAlarm.Triggered ? "1" : "0";
 			}
 
 			return "0";

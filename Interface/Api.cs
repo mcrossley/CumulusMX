@@ -35,6 +35,7 @@ namespace CumulusMX
 
 		internal static DisplaySettings displaySettings;
 		internal static AlarmSettings alarmSettings { private get; set; }
+		internal static AlarmUserSettings alarmUserSettings;
 		internal static DataEditor dataEditor { get; set; }
 		internal static DataEditors logfileEditor { get; set; }
 		internal static ApiTagProcessor tagProcessor { get; set; }
@@ -1211,6 +1212,9 @@ namespace CumulusMX
 						case "alarms.json":
 							await writer.WriteAsync(alarmSettings.GetSettings());
 							break;
+						case "useralarms.json":
+							await writer.WriteAsync(alarmUserSettings.GetAlpacaFormData());
+							break;
 						case "wizard.json":
 							await writer.WriteAsync(wizard.GetAlpacaFormData());
 							break;
@@ -1305,6 +1309,9 @@ namespace CumulusMX
 							break;
 						case "updatealarmconfig.json":
 							await writer.WriteAsync(alarmSettings.UpdateSettings(HttpContext));
+							break;
+						case "updateuseralarms.json":
+							await writer.WriteAsync(alarmUserSettings.UpdateConfig(HttpContext));
 							break;
 						case "testemail.json":
 							await writer.WriteAsync(alarmSettings.TestEmail(HttpContext));

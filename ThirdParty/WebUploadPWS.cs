@@ -35,20 +35,20 @@ namespace CumulusMX.ThirdParty
 					if (response.StatusCode != HttpStatusCode.OK)
 					{
 						cumulus.LogWarningMessage($"PWS Response: ERROR - Response code = {response.StatusCode},  Body = {responseBodyAsText}");
-						cumulus.ThirdPartyUploadAlarm.LastMessage = $"PWS: HTTP Response code = {response.StatusCode},  Body = {responseBodyAsText}";
-						cumulus.ThirdPartyUploadAlarm.Triggered = true;
+						cumulus.ThirdPartyAlarm.LastMessage = $"PWS: HTTP Response code = {response.StatusCode},  Body = {responseBodyAsText}";
+						cumulus.ThirdPartyAlarm.Triggered = true;
 					}
 					else
 					{
 						cumulus.LogDebugMessage("PWS Response: " + response.StatusCode + ": " + responseBodyAsText);
-						cumulus.ThirdPartyUploadAlarm.Triggered = false;
+						cumulus.ThirdPartyAlarm.Triggered = false;
 					}
 				}
 				catch (Exception ex)
 				{
 					cumulus.LogExceptionMessage(ex, "PWS update error");
-					cumulus.ThirdPartyUploadAlarm.LastMessage = "PWS: " + ex.Message;
-					cumulus.ThirdPartyUploadAlarm.Triggered = true;
+					cumulus.ThirdPartyAlarm.LastMessage = "PWS: " + ex.Message;
+					cumulus.ThirdPartyAlarm.Triggered = true;
 				}
 				finally
 				{

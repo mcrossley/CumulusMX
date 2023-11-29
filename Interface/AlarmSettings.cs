@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 
@@ -251,16 +252,16 @@ namespace CumulusMX
 				},
 				thirdParty = new ValuesJson()
 				{
-					Enabled = cumulus.ThirdPartyUploadAlarm.Enabled,
-					SoundEnabled = cumulus.ThirdPartyUploadAlarm.Sound,
-					Sound = cumulus.ThirdPartyUploadAlarm.SoundFile,
-					Notify = cumulus.ThirdPartyUploadAlarm.Notify,
-					Email = cumulus.ThirdPartyUploadAlarm.Email,
-					Latches = cumulus.ThirdPartyUploadAlarm.Latch,
-					LatchHrs = cumulus.ThirdPartyUploadAlarm.LatchHours,
-					Threshold = cumulus.ThirdPartyUploadAlarm.TriggerThreshold,
-					Action = cumulus.ThirdPartyUploadAlarm.Action,
-					ActionParams = cumulus.ThirdPartyUploadAlarm.ActionParams
+					Enabled = cumulus.ThirdPartyAlarm.Enabled,
+					SoundEnabled = cumulus.ThirdPartyAlarm.Sound,
+					Sound = cumulus.ThirdPartyAlarm.SoundFile,
+					Notify = cumulus.ThirdPartyAlarm.Notify,
+					Email = cumulus.ThirdPartyAlarm.Email,
+					Latches = cumulus.ThirdPartyAlarm.Latch,
+					LatchHrs = cumulus.ThirdPartyAlarm.LatchHours,
+					Threshold = cumulus.ThirdPartyAlarm.TriggerThreshold,
+					Action = cumulus.ThirdPartyAlarm.Action,
+					ActionParams = cumulus.ThirdPartyAlarm.ActionParams
 				},
 				mySqlUpload = new ValuesJson()
 				{
@@ -310,153 +311,225 @@ namespace CumulusMX
 
 		public string GetAlarmInfo()
 		{
-			//var InvC = new CultureInfo("");
+			var alarms = new List<InfoJson>();
 
-			var data = new InfoDataJson()
-			{
-				tempBelow = new InfoJson()
+			if (cumulus.LowTempAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.LowTempAlarm.Enabled,
+					Id = cumulus.LowTempAlarm.Id,
+					Name = cumulus.LowTempAlarm.Name,
 					SoundEnabled = cumulus.LowTempAlarm.Sound,
 					Sound = cumulus.LowTempAlarm.SoundFile,
 					Notify = cumulus.LowTempAlarm.Notify
-				},
-				tempAbove = new InfoJson()
+				});
+			if (cumulus.HighTempAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.HighTempAlarm.Enabled,
+					Id = cumulus.HighTempAlarm.Id,
+					Name = cumulus.HighTempAlarm.Name,
 					SoundEnabled = cumulus.HighTempAlarm.Sound,
 					Sound = cumulus.HighTempAlarm.SoundFile,
 					Notify = cumulus.HighTempAlarm.Notify
-				},
-				tempChange = new InfoJson()
+				});
+			if (cumulus.TempChangeAlarm.Enabled)
+			{
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.TempChangeAlarm.Enabled,
+					Id = cumulus.TempChangeAlarm.IdUp,
+					Name = cumulus.TempChangeAlarm.NameUp,
 					SoundEnabled = cumulus.TempChangeAlarm.Sound,
 					Sound = cumulus.TempChangeAlarm.SoundFile,
 					Notify = cumulus.TempChangeAlarm.Notify
-				},
-				pressBelow = new InfoJson()
+				});
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.LowPressAlarm.Enabled,
+					Id = cumulus.TempChangeAlarm.IdDown,
+					Name = cumulus.TempChangeAlarm.NameDown,
+					SoundEnabled = cumulus.TempChangeAlarm.Sound,
+					Sound = cumulus.TempChangeAlarm.SoundFile,
+					Notify = cumulus.TempChangeAlarm.Notify
+				});
+			}
+			if (cumulus.LowPressAlarm.Enabled)
+				alarms.Add(new InfoJson()
+				{
+					Id = cumulus.LowPressAlarm.Id,
+					Name = cumulus.LowPressAlarm.Name,
 					SoundEnabled = cumulus.LowPressAlarm.Sound,
 					Sound = cumulus.LowPressAlarm.SoundFile,
 					Notify = cumulus.LowPressAlarm.Notify
-				},
-				pressAbove = new InfoJson()
+				});
+			if (cumulus.HighPressAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.HighPressAlarm.Enabled,
+					Id = cumulus.HighPressAlarm.Id,
+					Name = cumulus.HighPressAlarm.Name,
 					SoundEnabled = cumulus.HighPressAlarm.Sound,
 					Sound = cumulus.HighPressAlarm.SoundFile,
 					Notify = cumulus.HighPressAlarm.Notify
-				},
-				pressChange = new InfoJson()
+				});
+			if (cumulus.PressChangeAlarm.Enabled)
+			{
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.PressChangeAlarm.Enabled,
+					Id = cumulus.PressChangeAlarm.IdUp,
+					Name = cumulus.PressChangeAlarm.NameUp,
 					SoundEnabled = cumulus.PressChangeAlarm.Sound,
 					Sound = cumulus.PressChangeAlarm.SoundFile,
 					Notify = cumulus.PressChangeAlarm.Notify
-				},
-				rainAbove = new InfoJson()
+				});
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.HighRainTodayAlarm.Enabled,
+					Id = cumulus.PressChangeAlarm.IdDown,
+					Name = cumulus.PressChangeAlarm.NameDown,
+					SoundEnabled = cumulus.PressChangeAlarm.Sound,
+					Sound = cumulus.PressChangeAlarm.SoundFile,
+					Notify = cumulus.PressChangeAlarm.Notify
+				});
+			}
+			if (cumulus.HighRainTodayAlarm.Enabled)
+				alarms.Add(new InfoJson()
+				{
+					Id = cumulus.HighRainTodayAlarm.Id,
+					Name = cumulus.HighRainTodayAlarm.Name,
 					SoundEnabled = cumulus.HighRainTodayAlarm.Sound,
 					Sound = cumulus.HighRainTodayAlarm.SoundFile,
 					Notify = cumulus.HighRainTodayAlarm.Notify
-				},
-				rainRateAbove = new InfoJson()
+				});
+			if (cumulus.HighRainRateAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.HighRainRateAlarm.Enabled,
+					Id = cumulus.HighRainRateAlarm.Id,
+					Name = cumulus.HighRainRateAlarm.Name,
 					SoundEnabled = cumulus.HighRainRateAlarm.Sound,
 					Sound = cumulus.HighRainRateAlarm.SoundFile,
 					Notify = cumulus.HighRainRateAlarm.Notify
-				},
-				isRaining = new InfoJson()
+				});
+			if (cumulus.IsRainingAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.IsRainingAlarm.Enabled,
+					Id = cumulus.IsRainingAlarm.Id,
+					Name = cumulus.IsRainingAlarm.Name,
 					SoundEnabled = cumulus.IsRainingAlarm.Sound,
 					Sound = cumulus.IsRainingAlarm.SoundFile,
 					Notify = cumulus.IsRainingAlarm.Notify
-				},
-				gustAbove = new InfoJson()
+				});
+			if (cumulus.HighGustAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.HighGustAlarm.Enabled,
+					Id = cumulus.HighGustAlarm.Id,
+					Name = cumulus.HighGustAlarm.Name,
 					SoundEnabled = cumulus.HighGustAlarm.Sound,
 					Sound = cumulus.HighGustAlarm.SoundFile,
 					Notify = cumulus.HighGustAlarm.Notify
-				},
-				windAbove = new InfoJson()
+				});
+			if (cumulus.HighWindAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.HighWindAlarm.Enabled,
+					Id = cumulus.HighWindAlarm.Id,
+					Name = cumulus.HighWindAlarm.Name,
 					SoundEnabled = cumulus.HighWindAlarm.Sound,
 					Sound = cumulus.HighWindAlarm.SoundFile,
 					Notify = cumulus.HighWindAlarm.Notify
-				},
-				contactLost = new InfoJson()
+				});
+			if (cumulus.SensorAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.SensorAlarm.Enabled,
+					Id = cumulus.SensorAlarm.Id,
+					Name = cumulus.SensorAlarm.Name,
 					SoundEnabled = cumulus.SensorAlarm.Sound,
 					Sound = cumulus.SensorAlarm.SoundFile,
 					Notify = cumulus.SensorAlarm.Notify
-				},
-				newRecord = new InfoJson()
+				});
+			if (cumulus.NewRecordAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.NewRecordAlarm.Enabled,
+					Id = cumulus.NewRecordAlarm.Id,
+					Name = cumulus.NewRecordAlarm.Name,
 					SoundEnabled = cumulus.NewRecordAlarm.Sound,
 					Sound = cumulus.NewRecordAlarm.SoundFile,
 					Notify = cumulus.NewRecordAlarm.Notify
-				},
-				dataStopped = new InfoJson()
+				});
+			if (cumulus.DataStoppedAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.DataStoppedAlarm.Enabled,
+					Id = cumulus.DataStoppedAlarm.Id,
+					Name = cumulus.DataStoppedAlarm.Name,
 					SoundEnabled = cumulus.DataStoppedAlarm.Sound,
 					Sound = cumulus.DataStoppedAlarm.SoundFile,
 					Notify = cumulus.DataStoppedAlarm.Notify
-				},
-				batteryLow = new InfoJson()
+				});
+			if (cumulus.BatteryLowAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.BatteryLowAlarm.Enabled,
+					Id = cumulus.BatteryLowAlarm.Id,
+					Name = cumulus.BatteryLowAlarm.Name,
 					SoundEnabled = cumulus.BatteryLowAlarm.Sound,
 					Sound = cumulus.BatteryLowAlarm.SoundFile,
 					Notify = cumulus.BatteryLowAlarm.Notify
-				},
-				spike = new InfoJson()
+				});
+			if (cumulus.SpikeAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.SpikeAlarm.Enabled,
+					Id = cumulus.SpikeAlarm.Id,
+					Name = cumulus.SpikeAlarm.Name,
 					SoundEnabled = cumulus.SpikeAlarm.Sound,
 					Sound = cumulus.SpikeAlarm.SoundFile,
 					Notify = cumulus.SpikeAlarm.Notify
-				},
-				upgrade = new InfoJson()
+				});
+			if (cumulus.UpgradeAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.UpgradeAlarm.Enabled,
+					Id = cumulus.UpgradeAlarm.Id,
+					Name = cumulus.UpgradeAlarm.Name,
 					SoundEnabled = cumulus.UpgradeAlarm.Sound,
 					Sound = cumulus.UpgradeAlarm.SoundFile,
 					Notify = cumulus.UpgradeAlarm.Notify
-				},
-				httpUpload = new InfoJson()
+				});
+			if (cumulus.ThirdPartyAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.ThirdPartyUploadAlarm.Enabled,
-					SoundEnabled = cumulus.ThirdPartyUploadAlarm.Sound,
-					Sound = cumulus.ThirdPartyUploadAlarm.SoundFile,
-					Notify = cumulus.ThirdPartyUploadAlarm.Notify
-				},
-				mySqlUpload = new InfoJson()
+					Id = cumulus.ThirdPartyAlarm.Id,
+					Name = cumulus.ThirdPartyAlarm.Name,
+					SoundEnabled = cumulus.ThirdPartyAlarm.Sound,
+					Sound = cumulus.ThirdPartyAlarm.SoundFile,
+					Notify = cumulus.ThirdPartyAlarm.Notify
+				});
+			if (cumulus.MySqlUploadAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.MySqlUploadAlarm.Enabled,
+					Id = cumulus.MySqlUploadAlarm.Id,
+					Name = cumulus.MySqlUploadAlarm.Name,
 					SoundEnabled = cumulus.MySqlUploadAlarm.Sound,
 					Sound = cumulus.MySqlUploadAlarm.SoundFile,
 					Notify = cumulus.MySqlUploadAlarm.Notify
-				},
-				ftpUpload = new InfoJson()
+				});
+			if (cumulus.FtpAlarm.Enabled)
+				alarms.Add(new InfoJson()
 				{
-					Enabled = cumulus.FtpAlarm.Enabled,
+					Id = cumulus.FtpAlarm.Id,
+					Name = cumulus.FtpAlarm.Name,
 					SoundEnabled = cumulus.FtpAlarm.Sound,
 					Sound = cumulus.FtpAlarm.SoundFile,
 					Notify = cumulus.FtpAlarm.Notify
-				}
-			};
+				});
 
-			return data.ToJson();
+			for (var i = 0; i < cumulus.UserAlarms.Count; i++)
+			{
+				if (cumulus.UserAlarms[i].Enabled)
+				{
+					alarms.Add(new InfoJson()
+					{
+						Id = "AlarmUser" + i,
+						Name = cumulus.UserAlarms[i].Name,
+						SoundEnabled = false,
+						Sound = "",
+						Notify = false
+					}); ;
+				}
+			}
+
+			return alarms.ToJson();
 		}
 
 
@@ -698,17 +771,17 @@ namespace CumulusMX
 				cumulus.UpgradeAlarm.Action = settings.upgrade.Action.Trim();
 				cumulus.UpgradeAlarm.ActionParams = settings.upgrade.ActionParams.Trim();
 
-				cumulus.ThirdPartyUploadAlarm.Enabled = settings.thirdParty.Enabled;
-				cumulus.ThirdPartyUploadAlarm.Sound = settings.thirdParty.SoundEnabled;
-				cumulus.ThirdPartyUploadAlarm.SoundFile = settings.thirdParty.Sound.Trim();
-				cumulus.ThirdPartyUploadAlarm.Notify = settings.thirdParty.Notify;
-				cumulus.ThirdPartyUploadAlarm.Email = settings.thirdParty.Email;
-				cumulus.ThirdPartyUploadAlarm.Latch = settings.thirdParty.Latches;
-				cumulus.ThirdPartyUploadAlarm.LatchHours = settings.thirdParty.LatchHrs;
-				cumulus.ThirdPartyUploadAlarm.TriggerThreshold = settings.thirdParty.Threshold;
-				emailRequired = emailRequired || (cumulus.ThirdPartyUploadAlarm.Email && cumulus.ThirdPartyUploadAlarm.Enabled);
-				cumulus.ThirdPartyUploadAlarm.Action = settings.thirdParty.Action.Trim();
-				cumulus.ThirdPartyUploadAlarm.ActionParams = settings.thirdParty.ActionParams.Trim();
+				cumulus.ThirdPartyAlarm.Enabled = settings.thirdParty.Enabled;
+				cumulus.ThirdPartyAlarm.Sound = settings.thirdParty.SoundEnabled;
+				cumulus.ThirdPartyAlarm.SoundFile = settings.thirdParty.Sound.Trim();
+				cumulus.ThirdPartyAlarm.Notify = settings.thirdParty.Notify;
+				cumulus.ThirdPartyAlarm.Email = settings.thirdParty.Email;
+				cumulus.ThirdPartyAlarm.Latch = settings.thirdParty.Latches;
+				cumulus.ThirdPartyAlarm.LatchHours = settings.thirdParty.LatchHrs;
+				cumulus.ThirdPartyAlarm.TriggerThreshold = settings.thirdParty.Threshold;
+				emailRequired = emailRequired || (cumulus.ThirdPartyAlarm.Email && cumulus.ThirdPartyAlarm.Enabled);
+				cumulus.ThirdPartyAlarm.Action = settings.thirdParty.Action.Trim();
+				cumulus.ThirdPartyAlarm.ActionParams = settings.thirdParty.ActionParams.Trim();
 
 				cumulus.MySqlUploadAlarm.Enabled = settings.mySqlUpload.Enabled;
 				cumulus.MySqlUploadAlarm.Sound = settings.mySqlUpload.SoundEnabled;
@@ -879,32 +952,11 @@ namespace CumulusMX
 			public string ActionParams { get; set; }
 		}
 
-		private class InfoDataJson
-		{
-			public InfoJson tempBelow { get; set; }
-			public InfoJson tempAbove { get; set; }
-			public InfoJson tempChange { get; set; }
-			public InfoJson pressBelow { get; set; }
-			public InfoJson pressAbove { get; set; }
-			public InfoJson pressChange { get; set; }
-			public InfoJson rainAbove { get; set; }
-			public InfoJson rainRateAbove { get; set; }
-			public InfoJson gustAbove { get; set; }
-			public InfoJson windAbove { get; set; }
-			public InfoJson newRecord { get; set; }
-			public InfoJson contactLost { get; set; }
-			public InfoJson dataStopped { get; set; }
-			public InfoJson batteryLow { get; set; }
-			public InfoJson spike { get; set; }
-			public InfoJson upgrade { get; set; }
-			public InfoJson httpUpload { get; set; }
-			public InfoJson mySqlUpload { get; set; }
-			public InfoJson isRaining { get; set; }
-			public InfoJson ftpUpload { get; set; }
-		}
-
 		private class InfoJson
 		{
+			public string Id { get; set; }
+			public string Name { get; set; }
+
 			public bool Enabled { get; set; }
 			public bool SoundEnabled { get; set; }
 			public string Sound { get; set; }

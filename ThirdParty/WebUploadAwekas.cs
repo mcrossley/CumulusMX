@@ -59,12 +59,12 @@ namespace CumulusMX.ThirdParty
 				if (response.StatusCode != HttpStatusCode.OK)
 				{
 					cumulus.LogMessage($"AWEKAS: ERROR - Response code = {response.StatusCode}, body = {responseBodyAsText}");
-					cumulus.ThirdPartyUploadAlarm.LastMessage = $"AWEKAS: HTTP Response code = {response.StatusCode}, body = {responseBodyAsText}";
-					cumulus.ThirdPartyUploadAlarm.Triggered = true;
+					cumulus.ThirdPartyAlarm.LastMessage = $"AWEKAS: HTTP Response code = {response.StatusCode}, body = {responseBodyAsText}";
+					cumulus.ThirdPartyAlarm.Triggered = true;
 				}
 				else
 				{
-					cumulus.ThirdPartyUploadAlarm.Triggered = false;
+					cumulus.ThirdPartyAlarm.Triggered = false;
 				}
 
 				AwekasResponse respJson;
@@ -77,8 +77,8 @@ namespace CumulusMX.ThirdParty
 				{
 					cumulus.LogMessage("AWEKAS: Exception deserializing response = " + ex.Message);
 					cumulus.LogMessage($"AWEKAS: ERROR - Response body = {responseBodyAsText}");
-					cumulus.ThirdPartyUploadAlarm.LastMessage = "AWEKAS deserializing response: " + ex.Message;
-					cumulus.ThirdPartyUploadAlarm.Triggered = true;
+					cumulus.ThirdPartyAlarm.LastMessage = "AWEKAS deserializing response: " + ex.Message;
+					cumulus.ThirdPartyAlarm.Triggered = true;
 					Updating = false;
 					return;
 				}
@@ -135,8 +135,8 @@ namespace CumulusMX.ThirdParty
 					else
 					{
 						cumulus.LogMessage("AWEKAS: Unknown error");
-						cumulus.ThirdPartyUploadAlarm.LastMessage = "AWEKAS: Unknown error";
-						cumulus.ThirdPartyUploadAlarm.Triggered = true;
+						cumulus.ThirdPartyAlarm.LastMessage = "AWEKAS: Unknown error";
+						cumulus.ThirdPartyAlarm.Triggered = true;
 					}
 				}
 
@@ -169,8 +169,8 @@ namespace CumulusMX.ThirdParty
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "AWEKAS: Error");
-				cumulus.ThirdPartyUploadAlarm.LastMessage = "AWEKAS: " + ex.Message;
-				cumulus.ThirdPartyUploadAlarm.Triggered = true;
+				cumulus.ThirdPartyAlarm.LastMessage = "AWEKAS: " + ex.Message;
+				cumulus.ThirdPartyAlarm.Triggered = true;
 			}
 			finally
 			{

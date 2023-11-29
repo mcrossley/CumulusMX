@@ -44,19 +44,19 @@ namespace CumulusMX.ThirdParty
 				if (response.StatusCode != HttpStatusCode.OK)
 				{
 					cumulus.LogMessage("WindGuru: ERROR - " + response.StatusCode + ": " + responseBodyAsText);
-					cumulus.ThirdPartyUploadAlarm.LastMessage = "WindGuru: HTTP response - " + response.StatusCode;
-					cumulus.ThirdPartyUploadAlarm.Triggered = true;
+					cumulus.ThirdPartyAlarm.LastMessage = "WindGuru: HTTP response - " + response.StatusCode;
+					cumulus.ThirdPartyAlarm.Triggered = true;
 				}
 				else
 				{
-					cumulus.ThirdPartyUploadAlarm.Triggered = false;
+					cumulus.ThirdPartyAlarm.Triggered = false;
 				}
 			}
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "WindGuru: ERROR");
-				cumulus.ThirdPartyUploadAlarm.LastMessage = "WindGuru: " + ex.Message;
-				cumulus.ThirdPartyUploadAlarm.Triggered = true;
+				cumulus.ThirdPartyAlarm.LastMessage = "WindGuru: " + ex.Message;
+				cumulus.ThirdPartyAlarm.Triggered = true;
 			}
 			finally
 			{

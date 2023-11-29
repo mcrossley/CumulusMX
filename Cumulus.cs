@@ -531,26 +531,28 @@ namespace CumulusMX
 		public double CPUtemp = -999;
 
 		// Alarms
-		public Alarm DataStoppedAlarm = new Alarm("Data Stopped", AlarmTypes.Trigger);
-		public Alarm BatteryLowAlarm = new Alarm("Battery Low", AlarmTypes.Trigger);
-		public Alarm SensorAlarm = new Alarm("Sensor Data Stopped", AlarmTypes.Trigger);
-		public Alarm SpikeAlarm = new Alarm("Data Spike", AlarmTypes.Trigger);
-		public Alarm HighWindAlarm = new Alarm("High Wind", AlarmTypes.Above);
-		public Alarm HighGustAlarm = new Alarm("High Gust", AlarmTypes.Above);
-		public Alarm HighRainRateAlarm = new Alarm("High Rainfall Rate", AlarmTypes.Above);
-		public Alarm HighRainTodayAlarm = new Alarm("Total Rainfall Today", AlarmTypes.Above);
-		public AlarmChange PressChangeAlarm = new AlarmChange("Pressure Change");
-		public Alarm HighPressAlarm = new Alarm("High Pressure", AlarmTypes.Above);
-		public Alarm LowPressAlarm = new Alarm("Low Pressure", AlarmTypes.Below);
-		public AlarmChange TempChangeAlarm = new AlarmChange("Temperature Change");
-		public Alarm HighTempAlarm = new Alarm("High Temperature", AlarmTypes.Above);
-		public Alarm LowTempAlarm = new Alarm("Low Temperature", AlarmTypes.Below);
-		public Alarm UpgradeAlarm = new Alarm("Upgrade Available", AlarmTypes.Trigger);
-		public Alarm ThirdPartyUploadAlarm = new Alarm("HTTP Uploads", AlarmTypes.Trigger);
-		public Alarm MySqlUploadAlarm = new Alarm("MySQL Uploads", AlarmTypes.Trigger);
-		public Alarm IsRainingAlarm = new Alarm("IsRaining", AlarmTypes.Trigger);
-		public Alarm NewRecordAlarm = new Alarm("New Record", AlarmTypes.Trigger);
-		public Alarm FtpAlarm = new Alarm("Web Upload", AlarmTypes.Trigger);
+		public Alarm DataStoppedAlarm;
+		public Alarm BatteryLowAlarm;
+		public Alarm SensorAlarm;
+		public Alarm SpikeAlarm;
+		public Alarm HighWindAlarm;
+		public Alarm HighGustAlarm;
+		public Alarm HighRainRateAlarm;
+		public Alarm HighRainTodayAlarm;
+		public AlarmChange PressChangeAlarm;
+		public Alarm HighPressAlarm;
+		public Alarm LowPressAlarm;
+		public AlarmChange TempChangeAlarm;
+		public Alarm HighTempAlarm;
+		public Alarm LowTempAlarm;
+		public Alarm UpgradeAlarm;
+		public Alarm ThirdPartyAlarm;
+		public Alarm MySqlUploadAlarm;
+		public Alarm IsRainingAlarm;
+		public Alarm NewRecordAlarm;
+		public Alarm FtpAlarm;
+
+		public List<AlarmUser> UserAlarms = new List<AlarmUser>();
 
 
 		private const double DEFAULTFCLOWPRESS = 950.0;
@@ -1029,36 +1031,26 @@ namespace CumulusMX
 			}
 
 			// initialise the alarms
-			DataStoppedAlarm.cumulus = this;
-			BatteryLowAlarm.cumulus = this;
-			SensorAlarm.cumulus = this;
-			SpikeAlarm.cumulus = this;
-			HighWindAlarm.cumulus = this;
-			HighWindAlarm.Units = Units.WindText;
-			HighGustAlarm.cumulus = this;
-			HighGustAlarm.Units = Units.WindText;
-			HighRainRateAlarm.cumulus = this;
-			HighRainRateAlarm.Units = Units.RainTrendText;
-			HighRainTodayAlarm.cumulus = this;
-			HighRainTodayAlarm.Units = Units.RainText;
-			PressChangeAlarm.cumulus = this;
-			PressChangeAlarm.Units = Units.PressTrendText;
-			HighPressAlarm.cumulus = this;
-			HighPressAlarm.Units = Units.PressText;
-			LowPressAlarm.cumulus = this;
-			LowPressAlarm.Units = Units.PressText;
-			TempChangeAlarm.cumulus = this;
-			TempChangeAlarm.Units = Units.TempTrendText;
-			HighTempAlarm.cumulus = this;
-			HighTempAlarm.Units = Units.TempText;
-			LowTempAlarm.cumulus = this;
-			LowTempAlarm.Units = Units.TempText;
-			UpgradeAlarm.cumulus = this;
-			ThirdPartyUploadAlarm.cumulus = this;
-			MySqlUploadAlarm.cumulus = this;
-			IsRainingAlarm.cumulus = this;
-			NewRecordAlarm.cumulus = this;
-			FtpAlarm.cumulus = this;
+			DataStoppedAlarm = new Alarm("AlarmData", AlarmTypes.Trigger, this);
+			BatteryLowAlarm = new Alarm("AlarmBattery", AlarmTypes.Trigger, this);
+			SensorAlarm = new Alarm("AlarmSensor", AlarmTypes.Trigger, this);
+			SpikeAlarm = new Alarm("AlarmSpike", AlarmTypes.Trigger, this);
+			HighWindAlarm = new Alarm("AlarmWind", AlarmTypes.Above, this, Units.WindText);
+			HighGustAlarm = new Alarm("AlarmGust", AlarmTypes.Above, this, Units.WindText);
+			HighRainRateAlarm = new Alarm("AlarmRainRate", AlarmTypes.Above, this, Units.RainTrendText);
+			HighRainTodayAlarm = new Alarm("AlarmRain", AlarmTypes.Above, this, Units.RainText);
+			PressChangeAlarm = new AlarmChange("AlarmPressUp", "AlarmPressDn", this, Units.PressTrendText);
+			HighPressAlarm = new Alarm("AlarmHighPress", AlarmTypes.Above, this, Units.PressText);
+			LowPressAlarm = new Alarm("AlarmLowPress", AlarmTypes.Below, this, Units.PressText);
+			TempChangeAlarm = new AlarmChange("AlarmTempUp", "AlarmTempDn", this, Units.TempTrendText);
+			HighTempAlarm = new Alarm("AlarmHighTemp", AlarmTypes.Above, this, Units.TempText);
+			LowTempAlarm = new Alarm("AlarmLowTemp", AlarmTypes.Below, this, Units.TempText);
+			UpgradeAlarm = new Alarm("AlarmUpgrade", AlarmTypes.Trigger, this);
+			ThirdPartyAlarm = new Alarm("AlarmHttp", AlarmTypes.Trigger, this);
+			MySqlUploadAlarm = new Alarm("AlarmMySql", AlarmTypes.Trigger, this);
+			IsRainingAlarm = new Alarm("AlarmIsRaining", AlarmTypes.Trigger, this);
+			NewRecordAlarm = new Alarm("AlarmNewRec", AlarmTypes.Trigger, this);
+			FtpAlarm = new Alarm("AlarmFtp", AlarmTypes.Trigger, this);
 
 			// Read the configuration file
 			ReadIniFile();
@@ -1429,6 +1421,7 @@ namespace CumulusMX
 			Api.calibrationSettings = new CalibrationSettings(this);
 			Api.noaaSettings = new NOAASettings(this);
 			Api.alarmSettings = new AlarmSettings(this);
+			Api.alarmUserSettings = new AlarmUserSettings(this);
 			Api.mySqlSettings = new MysqlSettings(this);
 			Api.customLogs = new CustomLogsSettings(this);
 			Api.dataEditor = new DataEditor(this);
@@ -4669,16 +4662,16 @@ namespace CumulusMX
 			UpgradeAlarm.Action = ini.GetValue("Alarms", "UpgradeAlarmAction", "");
 			UpgradeAlarm.ActionParams = ini.GetValue("Alarms", "UpgradeAlarmActionParams", "");
 
-			ThirdPartyUploadAlarm.Enabled = ini.GetValue("Alarms", "HttpUploadAlarmSet", false);
-			ThirdPartyUploadAlarm.Sound = ini.GetValue("Alarms", "HttpUploadAlarmSound", false);
-			ThirdPartyUploadAlarm.SoundFile = ini.GetValue("Alarms", "HttpUploadAlarmSoundFile", DefaultSoundFile);
-			ThirdPartyUploadAlarm.Notify = ini.GetValue("Alarms", "HttpUploadAlarmNotify", false);
-			ThirdPartyUploadAlarm.Email = ini.GetValue("Alarms", "HttpUploadAlarmEmail", false);
-			ThirdPartyUploadAlarm.Latch = ini.GetValue("Alarms", "HttpUploadAlarmLatch", false);
-			ThirdPartyUploadAlarm.LatchHours = ini.GetValue("Alarms", "HttpUploadAlarmLatchHours", 24.0);
-			ThirdPartyUploadAlarm.TriggerThreshold = ini.GetValue("Alarms", "HttpUploadAlarmTriggerCount", 1);
-			ThirdPartyUploadAlarm.Action = ini.GetValue("Alarms", "HttpUploadAlarmAction", "");
-			ThirdPartyUploadAlarm.ActionParams = ini.GetValue("Alarms", "HttpUploadAlarmActionParams", "");
+			ThirdPartyAlarm.Enabled = ini.GetValue("Alarms", "HttpUploadAlarmSet", false);
+			ThirdPartyAlarm.Sound = ini.GetValue("Alarms", "HttpUploadAlarmSound", false);
+			ThirdPartyAlarm.SoundFile = ini.GetValue("Alarms", "HttpUploadAlarmSoundFile", DefaultSoundFile);
+			ThirdPartyAlarm.Notify = ini.GetValue("Alarms", "HttpUploadAlarmNotify", false);
+			ThirdPartyAlarm.Email = ini.GetValue("Alarms", "HttpUploadAlarmEmail", false);
+			ThirdPartyAlarm.Latch = ini.GetValue("Alarms", "HttpUploadAlarmLatch", false);
+			ThirdPartyAlarm.LatchHours = ini.GetValue("Alarms", "HttpUploadAlarmLatchHours", 24.0);
+			ThirdPartyAlarm.TriggerThreshold = ini.GetValue("Alarms", "HttpUploadAlarmTriggerCount", 1);
+			ThirdPartyAlarm.Action = ini.GetValue("Alarms", "HttpUploadAlarmAction", "");
+			ThirdPartyAlarm.ActionParams = ini.GetValue("Alarms", "HttpUploadAlarmActionParams", "");
 
 			MySqlUploadAlarm.Enabled = ini.GetValue("Alarms", "MySqlUploadAlarmSet", false);
 			MySqlUploadAlarm.Sound = ini.GetValue("Alarms", "MySqlUploadAlarmSound", false);
@@ -4715,6 +4708,45 @@ namespace CumulusMX
 			AlarmDestEmail = ini.GetValue("Alarms", "DestEmail", "").Split(';');
 			AlarmEmailHtml = ini.GetValue("Alarms", "UseHTML", false);
 			AlarmEmailUseBcc = ini.GetValue("Alarms", "UseBCC", false);
+
+			// User Alarm Settings
+			for (var i = 0; i < 10; i++)
+			{
+				if (ini.ValueExists("UserAlarms", "AlarmName" + i))
+				{
+					var name = ini.GetValue("UserAlarms", "AlarmName" + i, "");
+					var tag = ini.GetValue("UserAlarms", "AlarmTag" + i, "");
+					var type = ini.GetValue("UserAlarms", "AlarmType" + i, "");
+					var value = ini.GetValue("UserAlarms", "AlarmValue" + i, 0.0);
+					var enabled = ini.GetValue("UserAlarms", "AlarmEnabled" + i, false);
+					var email = ini.GetValue("UserAlarms", "AlarmEmail" + i, false);
+					var latch = ini.GetValue("UserAlarms", "AlarmLatch" + i, false);
+					var latchHours = ini.GetValue("UserAlarms", "AlarmLatchHours" + i, 24.0);
+					var action = ini.GetValue("UserAlarms", "AlarmAction" + i, "");
+					var actionParams = ini.GetValue("UserAlarms", "AlarmActionParams" + i, "");
+
+					if (name != "" && tag != "" && type != "")
+					{
+						try
+						{
+							UserAlarms.Add(new AlarmUser(name, type, tag, this)
+							{
+								Value = value,
+								Enabled = enabled,
+								Email = email,
+								Latch = latch,
+								LatchHours = latchHours,
+								Action = action,
+								ActionParams = actionParams
+							});
+						}
+						catch (Exception ex)
+						{
+							LogErrorMessage($"Error loading user alarm {ini.GetValue("UserAlarms", "AlarmName" + i, "")}: {ex.Message}");
+						}
+					}
+				}
+			}
 
 			Calib.Press.Offset = ini.GetValue("Offsets", "PressOffset", 0.0);
 			Calib.Temp.Offset = ini.GetValue("Offsets", "TempOffset", 0.0);
@@ -5955,16 +5987,16 @@ namespace CumulusMX
 			ini.SetValue("Alarms", "UpgradeAlarmAction", UpgradeAlarm.Action);
 			ini.SetValue("Alarms", "UpgradeAlarmActionParams", UpgradeAlarm.ActionParams);
 
-			ini.SetValue("Alarms", "HttpUploadAlarmSet", ThirdPartyUploadAlarm.Enabled);
-			ini.SetValue("Alarms", "HttpUploadAlarmSound", ThirdPartyUploadAlarm.Sound);
-			ini.SetValue("Alarms", "HttpUploadAlarmSoundFile", ThirdPartyUploadAlarm.SoundFile);
-			ini.SetValue("Alarms", "HttpUploadAlarmNotify", ThirdPartyUploadAlarm.Notify);
-			ini.SetValue("Alarms", "HttpUploadAlarmEmail", ThirdPartyUploadAlarm.Email);
-			ini.SetValue("Alarms", "HttpUploadAlarmLatch", ThirdPartyUploadAlarm.Latch);
-			ini.SetValue("Alarms", "HttpUploadAlarmLatchHours", ThirdPartyUploadAlarm.LatchHours);
-			ini.SetValue("Alarms", "HttpUploadAlarmTriggerCount", ThirdPartyUploadAlarm.TriggerThreshold);
-			ini.SetValue("Alarms", "HttpUploadAlarmAction", ThirdPartyUploadAlarm.Action);
-			ini.SetValue("Alarms", "HttpUploadAlarmActionParams", ThirdPartyUploadAlarm.ActionParams);
+			ini.SetValue("Alarms", "HttpUploadAlarmSet", ThirdPartyAlarm.Enabled);
+			ini.SetValue("Alarms", "HttpUploadAlarmSound", ThirdPartyAlarm.Sound);
+			ini.SetValue("Alarms", "HttpUploadAlarmSoundFile", ThirdPartyAlarm.SoundFile);
+			ini.SetValue("Alarms", "HttpUploadAlarmNotify", ThirdPartyAlarm.Notify);
+			ini.SetValue("Alarms", "HttpUploadAlarmEmail", ThirdPartyAlarm.Email);
+			ini.SetValue("Alarms", "HttpUploadAlarmLatch", ThirdPartyAlarm.Latch);
+			ini.SetValue("Alarms", "HttpUploadAlarmLatchHours", ThirdPartyAlarm.LatchHours);
+			ini.SetValue("Alarms", "HttpUploadAlarmTriggerCount", ThirdPartyAlarm.TriggerThreshold);
+			ini.SetValue("Alarms", "HttpUploadAlarmAction", ThirdPartyAlarm.Action);
+			ini.SetValue("Alarms", "HttpUploadAlarmActionParams", ThirdPartyAlarm.ActionParams);
 
 			ini.SetValue("Alarms", "MySqlUploadAlarmSet", MySqlUploadAlarm.Enabled);
 			ini.SetValue("Alarms", "MySqlUploadAlarmSound", MySqlUploadAlarm.Sound);
@@ -6001,6 +6033,35 @@ namespace CumulusMX
 			ini.SetValue("Alarms", "DestEmail", AlarmDestEmail.Join(";"));
 			ini.SetValue("Alarms", "UseHTML", AlarmEmailHtml);
 			ini.SetValue("Alarms", "UseBCC", AlarmEmailUseBcc);
+
+			// User Alarms
+			for (var i = 0; i < UserAlarms.Count(); i++)
+			{
+				ini.SetValue("UserAlarms", "AlarmName" + i, UserAlarms[i].Name);
+				ini.SetValue("UserAlarms", "AlarmTag" + i, UserAlarms[i].WebTag);
+				ini.SetValue("UserAlarms", "AlarmType" + i, UserAlarms[i].Type);
+				ini.SetValue("UserAlarms", "AlarmValue" + i, UserAlarms[i].Value);
+				ini.SetValue("UserAlarms", "AlarmEnabled" + i, UserAlarms[i].Enabled);
+				ini.SetValue("UserAlarms", "AlarmEmail" + i, UserAlarms[i].Email);
+				ini.SetValue("UserAlarms", "AlarmLatch" + i, UserAlarms[i].Latch);
+				ini.SetValue("UserAlarms", "AlarmLatchHours" + i, UserAlarms[i].LatchHours);
+				ini.SetValue("UserAlarms", "AlarmAction" + i, UserAlarms[i].Action);
+				ini.SetValue("UserAlarms", "AlarmActionParams" + i, UserAlarms[i].ActionParams);
+			}
+			// remove any old alarms
+			for (var i = UserAlarms.Count(); i < 10; i++)
+			{
+				ini.DeleteValue("UserAlarms", "AlarmName" + i);
+				ini.DeleteValue("UserAlarms", "AlarmTag" + i);
+				ini.DeleteValue("UserAlarms", "AlarmType" + i);
+				ini.DeleteValue("UserAlarms", "AlarmValue" + i);
+				ini.DeleteValue("UserAlarms", "AlarmEnabled" + i);
+				ini.DeleteValue("UserAlarms", "AlarmEmail" + i);
+				ini.DeleteValue("UserAlarms", "AlarmLatch" + i);
+				ini.DeleteValue("UserAlarms", "AlarmLatchHours" + i);
+				ini.DeleteValue("UserAlarms", "AlarmAction" + i);
+				ini.DeleteValue("UserAlarms", "AlarmActionParams" + i);
+			}
 
 			ini.SetValue("Offsets", "PressOffset", Calib.Press.Offset);
 			ini.SetValue("Offsets", "TempOffset", Calib.Temp.Offset);
@@ -6575,6 +6636,7 @@ namespace CumulusMX
 			// alarm emails
 			Trans.AlarmEmailSubject = ini.GetValue("AlarmEmails", "subject", "Cumulus MX Alarm");
 			Trans.AlarmEmailPreamble = ini.GetValue("AlarmEmails", "preamble", "A Cumulus MX alarm has been triggered.");
+
 			HighGustAlarm.EmailMsg = ini.GetValue("AlarmEmails", "windGustAbove", "A wind gust above {0} {1} has occurred.");
 			HighPressAlarm.EmailMsg = ini.GetValue("AlarmEmails", "pressureAbove", "The pressure has risen above {0} {1}.");
 			HighTempAlarm.EmailMsg = ini.GetValue("AlarmEmails", "tempAbove", "The temperature has risen above {0} {1}.");
@@ -6592,11 +6654,35 @@ namespace CumulusMX
 			BatteryLowAlarm.EmailMsg = ini.GetValue("AlarmEmails", "batteryLow", "A low battery condition has been detected.");
 			SpikeAlarm.EmailMsg = ini.GetValue("AlarmEmails", "dataSpike", "A data spike from your weather station has been suppressed.");
 			UpgradeAlarm.EmailMsg = ini.GetValue("AlarmEmails", "upgrade", "An upgrade to Cumulus MX is now available.");
-			ThirdPartyUploadAlarm.EmailMsg = ini.GetValue("AlarmEmails", "httpStopped", "HTTP uploads are failing.");
+			ThirdPartyAlarm.EmailMsg = ini.GetValue("AlarmEmails", "httpStopped", "HTTP uploads are failing.");
 			MySqlUploadAlarm.EmailMsg = ini.GetValue("AlarmEmails", "mySqlStopped", "MySQL uploads are failing.");
 			IsRainingAlarm.EmailMsg = ini.GetValue("AlarmEmails", "isRaining", "It has started to rain.");
 			NewRecordAlarm.EmailMsg = ini.GetValue("AlarmEmails", "newRecord", "A new all-time record has been set.");
 			FtpAlarm.EmailMsg = ini.GetValue("AlarmEmails", "ftpStopped", "FTP uploads have stopped.");
+
+			// alarm names
+			HighGustAlarm.Name = ini.GetValue("AlarmNames", "windGustAbove", "High Gust");
+			HighPressAlarm.Name = ini.GetValue("AlarmNames", "pressureAbove", "High Pressure");
+			HighTempAlarm.Name = ini.GetValue("AlarmNames", "tempAbove", "High Temperature");
+			LowPressAlarm.Name = ini.GetValue("AlarmNames", "pressBelow", "Low Pressure");
+			LowTempAlarm.Name = ini.GetValue("AlarmNames", "tempBelow", "Low Temperature");
+			PressChangeAlarm.NameDown = ini.GetValue("AlarmNames", "pressDown", "Pressure Falling");
+			PressChangeAlarm.NameUp = ini.GetValue("AlarmNames", "pressUp", "Pressure Rising");
+			HighRainTodayAlarm.Name = ini.GetValue("AlarmNames", "rainAbove", "Rainfall Today");
+			HighRainRateAlarm.Name = ini.GetValue("AlarmNames", "rainRateAbove", "High Rainfall Rate");
+			SensorAlarm.Name = ini.GetValue("AlarmNames", "sensorLost", "Sensor Data Stopped");
+			TempChangeAlarm.NameDown = ini.GetValue("AlarmNames", "tempDown", "Temp Falling");
+			TempChangeAlarm.NameUp = ini.GetValue("AlarmNames", "tempUp", "Temp Rising");
+			HighWindAlarm.Name = ini.GetValue("AlarmNames", "windAbove", "High Wind");
+			DataStoppedAlarm.Name = ini.GetValue("AlarmNames", "dataStopped", "Data Stopped");
+			BatteryLowAlarm.Name = ini.GetValue("AlarmNames", "batteryLow", "Battery Low");
+			SpikeAlarm.Name = ini.GetValue("AlarmNames", "dataSpike", "Data Spike");
+			UpgradeAlarm.Name = ini.GetValue("AlarmNames", "upgrade", "Upgrade Available");
+			ThirdPartyAlarm.Name = ini.GetValue("AlarmNames", "httpStopped", "HTTP Upload");
+			MySqlUploadAlarm.Name = ini.GetValue("AlarmNames", "mySqlStopped", "MySQL Upload");
+			IsRainingAlarm.Name = ini.GetValue("AlarmNames", "isRaining", "Is Raining");
+			NewRecordAlarm.Name = ini.GetValue("AlarmNames", "newRecord", "New Record");
+			FtpAlarm.Name = ini.GetValue("AlarmNames", "ftpStopped", "Web Upload");
 
 			if (!File.Exists("strings.ini"))
 			{
@@ -6757,11 +6843,35 @@ namespace CumulusMX
 			ini.SetValue("AlarmEmails", "batteryLow", BatteryLowAlarm.EmailMsg);
 			ini.SetValue("AlarmEmails", "dataSpike", SpikeAlarm.EmailMsg);
 			ini.SetValue("AlarmEmails", "upgrade", UpgradeAlarm.EmailMsg);
-			ini.SetValue("AlarmEmails", "httpStopped", ThirdPartyUploadAlarm.EmailMsg);
+			ini.SetValue("AlarmEmails", "httpStopped", ThirdPartyAlarm.EmailMsg);
 			ini.SetValue("AlarmEmails", "mySqlStopped", MySqlUploadAlarm.EmailMsg);
 			ini.SetValue("AlarmEmails", "isRaining", IsRainingAlarm.EmailMsg);
 			ini.SetValue("AlarmEmails", "newRecord", NewRecordAlarm.EmailMsg);
 			ini.SetValue("AlarmEmails", "ftpStopped", FtpAlarm.EmailMsg);
+
+			// alarm names
+			ini.SetValue("AlarmNames", "windGustAbove", HighGustAlarm.Name);
+			ini.SetValue("AlarmNames", "pressureAbove", HighPressAlarm.Name);
+			ini.SetValue("AlarmNames", "tempAbove", HighTempAlarm.Name);
+			ini.SetValue("AlarmNames", "pressBelow", LowPressAlarm.Name);
+			ini.SetValue("AlarmNames", "tempBelow", LowTempAlarm.Name);
+			ini.SetValue("AlarmNames", "pressDown", PressChangeAlarm.NameDown);
+			ini.SetValue("AlarmNames", "pressUp", PressChangeAlarm.NameUp);
+			ini.SetValue("AlarmNames", "rainAbove", HighRainTodayAlarm.Name);
+			ini.SetValue("AlarmNames", "rainRateAbove", HighRainRateAlarm.Name);
+			ini.SetValue("AlarmNames", "sensorLost", SensorAlarm.Name);
+			ini.SetValue("AlarmNames", "tempDown", TempChangeAlarm.NameDown);
+			ini.SetValue("AlarmNames", "tempUp", TempChangeAlarm.NameUp);
+			ini.SetValue("AlarmNames", "windAbove", HighWindAlarm.Name);
+			ini.SetValue("AlarmNames", "dataStopped", DataStoppedAlarm.Name);
+			ini.SetValue("AlarmNames", "batteryLow", BatteryLowAlarm.Name);
+			ini.SetValue("AlarmNames", "dataSpike", SpikeAlarm.Name);
+			ini.SetValue("AlarmNames", "upgrade", UpgradeAlarm.Name);
+			ini.SetValue("AlarmNames", "httpStopped", ThirdPartyAlarm.Name);
+			ini.SetValue("AlarmNames", "mySqlStopped", MySqlUploadAlarm.Name);
+			ini.SetValue("AlarmNames", "isRaining", IsRainingAlarm.Name);
+			ini.SetValue("AlarmNames", "newRecord", NewRecordAlarm.Name);
+			ini.SetValue("AlarmNames", "ftpStopped", FtpAlarm.Name);
 
 			ini.Flush();
 

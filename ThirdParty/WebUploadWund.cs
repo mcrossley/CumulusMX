@@ -69,22 +69,22 @@ namespace CumulusMX.ThirdParty
 					if (!RapidFireEnabled || ErrorFlagCount >= 12)
 					{
 						cumulus.LogMessage("Wunderground: Response = " + response.StatusCode + ": " + responseBodyAsText);
-						cumulus.ThirdPartyUploadAlarm.LastMessage = "Wunderground: HTTP response - " + response.StatusCode;
-						cumulus.ThirdPartyUploadAlarm.Triggered = true;
+						cumulus.ThirdPartyAlarm.LastMessage = "Wunderground: HTTP response - " + response.StatusCode;
+						cumulus.ThirdPartyAlarm.Triggered = true;
 						ErrorFlagCount = 0;
 					}
 				}
 				else
 				{
-					cumulus.ThirdPartyUploadAlarm.Triggered = false;
+					cumulus.ThirdPartyAlarm.Triggered = false;
 					ErrorFlagCount = 0;
 				}
 			}
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "Wunderground: ERROR");
-				cumulus.ThirdPartyUploadAlarm.LastMessage = "Wunderground: " + ex.Message;
-				cumulus.ThirdPartyUploadAlarm.Triggered = true;
+				cumulus.ThirdPartyAlarm.LastMessage = "Wunderground: " + ex.Message;
+				cumulus.ThirdPartyAlarm.Triggered = true;
 			}
 			finally
 			{

@@ -1,13 +1,16 @@
 ﻿using System;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 
 namespace CumulusMX
 {
 	public class Alarm
 	{
-		public Cumulus cumulus { get; set; }
+		public readonly Cumulus cumulus;
 
-		public string Name { get; }
+		public string Id { get; }
+		public string Name { get; set; }
+
 		public virtual bool Enabled
 		{
 			get => enabled;
@@ -57,10 +60,12 @@ namespace CumulusMX
 		int triggerCount = 0;
 		DateTime triggeredTime;
 
-		public Alarm(string AlarmName, AlarmTypes AlarmType)
+		public Alarm(string id, AlarmTypes AlarmType, Cumulus cumul, string units = null)
 		{
-			Name = AlarmName;
+			Id = id;
+			cumulus = cumul;
 			type = AlarmType;
+			Units = units;
 		}
 
 		public void CheckAlarm(double value)
@@ -84,7 +89,7 @@ namespace CumulusMX
 					// If we were not set before, so we need to send an email?
 					if (!triggered)
 					{
-						cumulus.LogMessage($"Alarm ({Name}): Triggered, value = {Value}" + (string.IsNullOrEmpty(LastMessage) ? "" : $", Message = {LastMessage}"));
+						cumulus.LogMessage($"Alarm ({Name}): Triggered, value = {value}, threshold = {Value}" + (string.IsNullOrEmpty(LastMessage) ? "" : $", Message = {LastMessage}"));
 
 						if (Email && cumulus.SmtpOptions.Enabled && cumulus.emailer != null)
 						{
@@ -178,8 +183,16 @@ namespace CumulusMX
 
 	public class AlarmChange : Alarm
 	{
-		public AlarmChange(string AlarmName) : base(AlarmName, AlarmTypes.Change)
+		public string IdUp { get; }
+		public string IdDown { get; }
+
+		public string NameUp { get; set; }
+		public string NameDown { get; set; }
+
+		public AlarmChange(string idUp, string idDwn, Cumulus cumul, string units = null) : base("", AlarmTypes.Change, cumul, units)
 		{
+			IdUp = idUp;
+			IdDown = idDwn;
 		}
 
 		public override bool Enabled
@@ -262,7 +275,7 @@ namespace CumulusMX
 				// If we were not set before, so we need to send an email etc?
 				if (!upTriggered)
 				{
-					cumulus.LogMessage($"Alarm ({Name}): Up triggered, value = {Value}" + (string.IsNullOrEmpty(LastMessage) ? "" : $", Message = {LastMessage}"));
+					cumulus.LogMessage($"Alarm ({Name}): Down triggered, value = {value}, threshold = {Value}" + (string.IsNullOrEmpty(LastMessage) ? "" : $", Message = {LastMessage}"));
 
 					if (Email && cumulus.SmtpOptions.Enabled && cumulus.emailer != null)
 					{
@@ -441,5 +454,19 @@ namespace CumulusMX
 		Below,
 		Change,
 		Trigger
+	}
+
+	[DataContract]
+	public class DashboardAlarms
+	{
+		public DashboardAlarms(string Id, bool Triggered)
+		{
+			id = Id;
+			triggered = Triggered;
+		}
+		[DataMember]
+		public string id { get; set; }
+		[DataMember]
+		public bool triggered { get; set; }
 	}
 }

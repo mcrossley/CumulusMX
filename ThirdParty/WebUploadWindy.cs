@@ -43,19 +43,19 @@ namespace CumulusMX.ThirdParty
 				if (response.StatusCode != HttpStatusCode.OK)
 				{
 					cumulus.LogMessage("Windy: ERROR - Response = " + response.StatusCode + ": " + responseBodyAsText);
-					cumulus.ThirdPartyUploadAlarm.LastMessage = "Windy: HTTP response - " + response.StatusCode;
-					cumulus.ThirdPartyUploadAlarm.Triggered = true;
+					cumulus.ThirdPartyAlarm.LastMessage = "Windy: HTTP response - " + response.StatusCode;
+					cumulus.ThirdPartyAlarm.Triggered = true;
 				}
 				else
 				{
-					cumulus.ThirdPartyUploadAlarm.Triggered = false;
+					cumulus.ThirdPartyAlarm.Triggered = false;
 				}
 			}
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "Windy: ERROR");
-				cumulus.ThirdPartyUploadAlarm.LastMessage = "Windy: " + ex.Message;
-				cumulus.ThirdPartyUploadAlarm.Triggered = true;
+				cumulus.ThirdPartyAlarm.LastMessage = "Windy: " + ex.Message;
+				cumulus.ThirdPartyAlarm.Triggered = true;
 			}
 			finally
 			{
