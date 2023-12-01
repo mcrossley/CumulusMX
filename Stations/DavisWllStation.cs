@@ -71,12 +71,12 @@ namespace CumulusMX
 					return DateTime.MinValue;
 				}
 
-				if (datetimeStr.EndsWith("Z") &&
+				if (datetimeStr.EndsWith('Z') &&
 					DateTime.TryParseExact(datetimeStr, utcTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTime resultUtc))
 				{
 					return resultUtc;
 				}
-				else if (!datetimeStr.EndsWith("Z") &&
+				else if (!datetimeStr.EndsWith('Z') &&
 					DateTime.TryParseExact(datetimeStr, localTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime resultLocal))
 				{
 					return resultLocal;
@@ -598,7 +598,7 @@ namespace CumulusMX
 								int windDir = rec.wind_dir_last ?? 0;
 
 								// No average in the broadcast data, so use last value from current - allow for calibration
-								DoWind(ConvertWindMPHToUser(rec.wind_speed_last), windDir, -1, dateTime);
+								DoWind(ConvertUnits.WindMPHToUser(rec.wind_speed_last), windDir, -1, dateTime);
 							}
 							catch (Exception ex)
 							{
@@ -693,7 +693,7 @@ namespace CumulusMX
 				{
 					// Yuck, we have to find the data type in the string, then we know how to decode it to the correct object type
 					int start = rec.IndexOf("data_structure_type:") + "data_structure_type:".Length;
-					int end = rec.IndexOf(",", start);
+					int end = rec.IndexOf(',', start);
 
 					int type = int.Parse(rec[start..end]);
 					string idx = "";
@@ -737,15 +737,15 @@ namespace CumulusMX
 
 									DoHumidity((int?)data1.hum, dateTime);
 
-									DoTemperature(ConvertTempFToUser(data1.temp), dateTime);
+									DoTemperature(ConvertUnits.TempFToUser(data1.temp), dateTime);
 
-									DoDewpoint(ConvertTempFToUser(data1.dew_point), dateTime);
+									DoDewpoint(ConvertUnits.TempFToUser(data1.dew_point), dateTime);
 
-									newWindChill = ConvertTempFToUser(data1.wind_chill);
+									newWindChill = ConvertUnits.TempFToUser(data1.wind_chill);
 
 									if (data1.thsw_index.HasValue)
 									{
-										THSWIndex = ConvertTempFToUser(data1.thsw_index);
+										THSWIndex = ConvertUnits.TempFToUser(data1.thsw_index);
 									}
 
 									//TODO: Wet Bulb? rec["wet_bulb"] - No, we already have humidity
@@ -774,7 +774,7 @@ namespace CumulusMX
 											{
 												cumulus.LogDebugMessage($"WLL current: using extra temp data from TxId {data1.txid}");
 
-												DoExtraTemp(ConvertTempFToUser(data1.temp.Value), tempTxId);
+												DoExtraTemp(ConvertUnits.TempFToUser(data1.temp.Value), tempTxId);
 											}
 
 											if (cumulus.WllExtraHumTx[tempTxId - 1])
@@ -815,11 +815,11 @@ namespace CumulusMX
 
 									// pesky null values from WLL when it is calm
 									if (cumulus.StationOptions.AvgSpeedMinutes == 1)
-										currentAvgWindSpd = ConvertWindMPHToUser(data1.wind_speed_avg_last_1_min ?? 0);
+										currentAvgWindSpd = ConvertUnits.WindMPHToUser(data1.wind_speed_avg_last_1_min ?? 0);
 									else if (cumulus.StationOptions.AvgSpeedMinutes < 10)
-										currentAvgWindSpd = ConvertWindMPHToUser(data1.wind_speed_avg_last_2_min ?? 0);
+										currentAvgWindSpd = ConvertUnits.WindMPHToUser(data1.wind_speed_avg_last_2_min ?? 0);
 									else
-										currentAvgWindSpd = ConvertWindMPHToUser(data1.wind_speed_avg_last_10_min ?? 0);
+										currentAvgWindSpd = ConvertUnits.WindMPHToUser(data1.wind_speed_avg_last_10_min ?? 0);
 
 									if (broadcastStopped)
 									{
@@ -827,7 +827,7 @@ namespace CumulusMX
 
 										// pesky null values from WLL when it is calm
 										int wdir = data1.wind_dir_last ?? 0;
-										var wind = ConvertWindMPHToUser(data1.wind_speed_last ?? 0);
+										var wind = ConvertUnits.WindMPHToUser(data1.wind_speed_last ?? 0);
 
 										DoWind(wind, wdir, currentAvgWindSpd, dateTime);
 									}
@@ -837,12 +837,12 @@ namespace CumulusMX
 									int gustDir;
 									if (cumulus.StationOptions.PeakGustMinutes <= 10)
 									{
-										gust = ConvertWindMPHToUser(data1.wind_speed_hi_last_2_min ?? 0);
+										gust = ConvertUnits.WindMPHToUser(data1.wind_speed_hi_last_2_min ?? 0);
 										gustDir = data1.wind_dir_at_hi_speed_last_2_min ?? 0;
 									}
 									else
 									{
-										gust = ConvertWindMPHToUser(data1.wind_speed_hi_last_10_min ?? 0);
+										gust = ConvertUnits.WindMPHToUser(data1.wind_speed_hi_last_10_min ?? 0);
 										gustDir = data1.wind_dir_at_hi_speed_last_10_min ?? 0;
 									}
 
@@ -1125,7 +1125,7 @@ namespace CumulusMX
 								idx = "temp_" + cumulus.WllExtraSoilTempIdx1;
 								try
 								{
-									DoSoilTemp(ConvertTempFToUser((double?)data2[idx]), 1);
+									DoSoilTemp(ConvertUnits.TempFToUser((double?)data2[idx]), 1);
 								}
 								catch (Exception ex)
 								{
@@ -1137,7 +1137,7 @@ namespace CumulusMX
 								idx = "temp_" + cumulus.WllExtraSoilTempIdx2;
 								try
 								{
-									DoSoilTemp(ConvertTempFToUser((double?)data2[idx]), 2);
+									DoSoilTemp(ConvertUnits.TempFToUser((double?)data2[idx]), 2);
 								}
 								catch (Exception ex)
 								{
@@ -1149,7 +1149,7 @@ namespace CumulusMX
 								idx = "temp_" + cumulus.WllExtraSoilTempIdx3;
 								try
 								{
-									DoSoilTemp(ConvertTempFToUser((double?)data2[idx]), 3);
+									DoSoilTemp(ConvertUnits.TempFToUser((double?)data2[idx]), 3);
 								}
 								catch (Exception ex)
 								{
@@ -1161,7 +1161,7 @@ namespace CumulusMX
 								idx = "temp_" + cumulus.WllExtraSoilTempIdx4;
 								try
 								{
-									DoSoilTemp(ConvertTempFToUser((double?)data2[idx]), 4);
+									DoSoilTemp(ConvertUnits.TempFToUser((double?)data2[idx]), 4);
 								}
 								catch (Exception ex)
 								{
@@ -1187,12 +1187,12 @@ namespace CumulusMX
 							{
 								var data3 = rec.FromJsv<WllCurrentType3>();
 
-								DoPressure(ConvertPressINHGToUser(data3.bar_sea_level), dateTime);
+								DoPressure(ConvertUnits.PressINHGToUser(data3.bar_sea_level), dateTime);
 								// Altimeter from absolute
-								StationPressure = ConvertPressINHGToUser(data3.bar_absolute);
+								StationPressure = ConvertUnits.PressINHGToUser(data3.bar_absolute);
 								// Or do we use calibration? The VP2 code doesn't?
-								//StationPressure = ConvertPressINHGToUser(rec.Value<double>("bar_absolute")) * cumulus.Calib.Press.Mult + cumulus.Calib.Press.Offset;
-								AltimeterPressure = ConvertPressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure), AltitudeM(cumulus.Altitude)));
+								//StationPressure = ConvertUnits.PressINHGToUser(rec.Value<double>("bar_absolute")) * cumulus.Calib.Press.Mult + cumulus.Calib.Press.Offset;
+								AltimeterPressure = ConvertUnits.PressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure), AltitudeM(cumulus.Altitude)));
 							}
 							catch (Exception ex)
 							{
@@ -1216,7 +1216,7 @@ namespace CumulusMX
 
 							try
 							{
-								DoIndoorTemp(ConvertTempFToUser(data4.temp_in));
+								DoIndoorTemp(ConvertUnits.TempFToUser(data4.temp_in));
 							}
 							catch (Exception ex)
 							{
@@ -1313,10 +1313,10 @@ namespace CumulusMX
 			// 0: Reserved, 1: 0.01", 2: 0.2mm, 3: 0.1mm, 4: 0.001"
 			return size switch
 			{
-				1 => ConvertRainINToUser(clicks * 0.01),
-				2 => ConvertRainMMToUser(clicks * 0.2),
-				3 => ConvertRainMMToUser(clicks * 0.1),
-				4 => ConvertRainINToUser(clicks * 0.001),
+				1 => ConvertUnits.RainINToUser(clicks * 0.01).Value,
+				2 => ConvertUnits.RainMMToUser(clicks * 0.2).Value,
+				3 => ConvertUnits.RainMMToUser(clicks * 0.1).Value,
+				4 => ConvertUnits.RainINToUser(clicks * 0.001).Value,
 				_ => cumulus.DavisOptions.RainGaugeType switch
 				{
 					// Hmm, no valid tip size from WLL...
@@ -1326,8 +1326,8 @@ namespace CumulusMX
 					-1 when cumulus.Units.Rain == 0 => clicks * 0.2,
 					-1 => clicks * 0.01,
 					// Rain gauge is metric, convert to user unit
-					0 => ConvertRainMMToUser(clicks * 0.2),
-					_ => ConvertRainINToUser(clicks * 0.01),
+					0 => ConvertUnits.RainMMToUser(clicks * 0.2).Value,
+					_ => ConvertUnits.RainINToUser(clicks * 0.01).Value,
 				},
 			};
 		}
@@ -1896,7 +1896,7 @@ namespace CumulusMX
 									if (data11.temp_hi_at != 0 && data11.temp_hi != null)
 									{
 										ts = Utils.FromUnixTime(data11.temp_hi_at);
-										DoTemperature(ConvertTempFToUser(data11.temp_hi), ts);
+										DoTemperature(ConvertUnits.TempFToUser(data11.temp_hi), ts);
 									}
 									else
 									{
@@ -1907,7 +1907,7 @@ namespace CumulusMX
 									if (data11.temp_lo_at != 0 && data11.temp_lo != null)
 									{
 										ts = Utils.FromUnixTime(data11.temp_lo_at);
-										DoTemperature(ConvertTempFToUser(data11.temp_lo), ts);
+										DoTemperature(ConvertUnits.TempFToUser(data11.temp_lo), ts);
 									}
 									else
 									{
@@ -1915,7 +1915,7 @@ namespace CumulusMX
 									}
 
 									// do last temp
-									DoTemperature(ConvertTempFToUser(data11.temp_last), recordTs);
+									DoTemperature(ConvertUnits.TempFToUser(data11.temp_last), recordTs);
 									if (Temperature == null)
 									{
 										cumulus.LogMessage($"WL.com historic: Warning, no valid Temperature data on TxId {data11.tx_id}");
@@ -1925,7 +1925,7 @@ namespace CumulusMX
 									if (data11.temp_avg.HasValue)
 									{
 										tempsamplestoday += data11.arch_int / 60;
-										TempTotalToday += ConvertTempFToUser(data11.temp_avg).Value * data11.arch_int / 60;
+										TempTotalToday += ConvertUnits.TempFToUser(data11.temp_avg).Value * data11.arch_int / 60;
 									}
 									// update chill hours
 									if ((Temperature ?? Cumulus.DefaultLoVal) < cumulus.ChillHourThreshold)
@@ -1950,7 +1950,7 @@ namespace CumulusMX
 								if (data11.dew_point_hi_at != 0 && data11.dew_point_hi != null)
 								{
 									ts = Utils.FromUnixTime(data11.dew_point_hi_at);
-									DoDewpoint(ConvertTempFToUser((double)data11.dew_point_hi), ts);
+									DoDewpoint(ConvertUnits.TempFToUser((double)data11.dew_point_hi), ts);
 								}
 								else
 								{
@@ -1961,7 +1961,7 @@ namespace CumulusMX
 								if (data11.dew_point_lo_at != 0 && data11.dew_point_lo != null)
 								{
 									ts = Utils.FromUnixTime(data11.dew_point_lo_at);
-									DoDewpoint(ConvertTempFToUser((double)data11.dew_point_lo), ts);
+									DoDewpoint(ConvertUnits.TempFToUser((double)data11.dew_point_lo), ts);
 								}
 								else
 								{
@@ -1971,7 +1971,7 @@ namespace CumulusMX
 								// do last DP
 								if (data11.dew_point_last != null)
 								{
-									DoDewpoint(ConvertTempFToUser((double)data11.dew_point_last), recordTs);
+									DoDewpoint(ConvertUnits.TempFToUser((double)data11.dew_point_last), recordTs);
 								}
 								else
 								{
@@ -1992,7 +1992,7 @@ namespace CumulusMX
 									if (data11.wind_chill_lo_at != 0 && data11.wind_chill_lo != null)
 									{
 										ts = Utils.FromUnixTime(data11.wind_chill_lo_at);
-										DoWindChill(ConvertTempFToUser(data11.wind_chill_lo), ts);
+										DoWindChill(ConvertUnits.TempFToUser(data11.wind_chill_lo), ts);
 									}
 									else
 									{
@@ -2002,7 +2002,7 @@ namespace CumulusMX
 									// do last WC
 									if (data11.wind_chill_last != null)
 									{
-										DoWindChill(ConvertTempFToUser(data11.wind_chill_last), recordTs);
+										DoWindChill(ConvertUnits.TempFToUser(data11.wind_chill_last), recordTs);
 									}
 									else
 									{
@@ -2031,7 +2031,7 @@ namespace CumulusMX
 									{
 										cumulus.LogDebugMessage($"WL.com historic: using extra temp data from TxId {data11.tx_id}");
 
-										DoExtraTemp(ConvertTempFToUser((double)data11.temp_last), tempTxId);
+										DoExtraTemp(ConvertUnits.TempFToUser((double)data11.temp_last), tempTxId);
 									}
 								}
 								catch (Exception ex)
@@ -2073,7 +2073,7 @@ namespace CumulusMX
 								if (data11.wind_speed_hi != null && data11.wind_speed_hi_dir != null && data11.wind_speed_avg != null)
 								{
 									cumulus.LogDebugMessage($"WL.com historic: using wind data from TxId {data11.tx_id}");
-									DoWind(ConvertWindMPHToUser(data11.wind_speed_hi), data11.wind_speed_hi_dir, ConvertWindMPHToUser(data11.wind_speed_avg), recordTs);
+									DoWind(ConvertUnits.WindMPHToUser(data11.wind_speed_hi), data11.wind_speed_hi_dir, ConvertUnits.WindMPHToUser(data11.wind_speed_avg), recordTs);
 								}
 								else
 								{
@@ -2082,7 +2082,7 @@ namespace CumulusMX
 
 								if (data11.wind_speed_avg != null)
 								{
-									WindAverage = cumulus.Calib.WindSpeed.Calibrate(ConvertWindMPHToUser(data11.wind_speed_avg));
+									WindAverage = cumulus.Calib.WindSpeed.Calibrate(ConvertUnits.WindMPHToUser(data11.wind_speed_avg));
 
 									// add in 'archivePeriod' minutes worth of wind speed to windrun
 									int interval = data11.arch_int / 60;
@@ -2220,8 +2220,8 @@ namespace CumulusMX
 									// The number is the total for the one hour period.
 									// This is unlike the existing VP2 when the ET is an annual running total
 									// So we try and mimic the VP behaviour
-									var newET = AnnualETTotal + ConvertRainINToUser(data11.et.Value);
-									cumulus.LogDebugMessage($"WLL DecodeHistoric: Adding {ConvertRainINToUser(data11.et.Value):F3} to ET");
+									var newET = AnnualETTotal + ConvertUnits.RainINToUser(data11.et.Value).Value;
+									cumulus.LogDebugMessage($"WLL DecodeHistoric: Adding {ConvertUnits.RainINToUser(data11.et.Value):F3} to ET");
 									DoET(newET, recordTs);
 								}
 							}
@@ -2407,7 +2407,7 @@ namespace CumulusMX
 										}
 										else
 										{
-											DoSoilTemp(ConvertTempFToUser((double)data13[idx]), 1);
+											DoSoilTemp(ConvertUnits.TempFToUser((double)data13[idx]), 1);
 										}
 									}
 									if (cumulus.WllExtraSoilTempTx2 == data13.tx_id)
@@ -2420,7 +2420,7 @@ namespace CumulusMX
 										}
 										else
 										{
-											DoSoilTemp(ConvertTempFToUser((double)data13[idx]), 2);
+											DoSoilTemp(ConvertUnits.TempFToUser((double)data13[idx]), 2);
 										}
 									}
 									if (cumulus.WllExtraSoilTempTx3 == data13.tx_id)
@@ -2433,7 +2433,7 @@ namespace CumulusMX
 										}
 										else
 										{
-											DoSoilTemp(ConvertTempFToUser((double)data13[idx]), 3);
+											DoSoilTemp(ConvertUnits.TempFToUser((double)data13[idx]), 3);
 										}
 									}
 									if (cumulus.WllExtraSoilTempTx4 == data13.tx_id)
@@ -2446,7 +2446,7 @@ namespace CumulusMX
 										}
 										else
 										{
-											DoSoilTemp(ConvertTempFToUser((double)data13[idx]), 4);
+											DoSoilTemp(ConvertUnits.TempFToUser((double)data13[idx]), 4);
 										}
 									}
 								}
@@ -2478,7 +2478,7 @@ namespace CumulusMX
 									if (data13baro.bar_hi_at != 0 && data13baro.bar_hi != null)
 									{
 										ts = Utils.FromUnixTime(data13baro.bar_hi_at);
-										DoPressure(ConvertPressINHGToUser((double)data13baro.bar_hi), ts);
+										DoPressure(ConvertUnits.PressINHGToUser((double)data13baro.bar_hi), ts);
 									}
 									else
 									{
@@ -2488,7 +2488,7 @@ namespace CumulusMX
 									if (data13baro.bar_lo_at != 0 && data13baro.bar_lo != null)
 									{
 										ts = Utils.FromUnixTime(data13baro.bar_lo_at);
-										DoPressure(ConvertPressINHGToUser((double)data13baro.bar_lo), ts);
+										DoPressure(ConvertUnits.PressINHGToUser((double)data13baro.bar_lo), ts);
 									}
 									else
 									{
@@ -2499,7 +2499,7 @@ namespace CumulusMX
 									{
 										// leave it at current value
 										ts = Utils.FromUnixTime(data13baro.ts);
-										DoPressure(ConvertPressINHGToUser((double)data13baro.bar_sea_level), ts);
+										DoPressure(ConvertUnits.PressINHGToUser((double)data13baro.bar_sea_level), ts);
 									}
 									else
 									{
@@ -2510,10 +2510,10 @@ namespace CumulusMX
 									// Altimeter from absolute
 									if (data13baro.bar_absolute != null)
 									{
-										StationPressure = ConvertPressINHGToUser((double)data13baro.bar_absolute);
+										StationPressure = ConvertUnits.PressINHGToUser((double)data13baro.bar_absolute);
 										// Or do we use calibration? The VP2 code doesn't?
-										//StationPressure = ConvertPressINHGToUser(data.Value<double>("bar_absolute")) * cumulus.Calib.Press.Mult + cumulus.Calib.Press.Offset;
-										AltimeterPressure = ConvertPressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure).Value, AltitudeM(cumulus.Altitude)));
+										//StationPressure = ConvertUnits.PressINHGToUser(data.Value<double>("bar_absolute")) * cumulus.Calib.Press.Mult + cumulus.Calib.Press.Offset;
+										AltimeterPressure = ConvertUnits.PressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure).Value, AltitudeM(cumulus.Altitude)));
 									}
 									else
 									{
@@ -2550,7 +2550,7 @@ namespace CumulusMX
 								{
 									if (data13temp.temp_in_last != null)
 									{
-										DoIndoorTemp(ConvertTempFToUser((double)data13temp.temp_in_last));
+										DoIndoorTemp(ConvertUnits.TempFToUser((double)data13temp.temp_in_last));
 									}
 									else
 									{
@@ -2784,8 +2784,8 @@ namespace CumulusMX
 						// The number is the total for the one hour period.
 						// This is unlike the existing VP2 when the ET is an annual running total
 						// So we try and mimic the VP behaviour
-						var newET = AnnualETTotal + ConvertRainINToUser(data.et.Value);
-						cumulus.LogDebugMessage($"WLL Health: Adding {ConvertRainINToUser(data.et.Value):F3} to ET");
+						var newET = AnnualETTotal + ConvertUnits.RainINToUser(data.et.Value).Value;
+						cumulus.LogDebugMessage($"WLL Health: Adding {ConvertUnits.RainINToUser(data.et.Value):F3} to ET");
 						DoET(newET, DateTime.Now);
 					}
 				}
@@ -2983,10 +2983,8 @@ namespace CumulusMX
 
 		// Finds all stations associated with this API
 		// Return true if only 1 result is found, else return false
-		private void GetAvailableStationIds(bool logToConsole = false)
+		private static void GetAvailableStationIds(bool logToConsole = false)
 		{
-			var unixDateTime = Utils.ToUnixTime(DateTime.Now);
-
 			if (cumulus.WllApiKey == string.Empty || cumulus.WllApiSecret == string.Empty)
 			{
 				cumulus.LogMessage("WLLStations: Missing WeatherLink API data in the cumulus.ini file, aborting!");
@@ -3068,8 +3066,6 @@ namespace CumulusMX
 
 		private void GetAvailableSensors()
 		{
-			var unixDateTime = Utils.ToUnixTime(DateTime.Now);
-
 			if (cumulus.WllApiKey == string.Empty || cumulus.WllApiSecret == string.Empty)
 			{
 				cumulus.LogWarningMessage("GetAvailableSensors: WeatherLink API data is missing in the configuration, aborting!");
@@ -3086,13 +3082,13 @@ namespace CumulusMX
 
 			cumulus.LogDebugMessage($"GetAvailableSensors: URL = {stationsUrl.Replace(cumulus.WllApiKey, "API_KEY")}");
 
-			WlSensorList sensorsObj = new WlSensorList();
+			WlSensorList sensorsObj;
 
 			try
 			{
 				string responseBody;
 				int responseCode;
-var request = new HttpRequestMessage(HttpMethod.Get, stationsUrl);
+				var request = new HttpRequestMessage(HttpMethod.Get, stationsUrl);
 				request.Headers.Add("X-Api-Secret", cumulus.WllApiSecret);
 
 				// We want to do this synchronously
@@ -3196,7 +3192,7 @@ var request = new HttpRequestMessage(HttpMethod.Get, stationsUrl);
 			return 0;
 		}
 
-		private async Task GetSystemStatus()
+		private static async Task GetSystemStatus()
 		{
 			WlComSystemStatus status;
 			try

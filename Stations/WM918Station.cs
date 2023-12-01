@@ -295,8 +295,8 @@ namespace CumulusMX.Stations
 			// Wind Chill W1W2 (WS bit 1 gives sign)
 			// Checksum C1C2
 
-			double current = ConvertWindMSToUser((double) (BCDchartoint(buff[1]) + ((BCDchartoint(buff[2]) % 10) * 100)) / 10);
-			double average = ConvertWindMSToUser((double) (BCDchartoint(buff[4]) + ((BCDchartoint(buff[5]) % 10) * 100)) / 10);
+			double current = ConvertUnits.WindMSToUser((double) (BCDchartoint(buff[1]) + ((BCDchartoint(buff[2]) % 10) * 100)) / 10).Value;
+			double average = ConvertUnits.WindMSToUser((double) (BCDchartoint(buff[4]) + ((BCDchartoint(buff[5]) % 10) * 100)) / 10).Value;
 			int bearing = BCDchartoint(buff[2]) / 10 + (BCDchartoint(buff[3]) * 10);
 
 			DoWind(current, bearing, average, DateTime.Now);
@@ -308,7 +308,7 @@ namespace CumulusMX.Stations
 
 			if (wc > -70)
 			{
-				DoWindChill(ConvertTempCToUser(wc), DateTime.Now);
+				DoWindChill(ConvertUnits.TempCToUser(wc), DateTime.Now);
 			}
 		}
 
@@ -324,12 +324,12 @@ namespace CumulusMX.Stations
 			// Sea-Level pressure S1S2S3S4.SD
 			// Checksum C1C2
 
-			DoDewpoint(ConvertTempCToUser(BCDchartoint(buff[18])), DateTime.Now);
+			DoDewpoint(ConvertUnits.TempCToUser(BCDchartoint(buff[18])), DateTime.Now);
 
 			double locPress = BCDchartoint(buff[1]) + (BCDchartoint(buff[2])*100);
-			StationPressure = ConvertPressMBToUser(locPress);
+			StationPressure = ConvertUnits.PressMBToUser(locPress);
 
-			double pressure = ConvertPressMBToUser((BCDchartoint(buff[3]) / 10) + (BCDchartoint(buff[4]) * 10) + ((BCDchartoint(buff[5]) % 10) * 1000)).Value;
+			double pressure = ConvertUnits.PressMBToUser((BCDchartoint(buff[3]) / 10) + (BCDchartoint(buff[4]) * 10) + ((BCDchartoint(buff[5]) % 10) * 1000)).Value;
 
 			DoPressure(pressure, DateTime.Now);
 
@@ -366,7 +366,7 @@ namespace CumulusMX.Stations
 
 			if (temp10 > -500)
 			{
-				DoTemperature(ConvertTempCToUser(temp10 / 10), DateTime.Now);
+				DoTemperature(ConvertUnits.TempCToUser(temp10 / 10), DateTime.Now);
 			}
 			else
 			{
@@ -378,7 +378,7 @@ namespace CumulusMX.Stations
 
 			if ((buff[2] & 0x08) == 8)  temp10 = -temp10;
 
-			DoIndoorTemp(ConvertTempCToUser(temp10 / 10));
+			DoIndoorTemp(ConvertUnits.TempCToUser(temp10 / 10));
 
 			DoDewpoint(null, DateTime.Now);
 			DoApparentTemp(DateTime.Now);
@@ -400,8 +400,8 @@ namespace CumulusMX.Stations
 			//                           Month M1M2)
 			// Checksum C1C2
 
-			double raincounter = ConvertRainMMToUser(BCDchartoint(buff[5]) + (BCDchartoint(buff[6]) * 100));
-			double rainrate = ConvertRainMMToUser(BCDchartoint(buff[1]) + ((BCDchartoint(buff[2]) % 10) * 100));
+			double raincounter = ConvertUnits.RainMMToUser(BCDchartoint(buff[5]) + (BCDchartoint(buff[6]) * 100)).Value;
+			double rainrate = ConvertUnits.RainMMToUser(BCDchartoint(buff[1]) + ((BCDchartoint(buff[2]) % 10) * 100)).Value;
 
 			DoRain(raincounter,rainrate, DateTime.Now);
 		}

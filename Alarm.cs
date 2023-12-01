@@ -4,11 +4,11 @@ using System.Threading.Tasks;
 
 namespace CumulusMX
 {
-	public class Alarm
+	public class Alarm(string id, AlarmTypes AlarmType, Cumulus cumul, string units = null)
 	{
-		public readonly Cumulus cumulus;
+		public readonly Cumulus cumulus = cumul;
 
-		public string Id { get; }
+		public string Id { get; } = id;
 		public string Name { get; set; }
 
 		public virtual bool Enabled
@@ -50,29 +50,20 @@ namespace CumulusMX
 		public bool Latch { get; set; }
 		public double LatchHours { get; set; }
 		public string EmailMsg { get; set; }
-		public string Units { get; set; }
+		public string Units { get; set; } = units;
 		public string LastMessage { get; set; }
 		public int TriggerThreshold { get; set; }
 
-		private readonly AlarmTypes type;
 		private protected bool enabled;
 		bool triggered;
 		int triggerCount = 0;
 		DateTime triggeredTime;
 
-		public Alarm(string id, AlarmTypes AlarmType, Cumulus cumul, string units = null)
-		{
-			Id = id;
-			cumulus = cumul;
-			type = AlarmType;
-			Units = units;
-		}
-
 		public void CheckAlarm(double value)
 		{
 			if (enabled && cumulus.NormalRunning)
 			{
-				doTriggered((type == AlarmTypes.Above && value > Value) || (type == AlarmTypes.Below && value < Value));
+				doTriggered((AlarmType == AlarmTypes.Above && value > Value) || (AlarmType == AlarmTypes.Below && value < Value));
 			}
 		}
 
@@ -181,19 +172,13 @@ namespace CumulusMX
 	}
 
 
-	public class AlarmChange : Alarm
+	public class AlarmChange(string idUp, string idDwn, Cumulus cumul, string units = null) : Alarm("", AlarmTypes.Change, cumul, units)
 	{
-		public string IdUp { get; }
-		public string IdDown { get; }
+		public string IdUp { get; } = idUp;
+		public string IdDown { get; } = idDwn;
 
 		public string NameUp { get; set; }
 		public string NameDown { get; set; }
-
-		public AlarmChange(string idUp, string idDwn, Cumulus cumul, string units = null) : base("", AlarmTypes.Change, cumul, units)
-		{
-			IdUp = idUp;
-			IdDown = idDwn;
-		}
 
 		public override bool Enabled
 		{
@@ -457,16 +442,11 @@ namespace CumulusMX
 	}
 
 	[DataContract]
-	public class DashboardAlarms
+	public class DashboardAlarms(string Id, bool Triggered)
 	{
-		public DashboardAlarms(string Id, bool Triggered)
-		{
-			id = Id;
-			triggered = Triggered;
-		}
 		[DataMember]
-		public string id { get; set; }
+		public string id { get; set; } = Id;
 		[DataMember]
-		public bool triggered { get; set; }
+		public bool triggered { get; set; } = Triggered;
 	}
 }

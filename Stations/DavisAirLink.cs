@@ -422,11 +422,11 @@ namespace CumulusMX
 
 							if (indoor)
 							{
-								cumulus.airLinkDataIn.temperature = WeatherStation.ConvertTempFToUser(rec.temp).Value;
+								cumulus.airLinkDataIn.temperature = ConvertUnits.TempFToUser(rec.temp).Value;
 							}
 							else
 							{
-								cumulus.airLinkDataOut.temperature = WeatherStation.ConvertTempFToUser(rec.temp).Value;
+								cumulus.airLinkDataOut.temperature = ConvertUnits.TempFToUser(rec.temp).Value;
 							}
 						}
 						catch (Exception ex)
@@ -895,11 +895,11 @@ namespace CumulusMX
 							{
 								if (indoor)
 								{
-									cumulus.airLinkDataIn.temperature = WeatherStation.ConvertTempFToUser(data17.temp_avg).Value;
+									cumulus.airLinkDataIn.temperature = ConvertUnits.TempFToUser(data17.temp_avg).Value;
 								}
 								else
 								{
-									cumulus.airLinkDataOut.temperature = WeatherStation.ConvertTempFToUser(data17.temp_avg).Value;
+									cumulus.airLinkDataOut.temperature = ConvertUnits.TempFToUser(data17.temp_avg).Value;
 								}
 							}
 						}

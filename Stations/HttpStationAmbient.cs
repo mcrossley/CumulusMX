@@ -154,9 +154,9 @@ namespace CumulusMX.Stations
 						}
 						else
 						{
-							var gustVal = ConvertWindMPHToUser(Convert.ToDouble(gust, invNum));
+							var gustVal = ConvertUnits.WindMPHToUser(Convert.ToDouble(gust, invNum));
 							var dirVal = Convert.ToInt32(dir, invNum);
-							var avgVal = ConvertWindMPHToUser(Convert.ToDouble(avg, invNum));
+							var avgVal = ConvertUnits.WindMPHToUser(Convert.ToDouble(avg, invNum));
 							DoWind(gustVal, dirVal, avgVal, recDate);
 						}
 					}
@@ -223,7 +223,7 @@ namespace CumulusMX.Stations
 						}
 						else
 						{
-							var pressVal = ConvertPressINHGToUser(Convert.ToDouble(press, invNum));
+							var pressVal = ConvertUnits.PressINHGToUser(Convert.ToDouble(press, invNum));
 							DoPressure(pressVal, recDate);
 							UpdatePressureTrendString();
 						}
@@ -234,7 +234,7 @@ namespace CumulusMX.Stations
 						}
 						else
 						{
-							StationPressure = ConvertPressINHGToUser(Convert.ToDouble(stnPress, CultureInfo.InvariantCulture));
+							StationPressure = ConvertUnits.PressINHGToUser(Convert.ToDouble(stnPress, CultureInfo.InvariantCulture));
 						}
 					}
 					catch (Exception ex)
@@ -258,7 +258,7 @@ namespace CumulusMX.Stations
 						}
 						else
 						{
-							var tempVal = ConvertTempFToUser(Convert.ToDouble(temp, invNum));
+							var tempVal = ConvertUnits.TempFToUser(Convert.ToDouble(temp, invNum));
 							DoIndoorTemp(tempVal);
 						}
 					}
@@ -284,7 +284,7 @@ namespace CumulusMX.Stations
 						}
 						else
 						{
-							var tempVal = ConvertTempFToUser(Convert.ToDouble(temp, invNum));
+							var tempVal = ConvertUnits.TempFToUser(Convert.ToDouble(temp, invNum));
 							DoTemperature(tempVal, recDate);
 						}
 					}
@@ -317,8 +317,8 @@ namespace CumulusMX.Stations
 						}
 						else
 						{
-							var rainVal = ConvertRainINToUser(Convert.ToDouble(rain, invNum));
-							//var rateVal = ConvertRainINToUser(Convert.ToDouble(rRate, invNum));
+							var rainVal = ConvertUnits.RainINToUser(Convert.ToDouble(rain, invNum));
+							//var rateVal = ConvertUnits.RainINToUser(Convert.ToDouble(rRate, invNum));
 							DoRain(rainVal, 0, recDate);
 						}
 					}
@@ -346,7 +346,7 @@ namespace CumulusMX.Stations
 						}
 						else
 						{
-							var val = dewpnt == null ? null : ConvertTempFToUser(Convert.ToDouble(dewpnt, invNum));
+							var val = dewpnt == null ? null : ConvertUnits.TempFToUser(Convert.ToDouble(dewpnt, invNum));
 							DoDewpoint(val, recDate);
 						}
 					}
@@ -376,7 +376,7 @@ namespace CumulusMX.Stations
 							}
 							else
 							{
-								var val = chill == null ? null : ConvertTempFToUser(Convert.ToDouble(chill, invNum));
+								var val = chill == null ? null : ConvertUnits.TempFToUser(Convert.ToDouble(chill, invNum));
 								DoWindChill(val, recDate);
 							}
 						}
@@ -644,7 +644,7 @@ namespace CumulusMX.Stations
 			{
 				if (data["temp" + i + "f"] != null)
 				{
-					station.DoExtraTemp(ConvertTempFToUser(Convert.ToDouble(data["temp" + i + "f"], invNum)), i);
+					station.DoExtraTemp(ConvertUnits.TempFToUser(Convert.ToDouble(data["temp" + i + "f"], invNum)), i);
 				}
 				else
 				{
@@ -698,7 +698,7 @@ namespace CumulusMX.Stations
 			{
 				if (data["soiltemp" + i] != null)
 				{
-					station.DoSoilTemp(ConvertTempFToUser(Convert.ToDouble(data["soiltemp" + i], invNum)), i - 1);
+					station.DoSoilTemp(ConvertUnits.TempFToUser(Convert.ToDouble(data["soiltemp" + i], invNum)), i - 1);
 				}
 				else
 				{
@@ -804,7 +804,7 @@ namespace CumulusMX.Stations
 				var valDist = Convert.ToDouble(dist, invNum);
 				if (valDist != 255)
 				{
-					LightningDistance = ConvertKmtoUserUnits(valDist);
+					LightningDistance = ConvertUnits.KmtoUserUnits(valDist).Value;
 				}
 
 				var valTime = Convert.ToDouble(time, invNum);
@@ -882,8 +882,8 @@ namespace CumulusMX.Stations
 			{
 				if (station.ExtraTemp[i].HasValue && station.ExtraHum[i].HasValue)
 				{
-					var dp = MeteoLib.DewPoint(ConvertUserTempToC(station.ExtraTemp[i].Value), station.ExtraHum[i].Value);
-					station.ExtraDewPoint[i] = ConvertTempCToUser(dp);
+					var dp = MeteoLib.DewPoint(ConvertUnits.UserTempToC(station.ExtraTemp[i].Value), station.ExtraHum[i].Value);
+					station.ExtraDewPoint[i] = ConvertUnits.TempCToUser(dp);
 				}
 				else
 					station.ExtraDewPoint[i] = null;

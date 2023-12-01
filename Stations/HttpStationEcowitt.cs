@@ -358,9 +358,9 @@ namespace CumulusMX.Stations
 						{
 							cumulus.LogDebugMessage($"ProcessData: Error, missing wind data");
 						}
-						var gustVal = gust == null ? null : ConvertWindMPHToUser(Convert.ToDouble(gust, invNum));
+						var gustVal = gust == null ? null : ConvertUnits.WindMPHToUser(Convert.ToDouble(gust, invNum));
 						int? dirVal = dir == null ? null : Convert.ToInt32(dir, invNum);
-						var spdVal = spd == null ? null : ConvertWindMPHToUser(Convert.ToDouble(spd, invNum));
+						var spdVal = spd == null ? null : ConvertUnits.WindMPHToUser(Convert.ToDouble(spd, invNum));
 
 						DoWind(gustVal, dirVal, spdVal, recDate);
 					}
@@ -429,7 +429,7 @@ namespace CumulusMX.Stations
 						}
 						else
 						{
-							var pressVal = ConvertPressINHGToUser(Convert.ToDouble(press, invNum));
+							var pressVal = ConvertUnits.PressINHGToUser(Convert.ToDouble(press, invNum));
 							DoPressure(pressVal, recDate);
 							UpdatePressureTrendString();
 						}
@@ -440,7 +440,7 @@ namespace CumulusMX.Stations
 						}
 						else
 						{
-							StationPressure = ConvertPressINHGToUser(Convert.ToDouble(stnPress, invNum));
+							StationPressure = ConvertUnits.PressINHGToUser(Convert.ToDouble(stnPress, invNum));
 						}
 					}
 					catch (Exception ex)
@@ -465,7 +465,7 @@ namespace CumulusMX.Stations
 						}
 						else
 						{
-							var tempVal = ConvertTempFToUser(Convert.ToDouble(temp, invNum));
+							var tempVal = ConvertUnits.TempFToUser(Convert.ToDouble(temp, invNum));
 							DoIndoorTemp(tempVal);
 						}
 					}
@@ -490,7 +490,7 @@ namespace CumulusMX.Stations
 							}
 							else
 							{
-								var tempVal = ConvertTempFToUser(Convert.ToDouble(thisTemp, invNum));
+								var tempVal = ConvertUnits.TempFToUser(Convert.ToDouble(thisTemp, invNum));
 								DoTemperature(tempVal, recDate);
 							}
 						}
@@ -560,13 +560,13 @@ namespace CumulusMX.Stations
 						if (rain == null)
 						{
 							cumulus.LogDebugMessage($"ProcessData: Error, missing rainfall");
-							var rateVal = ConvertRainINToUser(Convert.ToDouble(rRate, invNum));
+							var rateVal = ConvertUnits.RainINToUser(Convert.ToDouble(rRate, invNum));
 							DoRain(null, rateVal, recDate);
 						}
 						else
 						{
-							var rainVal = ConvertRainINToUser(Convert.ToDouble(rain, invNum));
-							var rateVal = ConvertRainINToUser(Convert.ToDouble(rRate, invNum));
+							var rainVal = ConvertUnits.RainINToUser(Convert.ToDouble(rain, invNum));
+							var rateVal = ConvertUnits.RainINToUser(Convert.ToDouble(rRate, invNum));
 							DoRain(rainVal, rateVal, recDate);
 						}
 					}
@@ -845,7 +845,7 @@ namespace CumulusMX.Stations
 							}
 
 							var dewpnt = data["dewptf"];
-							var val = dewpnt == null ? null : ConvertTempFToUser(Convert.ToDouble(dewpnt, invNum));
+							var val = dewpnt == null ? null : ConvertUnits.TempFToUser(Convert.ToDouble(dewpnt, invNum));
 							DoDewpoint(val, recDate);
 						}
 					}
@@ -868,7 +868,7 @@ namespace CumulusMX.Stations
 						else
 						{
 							var chill = data["windchillf"];
-							var val = chill == null ? null : ConvertTempFToUser(Convert.ToDouble(chill, invNum));
+							var val = chill == null ? null : ConvertUnits.TempFToUser(Convert.ToDouble(chill, invNum));
 							DoWindChill(val, recDate);
 						}
 					}
@@ -930,9 +930,9 @@ namespace CumulusMX.Stations
 			{
 				if (i == cumulus.Gw1000PrimaryTHSensor)
 				{
-					station.DoTemperature(ConvertTempFToUser(Utils.TryParseNullDouble(data["temp" + i + "f"])), ts);
+					station.DoTemperature(ConvertUnits.TempFToUser(Utils.TryParseNullDouble(data["temp" + i + "f"])), ts);
 				}
-				station.DoExtraTemp(ConvertTempFToUser(Utils.TryParseNullDouble(data["temp" + i + "f"])), i);
+				station.DoExtraTemp(ConvertUnits.TempFToUser(Utils.TryParseNullDouble(data["temp" + i + "f"])), i);
 			}
 		}
 
@@ -983,7 +983,7 @@ namespace CumulusMX.Stations
 		{
 			if (data["soiltempf"] != null)
 			{
-				station.DoSoilTemp(ConvertTempFToUser(Convert.ToDouble(data["soiltempf"], invNum)), 1);
+				station.DoSoilTemp(ConvertUnits.TempFToUser(Convert.ToDouble(data["soiltempf"], invNum)), 1);
 			}
 			else
 			{
@@ -994,7 +994,7 @@ namespace CumulusMX.Stations
 			{
 				if (data["soiltemp" + i + "f"] != null)
 				{
-					station.DoSoilTemp(ConvertTempFToUser(Convert.ToDouble(data["soiltemp" + i + "f"], invNum)), i - 1);
+					station.DoSoilTemp(ConvertUnits.TempFToUser(Convert.ToDouble(data["soiltemp" + i + "f"], invNum)), i - 1);
 				}
 				else
 				{
@@ -1045,11 +1045,11 @@ namespace CumulusMX.Stations
 			{
 				if (cumulus.EcowittSettings.MapWN34[i] == 0)
 				{
-					station.DoUserTemp(ConvertTempFToUser(Convert.ToDouble(data["tf_ch" + i], invNum)), i);
+					station.DoUserTemp(ConvertUnits.TempFToUser(Convert.ToDouble(data["tf_ch" + i], invNum)), i);
 				}
 				else
 				{
-					station.DoSoilTemp(ConvertTempFToUser(Convert.ToDouble(data["tf_ch" + i], invNum)), cumulus.EcowittSettings.MapWN34[i]);
+					station.DoSoilTemp(ConvertUnits.TempFToUser(Convert.ToDouble(data["tf_ch" + i], invNum)), cumulus.EcowittSettings.MapWN34[i]);
 				}
 			}
 		}
@@ -1087,7 +1087,7 @@ namespace CumulusMX.Stations
 
 			if (data["tf_co2"] != null)
 			{
-				station.CO2_temperature = ConvertTempFToUser(Convert.ToDouble(data["tf_co2"], invNum));
+				station.CO2_temperature = ConvertUnits.TempFToUser(Convert.ToDouble(data["tf_co2"], invNum));
 			}
 			if (data["humi_co2"] != null)
 			{
@@ -1131,7 +1131,7 @@ namespace CumulusMX.Stations
 				var valDist = Convert.ToDouble(dist, invNum);
 				if (valDist != 255)
 				{
-					station.LightningDistance = ConvertKmtoUserUnits(valDist);
+					station.LightningDistance = ConvertUnits.KmtoUserUnits(valDist).Value;
 				}
 
 				var valTime = Convert.ToDouble(time, invNum);
@@ -1201,7 +1201,7 @@ namespace CumulusMX.Stations
 		{
 			for (var i = 1; i <= 10; i++)
 			{
-				var dp = MeteoLib.DewPoint(ConvertUserTempToC(station.ExtraTemp[i]), station.ExtraHum[i]);
+				var dp = MeteoLib.DewPoint(ConvertUnits.UserTempToC(station.ExtraTemp[i]), station.ExtraHum[i]);
 				station.DoExtraDP(dp, i);
 			}
 		}

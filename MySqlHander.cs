@@ -425,7 +425,7 @@ namespace CumulusMX
 			values.Append((station.RainToday.HasValue ? station.RainToday.Value.ToString(cumulus.RainFormat, invNum) : "null") + ',');
 			values.Append((station.Pressure.HasValue ? station.Pressure.Value.ToString(cumulus.PressFormat, invNum) : "null") + ",'");
 			values.Append(WeatherStation.CompassPoint(station.Bearing) + "','");
-			values.Append((station.WindAverage.HasValue ? cumulus.Beaufort(station.WindAverage.Value) : "null") + "','");
+			values.Append((station.WindAverage.HasValue ? Cumulus.Beaufort(station.WindAverage.Value) : "null") + "','");
 			values.Append(cumulus.Units.WindText + "','");
 			values.Append(cumulus.Units.TempText[1].ToString() + "','");
 			values.Append(cumulus.Units.PressText + "','");

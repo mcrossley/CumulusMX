@@ -4,133 +4,29 @@ using System.Runtime.Serialization;
 namespace CumulusMX
 {
 	[DataContract]
-	public class WebSocketData // The annotations on this class are so it can be serialised as JSON
+	public class WebSocketData(Cumulus cumulus, double? outdoorTemp, int? outdoorHum, double avgTempToday, double? indoorTemp, double? outdoorDewpoint, double? windChill,
+						int? indoorHum, double? pressure, double? windLatest, double? windAverage, double? recentmaxgust, double windRunToday, int? bearing, int? avgbearing,
+						double? rainToday, double? rainYesterday, double rainMonth, double rainYear, double? rainRate, double rainLastHour, double? heatIndex, double? humidex,
+						double? appTemp, double tempTrend, double pressTrend, double? highGustToday, string highGustTodayTime, double? highWindToday, int? highGustBearingToday,
+						string windUnit, int bearingRangeFrom10, int bearingRangeTo10, string windRoseData, double? highTempToday, double? lowTempToday, string highTempTodayToday,
+						string lowTempTodayTime, double? highPressToday, double? lowPressToday, string highPressTodayTime, string lowPressTodayTime, double? highRainRateToday,
+						string highRainRateTodayTime, int? highHumToday, int? lowHumToday, string highHumTodayTime, string lowHumTodayTime, string pressUnit, string tempUnit,
+						string rainUnit, double? highDewpointToday, double? lowDewpointToday, string highDewpointTodayTime, string lowDewpointTodayTime, double? lowWindChillToday,
+						string lowWindChillTodayTime, int? solarRad, int? highSolarRadToday, string highSolarRadTodayTime, double? uvindex, double? highUVindexToday,
+						string highUVindexTodayTime, string forecast, string sunrise, string sunset, string moonrise, string moonset, double? highHeatIndexToday,
+						string highHeatIndexTodayTime, double? highAppTempToday, double? lowAppTempToday, string highAppTempTodayTime, string lowAppTempTodayTime,
+						int? currentSolarMax, double alltimeHighPressure, double alltimeLowPressure, double sunshineHours, string domWindDir, string lastRainTipISO,
+						double highHourlyRainToday, string highHourlyRainTodayTime, string highBeaufortToday, string beaufort, string beaufortDesc, string lastDataRead,
+						bool dataStopped, double stormRain, string stormRainStart, int? cloudbase, string cloudbaseUnit, double last24hourRain,
+						double? feelsLike, double? highFeelsLikeToday, string highFeelsLikeTodayTime, double? lowFeelsLikeToday, string lowFeelsLikeTodayTime,
+						double? highHumidexToday, string highHumidexTodayTime, List<DashboardAlarms> alarms) // The annotations on this class are so it can be serialised as JSON
 	{
-		private readonly Cumulus cumulus;
+		private readonly Cumulus cumulus = cumulus;
 		private static readonly string nullVal = "-";
 		private static readonly string nullTime = "--:--";
 
-		public WebSocketData(Cumulus cumulus, double? outdoorTemp, int? outdoorHum, double avgTempToday, double? indoorTemp, double? outdoorDewpoint, double? windChill,
-							int? indoorHum, double? pressure, double? windLatest, double? windAverage, double? recentmaxgust, double windRunToday, int? bearing, int? avgbearing,
-							double? rainToday, double? rainYesterday, double rainMonth, double rainYear, double? rainRate, double rainLastHour, double? heatIndex, double? humidex,
-							double? appTemp, double tempTrend, double pressTrend, double? highGustToday, string highGustTodayTime, double? highWindToday, int? highGustBearingToday,
-							string windUnit, int bearingRangeFrom10, int bearingRangeTo10, string windRoseData, double? highTempToday, double? lowTempToday, string highTempTodayToday,
-							string lowTempTodayTime, double? highPressToday, double? lowPressToday, string highPressTodayTime, string lowPressTodayTime, double? highRainRateToday,
-							string highRainRateTodayTime, int? highHumToday, int? lowHumToday, string highHumTodayTime, string lowHumTodayTime, string pressUnit, string tempUnit,
-							string rainUnit, double? highDewpointToday, double? lowDewpointToday, string highDewpointTodayTime, string lowDewpointTodayTime, double? lowWindChillToday,
-							string lowWindChillTodayTime, int? solarRad, int? highSolarRadToday, string highSolarRadTodayTime, double? uvindex, double? highUVindexToday,
-							string highUVindexTodayTime, string forecast, string sunrise, string sunset, string moonrise, string moonset, double? highHeatIndexToday,
-							string highHeatIndexTodayTime, double? highAppTempToday, double? lowAppTempToday, string highAppTempTodayTime, string lowAppTempTodayTime,
-							int? currentSolarMax, double alltimeHighPressure, double alltimeLowPressure, double sunshineHours, string domWindDir, string lastRainTipISO,
-							double highHourlyRainToday, string highHourlyRainTodayTime, string highBeaufortToday, string beaufort, string beaufortDesc, string lastDataRead,
-							bool dataStopped, double stormRain, string stormRainStart, int? cloudbase, string cloudbaseUnit, double last24hourRain,
-							double? feelsLike, double? highFeelsLikeToday, string highFeelsLikeTodayTime, double? lowFeelsLikeToday, string lowFeelsLikeTodayTime,
-							double? highHumidexToday, string highHumidexTodayTime, List<DashboardAlarms> alarms)
-		{
-			this.cumulus = cumulus;
-			OutdoorTemp = outdoorTemp;
-			HighTempToday = highTempToday;
-			LowTempToday = lowTempToday;
-			HighTempTodayTime = highTempTodayToday;
-			LowTempTodayTime = lowTempTodayTime;
-			OutdoorHum = outdoorHum;
-			AvgTempToday = avgTempToday;
-			IndoorTemp = indoorTemp;
-			OutdoorDewpoint = outdoorDewpoint;
-			WindChill = windChill;
-			LowWindChillToday = lowWindChillToday;
-			LowWindChillTodayTime = lowWindChillTodayTime;
-			IndoorHum = indoorHum;
-			Pressure = pressure;
-			HighPressToday = highPressToday;
-			LowPressToday = lowPressToday;
-			HighPressTodayTime = highPressTodayTime;
-			LowPressTodayTime = lowPressTodayTime;
-			WindLatest = windLatest;
-			WindAverage = windAverage;
-			Recentmaxgust = recentmaxgust;
-			WindRunToday = windRunToday;
-			Bearing = bearing;
-			Avgbearing = avgbearing;
-			RainToday = rainToday;
-			RainYesterday = rainYesterday;
-			RainMonth = rainMonth;
-			RainYear = rainYear;
-			RainRate = rainRate;
-			HighRainRateToday = highRainRateToday;
-			HighRainRateTodayTime = highRainRateTodayTime;
-			HighHourlyRainToday = highHourlyRainToday;
-			HighHourlyRainTodayTime = highHourlyRainTodayTime;
-			RainLastHour = rainLastHour;
-			RainLast24Hour = last24hourRain;
-			HeatIndex = heatIndex;
-			HighHeatIndexToday = highHeatIndexToday;
-			HighHeatIndexTodayTime = highHeatIndexTodayTime;
-			Humidex = humidex;
-			HighHumidexToday = highHumidexToday;
-			HighHumidexTodayTime = highHumidexTodayTime;
-			AppTemp = appTemp;
-			HighAppTempToday = highAppTempToday;
-			LowAppTempToday = lowAppTempToday;
-			HighAppTempTodayTime = highAppTempTodayTime;
-			LowAppTempTodayTime = lowAppTempTodayTime;
-			FeelsLike = feelsLike;
-			HighFeelsLikeToday = highFeelsLikeToday;
-			LowFeelsLikeToday = lowFeelsLikeToday;
-			HighFeelsLikeTodayTime = highFeelsLikeTodayTime;
-			LowFeelsLikeTodayTime = lowFeelsLikeTodayTime;
-			TempTrend = tempTrend;
-			PressTrend = pressTrend;
-			HighGustToday = highGustToday;
-			HighGustTodayTime = highGustTodayTime;
-			HighWindToday = highWindToday;
-			HighGustBearingToday = highGustBearingToday;
-			BearingRangeFrom10 = bearingRangeFrom10;
-			BearingRangeTo10 = bearingRangeTo10;
-			WindRoseData = windRoseData;
-			WindUnit = windUnit;
-			PressUnit = pressUnit;
-			TempUnit = tempUnit;
-			RainUnit = rainUnit;
-			HighHumToday = highHumToday;
-			LowHumToday = lowHumToday;
-			HighHumTodayTime = highHumTodayTime;
-			LowHumTodayTime = lowHumTodayTime;
-			HighDewpointToday = highDewpointToday;
-			LowDewpointToday = lowDewpointToday;
-			HighDewpointTodayTime = highDewpointTodayTime;
-			LowDewpointTodayTime = lowDewpointTodayTime;
-			SolarRad = solarRad;
-			HighSolarRadToday = highSolarRadToday;
-			HighSolarRadTodayTime = highSolarRadTodayTime;
-			CurrentSolarMax = currentSolarMax;
-			UVindex = uvindex;
-			HighUVindexToday = highUVindexToday;
-			HighUVindexTodayTime = highUVindexTodayTime;
-			AlltimeHighPressure = alltimeHighPressure;
-			AlltimeLowPressure = alltimeLowPressure;
-			SunshineHours = sunshineHours;
-			Forecast = forecast;
-			Sunrise = sunrise;
-			Sunset = sunset;
-			Moonrise = moonrise;
-			Moonset = moonset;
-			DominantWindDirection = domWindDir;
-			LastRainTipISO = lastRainTipISO;
-			HighBeaufortToday = highBeaufortToday;
-			Beaufort = beaufort;
-			BeaufortDesc = beaufortDesc;
-			LastDataRead = lastDataRead;
-			DataStopped = dataStopped;
-			StormRain = stormRain;
-			StormRainStart = stormRainStart;
-			Cloudbase = cloudbase;
-			CloudbaseUnit = cloudbaseUnit;
-			Alarms = alarms;
-		}
-
 		[IgnoreDataMember]
-		public double StormRain { get; set; }
+		public double StormRain { get; set; } = stormRain;
 
 		[DataMember(Name = "StormRain")]
 		public string StormRainRounded
@@ -140,10 +36,10 @@ namespace CumulusMX
 		}
 
 		[DataMember]
-		public string StormRainStart { get; set; }
+		public string StormRainStart { get; set; } = stormRainStart;
 
 		[IgnoreDataMember]
-		public int? CurrentSolarMax { get; set; }
+		public int? CurrentSolarMax { get; set; } = currentSolarMax;
 
 		[DataMember(Name = "CurrentSolarMax")]
 		public string CurrentSolarMaxStr
@@ -153,7 +49,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? HighHeatIndexToday { get; set; }
+		public double? HighHeatIndexToday { get; set; } = highHeatIndexToday;
 
 		[DataMember(Name = "HighHeatIndexToday")]
 		public string HighHeatIndexTodayStr
@@ -163,7 +59,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string HighHeatIndexTodayTime { get; set; }
+		public string HighHeatIndexTodayTime { get; set; } = highHeatIndexTodayTime;
 
 		[DataMember (Name = "HighHeatIndexTodayTime")]
 		public string HighHeatIndexTodayTimeStr
@@ -174,22 +70,22 @@ namespace CumulusMX
 
 
 		[DataMember]
-		public string Sunrise { get; set; }
+		public string Sunrise { get; set; } = sunrise;
 
 		[DataMember]
-		public string Sunset { get; set; }
+		public string Sunset { get; set; } = sunset;
 
 		[DataMember]
-		public string Moonrise { get; set; }
+		public string Moonrise { get; set; } = moonrise;
 
 		[DataMember]
-		public string Moonset { get; set; }
+		public string Moonset { get; set; } = moonset;
 
 		[DataMember]
-		public string Forecast { get; set; }
+		public string Forecast { get; set; } = forecast;
 
 		[IgnoreDataMember]
-		public double? UVindex { get; set; }
+		public double? UVindex { get; set; } = uvindex;
 
 		[DataMember(Name = "UVindex")]
 		public string UVindexStr
@@ -199,7 +95,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? HighUVindexToday { get; set; }
+		public double? HighUVindexToday { get; set; } = highUVindexToday;
 
 		[DataMember(Name = "HighUVindexToday")]
 		public string HighUVindexTodayStr
@@ -209,7 +105,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string HighUVindexTodayTime { get; set; }
+		public string HighUVindexTodayTime { get; set; } = highUVindexTodayTime;
 
 		[DataMember(Name = "HighUVindexTodayTime")]
 		public string HighUVindexTodayTimeStr
@@ -219,7 +115,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string HighSolarRadTodayTime { get; set; }
+		public string HighSolarRadTodayTime { get; set; } = highSolarRadTodayTime;
 
 		[DataMember(Name = "HighSolarRadTodayTime")]
 		public string HighSolarRadTodayTimeStr
@@ -229,7 +125,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public int? HighSolarRadToday { get; set; }
+		public int? HighSolarRadToday { get; set; } = highSolarRadToday;
 
 		[DataMember(Name = "HighSolarRadToday")]
 		public string HighSolarRadTodayStr
@@ -239,7 +135,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public int? SolarRad { get; set; }
+		public int? SolarRad { get; set; } = solarRad;
 
 		[DataMember(Name = "SolarRad")]
 		public string SolarRadStr
@@ -250,7 +146,7 @@ namespace CumulusMX
 
 
 		[IgnoreDataMember]
-		public double? IndoorTemp { get; set; }
+		public double? IndoorTemp { get; set; } = indoorTemp;
 
 		[DataMember(Name = "IndoorTemp")]
 		public string IndoorTempRounded
@@ -260,7 +156,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? OutdoorDewpoint { get; set; }
+		public double? OutdoorDewpoint { get; set; } = outdoorDewpoint;
 
 		[DataMember(Name = "OutdoorDewpoint")]
 		public string OutdoorDewpointRounded
@@ -270,7 +166,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? LowDewpointToday { get; set; }
+		public double? LowDewpointToday { get; set; } = lowDewpointToday;
 
 		[DataMember(Name = "LowDewpointToday")]
 		public string LowDewpointTodayRounded
@@ -280,7 +176,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? HighDewpointToday { get; set; }
+		public double? HighDewpointToday { get; set; } = highDewpointToday;
 
 		[DataMember(Name = "HighDewpointToday")]
 		public string HighDewpointTodayRounded
@@ -290,7 +186,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string LowDewpointTodayTime { get; set; }
+		public string LowDewpointTodayTime { get; set; } = lowDewpointTodayTime;
 
 		[DataMember(Name = "LowDewpointTodayTime")]
 		public string LowDewpointTodayTimeStr
@@ -301,7 +197,7 @@ namespace CumulusMX
 
 
 		[IgnoreDataMember]
-		public string HighDewpointTodayTime { get; set; }
+		public string HighDewpointTodayTime { get; set; } = highDewpointTodayTime;
 
 		[DataMember(Name = "HighDewpointTodayTime")]
 		public string HighDewpointTodayTimeStr
@@ -312,7 +208,7 @@ namespace CumulusMX
 
 
 		[IgnoreDataMember]
-		public double? WindChill { get; set; }
+		public double? WindChill { get; set; } = windChill;
 
 		[DataMember(Name = "WindChill")]
 		public string WindChillRounded
@@ -322,7 +218,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? LowWindChillToday { get; set; }
+		public double? LowWindChillToday { get; set; } = lowWindChillToday;
 
 		[DataMember(Name = "LowWindChillToday")]
 		public string LowWindChillTodayRounded
@@ -332,7 +228,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string LowWindChillTodayTime { get; set; }
+		public string LowWindChillTodayTime { get; set; } = lowWindChillTodayTime;
 
 		[DataMember(Name = "LowWindChillTodayTime")]
 		public string LowWindChillTodayTimeStr
@@ -342,22 +238,22 @@ namespace CumulusMX
 		}
 
 		[DataMember]
-		public string WindUnit;
+		public string WindUnit = windUnit;
 
 		[DataMember]
-		public string RainUnit { get; set; }
+		public string RainUnit { get; set; } = rainUnit;
 
 		[DataMember]
-		public string TempUnit { get; set; }
+		public string TempUnit { get; set; } = tempUnit;
 
 		[DataMember]
-		public string PressUnit { get; set; }
+		public string PressUnit { get; set; } = pressUnit;
 
 		[DataMember]
-		public string CloudbaseUnit { get; set; }
+		public string CloudbaseUnit { get; set; } = cloudbaseUnit;
 
 		[IgnoreDataMember]
-		public int? Cloudbase { get; set; }
+		public int? Cloudbase { get; set; } = cloudbase;
 
 		[DataMember(Name="Cloudbase")]
 		public string CloudbaseStr
@@ -367,7 +263,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string LowHumTodayTime { get; set; }
+		public string LowHumTodayTime { get; set; } = lowHumTodayTime;
 
 		[DataMember(Name = "LowHumTodayTime")]
 		public string LowHumTodayTimeStr
@@ -378,7 +274,7 @@ namespace CumulusMX
 
 
 		[IgnoreDataMember]
-		public string HighHumTodayTime { get; set; }
+		public string HighHumTodayTime { get; set; } = highHumTodayTime;
 
 		[DataMember(Name = "HighHumTodayTime")]
 		public string HighHumTodayTimeStr
@@ -388,7 +284,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public int? LowHumToday { get; set; }
+		public int? LowHumToday { get; set; } = lowHumToday;
 
 		[DataMember(Name = "LowHumToday")]
 		public string LowHumTodayStr
@@ -398,7 +294,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public int? HighHumToday { get; set; }
+		public int? HighHumToday { get; set; } = highHumToday;
 
 		[DataMember(Name = "HighHumToday")]
 		public string HighHumTodayStr
@@ -408,7 +304,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string HighRainRateTodayTime { get; set; }
+		public string HighRainRateTodayTime { get; set; } = highRainRateTodayTime;
 
 		[DataMember(Name = "HighRainRateTodayTime")]
 		public string HighRainRateTodayTimeStr
@@ -418,7 +314,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? HighRainRateToday { get; set; }
+		public double? HighRainRateToday { get; set; } = highRainRateToday;
 
 		[DataMember(Name="HighRainRateToday")]
 		public string HighRainRateTodayRounded
@@ -428,10 +324,10 @@ namespace CumulusMX
 		}
 
 		[DataMember]
-		public string HighHourlyRainTodayTime { get; set; }
+		public string HighHourlyRainTodayTime { get; set; } = highHourlyRainTodayTime;
 
 		[IgnoreDataMember]
-		public double HighHourlyRainToday { get; set; }
+		public double HighHourlyRainToday { get; set; } = highHourlyRainToday;
 
 		[DataMember(Name="HighHourlyRainToday")]
 		public string HighHourlyRainTodayRounded
@@ -441,7 +337,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string LowPressTodayTime { get; set; }
+		public string LowPressTodayTime { get; set; } = lowPressTodayTime;
 
 		[DataMember(Name = "LowPressTodayTime")]
 		public string LowPressTodayTimeStr
@@ -451,7 +347,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string HighPressTodayTime { get; set; }
+		public string HighPressTodayTime { get; set; } = highPressTodayTime;
 
 		[DataMember(Name = "HighPressTodayTime")]
 		public string HighPressTodayTimeStr
@@ -461,7 +357,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? LowPressToday { get; set; }
+		public double? LowPressToday { get; set; } = lowPressToday;
 
 		[DataMember(Name="LowPressToday")]
 		public string LowPressTodayRounded
@@ -471,7 +367,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? HighPressToday { get; set; }
+		public double? HighPressToday { get; set; } = highPressToday;
 
 		[DataMember(Name="HighPressToday")]
 		public string HighPressTodayRounded
@@ -481,7 +377,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string LowTempTodayTime { get; set; }
+		public string LowTempTodayTime { get; set; } = lowTempTodayTime;
 
 		[DataMember(Name = "LowTempTodayTime")]
 		public string LowTempTodayTimeStr
@@ -491,7 +387,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string HighTempTodayTime { get; set; }
+		public string HighTempTodayTime { get; set; } = highTempTodayToday;
 
 		[DataMember(Name = "HighTempTodayTime")]
 		public string HighTempTodayTimeStr
@@ -501,7 +397,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? LowTempToday { get; set; }
+		public double? LowTempToday { get; set; } = lowTempToday;
 
 		[DataMember(Name = "LowTempToday")]
 		public string LowTempTodayRounded
@@ -511,7 +407,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? HighTempToday { get; set; }
+		public double? HighTempToday { get; set; } = highTempToday;
 
 		[DataMember(Name = "HighTempToday")]
 		public string HighTempTodayRounded
@@ -521,16 +417,16 @@ namespace CumulusMX
 		}
 
 		[DataMember]
-		public string WindRoseData { get; set; }
+		public string WindRoseData { get; set; } = windRoseData;
 
 		[DataMember]
-		public int BearingRangeTo10 { get; set; }
+		public int BearingRangeTo10 { get; set; } = bearingRangeTo10;
 
 		[DataMember]
-		public int BearingRangeFrom10 { get; set; }
+		public int BearingRangeFrom10 { get; set; } = bearingRangeFrom10;
 
 		[IgnoreDataMember]
-		public int? HighGustBearingToday { get; set; }
+		public int? HighGustBearingToday { get; set; } = highGustBearingToday;
 
 		[DataMember(Name = "HighGustBearingToday")]
 		public string HighGustBearingTodayStr
@@ -540,7 +436,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? HighWindToday { get; set; }
+		public double? HighWindToday { get; set; } = highWindToday;
 
 		[DataMember(Name = "HighWindToday")]
 		public string HighWindTodayRounded
@@ -550,7 +446,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string HighGustTodayTime { get; set; }
+		public string HighGustTodayTime { get; set; } = highGustTodayTime;
 
 		[DataMember(Name = "HighGustTodayTime")]
 		public string HighGustTodayTimeStr
@@ -560,7 +456,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? HighGustToday { get; set; }
+		public double? HighGustToday { get; set; } = highGustToday;
 
 		[DataMember(Name = "HighGustToday")]
 		public string HighGustTodayRounded
@@ -570,7 +466,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? OutdoorTemp { get; set; }
+		public double? OutdoorTemp { get; set; } = outdoorTemp;
 
 		[DataMember(Name = "OutdoorTemp")]
 		public string OutdoorTempRounded
@@ -580,7 +476,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public int? OutdoorHum { get; set; }
+		public int? OutdoorHum { get; set; } = outdoorHum;
 
 		[DataMember(Name = "OutdoorHum")]
 		public string OutdoorHumFormatted
@@ -591,7 +487,7 @@ namespace CumulusMX
 
 
 		[IgnoreDataMember]
-		public double AvgTempToday { get; set; }
+		public double AvgTempToday { get; set; } = avgTempToday;
 
 		[DataMember(Name = "AvgTempToday")]
 		public string AvgTempRounded
@@ -601,7 +497,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public int? IndoorHum { get; set; }
+		public int? IndoorHum { get; set; } = indoorHum;
 		[DataMember(Name = "IndoorHum")]
 		public string IndoorHumStr
 		{
@@ -610,7 +506,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? Pressure { get; set; }
+		public double? Pressure { get; set; } = pressure;
 
 		[DataMember(Name = "Pressure")]
 		public string PressureRounded
@@ -620,7 +516,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double AlltimeHighPressure { get; set; }
+		public double AlltimeHighPressure { get; set; } = alltimeHighPressure;
 
 		[DataMember(Name = "AlltimeHighPressure")]
 		public string AlltimeHighPressureRounded
@@ -630,7 +526,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double AlltimeLowPressure { get; set; }
+		public double AlltimeLowPressure { get; set; } = alltimeLowPressure;
 
 		[DataMember(Name = "AlltimeLowPressure")]
 		public string AlltimeLowPressureRounded
@@ -640,7 +536,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? WindLatest { get; set; }
+		public double? WindLatest { get; set; } = windLatest;
 
 		[DataMember(Name = "WindLatest")]
 		public string WindLatestRounded
@@ -650,7 +546,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? WindAverage { get; set; }
+		public double? WindAverage { get; set; } = windAverage;
 
 		[DataMember(Name = "WindAverage")]
 		public string WindAverageRounded
@@ -660,7 +556,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? Recentmaxgust { get; set; }
+		public double? Recentmaxgust { get; set; } = recentmaxgust;
 
 		[DataMember(Name = "Recentmaxgust")]
 		public string RecentmaxgustRounded
@@ -670,7 +566,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double WindRunToday { get; set; }
+		public double WindRunToday { get; set; } = windRunToday;
 
 		[DataMember(Name = "WindRunToday")]
 		public string WindRunTodayRounded
@@ -680,7 +576,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public int? Bearing { get; set; }
+		public int? Bearing { get; set; } = bearing;
 
 		[DataMember(Name = "Bearing")]
 		public string BearingFormatted
@@ -690,7 +586,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public int? Avgbearing { get; set; }
+		public int? Avgbearing { get; set; } = avgbearing;
 		[DataMember(Name = "Avgbearing")]
 		public string AvgbearingFormatted
 		{
@@ -699,7 +595,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? RainToday { get; set; }
+		public double? RainToday { get; set; } = rainToday;
 
 		[DataMember(Name = "RainToday")]
 		public string RainTodayRounded
@@ -709,7 +605,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? RainYesterday { get; set; }
+		public double? RainYesterday { get; set; } = rainYesterday;
 
 		[DataMember(Name = "RainYesterday")]
 		public string RainYesterdayRounded
@@ -719,7 +615,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double RainMonth { get; set; }
+		public double RainMonth { get; set; } = rainMonth;
 
 		[DataMember(Name = "RainMonth")]
 		public string RainMonthRounded
@@ -729,7 +625,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double RainYear { get; set; }
+		public double RainYear { get; set; } = rainYear;
 
 		[DataMember(Name = "RainYear")]
 		public string RainYearRounded
@@ -739,7 +635,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? RainRate { get; set; }
+		public double? RainRate { get; set; } = rainRate;
 
 		[DataMember(Name = "RainRate")]
 		public string RainRateRounded
@@ -749,7 +645,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double RainLastHour { get; set; }
+		public double RainLastHour { get; set; } = rainLastHour;
 
 		[DataMember(Name = "RainLastHour")]
 		public string RainLastHourRounded
@@ -759,7 +655,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double RainLast24Hour { get; set; }
+		public double RainLast24Hour { get; set; } = last24hourRain;
 
 		[DataMember(Name = "RainLast24Hour")]
 		public string RainLast24HourRounded
@@ -769,7 +665,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? HeatIndex { get; set; }
+		public double? HeatIndex { get; set; } = heatIndex;
 
 		[DataMember(Name = "HeatIndex")]
 		public string HeatIndexRounded
@@ -779,7 +675,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? Humidex { get; set; }
+		public double? Humidex { get; set; } = humidex;
 
 		[DataMember(Name = "Humidex")]
 		public string HumidexRounded
@@ -789,7 +685,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string HighHumidexTodayTime { get; set; }
+		public string HighHumidexTodayTime { get; set; } = highHumidexTodayTime;
 
 		[DataMember(Name = "HighHumidexTodayTime")]
 		public string HighHumidexTodayTimeStr
@@ -799,7 +695,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? HighHumidexToday { get; set; }
+		public double? HighHumidexToday { get; set; } = highHumidexToday;
 
 		[DataMember(Name = "HighHumidexToday")]
 		public string HighHumidexTodayRounded
@@ -809,7 +705,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? AppTemp { get; set; }
+		public double? AppTemp { get; set; } = appTemp;
 
 		[DataMember(Name = "AppTemp")]
 		public string AppTempRounded
@@ -819,7 +715,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string LowAppTempTodayTime { get; set; }
+		public string LowAppTempTodayTime { get; set; } = lowAppTempTodayTime;
 
 		[DataMember(Name = "LowAppTempTodayTime")]
 		public string LowAppTempTodayTimeStr
@@ -829,7 +725,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string HighAppTempTodayTime { get; set; }
+		public string HighAppTempTodayTime { get; set; } = highAppTempTodayTime;
 
 		[DataMember(Name = "HighAppTempTodayTime")]
 		public string HighAppTempTodayTimeStr
@@ -839,7 +735,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? LowAppTempToday { get; set; }
+		public double? LowAppTempToday { get; set; } = lowAppTempToday;
 
 		[DataMember(Name = "LowAppTempToday")]
 		public string LowAppTempTodayRounded
@@ -849,7 +745,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? HighAppTempToday { get; set; }
+		public double? HighAppTempToday { get; set; } = highAppTempToday;
 
 		[DataMember(Name = "HighAppTempToday")]
 		public string HighAppTempTodayRounded
@@ -859,7 +755,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? FeelsLike { get; set; }
+		public double? FeelsLike { get; set; } = feelsLike;
 
 		[DataMember(Name = "FeelsLike")]
 		public string FeelsLikeRounded
@@ -869,7 +765,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string LowFeelsLikeTodayTime { get; set; }
+		public string LowFeelsLikeTodayTime { get; set; } = lowFeelsLikeTodayTime;
 
 		[DataMember(Name = "LowFeelsLikeTodayTime")]
 		public string LowFeelsLikeTodayTimeStr
@@ -879,7 +775,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public string HighFeelsLikeTodayTime { get; set; }
+		public string HighFeelsLikeTodayTime { get; set; } = highFeelsLikeTodayTime;
 
 		[DataMember(Name = "HighFeelsLikeTodayTime")]
 		public string HighFeelsLikeTodayTimeStr
@@ -889,7 +785,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? LowFeelsLikeToday { get; set; }
+		public double? LowFeelsLikeToday { get; set; } = lowFeelsLikeToday;
 
 		[DataMember(Name = "LowFeelsLikeToday")]
 		public string LowFeelsLikeTodayRounded
@@ -899,7 +795,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double? HighFeelsLikeToday { get; set; }
+		public double? HighFeelsLikeToday { get; set; } = highFeelsLikeToday;
 
 		[DataMember(Name = "HighFeelsLikeToday")]
 		public string HighFeelsLikeTodayRounded
@@ -909,7 +805,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double TempTrend { get; set; }
+		public double TempTrend { get; set; } = tempTrend;
 
 		[DataMember(Name = "TempTrend")]
 		public string TempTrendRounded
@@ -919,7 +815,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double PressTrend { get; set; }
+		public double PressTrend { get; set; } = pressTrend;
 
 		[DataMember(Name = "PressTrend")]
 		public string PressTrendRounded
@@ -929,7 +825,7 @@ namespace CumulusMX
 		}
 
 		[IgnoreDataMember]
-		public double SunshineHours { get; set; }
+		public double SunshineHours { get; set; } = sunshineHours;
 
 		[DataMember(Name = "SunshineHours")]
 		public string SunshineHoursRounded
@@ -953,27 +849,27 @@ namespace CumulusMX
 		}
 
 		[DataMember]
-		public string DominantWindDirection { get; set; }
+		public string DominantWindDirection { get; set; } = domWindDir;
 
 		[DataMember]
-		public string LastRainTipISO { get; set; }
+		public string LastRainTipISO { get; set; } = lastRainTipISO;
 
 		[DataMember]
-		public string HighBeaufortToday { get; set; }
+		public string HighBeaufortToday { get; set; } = highBeaufortToday;
 
 		[DataMember]
-		public string Beaufort { get; set; }
+		public string Beaufort { get; set; } = beaufort;
 
 		[DataMember]
-		public string BeaufortDesc { get; set; }
+		public string BeaufortDesc { get; set; } = beaufortDesc;
 
 		[DataMember]
-		public string LastDataRead { get; set; }
+		public string LastDataRead { get; set; } = lastDataRead;
 
 		[DataMember]
-		public bool DataStopped { get; set; }
+		public bool DataStopped { get; set; } = dataStopped;
 
 		[DataMember]
-		public List<DashboardAlarms> Alarms { get; set; }
+		public List<DashboardAlarms> Alarms { get; set; } = alarms;
 	}
 }

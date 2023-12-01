@@ -172,9 +172,9 @@ namespace CumulusMX
 			{
 				var unit = tagParams.Get("unit").ToLower();
 				if (unit == "c")
-					return WeatherStation.ConvertUserTempToC(val);
+					return ConvertUnits.UserTempToC(val);
 				else if (unit == "f")
-					return WeatherStation.ConvertUserTempToF(val);
+					return ConvertUnits.UserTempToF(val);
 			}
 			return val;
 		}
@@ -198,11 +198,11 @@ namespace CumulusMX
 			{
 				var unit = tagParams.Get("unit").ToLower();
 				if (unit == "hpa" || unit == "mb")
-					return WeatherStation.ConvertUserPressureToHPa(val);
+					return ConvertUnits.UserPressToHpa(val).Value;
 				else if (unit == "kpa")
-					return WeatherStation.ConvertUserPressureToHPa(val) / 10;
+					return ConvertUnits.UserPressToHpa(val).Value / 10;
 				else if (unit == "inhg")
-					return WeatherStation.ConvertUserPressToIN(val);
+					return ConvertUnits.UserPressToIN(val);
 			}
 			return val;
 		}
@@ -213,9 +213,9 @@ namespace CumulusMX
 			{
 				var unit = tagParams.Get("unit").ToLower();
 				if (unit == "mm")
-					return WeatherStation.ConvertUserRainToMM(val);
+					return ConvertUnits.UserRainToMM(val);
 				else if (unit == "in")
-					return WeatherStation.ConvertUserRainToIN(val.Value);
+					return ConvertUnits.UserRainToIN(val.Value);
 			}
 			return val;
 		}
@@ -226,13 +226,13 @@ namespace CumulusMX
 			{
 				var unit = tagParams.Get("unit").ToLower();
 				if (unit == "mph")
-					return WeatherStation.ConvertUserWindToMPH(val);
+					return ConvertUnits.UserWindToMPH(val);
 				else if (unit == "kph")
-					return WeatherStation.ConvertUserWindToKPH(val);
+					return ConvertUnits.UserWindToKPH(val);
 				else if (unit == "ms")
-					return WeatherStation.ConvertUserWindToMS(val);
+					return ConvertUnits.UserWindToMS(val);
 				else if (unit == "kt")
-					return WeatherStation.ConvertUserWindToKnots(val);
+					return ConvertUnits.UserWindToKnots(val);
 			}
 			return val;
 		}
@@ -243,11 +243,11 @@ namespace CumulusMX
 			{
 				var unit = tagParams.Get("unit").ToLower();
 				if (unit == "mi")
-					return WeatherStation.ConvertWindRunToMi(val);
+					return ConvertUnits.WindRunToMi(val);
 				else if (unit == "km")
-					return WeatherStation.ConvertWindRunToKm(val);
+					return ConvertUnits.WindRunToKm(val);
 				else if (unit == "Nm")
-					return WeatherStation.ConvertWindRunToNm(val);
+					return ConvertUnits.WindRunToNm(val);
 			}
 			return val;
 		}
@@ -1008,17 +1008,17 @@ namespace CumulusMX
 
 		private string Tagbeaufort(Dictionary<string, string> tagParams)
 		{
-			return "F" + cumulus.Beaufort(station.WindAverage ?? 0);
+			return "F" + ConvertUnits.Beaufort(station.WindAverage);
 		}
 
 		private string Tagbeaufortnumber(Dictionary<string, string> tagParams)
 		{
-			return cumulus.Beaufort(station.WindAverage ?? 0);
+			return ConvertUnits.Beaufort(station.WindAverage).ToString();
 		}
 
 		private string Tagbeaudesc(Dictionary<string, string> tagParams)
 		{
-			return cumulus.BeaufortDesc(station.WindAverage ?? 0);
+			return cumulus.BeaufortDesc(station.WindAverage);
 		}
 
 		private string Tagwdirdata(Dictionary<string, string> tagParams)
@@ -1985,12 +1985,12 @@ namespace CumulusMX
 
 		private string TagTbeaufort(Dictionary<string, string> tagParams)
 		{
-			return "F" + cumulus.Beaufort(station.HiLoToday.HighWind);
+			return "F" + ConvertUnits.Beaufort(station.HiLoToday.HighWind);
 		}
 
 		private string TagTbeaufortnumber(Dictionary<string, string> tagParams)
 		{
-			return cumulus.Beaufort(station.HiLoToday.HighWind);
+			return ConvertUnits.Beaufort(station.HiLoToday.HighWind).ToString();
 		}
 
 		private string TagTbeaudesc(Dictionary<string, string> tagParams)
@@ -2302,12 +2302,12 @@ namespace CumulusMX
 
 		private string TagYbeaufort(Dictionary<string, string> tagParams)
 		{
-			return "F" + WeatherStation.Beaufort(station.HiLoYest.HighWind);
+			return "F" + ConvertUnits.Beaufort(station.HiLoYest.HighWind);
 		}
 
 		private string TagYbeaufortnumber(Dictionary<string, string> tagParams)
 		{
-			return WeatherStation.Beaufort(station.HiLoYest.HighWind).ToString();
+			return ConvertUnits.Beaufort(station.HiLoYest.HighWind).ToString();
 		}
 
 		private string TagYbeaudesc(Dictionary<string, string> tagParams)
@@ -3675,7 +3675,7 @@ namespace CumulusMX
 		private string TagIsFreezing(Dictionary<string, string> tagParams)
 		{
 			if (station.Temperature.HasValue)
-				return WeatherStation.ConvertUserTempToC(station.Temperature.Value) < 0.09 ? "1" : "0";
+				return ConvertUnits.UserTempToC(station.Temperature.Value) < 0.09 ? "1" : "0";
 			else
 				return "-";
 		}

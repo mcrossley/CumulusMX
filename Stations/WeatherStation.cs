@@ -68,10 +68,7 @@ namespace CumulusMX
 		{
 			get
 			{
-				if (monthlyRecs == null)
-				{
-					monthlyRecs = new AllTimeRecords[13];
-				}
+				monthlyRecs ??= new AllTimeRecords[13];
 
 				return monthlyRecs;
 			}
@@ -97,11 +94,11 @@ namespace CumulusMX
 		private int lastMinute;
 		private int lastHour;
 
-		public bool[] WMR928ChannelPresent = new[] { false, false, false, false };
-		public bool[] WMR928ExtraTempValueOnly = new[] { false, false, false, false };
-		public double[] WMR928ExtraTempValues = new[] { 0.0, 0.0, 0.0, 0.0 };
-		public double[] WMR928ExtraDPValues = new[] { 0.0, 0.0, 0.0, 0.0 };
-		public int[] WMR928ExtraHumValues = new[] { 0, 0, 0, 0 };
+		public bool[] WMR928ChannelPresent = [false, false, false, false];
+		public bool[] WMR928ExtraTempValueOnly = [false, false, false, false];
+		public double[] WMR928ExtraTempValues = [0.0, 0.0, 0.0, 0.0];
+		public double[] WMR928ExtraDPValues = [0.0, 0.0, 0.0, 0.0];
+		public int[] WMR928ExtraHumValues = [0, 0, 0, 0];
 
 		// random number generator - used for things like random back-off delays
 		internal Random random = new Random();
@@ -114,11 +111,11 @@ namespace CumulusMX
 
 		public bool calculaterainrate = false;
 
-		protected List<int> buffer = new List<int>();
+		protected List<int> buffer = [];
 
 		//private readonly List<Last3HourData> Last3HourDataList = new List<Last3HourData>();
 		//private readonly List<LastHourData> LastHourDataList = new List<LastHourData>();
-		private readonly List<Last10MinWind> Last10MinWindList = new List<Last10MinWind>();
+		private readonly List<Last10MinWind> Last10MinWindList = [];
 		//private readonly List<RecentDailyData> RecentDailyDataList = new List<RecentDailyData>();
 
 		//public WeatherDataCollection weatherDataCollection = new WeatherDataCollection();
@@ -373,7 +370,7 @@ namespace CumulusMX
 			// rollover/create raw data log files if required
 			cumulus.RollOverDataLogs();
 
-			SensorReception = new Dictionary<string, byte>();
+			SensorReception = [];
 		}
 
 		private bool CheckSqliteDatabase(bool giveup)
@@ -1067,7 +1064,7 @@ namespace CumulusMX
 				bool recordbroken;
 
 				// Make the delta relate to the precision for derived values such as feels like
-				string[] derivedVals = { "HighHeatIndex", "HighAppTemp", "LowAppTemp", "LowChill", "HighHumidex", "HighDewPoint", "LowDewPoint", "HighFeelsLike", "LowFeelsLike" };
+				string[] derivedVals = ["HighHeatIndex", "HighAppTemp", "LowAppTemp", "LowChill", "HighHumidex", "HighDewPoint", "LowDewPoint", "HighFeelsLike", "LowFeelsLike"];
 
 				double epsilon = derivedVals.Contains(index) ? Math.Pow(10, -cumulus.TempDPlaces) : 0.001; // required difference for new record
 
@@ -1621,7 +1618,7 @@ namespace CumulusMX
 			cumulus.FtpAlarm.Clear();
 		}
 
-		private void CheckUserAlarms()
+		private static void CheckUserAlarms()
 		{
 			foreach (var alarm in cumulus.UserAlarms)
 			{
@@ -1862,26 +1859,26 @@ namespace CumulusMX
 					if (WindAverage.HasValue)
 					{
 						xapReport.Append($"WindM={ConvertUserWindToMPH(WindAverage):F1}\n");
-						xapReport.Append($"WindK={ConvertUserWindToKPH(WindAverage):F1}\n");
+						xapReport.Append($"WindK={ConvertUnits.UserWindToKPH(WindAverage):F1}\n");
 					}
 					if (RecentMaxGust.HasValue)
 					{
 						xapReport.Append($"WindGustsM={ConvertUserWindToMPH(RecentMaxGust):F1}\n");
-						xapReport.Append($"WindGustsK={ConvertUserWindToKPH(RecentMaxGust):F1}\n");
+						xapReport.Append($"WindGustsK={ConvertUnits.UserWindToKPH(RecentMaxGust):F1}\n");
 					}
 					xapReport.Append($"WindDirD={Bearing}\n");
 					xapReport.Append($"WindDirC={AvgBearing}\n");
 					if (Temperature.HasValue)
 					{
-						xapReport.Append($"TempC={ConvertUserTempToC(Temperature):F1}\n");
-						xapReport.Append($"TempF={ConvertUserTempToF(Temperature):F1}\n");
+						xapReport.Append($"TempC={ConvertUnits.UserTempToC(Temperature):F1}\n");
+						xapReport.Append($"TempF={ConvertUnits.UserTempToF(Temperature):F1}\n");
 					}
-					xapReport.Append($"DewC={ConvertUserTempToC(Dewpoint):F1}\n");
-					xapReport.Append($"DewF={ConvertUserTempToF(Dewpoint):F1}\n");
+					xapReport.Append($"DewC={ConvertUnits.UserTempToC(Dewpoint):F1}\n");
+					xapReport.Append($"DewF={ConvertUnits.UserTempToF(Dewpoint):F1}\n");
 					if (Pressure.HasValue)
-						xapReport.Append($"AirPressure={ConvertUserPressToMB(Pressure):F1}\n");
+						xapReport.Append($"AirPressure={ConvertUnits.UserPressToMB(Pressure):F1}\n");
 					if (RainToday.HasValue)
-						xapReport.Append($"Rain={ConvertUserRainToMM(RainToday.Value):F1}\n");
+						xapReport.Append($"Rain={ConvertUnits.UserRainToMM(RainToday.Value):F1}\n");
 					xapReport.Append('}');
 
 					data = Encoding.ASCII.GetBytes(xapReport.ToString());
@@ -1921,7 +1918,7 @@ namespace CumulusMX
 					var raw = File.ReadAllText(@"/sys/class/thermal/thermal_zone0/temp");
 					if (double.TryParse(raw, out var val))
 					{
-						cumulus.CPUtemp = ConvertTempCToUser(val / 1000).Value;
+						cumulus.CPUtemp = ConvertUnits.TempCToUser(val / 1000).Value;
 						cumulus.LogDebugMessage($"Current CPU temp = {cumulus.CPUtemp.ToString(cumulus.TempFormat)}{cumulus.Units.TempText}");
 					}
 					else
@@ -2108,17 +2105,17 @@ namespace CumulusMX
 				}
 				// finally calculate the ETo
 				var newET = MeteoLib.Evapotranspiration(
-					ConvertUserTempToC(result[0].avgTemp).Value,
+					ConvertUnits.UserTempToC(result[0].avgTemp).Value,
 					result[0].avgHum.Value,
 					result[0].avgSol.Value,
 					result[0].avgSolMax.Value,
-					ConvertUserWindToMS(result[0].avgWind).Value,
+					ConvertUnits.UserWindToMS(result[0].avgWind).Value,
 					cumulus.StationOptions.AnemometerHeightM,
 					ConvertUserPressureToHPa(result[0].avgPress).Value / 10
 				);
 
 				// convert to user units
-				newET = ConvertRainMMToUser(newET);
+				newET = ConvertUnits.RainMMToUser(newET).Value;
 
 				// DoET expects the running annual total to be sent
 				DoET(AnnualETTotal + newET, date);
@@ -2229,7 +2226,7 @@ namespace CumulusMX
 			else
 				// 0900 day, use midnight calculation
 				in100raintoday = Convert.ToInt32(ConvertUserRainToIn(RainSinceMidnight) * 100);
-			int mb10press = Convert.ToInt32(ConvertUserPressToMB(AltimeterPressure ?? 0) * 10);
+			int mb10press = Convert.ToInt32(ConvertUnits.UserPressToMB(AltimeterPressure ?? 0) * 10);
 			// For 100% humidity, send zero. For zero humidity, send 1
 			int hum;
 			if (Humidity.HasValue)
@@ -2424,20 +2421,18 @@ namespace CumulusMX
 			}
 
 			// Spike check
-			// Spike removal is in Celsius
-			var tempC = ConvertUserTempToC(temp).Value;
 
-			if ((previousInTemp != 999) && (Math.Abs(tempC - previousInTemp) > cumulus.Spike.InTempDiff))
+			if ((previousInTemp != 999) && (Math.Abs(temp.Value - previousInTemp) > cumulus.Spike.InTempDiff))
 			{
 				cumulus.LogSpikeRemoval("Indoor temperature difference greater than specified; reading ignored");
-				cumulus.LogSpikeRemoval($"NewVal={tempC} OldVal={previousInTemp} SpikeDiff={cumulus.Spike.InTempDiff:F1}");
+				cumulus.LogSpikeRemoval($"NewVal={temp} OldVal={previousInTemp} SpikeDiff={cumulus.Spike.InTempDiff:F1}");
 				lastSpikeRemoval = DateTime.Now;
-				cumulus.SpikeAlarm.LastMessage = $"Indoor temperature difference greater than spike value - NewVal={tempC} OldVal={previousInTemp}";
+				cumulus.SpikeAlarm.LastMessage = $"Indoor temperature difference greater than spike value - NewVal={temp} OldVal={previousInTemp}";
 				cumulus.SpikeAlarm.Triggered = true;
 				return;
 			}
 
-			previousInTemp = tempC;
+			previousInTemp = temp.Value;
 
 			IndoorTemp = cumulus.Calib.InTemp.Calibrate(temp);
 			dataValuesUpdated.IndoorTemp = IndoorTemp.HasValue;
@@ -2554,20 +2549,18 @@ namespace CumulusMX
 
 			dataValuesUpdated.Temperature = true;
 
-			// Spike removal is in Celsius
-			var tempC = ConvertUserTempToC(temp).Value;
-
-			if (((Math.Abs(tempC - previousTemp) > cumulus.Spike.TempDiff) && (previousTemp != 999)) ||
-				tempC >= cumulus.Limit.TempHigh || tempC <= cumulus.Limit.TempLow)
+			// Spike removal
+			if (((Math.Abs(temp.Value - previousTemp) > cumulus.Spike.TempDiff) && (previousTemp != 999)) ||
+				temp.Value >= cumulus.Limit.TempHigh || temp.Value <= cumulus.Limit.TempLow)
 			{
 				lastSpikeRemoval = DateTime.Now;
-				cumulus.SpikeAlarm.LastMessage = $"Temp difference greater than spike value - NewVal={tempC.ToString(cumulus.TempFormat)} OldVal={previousTemp.ToString(cumulus.TempFormat)}";
+				cumulus.SpikeAlarm.LastMessage = $"Temp difference greater than spike value - NewVal={temp.Value.ToString(cumulus.TempFormat)} OldVal={previousTemp.ToString(cumulus.TempFormat)}";
 				cumulus.SpikeAlarm.Triggered = true;
 				cumulus.LogSpikeRemoval("Temp difference greater than specified; reading ignored");
-				cumulus.LogSpikeRemoval($"NewVal={tempC.ToString(cumulus.TempFormat)} OldVal={previousTemp.ToString(cumulus.TempFormat)} SpikeTempDiff={cumulus.Spike.TempDiff.ToString(cumulus.TempFormat)} HighLimit={cumulus.Limit.TempHigh.ToString(cumulus.TempFormat)} LowLimit={cumulus.Limit.TempLow.ToString(cumulus.TempFormat)}");
+				cumulus.LogSpikeRemoval($"NewVal={temp.Value.ToString(cumulus.TempFormat)} OldVal={previousTemp.ToString(cumulus.TempFormat)} SpikeTempDiff={cumulus.Spike.TempDiff.ToString(cumulus.TempFormat)} HighLimit={cumulus.Limit.TempHigh.ToString(cumulus.TempFormat)} LowLimit={cumulus.Limit.TempLow.ToString(cumulus.TempFormat)}");
 				return;
 			}
-			previousTemp = tempC;
+			previousTemp = temp.Value;
 
 			// UpdateStatusPanel;
 			// update global temp
@@ -2663,13 +2656,13 @@ namespace CumulusMX
 				return;
 			}
 
-			var tempinF = ConvertUserTempToF(Temperature).Value;
-			var tempinC = ConvertUserTempToC(Temperature).Value;
+			var tempinF = ConvertUnits.UserTempToF(Temperature).Value;
+			var tempinC = ConvertUnits.UserTempToC(Temperature).Value;
 
 			// Calculate cloud base
 			if (Dewpoint.HasValue)
 			{
-				CloudBase = (int)Math.Floor((tempinF - ConvertUserTempToF(Dewpoint)).Value / 4.4 * 1000 / (cumulus.CloudBaseInFeet ? 1 : 3.2808399));
+				CloudBase = (int)Math.Floor((tempinF - ConvertUnits.UserTempToF(Dewpoint)).Value / 4.4 * 1000 / (cumulus.CloudBaseInFeet ? 1 : 3.2808399));
 				if (CloudBase < 0)
 					CloudBase = 0;
 			}
@@ -2681,7 +2674,7 @@ namespace CumulusMX
 
 			if (Humidity.HasValue)
 			{
-				HeatIndex = ConvertTempCToUser(MeteoLib.HeatIndex(tempinC, Humidity.Value));
+				HeatIndex = ConvertUnits.TempCToUser(MeteoLib.HeatIndex(tempinC, Humidity.Value));
 
 				if (HeatIndex.Value > (HiLoToday.HighHeatIndex ?? -999.0))
 				{
@@ -2719,7 +2712,7 @@ namespace CumulusMX
 
 			// Find estimated wet bulb temp. First time this is called, required variables may not have been set up yet
 			if (Pressure.HasValue && Dewpoint.HasValue)
-				WetBulb = ConvertTempCToUser(MeteoLib.CalculateWetBulbC(tempinC, ConvertUserTempToC(Dewpoint).Value, ConvertUserPressToMB(Pressure).Value));
+				WetBulb = ConvertUnits.TempCToUser(MeteoLib.CalculateWetBulbC(tempinC, ConvertUnits.UserTempToC(Dewpoint).Value, ConvertUnits.UserPressToMB(Pressure).Value));
 			else
 				WetBulb = null;
 		}
@@ -2741,12 +2734,12 @@ namespace CumulusMX
 			}
 
 			//ApparentTemperature =
-			//ConvertTempCToUser(ConvertUserTempToC(OutdoorTemperature) + (0.33 * MeteoLib.ActualVapourPressure(ConvertUserTempToC(OutdoorTemperature), Humidity)) -
-			//				   (0.7 * ConvertUserWindToMS(WindAverage)) - 4);
-			ApparentTemp = ConvertTempCToUser(MeteoLib.ApparentTemperature(ConvertUserTempToC(Temperature).Value, ConvertUserWindToMS(WindAverage).Value, Humidity.Value));
+			//ConvertUnits.TempCToUser(ConvertUnits.UserTempToC(OutdoorTemperature) + (0.33 * MeteoLib.ActualVapourPressure(ConvertUnits.UserTempToC(OutdoorTemperature), Humidity)) -
+			//				   (0.7 * ConvertUnits.UserWindToMS(WindAverage)) - 4);
+			ApparentTemp = ConvertUnits.TempCToUser(MeteoLib.ApparentTemperature(ConvertUnits.UserTempToC(Temperature).Value, ConvertUnits.UserWindToMS(WindAverage).Value, Humidity.Value));
 
 			// we will tag on the THW Index here
-			THWIndex = ConvertTempCToUser(MeteoLib.THWIndex(ConvertUserTempToC(Temperature), Humidity, ConvertUserWindToKPH(WindAverage)));
+			THWIndex = ConvertUnits.TempCToUser(MeteoLib.THWIndex(ConvertUnits.UserTempToC(Temperature), Humidity, ConvertUnits.UserWindToKPH(WindAverage)));
 
 			if (ApparentTemp > (HiLoToday.HighAppTemp ?? Cumulus.DefaultHiVal))
 			{
@@ -2805,13 +2798,13 @@ namespace CumulusMX
 		{
 			if (cumulus.StationOptions.CalculatedWC || !chillpar.HasValue)
 			{
-				var TempinC = ConvertUserTempToC(Temperature);
-				var windinKPH = ConvertUserWindToKPH(WindAverage);
-				WindChill = ConvertTempCToUser(MeteoLib.WindChill(TempinC, windinKPH));
+				var TempinC = ConvertUnits.UserTempToC(Temperature);
+				var windinKPH = ConvertUnits.UserWindToKPH(WindAverage);
+				WindChill = ConvertUnits.TempCToUser(MeteoLib.WindChill(TempinC, windinKPH));
 			}
 			else
 			{
-				if (WindAverage.HasValue && ConvertUserWindToMS(WindAverage) < 1.5)
+				if (WindAverage.HasValue && ConvertUnits.UserWindToMS(WindAverage) < 1.5)
 					WindChill = chillpar;
 				else
 					WindChill = Temperature;
@@ -2862,7 +2855,7 @@ namespace CumulusMX
 				return;
 			}
 
-			FeelsLike = ConvertTempCToUser(MeteoLib.FeelsLike(ConvertUserTempToC(Temperature.Value), ConvertUserWindToKPH(WindAverage), Humidity.Value));
+			FeelsLike = ConvertUnits.TempCToUser(MeteoLib.FeelsLike(ConvertUnits.UserTempToC(Temperature.Value), ConvertUnits.UserWindToKPH(WindAverage), Humidity.Value));
 
 			if (FeelsLike > (HiLoToday.HighFeelsLike ?? Cumulus.DefaultHiVal))
 			{
@@ -2924,7 +2917,7 @@ namespace CumulusMX
 				return;
 			}
 
-			Humidex = MeteoLib.Humidex(ConvertUserTempToC(Temperature), Humidity);
+			Humidex = MeteoLib.Humidex(ConvertUnits.UserTempToC(Temperature), Humidity);
 
 			if (Humidex > (HiLoToday.HighHumidex ?? Cumulus.DefaultHiVal))
 			{
@@ -3041,20 +3034,19 @@ namespace CumulusMX
 				return;
 			}
 
-			// Spike removal is in mb/hPa
-			var pressMB = ConvertUserPressToMB(sl).Value;
-			if (((Math.Abs(pressMB - previousPress) > cumulus.Spike.PressDiff) && (previousPress != 9999)) ||
-				pressMB >= cumulus.Limit.PressHigh || pressMB <= cumulus.Limit.PressLow)
+			// Spike removal
+			if (((Math.Abs(sl.Value - previousPress) > cumulus.Spike.PressDiff) && (previousPress != 9999)) ||
+				sl.Value >= cumulus.Limit.PressHigh || sl.Value <= cumulus.Limit.PressLow)
 			{
 				cumulus.LogSpikeRemoval("Pressure difference greater than specified; reading ignored");
-				cumulus.LogSpikeRemoval($"NewVal={pressMB:F1} OldVal={previousPress:F1} SpikePressDiff={cumulus.Spike.PressDiff:F1} HighLimit={cumulus.Limit.PressHigh:F1} LowLimit={cumulus.Limit.PressLow:F1}");
+				cumulus.LogSpikeRemoval($"NewVal={sl.Value:F1} OldVal={previousPress:F1} SpikePressDiff={cumulus.Spike.PressDiff:F1} HighLimit={cumulus.Limit.PressHigh:F1} LowLimit={cumulus.Limit.PressLow:F1}");
 				lastSpikeRemoval = DateTime.Now;
-				cumulus.SpikeAlarm.LastMessage = $"Pressure difference greater than spike value - NewVal={pressMB:F1} OldVal={previousPress:F1}";
+				cumulus.SpikeAlarm.LastMessage = $"Pressure difference greater than spike value - NewVal={sl.Value:F1} OldVal={previousPress:F1}";
 				cumulus.SpikeAlarm.Triggered = true;
 				return;
 			}
 
-			previousPress = pressMB;
+			previousPress = sl.Value;
 
 			Pressure = cumulus.Calib.Press.Calibrate(sl);
 
@@ -3072,7 +3064,7 @@ namespace CumulusMX
 			{
 				if (cumulus.Manufacturer == cumulus.OREGONUSB)
 				{
-					AltimeterPressure = ConvertPressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure), AltitudeM(cumulus.Altitude)));
+					AltimeterPressure = ConvertUnits.PressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure), AltitudeM(cumulus.Altitude)));
 				}
 				else
 				{
@@ -3179,14 +3171,13 @@ namespace CumulusMX
 			cumulus.LogDebugMessage($"DoRain: counter={total:f3}, rate={rate:f3}; RainToday={RainToday:f3}, StartOfDay={raindaystart:f3}");
 #endif
 
-			// Spike removal is in mm
-			var rainRateMM = ConvertUserRainToMM(rate);
-			if ((rainRateMM ?? 0) > cumulus.Spike.MaxRainRate)
+			// Spike removal
+			if ((rate ?? 0) > cumulus.Spike.MaxRainRate)
 			{
 				cumulus.LogSpikeRemoval("Rain rate greater than specified; reading ignored");
-				cumulus.LogSpikeRemoval($"Rate value = {rainRateMM:F2} SpikeMaxRainRate = {cumulus.Spike.MaxRainRate:F2}");
+				cumulus.LogSpikeRemoval($"Rate value = {rate:F2} SpikeMaxRainRate = {cumulus.Spike.MaxRainRate:F2}");
 				lastSpikeRemoval = timestamp;
-				cumulus.SpikeAlarm.LastMessage = $"Rain rate greater than spike value - value = {rainRateMM:F2}mm/hr";
+				cumulus.SpikeAlarm.LastMessage = $"Rain rate greater than spike value - value = {rate:F2}mm/hr";
 				cumulus.SpikeAlarm.Triggered = true;
 				return;
 			}
@@ -3445,7 +3436,7 @@ namespace CumulusMX
 			double? newdp;
 			if (!dp.HasValue || (cumulus.StationOptions.CalculatedDP && !cumulus.FineOffsetStation))
 			{
-				newdp = ConvertTempCToUser(MeteoLib.DewPoint(ConvertUserTempToC(Temperature), Humidity));
+				newdp = ConvertUnits.TempCToUser(MeteoLib.DewPoint(ConvertUnits.UserTempToC(Temperature), Humidity));
 			}
 			else
 			{
@@ -3458,7 +3449,7 @@ namespace CumulusMX
 				return;
 			}
 
-			if (ConvertUserTempToC(newdp) <= cumulus.Limit.DewHigh)
+			if (ConvertUnits.UserTempToC(newdp) <= cumulus.Limit.DewHigh)
 			{
 				Dewpoint = newdp;
 				dataValuesUpdated.DewPoint = true;
@@ -3641,25 +3632,22 @@ namespace CumulusMX
 			cumulus.LogDebugMessage($"DoWind: gust={gustpar:F1}, speed={speedpar:F1}");
 #endif
 
-			// Spike removal is in m/s
-			var windGustMS = ConvertUserWindToMS(gustpar);
-			var windAvgMS = ConvertUserWindToMS(speedpar);
-
-			if (windGustMS.HasValue && previousGust != 999 && (Math.Abs(windGustMS.Value - previousGust) > cumulus.Spike.GustDiff  || windGustMS >= cumulus.Limit.WindHigh))
+			// Spike removal
+			if (gustpar.HasValue && previousGust != 999 && (Math.Abs(gustpar.Value - previousGust) > cumulus.Spike.GustDiff  || gustpar >= cumulus.Limit.WindHigh))
 			{
 				WindLatest = null;
 				Bearing = null;
 				WindAverage = null;
 
 				cumulus.LogSpikeRemoval("Gust difference greater than specified; reading ignored");
-				cumulus.LogSpikeRemoval($"Gust: NewVal={windGustMS:F1} OldVal={previousGust:F1} SpikeGustDiff={cumulus.Spike.GustDiff:F1} HighLimit={cumulus.Limit.WindHigh:F1}");
+				cumulus.LogSpikeRemoval($"Gust: NewVal={gustpar:F1} OldVal={previousGust:F1} SpikeGustDiff={cumulus.Spike.GustDiff:F1} HighLimit={cumulus.Limit.WindHigh:F1}");
 
-				cumulus.SpikeAlarm.LastMessage = $"Gust difference greater than spike/limit value - Gust: NewVal={windGustMS:F1}m/s OldVal={previousGust:F1}m/s";
+				cumulus.SpikeAlarm.LastMessage = $"Gust difference greater than spike/limit value - Gust: NewVal={gustpar:F1}m/s OldVal={previousGust:F1}m/s";
 				cumulus.SpikeAlarm.Triggered = true;
 				lastSpikeRemoval = timestamp;
 				return;
 			}
-			else if (windGustMS == null)
+			else if (gustpar == null)
 			{
 				WindLatest = null;
 				Bearing = null;
@@ -3667,19 +3655,18 @@ namespace CumulusMX
 				return;
 			}
 
-			if (windAvgMS.HasValue && previousWind != 999 && (Math.Abs(windAvgMS.Value - previousWind) > cumulus.Spike.WindDiff || windAvgMS >= cumulus.Limit.WindHigh))
+			if (speedpar.HasValue && previousWind != 999 && (Math.Abs(speedpar.Value - previousWind) > cumulus.Spike.WindDiff || speedpar >= cumulus.Limit.WindHigh))
 			{
 				cumulus.LogSpikeRemoval("Wind difference greater than specified; reading ignored");
-				cumulus.LogSpikeRemoval($"Wind: NewVal={windAvgMS:F1} OldVal={previousWind:F1} SpikeWindDiff={cumulus.Spike.WindDiff:F1} HighLimit={cumulus.Limit.WindHigh:F1}");
+				cumulus.LogSpikeRemoval($"Wind: NewVal={speedpar:F1} OldVal={previousWind:F1} SpikeWindDiff={cumulus.Spike.WindDiff:F1} HighLimit={cumulus.Limit.WindHigh:F1}");
 				lastSpikeRemoval = DateTime.Now;
-				cumulus.SpikeAlarm.LastMessage = $"Wind difference greater than spike/limit value - Wind: NewVal={windAvgMS:F1}m/s OldVal={previousWind:F1}m/s";
+				cumulus.SpikeAlarm.LastMessage = $"Wind difference greater than spike/limit value - Wind: NewVal={speedpar:F1}m/s OldVal={previousWind:F1}m/s";
 				cumulus.SpikeAlarm.Triggered = true;
 				lastSpikeRemoval = timestamp;
 			}
 
-			previousGust = windGustMS.Value;
-			previousWind = windAvgMS ?? 999;
-
+			previousGust = gustpar ?? 999;
+			previousWind = speedpar ?? 999;
 
 
 			// use bearing of zero when calm
@@ -4124,12 +4111,12 @@ namespace CumulusMX
 
 		protected void DoWetBulb(double? temp, DateTime timestamp) // Supplied in CELSIUS
 		{
-			WetBulb = cumulus.Calib.WetBulb.Calibrate(ConvertTempCToUser(temp));
+			WetBulb = cumulus.Calib.WetBulb.Calibrate(ConvertUnits.TempCToUser(temp));
 
 			// calculate RH
 			if (Temperature.HasValue)
 			{
-				double TempDry = ConvertUserTempToC(Temperature).Value;
+				double TempDry = ConvertUnits.UserTempToC(Temperature).Value;
 				double Es = MeteoLib.SaturationVapourPressure1980(TempDry);
 				double Ew = MeteoLib.SaturationVapourPressure1980(temp.Value);
 				double E = Ew - (0.00066 * (1 + 0.00115 * temp.Value) * (TempDry - temp.Value) * 1013);
@@ -4139,7 +4126,7 @@ namespace CumulusMX
 				// Calculate DewPoint
 
 				// dewpoint = TempinC + ((0.13 * TempinC) + 13.6) * Ln(humidity / 100);
-				Dewpoint = ConvertTempCToUser(MeteoLib.DewPoint(TempDry, hum));
+				Dewpoint = ConvertUnits.TempCToUser(MeteoLib.DewPoint(TempDry, hum));
 
 				CheckForDewpointHighLow(timestamp);
 			}
@@ -4265,17 +4252,17 @@ namespace CumulusMX
 		private int DayResetDay = 0;
 		protected bool FirstRun = false;
 		public const int MaxWindRecent = 720;
-		public readonly double[] WindRunHourMult = { 3.6, 1.0, 1.0, 1.0 };
+		public readonly double[] WindRunHourMult = [3.6, 1.0, 1.0, 1.0];
 		public DateTime LastDataReadTimestamp = DateTime.MinValue;
 		public DateTime SavedLastDataReadTimestamp = DateTime.MinValue;
 		// Create arrays with 9 entries, 0 = VP2, 1-8 = WLL TxIds
 		public int DavisTotalPacketsReceived = 0;
-		public int[] DavisTotalPacketsMissed = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-		public int[] DavisNumberOfResynchs = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-		public int[] DavisMaxInARow = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-		public int[] DavisNumCRCerrors = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-		public int[] DavisReceptionPct = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-		public int[] DavisTxRssi = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		public int[] DavisTotalPacketsMissed = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+		public int[] DavisNumberOfResynchs = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+		public int[] DavisMaxInARow = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+		public int[] DavisNumCRCerrors = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+		public int[] DavisReceptionPct = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+		public int[] DavisTxRssi = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 		public string DavisFirmwareVersion = "???";
 		public string GW1000FirmwareVersion = "???";
 		public string EcowittCameraUrl = string.Empty;
@@ -4922,8 +4909,8 @@ namespace CumulusMX
 
 				if (HiLoToday.HighTemp.HasValue && HiLoToday.LowTemp.HasValue)
 				{
-					GrowingDegreeDaysThisYear1 += MeteoLib.GrowingDegreeDays(ConvertUserTempToC(HiLoToday.HighTemp).Value, ConvertUserTempToC(HiLoToday.LowTemp).Value, ConvertUserTempToC(cumulus.GrowingBase1).Value, cumulus.GrowingCap30C);
-					GrowingDegreeDaysThisYear2 += MeteoLib.GrowingDegreeDays(ConvertUserTempToC(HiLoToday.HighTemp).Value, ConvertUserTempToC(HiLoToday.LowTemp).Value, ConvertUserTempToC(cumulus.GrowingBase2).Value, cumulus.GrowingCap30C);
+					GrowingDegreeDaysThisYear1 += MeteoLib.GrowingDegreeDays(ConvertUnits.UserTempToC(HiLoToday.HighTemp).Value, ConvertUnits.UserTempToC(HiLoToday.LowTemp).Value, ConvertUnits.UserTempToC(cumulus.GrowingBase1).Value, cumulus.GrowingCap30C);
+					GrowingDegreeDaysThisYear2 += MeteoLib.GrowingDegreeDays(ConvertUnits.UserTempToC(HiLoToday.HighTemp).Value, ConvertUnits.UserTempToC(HiLoToday.LowTemp).Value, ConvertUnits.UserTempToC(cumulus.GrowingBase2).Value, cumulus.GrowingCap30C);
 				}
 
 				// Now reset all values to the current or default ones
@@ -5435,326 +5422,6 @@ namespace CumulusMX
 			return ((c / 16) * 10) + (c % 16);
 		}
 
-		/// <summary>
-		///  Convert temp supplied in C to units in use
-		/// </summary>
-		/// <param name="value">Temp in C</param>
-		/// <returns>Temp in configured units</returns>
-		public static double? ConvertTempCToUser(double? value)
-		{
-			if (!value.HasValue)
-				return value;
-
-			if (cumulus.Units.Temp == 1)
-			{
-				return MeteoLib.CToF(value.Value);
-			}
-			else
-			{
-				// C
-				return value;
-			}
-		}
-
-		/// <summary>
-		///  Convert temp supplied in F to units in use
-		/// </summary>
-		/// <param name="value">Temp in F</param>
-		/// <returns>Temp in configured units</returns>
-		public static double? ConvertTempFToUser(double? value)
-		{
-			if (!value.HasValue)
-				return value;
-
-			if (cumulus.Units.Temp == 0)
-			{
-				return MeteoLib.FtoC(value.Value);
-			}
-			else
-			{
-				// F
-				return value;
-			}
-		}
-
-		/// <summary>
-		///  Convert temp supplied in user units to C
-		/// </summary>
-		/// <param name="value">Temp in configured units</param>
-		/// <returns>Temp in C</returns>
-		public static double? ConvertUserTempToC(double? value)
-		{
-			if (!value.HasValue)
-				return value;
-
-			if (cumulus.Units.Temp == 1)
-			{
-				return MeteoLib.FtoC(value.Value);
-			}
-			else
-			{
-				// C
-				return value;
-			}
-		}
-
-		/// <summary>
-		///  Convert temp supplied in user units to F
-		/// </summary>
-		/// <param name="value">Temp in configured units</param>
-		/// <returns>Temp in F</returns>
-		public static double? ConvertUserTempToF(double? value)
-		{
-			if (!value.HasValue)
-				return value;
-
-			if (cumulus.Units.Temp == 1)
-			{
-				return value;
-			}
-			else
-			{
-				// C
-				return MeteoLib.CToF(value.Value);
-			}
-		}
-
-		/// <summary>
-		///  Converts wind supplied in m/s to user units
-		/// </summary>
-		/// <param name="value">Wind in m/s</param>
-		/// <returns>Wind in configured units</returns>
-		public static double ConvertWindMSToUser(double value)
-		{
-			return cumulus.Units.Wind switch
-			{
-				0 => value,
-				1 => value * 2.23693629,
-				2 => value * 3.6,
-				3 => value * 1.94384449,
-				_ => 0
-			};
-		}
-
-		/// <summary>
-		///  Converts wind supplied in mph to user units
-		/// </summary>
-		/// <param name="value">Wind in mph</param>
-		/// <returns>Wind in configured units</returns>
-		public static double? ConvertWindMPHToUser(double? value)
-		{
-			if (value == null)
-				return null;
-
-			return cumulus.Units.Wind switch
-			{
-				0 => value * 0.44704,
-				1 => value,
-				2 => value * 1.60934,
-				3 => value * 0.868976,
-				_ => 0
-			};
-		}
-
-		/// <summary>
-		/// Converts wind in user units to m/s
-		/// </summary>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		public static double? ConvertUserWindToMS(double? value)
-		{
-			if (value == null) return null;
-
-			return cumulus.Units.Wind switch
-			{
-				0 => value,
-				1 => value / 2.23693629,
-				2 => value / 3.6F,
-				3 => value / 1.94384449,
-				_ => 0
-			};
-		}
-
-		/// <summary>
-		/// Converts value in kilometres to distance unit based on users configured wind units
-		/// </summary>
-		/// <param name="val"></param>
-		/// <returns>Wind in configured units</returns>
-		public static double ConvertKmtoUserUnits(double val)
-		{
-			return cumulus.Units.Wind switch
-			{
-				// m/s
-				0 or 2 => val,
-				// mph
-				1 => val * 0.621371,
-				// knots
-				3 => val * 0.539957,
-				_ => val
-			};
-		}
-
-		/// <summary>
-		///  Converts windrun supplied in user units to km
-		/// </summary>
-		/// <param name="value">Windrun in configured units</param>
-		/// <returns>Wind in km</returns>
-		public static double? ConvertWindRunToKm(double? value)
-		{
-			if (value == null) return null;
-
-			return cumulus.Units.Wind switch
-			{
-				// m/s or km/h
-				0 or 2 => value,
-				// mph
-				1 => value / 0.621371192,
-				// knots
-				3 => value / 0.539956803,
-				_ => 0
-			};
-		}
-
-		/// <summary>
-		///  Converts windrun supplied in user units to miles
-		/// </summary>
-		/// <param name="value">Windrun in configured units</param>
-		/// <returns>Wind in mi</returns>
-		public static double? ConvertWindRunToMi(double? value)
-		{
-			if (value == null) return null;
-
-			return cumulus.Units.Wind switch
-			{
-				0 or 2 => value * 0.621371192,	// m/s or km/h
-				1 => value,						// mph
-				3 => value / 0.8689762,			// knots
-				_ => 0
-			};
-		}
-
-		/// <summary>
-		///  Converts windrun supplied in user units to nautical miles
-		/// </summary>
-		/// <param name="value">Windrun in configured units</param>
-		/// <returns>Wind in Nm</returns>
-		public static double? ConvertWindRunToNm(double? value)
-		{
-			if (value == null) return null;
-
-			return cumulus.Units.Wind switch
-			{
-				0 or 2 => value * 0.539956803,  // m/s or km/h
-				1 => value * 0.8689762,         // mph
-				3 => value,                     // knots
-				_ => 0
-			};
-		}
-
-		public static double? ConvertUserWindToKPH(double? wind) // input is in Units.Wind units, convert to km/h
-		{
-			if (wind == null)
-				return null;
-
-			return cumulus.Units.Wind switch
-			{
-				// m/s
-				0 => wind * 3.6,
-				// mph
-				1 => wind * 1.609344,
-				// kph
-				2 => wind,
-				// knots
-				3 => wind * 1.852,
-				_ => wind,
-			};
-		}
-
-		/// <summary>
-		/// Converts rain in mm to units in use
-		/// </summary>
-		/// <param name="value">Rain in mm</param>
-		/// <returns>Rain in configured units</returns>
-		public static double ConvertRainMMToUser(double value)
-		{
-			return cumulus.Units.Rain == 1 ? value * 0.0393700787 : value;
-		}
-
-		/// <summary>
-		/// Converts rain in inches to units in use
-		/// </summary>
-		/// <param name="value">Rain in mm</param>
-		/// <returns>Rain in configured units</returns>
-		public static double ConvertRainINToUser(double value)
-		{
-			return cumulus.Units.Rain == 1 ? value : value * 25.4;
-		}
-
-		/// <summary>
-		/// Converts rain in units in use to mm
-		/// </summary>
-		/// <param name="value">Rain in configured units</param>
-		/// <returns>Rain in mm</returns>
-		public static double? ConvertUserRainToMM(double? value)
-		{
-			if (value == null)
-				return null;
-
-			return cumulus.Units.Rain == 1 ? value / 0.0393700787 : value;
-		}
-
-		/// <summary>
-		/// Convert pressure in mb to units in use
-		/// </summary>
-		/// <param name="value">pressure in mb</param>
-		/// <returns>pressure in configured units</returns>
-		public static double? ConvertPressMBToUser(double? value)
-		{
-			if (value == null)
-				return null;
-
-			return cumulus.Units.Press == 2 ? value * 0.0295333727 : value;
-		}
-
-		/// <summary>
-		/// Convert pressure in inHg to units in use
-		/// </summary>
-		/// <param name="value">pressure in mb</param>
-		/// <returns>pressure in configured units</returns>
-		public static double? ConvertPressINHGToUser(double? value)
-		{
-			if (value == null)
-				return null;
-
-			return cumulus.Units.Press == 2 ? value : value * 33.8638866667;
-		}
-
-		/// <summary>
-		/// Convert pressure in units in use to mb
-		/// </summary>
-		/// <param name="value">pressure in configured units</param>
-		/// <returns>pressure in mb</returns>
-		public static double? ConvertUserPressToMB(double? value)
-		{
-			if (value == null)
-				return null;
-
-			return cumulus.Units.Press == 2 ? value / 0.0295333727 : value;
-		}
-
-		/// <summary>
-		/// Convert pressure in units in use to inHg
-		/// </summary>
-		/// <param name="value">pressure in configured units</param>
-		/// <returns>pressure in mb</returns>
-		public static double? ConvertUserPressToIN(double? value)
-		{
-			if (value == null)
-				return null;
-
-			return cumulus.Units.Press == 2 ? value : value * 0.0295333727;
-		}
-
 		public static string CompassPoint(int? bearing)
 		{
 			return (bearing ?? 0) == 0 ? "-" : cumulus.Trans.compassp[(((bearing.Value * 100) + 1125) % 36000) / 2250];
@@ -5994,7 +5661,7 @@ namespace CumulusMX
 
 						var tempRainLastHour = trendval * cumulus.Calib.Rain.Mult;
 
-						if (ConvertUserRainToMM(tempRainLastHour) > cumulus.Spike.MaxHourlyRain)
+						if (ConvertUnits.UserRainToMM(tempRainLastHour) > cumulus.Spike.MaxHourlyRain)
 						{
 							// ignore
 							cumulus.LogSpikeRemoval("Max hourly rainfall spike value exceed");
@@ -6069,7 +5736,7 @@ namespace CumulusMX
 							tempRainRate = 0;
 						}
 
-						if (ConvertUserRainToMM(tempRainRate) > cumulus.Spike.MaxRainRate)
+						if (ConvertUnits.UserRainToMM(tempRainRate) > cumulus.Spike.MaxRainRate)
 						{
 							// ignore
 							cumulus.LogSpikeRemoval("Max rainfall rate spike value exceed");
@@ -6711,7 +6378,7 @@ namespace CumulusMX
 		}
 
 
-		internal void UpdateMQTT()
+		internal static void UpdateMQTT()
 		{
 			if (cumulus.MQTT.EnableDataUpdate)
 			{
@@ -7057,43 +6724,6 @@ namespace CumulusMX
 
 		public int Forecastnumber { get; set; }
 
-		/// <summary>
-		/// Takes speed in user units, returns Bft number
-		/// </summary>
-		/// <param name="windspeed"></param>
-		/// <returns></returns>
-		public static int Beaufort(double? speed)
-		{
-			if (speed == null)
-				return -1;
-
-			double windspeedMS = ConvertUserWindToMS(speed).Value;
-			if (windspeedMS < 0.3)
-				return 0;
-			else if (windspeedMS < 1.6)
-				return 1;
-			else if (windspeedMS < 3.4)
-				return 2;
-			else if (windspeedMS < 5.5)
-				return 3;
-			else if (windspeedMS < 8.0)
-				return 4;
-			else if (windspeedMS < 10.8)
-				return 5;
-			else if (windspeedMS < 13.9)
-				return 6;
-			else if (windspeedMS < 17.2)
-				return 7;
-			else if (windspeedMS < 20.8)
-				return 8;
-			else if (windspeedMS < 24.5)
-				return 9;
-			else if (windspeedMS < 28.5)
-				return 10;
-			else if (windspeedMS < 32.7)
-				return 11;
-			else return 12;
-		}
 
 		// This overridden in each station implementation
 		public virtual void Stop()
@@ -7926,13 +7556,13 @@ namespace CumulusMX
 
 		public string PressINstr(double pressure)
 		{
-			return ConvertUserPressToIN(pressure).Value.ToString("F3", invNum);
+			return ConvertUnits.UserPressToIN(pressure).Value.ToString("F3", invNum);
 		}
 
 		public string PressPAstr(double pressure)
 		{
 			// return value to 0.1 hPa
-			return (ConvertUserPressToMB(pressure).Value / 100).ToString("F4", invNum);
+			return (ConvertUnits.UserPressToMB(pressure).Value / 100).ToString("F4", invNum);
 		}
 
 		public string WindMPHStr(double wind)
@@ -7946,7 +7576,7 @@ namespace CumulusMX
 
 		public string WindMSStr(double wind)
 		{
-			var windMS = ConvertUserWindToMS(wind).Value;
+			var windMS = ConvertUnits.UserWindToMS(wind).Value;
 			if (cumulus.StationOptions.RoundWindSpeed)
 				windMS = Math.Round(windMS);
 
@@ -7970,7 +7600,7 @@ namespace CumulusMX
 		/// <returns></returns>
 		public string RainMMstr(double rain)
 		{
-			return ConvertUserRainToMM(rain).Value.ToString("F2", invNum);
+			return ConvertUnits.UserRainToMM(rain).Value.ToString("F2", invNum);
 		}
 
 		/// <summary>
@@ -7980,7 +7610,7 @@ namespace CumulusMX
 		/// <returns></returns>
 		public string TempFstr(double temp)
 		{
-			return ConvertUserTempToF(temp).Value.ToString("F1", invNum);
+			return ConvertUnits.UserTempToF(temp).Value.ToString("F1", invNum);
 		}
 
 		/// <summary>
@@ -7990,7 +7620,7 @@ namespace CumulusMX
 		/// <returns></returns>
 		public string TempCstr(double temp)
 		{
-			return ConvertUserTempToC(temp).Value.ToString("F1", invNum);
+			return ConvertUnits.UserTempToC(temp).Value.ToString("F1", invNum);
 		}
 
 		public static double? ConvertUserRainToIN(double? rain)
@@ -8036,7 +7666,7 @@ namespace CumulusMX
 				}
 			}
 
-			if (json[json.Length - 1] == ',')
+			if (json[^1] == ',')
 				json.Length--;
 
 			json.Append("]}");
@@ -8055,7 +7685,7 @@ namespace CumulusMX
 				}
 			}
 
-			if (json[json.Length - 1] == ',')
+			if (json[^1] == ',')
 				json.Length--;
 
 			json.Append("]}");
@@ -8074,7 +7704,7 @@ namespace CumulusMX
 				}
 			}
 
-			if (json[json.Length - 1] == ',')
+			if (json[^1] == ',')
 				json.Length--;
 
 			json.Append("]}");
@@ -8093,7 +7723,7 @@ namespace CumulusMX
 				}
 			}
 
-			if (json[json.Length - 1] == ',')
+			if (json[^1] == ',')
 				json.Length--;
 
 			json.Append("]}");
@@ -8673,7 +8303,7 @@ namespace CumulusMX
 			return json.ToString();
 		}
 
-		public string GetCachedSqlCommands(string draw, int start, int length, string search)
+		public static string GetCachedSqlCommands(string draw, int start, int length, string search)
 		{
 			try
 			{
@@ -8839,7 +8469,7 @@ namespace CumulusMX
 				getTimeString(cumulus.MoonRiseTime), getTimeString(cumulus.MoonSetTime), HiLoToday.HighHeatIndex, HiLoToday.HighHeatIndexTime.ToString(cumulus.ProgramOptions.TimeFormat), HiLoToday.HighAppTemp,
 				HiLoToday.LowAppTemp, HiLoToday.HighAppTempTime.ToString(cumulus.ProgramOptions.TimeFormat), HiLoToday.LowAppTempTime.ToString(cumulus.ProgramOptions.TimeFormat), CurrentSolarMax,
 				AllTime.HighPress.Val, AllTime.LowPress.Val, SunshineHours, CompassPoint(DominantWindBearing), LastRainTip,
-				HiLoToday.HighHourlyRain, HiLoToday.HighHourlyRainTime.ToString(cumulus.ProgramOptions.TimeFormat), "F" + cumulus.Beaufort(HiLoToday.HighWind ?? 0), "F" + cumulus.Beaufort(WindAverage ?? 0),
+				HiLoToday.HighHourlyRain, HiLoToday.HighHourlyRainTime.ToString(cumulus.ProgramOptions.TimeFormat), "F" + Cumulus.Beaufort(HiLoToday.HighWind ?? 0), "F" + Cumulus.Beaufort(WindAverage ?? 0),
 				cumulus.BeaufortDesc(WindAverage ?? 0), LastDataReadTimestamp.ToString(cumulus.ProgramOptions.TimeFormatLong), DataStopped, StormRain, stormRainStart, CloudBase, cumulus.CloudBaseInFeet ? "ft" : "m", RainLast24Hour,
 				FeelsLike, HiLoToday.HighFeelsLike, HiLoToday.HighFeelsLikeTime.ToString(cumulus.ProgramOptions.TimeFormat), HiLoToday.LowFeelsLike, HiLoToday.LowFeelsLikeTime.ToString(cumulus.ProgramOptions.TimeFormat),
 				HiLoToday.HighHumidex, HiLoToday.HighHumidexTime.ToString(cumulus.ProgramOptions.TimeFormat), alarms);
@@ -8868,7 +8498,7 @@ namespace CumulusMX
 			if (gust == null) return false;
 
 			// Spike check is in m/s
-			var windGustMS = ConvertUserWindToMS(gust).Value;
+			var windGustMS = ConvertUnits.UserWindToMS(gust).Value;
 
 			if (Math.Abs(gust.Value - previousGust) > cumulus.Spike.GustDiff && previousGust != 999 || windGustMS >= cumulus.Limit.WindHigh)
 			{
@@ -9023,42 +8653,23 @@ namespace CumulusMX
 	}
 
 
-	public class Last10MinWind
+	public class Last10MinWind(DateTime ts, double windgust, double windspeed, double Xgust, double Ygust)
 	{
-		public DateTime timestamp;
-		public double gust;
-		public double speed;
-		public double gustX;
-		public double gustY;
-
-		public Last10MinWind(DateTime ts, double windgust, double windspeed, double Xgust, double Ygust)
-		{
-			timestamp = ts;
-			gust = windgust;
-			speed = windspeed;
-			gustX = Xgust;
-			gustY = Ygust;
-		}
+		public DateTime timestamp = ts;
+		public double gust = windgust;
+		public double speed = windspeed;
+		public double gustX = Xgust;
+		public double gustY = Ygust;
 	}
 
-	public class RecentDailyData
+	public class RecentDailyData(DateTime ts, double dailyrain, double sunhrs, double mint, double maxt, double avgt)
 	{
-		public DateTime timestamp;
-		public double rain;
-		public double sunhours;
-		public double mintemp;
-		public double maxtemp;
-		public double avgtemp;
-
-		public RecentDailyData(DateTime ts, double dailyrain, double sunhrs, double mint, double maxt, double avgt)
-		{
-			timestamp = ts;
-			rain = dailyrain;
-			sunhours = sunhrs;
-			mintemp = mint;
-			maxtemp = maxt;
-			avgtemp = avgt;
-		}
+		public DateTime timestamp = ts;
+		public double rain = dailyrain;
+		public double sunhours = sunhrs;
+		public double mintemp = mint;
+		public double maxtemp = maxt;
+		public double avgtemp = avgt;
 	}
 
 
@@ -9138,7 +8749,7 @@ namespace CumulusMX
 		public AllTimeRec HighRain24Hours { get; set; } = new AllTimeRec(28);
 	}
 
-	public class AllTimeRec
+	public class AllTimeRec(int index)
 	{
 		private static readonly string[] alltimedescs = new[]
 		{
@@ -9148,12 +8759,8 @@ namespace CumulusMX
 			"High daily windrun", "Longest dry period", "Longest wet period", "High daily temp range", "Low daily temp range",
 			"High feels like", "Low feels like", "High Humidex", "High 24 hour rain"
 		};
-		private readonly int idx;
+		private readonly int idx = index;
 
-		public AllTimeRec(int index)
-		{
-			idx = index;
-		}
 		public double Val { get; set; }
 		public DateTime Ts { get; set; }
 		public string Desc

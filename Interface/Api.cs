@@ -336,7 +336,7 @@ namespace CumulusMX
 						case "mysqlcache.json":
 							if (await Authenticate(HttpContext))
 							{
-								await writer.WriteAsync(Station.GetCachedSqlCommands(draw, start, length, search));
+								await writer.WriteAsync(WeatherStation.GetCachedSqlCommands(draw, start, length, search));
 							}
 							break;
 						case "errorlog.json":
@@ -783,35 +783,34 @@ namespace CumulusMX
 				{
 					int month = Convert.ToInt32(mon);
 
-					using (var writer = HttpContext.OpenResponseText(new UTF8Encoding(false)))
-					{
-						if (month < 1 || month > 12)
-						{
-							Response.StatusCode = 406;
-							await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"406\",\"Description\":\"Month value is out of range\"}}");
-						}
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 
-						switch (req)
-						{
-							case "temperature.json":
-								await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyTempRecords(month)));
-								break;
-							case "humidity.json":
-								await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyHumRecords(month)));
-								break;
-							case "pressure.json":
-								await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyPressRecords(month)));
-								break;
-							case "wind.json":
-								await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyWindRecords(month)));
-								break;
-							case "rain.json":
-								await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyRainRecords(month)));
-								break;
-							default:
-								Response.StatusCode = 404;
-								throw new KeyNotFoundException("Key Not Found: " + req);
-						}
+					if (month < 1 || month > 12)
+					{
+						Response.StatusCode = 406;
+						await writer.WriteAsync($"{{\"Title\":\"Unexpected Error\",\"ErrorCode\":\"406\",\"Description\":\"Month value is out of range\"}}");
+					}
+
+					switch (req)
+					{
+						case "temperature.json":
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyTempRecords(month)));
+							break;
+						case "humidity.json":
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyHumRecords(month)));
+							break;
+						case "pressure.json":
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyPressRecords(month)));
+							break;
+						case "wind.json":
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyWindRecords(month)));
+							break;
+						case "rain.json":
+							await writer.WriteAsync(EscapeUnicode(RecordsJson.GetMonthlyRainRecords(month)));
+							break;
+						default:
+							Response.StatusCode = 404;
+							throw new KeyNotFoundException("Key Not Found: " + req);
 					}
 				}
 				catch (Exception ex)
@@ -937,79 +936,77 @@ namespace CumulusMX
 
 					var query = HttpUtility.ParseQueryString(Request.Url.Query);
 
-					using (var writer = HttpContext.OpenResponseText(new UTF8Encoding(false)))
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+					if (query.AllKeys.Contains("startdate"))
 					{
-						if (query.AllKeys.Contains("startdate"))
+						// we expect "yyyy-mm-dd"
+						var start = query["startdate"].Split('-');
+
+						if (!Int32.TryParse(start[0], out startyear) || startyear < 2000 || startyear > 2050)
 						{
-							// we expect "yyyy-mm-dd"
-							var start = query["startdate"].Split('-');
-
-							if (!Int32.TryParse(start[0], out startyear) || startyear < 2000 || startyear > 2050)
-							{
-								await writer.WriteAsync("Invalid start year supplied: " + startyear);
-								Response.StatusCode = 406;
-								return;
-							}
-
-							if (!Int32.TryParse(start[1], out startmonth) || startmonth < 1 || startmonth > 12)
-							{
-								await writer.WriteAsync("Invalid start month supplied: " + startmonth);
-								Response.StatusCode = 406;
-								return;
-							}
-
-							if (!Int32.TryParse(start[2], out startday) || startday < 1 || startday > 31)
-							{
-								await writer.WriteAsync("Invalid start day supplied: " + startday);
-								Response.StatusCode = 406;
-								return;
-							}
-						}
-						else
-						{
-							await writer.WriteAsync("No start date supplied: ");
+							await writer.WriteAsync("Invalid start year supplied: " + startyear);
 							Response.StatusCode = 406;
 							return;
 						}
 
-						if (query.AllKeys.Contains("enddate"))
+						if (!Int32.TryParse(start[1], out startmonth) || startmonth < 1 || startmonth > 12)
 						{
-							// we expect "yyyy-mm-dd"
-							var end = query["enddate"].Split('-');
-
-							if (!Int32.TryParse(end[0], out endyear) || endyear < 2000 || endyear > 2050)
-							{
-								await writer.WriteAsync("Invalid end year supplied: " + endyear);
-								Response.StatusCode = 406;
-								return;
-							}
-
-							if (!Int32.TryParse(end[1], out endmonth) || endmonth < 1 || endmonth > 12)
-							{
-								await writer.WriteAsync("Invalid end month supplied: " + endmonth);
-								Response.StatusCode = 406;
-								return;
-							}
-
-							if (!Int32.TryParse(end[2], out endday) || endday < 1 || endday > 31)
-							{
-								await writer.WriteAsync("Invalid end day supplied: " + endday);
-								Response.StatusCode = 406;
-								return;
-							}
-						}
-						else
-						{
-							await writer.WriteAsync("No start date supplied: ");
+							await writer.WriteAsync("Invalid start month supplied: " + startmonth);
 							Response.StatusCode = 406;
 							return;
 						}
 
-						var startDate = new DateTime(startyear, startmonth, startday);
-						var endDate = new DateTime(endyear, endmonth, endday);
-
-						await writer.WriteAsync(EscapeUnicode(dataEditor.GetRecordsDayFile("thisperiod", startDate, endDate)));
+						if (!Int32.TryParse(start[2], out startday) || startday < 1 || startday > 31)
+						{
+							await writer.WriteAsync("Invalid start day supplied: " + startday);
+							Response.StatusCode = 406;
+							return;
+						}
 					}
+					else
+					{
+						await writer.WriteAsync("No start date supplied: ");
+						Response.StatusCode = 406;
+						return;
+					}
+
+					if (query.AllKeys.Contains("enddate"))
+					{
+						// we expect "yyyy-mm-dd"
+						var end = query["enddate"].Split('-');
+
+						if (!Int32.TryParse(end[0], out endyear) || endyear < 2000 || endyear > 2050)
+						{
+							await writer.WriteAsync("Invalid end year supplied: " + endyear);
+							Response.StatusCode = 406;
+							return;
+						}
+
+						if (!Int32.TryParse(end[1], out endmonth) || endmonth < 1 || endmonth > 12)
+						{
+							await writer.WriteAsync("Invalid end month supplied: " + endmonth);
+							Response.StatusCode = 406;
+							return;
+						}
+
+						if (!Int32.TryParse(end[2], out endday) || endday < 1 || endday > 31)
+						{
+							await writer.WriteAsync("Invalid end day supplied: " + endday);
+							Response.StatusCode = 406;
+							return;
+						}
+					}
+					else
+					{
+						await writer.WriteAsync("No start date supplied: ");
+						Response.StatusCode = 406;
+						return;
+					}
+
+					var startDate = new DateTime(startyear, startmonth, startday);
+					var endDate = new DateTime(endyear, endmonth, endday);
+
+					await writer.WriteAsync(EscapeUnicode(dataEditor.GetRecordsDayFile("thisperiod", startDate, endDate)));
 				}
 				catch (Exception ex)
 				{
@@ -1367,32 +1364,31 @@ namespace CumulusMX
 
 					Response.ContentType = "text/plain";
 
-					using (var writer = HttpContext.OpenResponseText(new UTF8Encoding(false)))
-					{
-						if (!Int32.TryParse(query["year"], out year) || year < 2000 || year > 2050)
-						{
-							await writer.WriteAsync("Invalid year supplied: " + year);
-							Response.StatusCode = 406;
-							return;
-						}
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 
-						switch (req)
-						{
-							case "noaayear":
-								await writer.WriteAsync(noaarpts.GetNoaaYearReport(year));
-								break;
-							case "noaamonth":
-								if (!Int32.TryParse(query["month"], out month) || month < 1 || month > 12)
-								{
-									await writer.WriteAsync("Invalid month supplied: " + month);
-									Response.StatusCode = 406;
-									return;
-								}
-								await writer.WriteAsync(noaarpts.GetNoaaMonthReport(year, month));
-								break;
-							default:
-								throw new KeyNotFoundException("Key Not Found: " + req);
-						}
+					if (!Int32.TryParse(query["year"], out year) || year < 2000 || year > 2050)
+					{
+						await writer.WriteAsync("Invalid year supplied: " + year);
+						Response.StatusCode = 406;
+						return;
+					}
+
+					switch (req)
+					{
+						case "noaayear":
+							await writer.WriteAsync(noaarpts.GetNoaaYearReport(year));
+							break;
+						case "noaamonth":
+							if (!Int32.TryParse(query["month"], out month) || month < 1 || month > 12)
+							{
+								await writer.WriteAsync("Invalid month supplied: " + month);
+								Response.StatusCode = 406;
+								return;
+							}
+							await writer.WriteAsync(noaarpts.GetNoaaMonthReport(year, month));
+							break;
+						default:
+							throw new KeyNotFoundException("Key Not Found: " + req);
 					}
 				}
 				catch (Exception ex)
@@ -1419,38 +1415,36 @@ namespace CumulusMX
 					int month, year;
 					Response.ContentType = "text/plain";
 
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
 
-					using (var writer = HttpContext.OpenResponseText(new UTF8Encoding(false)))
+					switch (req)
 					{
-						switch (req)
-						{
-							case "noaayear":
-								if (!Int32.TryParse(query["year"], out year) || year < 2000 || year > 2050)
-								{
-									await writer.WriteAsync(noaarpts.GenerateNoaaYearReport(year));
-								}
-								break;
-							case "noaamonth":
-								if (!Int32.TryParse(query["year"], out year) || year < 2000 || year > 2050)
-								{
-									await writer.WriteAsync("Invalid year supplied: " + year);
-									Response.StatusCode = 406;
-									return;
-								}
-								if (!Int32.TryParse(query["month"], out month) || month < 1 || month > 12)
-								{
-									await writer.WriteAsync("Invalid month supplied: " + month);
-									Response.StatusCode = 406;
-									return;
-								}
-								await writer.WriteAsync(noaarpts.GenerateNoaaMonthReport(year, month));
-								break;
-							case "all":
-								await writer.WriteAsync(noaarpts.GenerateMissing());
-								break;
-							default:
-								throw new KeyNotFoundException("Key Not Found: " + req);
-						}
+						case "noaayear":
+							if (!Int32.TryParse(query["year"], out year) || year < 2000 || year > 2050)
+							{
+								await writer.WriteAsync(noaarpts.GenerateNoaaYearReport(year));
+							}
+							break;
+						case "noaamonth":
+							if (!Int32.TryParse(query["year"], out year) || year < 2000 || year > 2050)
+							{
+								await writer.WriteAsync("Invalid year supplied: " + year);
+								Response.StatusCode = 406;
+								return;
+							}
+							if (!Int32.TryParse(query["month"], out month) || month < 1 || month > 12)
+							{
+								await writer.WriteAsync("Invalid month supplied: " + month);
+								Response.StatusCode = 406;
+								return;
+							}
+							await writer.WriteAsync(noaarpts.GenerateNoaaMonthReport(year, month));
+							break;
+						case "all":
+							await writer.WriteAsync(noaarpts.GenerateMissing());
+							break;
+						default:
+							throw new KeyNotFoundException("Key Not Found: " + req);
 					}
 				}
 				catch (Exception ex)
@@ -1480,35 +1474,34 @@ namespace CumulusMX
 
 				try
 				{
-					using (var writer = HttpContext.OpenResponseText(new UTF8Encoding(false)))
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+
+					switch (req)
 					{
-						switch (req)
-						{
-							case "reloaddayfile":
-								await writer.WriteAsync(LoadDatabase.LoadDayFileToDb(Station));
-								break;
-							case "purgemysql":
-								var cnt = 0;
-								while (Program.cumulus.MySqlFunction.FailedList.TryDequeue(out var item))
-								{
-									cnt++;
-								};
-								_ = Station.Database.Execute("DELETE FROM SqlCache");
-								string msg;
-								if (cnt == 0)
-								{
-									msg = "The MySQL cache is already empty!";
-								}
-								else
-								{
-									msg = $"Cached MySQL queue cleared of {cnt} commands";
-								}
-								await writer.WriteAsync(msg);
-								break;
-							default:
-								Response.StatusCode = 404;
-								break;
-						}
+						case "reloaddayfile":
+							await writer.WriteAsync(LoadDatabase.LoadDayFileToDb(Station));
+							break;
+						case "purgemysql":
+							var cnt = 0;
+							while (Program.cumulus.MySqlFunction.FailedList.TryDequeue(out var item))
+							{
+								cnt++;
+							};
+							_ = Station.Database.Execute("DELETE FROM SqlCache");
+							string msg;
+							if (cnt == 0)
+							{
+								msg = "The MySQL cache is already empty!";
+							}
+							else
+							{
+								msg = $"Cached MySQL queue cleared of {cnt} commands";
+							}
+							await writer.WriteAsync(msg);
+							break;
+						default:
+							Response.StatusCode = 404;
+							break;
 					}
 				}
 				catch (Exception ex)
@@ -1531,20 +1524,19 @@ namespace CumulusMX
 
 				try
 				{
-					using (var writer = HttpContext.OpenResponseText(new UTF8Encoding(false)))
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+
+					switch (req)
 					{
-						switch (req)
-						{
-							case "ftpnow.json":
-								await writer.WriteAsync(stationSettings.UploadNow(HttpContext));
-								break;
-							case "clearerrorlog.json":
-								await writer.WriteAsync(cumulus.ClearErrorLog());
-								break;
-							default:
-								Response.StatusCode = 404;
-								break;
-						}
+						case "ftpnow.json":
+							await writer.WriteAsync(stationSettings.UploadNow(HttpContext));
+							break;
+						case "clearerrorlog.json":
+							await writer.WriteAsync(cumulus.ClearErrorLog());
+							break;
+						default:
+							Response.StatusCode = 404;
+							break;
 					}
 				}
 				catch (Exception ex)
@@ -1564,31 +1556,33 @@ namespace CumulusMX
 				try
 				{
 					Response.ContentType = "application/json";
-					using (var writer = HttpContext.OpenResponseText(new UTF8Encoding(false)))
+					using var writer = HttpContext.OpenResponseText(new UTF8Encoding(false));
+
+					switch (req)
 					{
-						switch (req)
-						{
-							case "wsport.json":
-								await writer.WriteAsync(stationSettings.GetWSport());
-								break;
-							case "version.json":
-								await writer.WriteAsync(stationSettings.GetVersion());
-								break;
-							case "dateformat.txt":
-								Response.ContentType = "text/plain";
-								await writer.WriteAsync(CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern);
-								break;
-							case "csvseparator.txt":
-								Response.ContentType = "text/plain";
-								await writer.WriteAsync(CultureInfo.CurrentCulture.TextInfo.ListSeparator);
-								break;
-							case "alarms.json":
-								await writer.WriteAsync(alarmSettings.GetAlarmInfo());
-								break;
-							default:
-								Response.StatusCode = 404;
-								break;
-						}
+						case "wsport.json":
+							await writer.WriteAsync(stationSettings.GetWSport());
+							break;
+						case "version.json":
+							await writer.WriteAsync(stationSettings.GetVersion());
+							break;
+						case "dateformat.txt":
+							Response.ContentType = "text/plain";
+							await writer.WriteAsync(CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern);
+							break;
+						case "csvseparator.txt":
+							Response.ContentType = "text/plain";
+							await writer.WriteAsync(CultureInfo.CurrentCulture.TextInfo.ListSeparator);
+							break;
+						case "alarms.json":
+							await writer.WriteAsync(alarmSettings.GetAlarmInfo());
+							break;
+						case "units.json":
+							await writer.WriteAsync(WeatherStation.GetUnits());
+							break;
+						default:
+							Response.StatusCode = 404;
+							break;
 					}
 				}
 				catch (Exception ex)
@@ -1625,8 +1619,8 @@ namespace CumulusMX
 						context.Response.StatusCode = 401;
 						context.Response.ContentType = "application/json";
 						context.Response.Headers.Add("WWW-Authenticate", "Basic realm=\"My Realm\"");
-						using (var writer = context.OpenResponseText(new UTF8Encoding(false)))
-							await writer.WriteAsync("{\"Title\":\"Authentication required\",\"ErrorCode\":\"Authentication required\",\"Description\":\"You must authenticate\"}");
+						using var writer = context.OpenResponseText(new UTF8Encoding(false));
+						await writer.WriteAsync("{\"Title\":\"Authentication required\",\"ErrorCode\":\"Authentication required\",\"Description\":\"You must authenticate\"}");
 
 						return false;
 					}
@@ -1636,8 +1630,8 @@ namespace CumulusMX
 					context.Response.StatusCode = 401;
 					context.Response.ContentType = "application/json";
 					context.Response.Headers.Add("WWW-Authenticate", "Basic realm=\"My Realm\"");
-					using (var writer = context.OpenResponseText(new UTF8Encoding(false)))
-						await writer.WriteAsync("{\"Title\":\"Authentication required\",\"ErrorCode\":\"Authentication required\",\"Description\":\"You must authenticate\"}");
+					using var writer = context.OpenResponseText(new UTF8Encoding(false));
+					await writer.WriteAsync("{\"Title\":\"Authentication required\",\"ErrorCode\":\"Authentication required\",\"Description\":\"You must authenticate\"}");
 
 					return false;
 				}

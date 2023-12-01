@@ -806,7 +806,7 @@ namespace CumulusMX
 						{
 							case 0x01:  //Indoor Temperature (℃)
 								tempInt16 = Stations.GW1000Api.ConvertBigEndianInt16(data, idx);
-								DoIndoorTemp(ConvertTempCToUser(tempInt16 / 10.0));
+								DoIndoorTemp(ConvertUnits.TempCToUser(tempInt16 / 10.0));
 								idx += 2;
 								break;
 							case 0x02: //Outdoor Temperature (℃)
@@ -820,14 +820,14 @@ namespace CumulusMX
 								break;
 							case 0x03: //Dew point (℃)
 								tempInt16 = Stations.GW1000Api.ConvertBigEndianInt16(data, idx);
-								newDewPoint = ConvertTempCToUser(tempInt16 / 10.0);
+								newDewPoint = ConvertUnits.TempCToUser(tempInt16 / 10.0);
 								idx += 2;
 								break;
 							case 0x04: //Wind chill (℃)
 								if (cumulus.Gw1000PrimaryTHSensor == 0)
 								{
 									tempInt16 = Stations.GW1000Api.ConvertBigEndianInt16(data, idx);
-									newWindChill = ConvertTempCToUser(tempInt16 / 10.0);
+									newWindChill = ConvertUnits.TempCToUser(tempInt16 / 10.0);
 								}
 								idx += 2;
 								break;
@@ -851,12 +851,12 @@ namespace CumulusMX
 								break;
 							case 0x08: //Absolute Barometric (hPa)
 								tempUint16 = Stations.GW1000Api.ConvertBigEndianUInt16(data, idx);
-								StationPressure = ConvertPressMBToUser(tempUint16 / 10.0);
+								StationPressure = ConvertUnits.PressMBToUser(tempUint16 / 10.0);
 								idx += 2;
 								break;
 							case 0x09: //Relative Barometric (hPa)
 								tempUint16 = Stations.GW1000Api.ConvertBigEndianUInt16(data, idx);
-								DoPressure(ConvertPressMBToUser(tempUint16 / 10.0), dateTime);
+								DoPressure(ConvertUnits.PressMBToUser(tempUint16 / 10.0), dateTime);
 								idx += 2;
 								break;
 							case 0x0A: //Wind Direction (360°)
@@ -864,24 +864,24 @@ namespace CumulusMX
 								idx += 2;
 								break;
 							case 0x0B: //Wind Speed (m/s)
-								windSpeedLast = ConvertWindMSToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0);
+								windSpeedLast = ConvertUnits.WindMSToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0).Value;
 								idx += 2;
 								break;
 							case 0x0C: //Gust speed (m/s)
-								gustLast = ConvertWindMSToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0);
+								gustLast = ConvertUnits.WindMSToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0).Value;
 								idx += 2;
 								break;
 							case 0x0D: //Rain Event (mm)
 								if (cumulus.Gw1000PrimaryRainSensor == 0)
 								{
-									StormRain = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0);
+									StormRain = ConvertUnits.RainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0).Value;
 								}
 								idx += 2;
 								break;
 							case 0x0E: //Rain Rate (mm/h)
 								if (cumulus.Gw1000PrimaryRainSensor == 0)
 								{
-									rainRateLast = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0);
+									rainRateLast = ConvertUnits.RainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0).Value;
 								}
 								idx += 2;
 								break;
@@ -900,7 +900,7 @@ namespace CumulusMX
 							case 0x13: //Rain Year (mm)
 								if (cumulus.Gw1000PrimaryRainSensor == 0)
 								{
-									rainLast = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt32(data, idx) / 10.0);
+									rainLast = ConvertUnits.RainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt32(data, idx) / 10.0).Value;
 								}
 								idx += 4;
 								break;
@@ -942,7 +942,7 @@ namespace CumulusMX
 								{
 									outdoortemp = tempInt16 / 10.0;
 								}
-								DoExtraTemp(ConvertTempCToUser(tempInt16 / 10.0), chan);
+								DoExtraTemp(ConvertUnits.TempCToUser(tempInt16 / 10.0), chan);
 								idx += 2;
 								break;
 							case 0x22: //Humidity 1, 0-100%
@@ -981,7 +981,7 @@ namespace CumulusMX
 								chan = data[idx - 1] - 0x2B + 2; // -> 2,4,6,8...
 								chan /= 2; // -> 1,2,3,4...
 								tempInt16 = Stations.GW1000Api.ConvertBigEndianInt16(data, idx);
-								DoSoilTemp(ConvertTempCToUser(tempInt16 / 10.0), chan);
+								DoSoilTemp(ConvertUnits.TempCToUser(tempInt16 / 10.0), chan);
 								idx += 2;
 								break;
 							case 0x2C: //Soil Moisture1 (%)
@@ -1048,7 +1048,7 @@ namespace CumulusMX
 								break;
 							case 0x60: //Lightning dist (1-40km)
 									   // Sends a default value of 255km until the first strike is detected
-								newLightningDistance = data[idx] == 0xFF ? 999 : ConvertKmtoUserUnits(data[idx]);
+								newLightningDistance = data[idx] == 0xFF ? 999 : ConvertUnits.KmtoUserUnits(data[idx]).Value;
 								idx += 1;
 								break;
 							case 0x61: //Lightning time (UTC)
@@ -1093,11 +1093,11 @@ namespace CumulusMX
 								tempInt16 = Stations.GW1000Api.ConvertBigEndianInt16(data, idx);
 								if (cumulus.EcowittSettings.MapWN34[chan] == 0) // false = user temp, true = soil temp
 								{
-									DoUserTemp(ConvertTempCToUser(tempInt16 / 10.0), chan);
+									DoUserTemp(ConvertUnits.TempCToUser(tempInt16 / 10.0), chan);
 								}
 								else
 								{
-									DoSoilTemp(ConvertTempCToUser(tempInt16 / 10.0), cumulus.EcowittSettings.MapWN34[chan]);
+									DoSoilTemp(ConvertUnits.TempCToUser(tempInt16 / 10.0), cumulus.EcowittSettings.MapWN34[chan]);
 								}
 								// Firmware version 1.5.9 uses 2 data bytes, 1.6.0+ uses 3 data bytes
 								if (fwVersion.CompareTo(new Version("1.6.0")) >= 0)
@@ -1156,14 +1156,14 @@ namespace CumulusMX
 							case 0x80: // Piezo Rain Rate
 								if (cumulus.Gw1000PrimaryRainSensor == 1)
 								{
-									rainRateLast = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0);
+									rainRateLast = ConvertUnits.RainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0).Value;
 								}
 								idx += 2;
 								break;
 							case 0x81: // Piezo Rain Event
 								if (cumulus.Gw1000PrimaryRainSensor == 1)
 								{
-									StormRain = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0);
+									StormRain = ConvertUnits.RainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0).Value;
 								}
 								idx += 2;
 								break;
@@ -1182,7 +1182,7 @@ namespace CumulusMX
 							case 0x86: // Piezo Yearly Rain
 								if (cumulus.Gw1000PrimaryRainSensor == 1)
 								{
-									rainLast = ConvertRainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt32(data, idx) / 10.0);
+									rainLast = ConvertUnits.RainMMToUser(Stations.GW1000Api.ConvertBigEndianUInt32(data, idx) / 10.0).Value;
 								}
 								idx += 4;
 								break;
@@ -1215,7 +1215,7 @@ namespace CumulusMX
 
 					// Process outdoor temperature here, as GW1000 currently does not supply Dew Point so we have to calculate it in DoOutdoorTemp()
 					if (outdoortemp > -999)
-						DoTemperature(ConvertTempCToUser(outdoortemp), dateTime);
+						DoTemperature(ConvertUnits.TempCToUser(outdoortemp), dateTime);
 					else
 						DoTemperature(null, dateTime);
 
@@ -1224,8 +1224,8 @@ namespace CumulusMX
 					{
 						if (ExtraHum[i].HasValue && ExtraTemp[i].HasValue)
 						{
-							var dp = MeteoLib.DewPoint(ConvertUserTempToC(ExtraTemp[i].Value), ExtraHum[i].Value);
-							ExtraDewPoint[i] = ConvertTempCToUser(dp);
+							var dp = MeteoLib.DewPoint(ConvertUnits.UserTempToC(ExtraTemp[i].Value), ExtraHum[i].Value);
+							ExtraDewPoint[i] = ConvertUnits.TempCToUser(dp);
 						}
 					}
 
@@ -1248,14 +1248,14 @@ namespace CumulusMX
 					if (outdoortemp > -999)
 					{
 						DoDewpoint(newDewPoint, dateTime);
-						if (ConvertUserWindToMS(WindAverage) < 1.5)
+						if (ConvertUnits.UserWindToMS(WindAverage) < 1.5)
 						{
 							DoWindChill(Temperature, dateTime);
 						}
 						else
 						{
 							// calculate wind chill from calibrated C temp and calibrated wind in KPH
-							DoWindChill(ConvertTempCToUser(MeteoLib.WindChill(ConvertUserTempToC(Temperature), ConvertUserWindToKPH(WindAverage))), dateTime);
+							DoWindChill(ConvertUnits.TempCToUser(MeteoLib.WindChill(ConvertUnits.UserTempToC(Temperature), ConvertUnits.UserWindToKPH(WindAverage))), dateTime);
 						}
 
 						DoApparentTemp(dateTime);
@@ -1519,7 +1519,7 @@ namespace CumulusMX
 #if DEBUG
 						cumulus.LogDebugMessage($"GetPiezoRainData: Rain Year: {rain:f1} mm, Rate: {rRate:f1} mm/hr");
 #endif
-						DoRain(ConvertRainMMToUser(rain.Value), ConvertRainMMToUser(rRate.Value), DateTime.Now);
+						DoRain(ConvertUnits.RainMMToUser(rain.Value), ConvertUnits.RainMMToUser(rRate.Value), DateTime.Now);
 					}
 					else
 					{
@@ -1543,7 +1543,7 @@ namespace CumulusMX
 
 			try
 			{
-				CO2_temperature = ConvertTempCToUser(Stations.GW1000Api.ConvertBigEndianInt16(data, idx) / 10.0);
+				CO2_temperature = ConvertUnits.TempCToUser(Stations.GW1000Api.ConvertBigEndianInt16(data, idx) / 10.0);
 				idx += 2;
 				CO2_humidity = data[idx++];
 				CO2_pm10 = Stations.GW1000Api.ConvertBigEndianUInt16(data, idx) / 10.0;

@@ -130,7 +130,7 @@ namespace CumulusMX
 			Critical = 3
 		}
 
-		private readonly string[] sshAuthenticationVals = { "password", "psk", "password_psk" };
+		private readonly string[] sshAuthenticationVals = ["password", "psk", "password_psk"];
 
 		/*
 		public struct Dataunits
@@ -264,7 +264,7 @@ namespace CumulusMX
 		//public int[] PressFact = new[] { 1, 1, 100 };
 		//public int[] RUnitFact = new[] { 1000, 39 };
 
-		public int[] logints = new[] { 1, 5, 10, 15, 20, 30 };
+		public int[] logints = [1, 5, 10, 15, 20, 30];
 
 		//public int UnitMult = 1000;
 
@@ -293,11 +293,11 @@ namespace CumulusMX
 		};
 
 		// equivalents of Zambretti "dial window" letters A - Z
-		public int[] riseOptions = { 25, 25, 25, 24, 24, 19, 16, 12, 11, 9, 8, 6, 5, 2, 1, 1, 0, 0, 0, 0, 0, 0 };
-		public int[] steadyOptions = { 25, 25, 25, 25, 25, 25, 23, 23, 22, 18, 15, 13, 10, 4, 1, 1, 0, 0, 0, 0, 0, 0 };
-		public int[] fallOptions = { 25, 25, 25, 25, 25, 25, 25, 25, 23, 23, 21, 20, 17, 14, 7, 3, 1, 1, 1, 0, 0, 0 };
+		public int[] riseOptions = [25, 25, 25, 24, 24, 19, 16, 12, 11, 9, 8, 6, 5, 2, 1, 1, 0, 0, 0, 0, 0, 0];
+		public int[] steadyOptions = [25, 25, 25, 25, 25, 25, 23, 23, 22, 18, 15, 13, 10, 4, 1, 1, 0, 0, 0, 0, 0, 0];
+		public int[] fallOptions = [25, 25, 25, 25, 25, 25, 25, 25, 23, 23, 21, 20, 17, 14, 7, 3, 1, 1, 1, 0, 0, 0];
 
-		internal int[] FactorsOf60 = { 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60 };
+		internal int[] FactorsOf60 = [1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60];
 
 		public TimeSpan AvgSpeedTime { get; set; }
 
@@ -400,11 +400,11 @@ namespace CumulusMX
 
 		public bool SynchronisedWebUpdate;
 
-		private List<string> WundList = new List<string>();
-		private List<string> WindyList = new List<string>();
-		private List<string> PWSList = new List<string>();
-		private List<string> WOWList = new List<string>();
-		private List<string> OWMList = new List<string>();
+		private List<string> WundList = [];
+		private List<string> WindyList = [];
+		private List<string> PWSList = [];
+		private List<string> WOWList = [];
+		private List<string> OWMList = [];
 
 		internal string rawStationDataLogFile = "MXdiags/stationdata.log";
 		internal string rawExtraDataLogFile = "MXdiags/extradata.log";
@@ -552,7 +552,7 @@ namespace CumulusMX
 		public Alarm NewRecordAlarm;
 		public Alarm FtpAlarm;
 
-		public List<AlarmUser> UserAlarms = new List<AlarmUser>();
+		public List<AlarmUser> UserAlarms = [];
 
 
 		private const double DEFAULTFCLOWPRESS = 950.0;
@@ -618,7 +618,7 @@ namespace CumulusMX
 		public CustomLogSettings[] CustomDailyLogSettings = new CustomLogSettings[10];
 
 		public string[] StationDesc =
-		{
+		[
 			"Davis Vantage Pro",			// 0
 			"Davis Vantage Pro2",			// 1
 			"Oregon Scientific WMR-928",	// 2
@@ -640,9 +640,9 @@ namespace CumulusMX
 			"Ecowitt Cloud",				// 18
 			"Davis Cloud (WLL/WLC)",		// 19
 			"Davis Cloud (VP2)"				// 20
-		};
+		];
 
-		public string[] APRSstationtype = { "DsVP", "DsVP", "WMR928", "WM918", "EW", "FO", "WS2300", "FOs", "WMR100", "WMR200", "IMET", "DsVP", "Ecow", "Unkn", "Ecow", "Ambt", "Tmpt", "Simul", "Ecow", "DsVP", "DsVP" };
+		public string[] APRSstationtype = ["DsVP", "DsVP", "WMR928", "WM918", "EW", "FO", "WS2300", "FOs", "WMR100", "WMR200", "IMET", "DsVP", "Ecow", "Unkn", "Ecow", "Ambt", "Tmpt", "Simul", "Ecow", "DsVP", "DsVP"];
 
 		public string loggingfile;
 
@@ -807,8 +807,8 @@ namespace CumulusMX
 
 			MySqlFunction = new MySqlHander(this);
 
-			StdWebFiles = new FileGenerationOptions[]
-			{
+			StdWebFiles =
+			[
 				new FileGenerationOptions()
 				{
 					TemplateFileName = WebPath + "websitedataT.json",
@@ -822,10 +822,10 @@ namespace CumulusMX
 					LocalFileName = "wxnow.txt",
 					RemoteFileName = "wxnow.txt"
 				}
-			};
+			];
 
-			RealtimeFiles = new FileGenerationOptions[]
-			{
+			RealtimeFiles =
+			[
 				new FileGenerationOptions()
 				{
 					LocalFileName = "realtime.txt",
@@ -838,10 +838,10 @@ namespace CumulusMX
 					LocalFileName = "realtimegauges.txt",
 					RemoteFileName = "realtimegauges.txt"
 				}
-			};
+			];
 
-			GraphDataFiles = new FileGenerationOptions[]
-			{
+			GraphDataFiles =
+			[
 				new FileGenerationOptions()		// 0
 				{
 					LocalPath = WebPath,
@@ -968,10 +968,10 @@ namespace CumulusMX
 					LocalFileName = "leafwetdata.json",
 					RemoteFileName = "leafwetdata.json"
 				}
-			};
+			];
 
-			GraphDataEodFiles = new FileGenerationOptions[]
-			{
+			GraphDataEodFiles =
+			[
 				new FileGenerationOptions()
 				{
 					LocalPath = WebPath,
@@ -1020,7 +1020,7 @@ namespace CumulusMX
 					LocalFileName = "alltempsumdata.json",
 					RemoteFileName = "alltempsumdata.json"
 				}
-			};
+			];
 
 			ProgramOptions.Culture = new CultureConfig();
 
@@ -1737,44 +1737,44 @@ namespace CumulusMX
 				AllowAutoRedirect = false
 			};
 
-			phpUploadHttpClient = new HttpClient(phpUploadHttpHandler);
-			// 5 second timeout
-			phpUploadHttpClient.Timeout = new TimeSpan(0, 0, 5);
+			phpUploadHttpClient = new HttpClient(phpUploadHttpHandler)
+			{
+				// 5 second timeout
+				Timeout = new TimeSpan(0, 0, 5)
+			};
 		}
 
 
 		internal void TestPhpUploadCompression()
 		{
 			LogDebugMessage($"Testing PHP upload compression: '{FtpOptions.PhpUrl}'");
-			using (var request = new HttpRequestMessage(HttpMethod.Get, FtpOptions.PhpUrl))
+			using var request = new HttpRequestMessage(HttpMethod.Get, FtpOptions.PhpUrl);
+			try
 			{
-				try
+				request.Headers.Add("Accept", "text/html");
+				request.Headers.Add("Accept-Encoding", "gzip, deflate");
+				// we do this async
+				var response = phpUploadHttpClient.SendAsync(request).Result;
+				response.EnsureSuccessStatusCode();
+				var encoding = response.Content.Headers.ContentEncoding;
+
+				FtpOptions.PhpCompression = encoding.Count == 0 ? "none" : encoding.First();
+
+				if (FtpOptions.PhpCompression == "none")
 				{
-					request.Headers.Add("Accept", "text/html");
-					request.Headers.Add("Accept-Encoding", "gzip, deflate");
-					// we do this async
-					var response = phpUploadHttpClient.SendAsync(request).Result;
-					response.EnsureSuccessStatusCode();
-					var encoding = response.Content.Headers.ContentEncoding;
-
-					FtpOptions.PhpCompression = encoding.Count == 0 ? "none" : encoding.First();
-
-					if (FtpOptions.PhpCompression == "none")
-					{
-						LogDebugMessage("PHP upload does not support compression");
-					}
-					else
-					{
-						LogDebugMessage($"PHP upload supports {FtpOptions.PhpCompression} compression");
-					}
-
-					// Check the max requests
-					CheckPhpMaxUploads(response.Headers);
+					LogDebugMessage("PHP upload does not support compression");
 				}
-				catch (Exception ex)
+				else
 				{
-					LogExceptionMessage(ex, "TestPhpUploadCompression: Error - ");
+					LogDebugMessage($"PHP upload supports {FtpOptions.PhpCompression} compression");
 				}
+
+				// Check the max requests
+				CheckPhpMaxUploads(response.Headers);
+			}
+			catch (Exception ex)
+			{
+				LogExceptionMessage(ex, "TestPhpUploadCompression: Error - ");
 			}
 		}
 
@@ -2198,8 +2198,10 @@ namespace CumulusMX
 
 							if (!string.IsNullOrEmpty(RealtimeParams))
 							{
-								var parser = new TokenParser(TokenParserOnToken);
-								parser.InputText = RealtimeParams;
+								var parser = new TokenParser(TokenParserOnToken)
+								{
+									InputText = RealtimeParams
+								};
 								args = parser.ToStringFromString();
 							}
 
@@ -2480,7 +2482,7 @@ namespace CumulusMX
 
 			if (FtpOptions.Directory.Length > 0)
 			{
-				remotePath = (FtpOptions.Directory.EndsWith("/") ? FtpOptions.Directory : FtpOptions.Directory + "/");
+				remotePath = FtpOptions.Directory.EndsWith('/') ? FtpOptions.Directory : FtpOptions.Directory + "/";
 			}
 
 			LogDebugMessage($"Realtime[{cycle}]: Real time files starting");
@@ -2509,17 +2511,16 @@ namespace CumulusMX
 							data = ProcessTemplateFile2String(RealtimeFiles[i].TemplateFileName, true, true);
 						}
 
-						using (var dataStream = GenerateStreamFromString(data))
-						{
-							if (FtpOptions.FtpMode == FtpProtocols.SFTP)
-							{
+						using var dataStream = GenerateStreamFromString(data);
 
-								_ = UploadStream(RealtimeSSH, remoteFile, dataStream, cycle);
-							}
-							else if (FtpOptions.FtpMode == FtpProtocols.FTP || FtpOptions.FtpMode == FtpProtocols.FTPS)
-							{
-								_ = UploadStream(RealtimeFTP, remoteFile, dataStream, cycle);
-							}
+						if (FtpOptions.FtpMode == FtpProtocols.SFTP)
+						{
+
+							_ = UploadStream(RealtimeSSH, remoteFile, dataStream, cycle);
+						}
+						else if (FtpOptions.FtpMode == FtpProtocols.FTP || FtpOptions.FtpMode == FtpProtocols.FTPS)
+						{
+							_ = UploadStream(RealtimeFTP, remoteFile, dataStream, cycle);
 						}
 					}
 					else // PHP
@@ -2682,7 +2683,7 @@ namespace CumulusMX
 						LogExceptionMessage(ex, $"Realtime[{cycle}]: Eror waiting on upload tasks");
 					}
 				}
-				LogDebugMessage($"Realtime[{cycle}]: Real time files complete, {tasklist.Count()} files uploaded");
+				LogDebugMessage($"Realtime[{cycle}]: Real time files complete, {tasklist.Count} files uploaded");
 				tasklist.Clear();
 				RealtimeFtpInProgress = false;
 			}
@@ -3381,18 +3382,26 @@ namespace CumulusMX
 			}
 		}
 
-		private static string RemoveOldDiagsFiles(string directory)
+		private string RemoveOldDiagsFiles(string directory)
 		{
 			const int maxEntries = 12;
 
-			List<string> fileEntries = new List<string>(Directory.GetFiles(directory).Where(f => System.Text.RegularExpressions.Regex.Match(f, @"[\\/]+\d{8}-\d{6}\.txt").Success));
-
-			fileEntries.Sort();
-
-			while (fileEntries.Count >= maxEntries)
+			try
 			{
-				File.Delete(fileEntries.First());
-				fileEntries.RemoveAt(0);
+
+				List<string> fileEntries = new List<string>(Directory.GetFiles(directory).Where(f => System.Text.RegularExpressions.Regex.Match(f, @"[\\/]+\d{8}-\d{6}\.txt").Success));
+
+				fileEntries.Sort();
+
+				while (fileEntries.Count >= maxEntries)
+				{
+					File.Delete(fileEntries.First());
+					fileEntries.RemoveAt(0);
+				}
+			}
+			catch (Exception ex)
+			{
+				LogExceptionMessage(ex, "Error removing old MXdiags files");
 			}
 
 			return $"{directory}{DateTime.Now:yyyyMMdd-HHmmss}.txt";
@@ -3418,7 +3427,7 @@ namespace CumulusMX
 		private void ReadIniFile()
 		{
 			var DavisBaudRates = new List<int> { 1200, 2400, 4800, 9600, 14400, 19200 };
-			ImetOptions.BaudRates = new List<int> { 19200, 115200 };
+			ImetOptions.BaudRates = [19200, 115200];
 			var rewriteRequired = false; // Do we need to re-save the ini file after migration processing or resetting options?
 			var recreateRequired = false; // Do we need to wipe the file to remove old entries?
 
@@ -3740,6 +3749,34 @@ namespace CumulusMX
 			Spike.MaxHourlyRain = ini.GetValue("Station", "EWmaxHourlyRain", 999.0);
 			Spike.InTempDiff = ini.GetValue("Station", "EWinTempdiff", 999.0);
 			Spike.InHumDiff = ini.GetValue("Station", "EWinHumiditydiff", 999.0);
+			if (Spike.TempDiff < 999)
+			{
+				Spike.TempDiff = ConvertUnits.TempCToUser(Spike.TempDiff).Value;
+			}
+			if (Spike.PressDiff < 999)
+			{
+				Spike.PressDiff = ConvertUnits.PressMBToUser(Spike.PressDiff).Value;
+			}
+			if (Spike.GustDiff < 999)
+			{
+				Spike.GustDiff = ConvertUnits.WindMSToUser(Spike.GustDiff).Value;
+			}
+			if (Spike.WindDiff < 999)
+			{
+				Spike.WindDiff = ConvertUnits.WindMSToUser(Spike.WindDiff).Value;
+			}
+			if (Spike.MaxRainRate < 999)
+			{
+				Spike.MaxRainRate = ConvertUnits.RainMMToUser(Spike.MaxRainRate).Value;
+			}
+			if (Spike.MaxHourlyRain < 999)
+			{
+				Spike.MaxHourlyRain = ConvertUnits.RainMMToUser(Spike.MaxHourlyRain).Value;
+			}
+			if (Spike.InTempDiff < 999)
+			{
+				Spike.InTempDiff = ConvertUnits.TempCToUser(Spike.InTempDiff).Value;
+			}
 
 			LCMaxWind = ini.GetValue("Station", "LCMaxWind", 9999);
 
@@ -4780,12 +4817,12 @@ namespace CumulusMX
 			Calib.Solar.Mult2 = ini.GetValue("Offsets", "SolarMult2", 0.0);
 			Calib.UV.Mult2 = ini.GetValue("Offsets", "UVMult2", 0.0);
 
-			Limit.TempHigh = ini.GetValue("Limits", "TempHighC", 60.0);
-			Limit.TempLow = ini.GetValue("Limits", "TempLowC", -60.0);
-			Limit.DewHigh = ini.GetValue("Limits", "DewHighC", 40.0);
-			Limit.PressHigh = ini.GetValue("Limits", "PressHighMB", 1090.0);
-			Limit.PressLow = ini.GetValue("Limits", "PressLowMB", 870.0);
-			Limit.WindHigh = ini.GetValue("Limits", "WindHighMS", 90.0);
+			Limit.TempHigh = ConvertUnits.TempCToUser(ini.GetValue("Limits", "TempHighC", 60.0)).Value;
+			Limit.TempLow = ConvertUnits.TempCToUser(ini.GetValue("Limits", "TempLowC", -60.0)).Value;
+			Limit.DewHigh = ConvertUnits.TempCToUser(ini.GetValue("Limits", "DewHighC", 40.0)).Value;
+			Limit.PressHigh = ConvertUnits.PressMBToUser(ini.GetValue("Limits", "PressHighMB", 1090.0)).Value;
+			Limit.PressLow = ConvertUnits.PressMBToUser(ini.GetValue("Limits", "PressLowMB", 870.0)).Value;
+			Limit.WindHigh = ConvertUnits.WindMSToUser(ini.GetValue("Limits", "WindHighMS", 90.0)).Value;
 
 			xapEnabled = ini.GetValue("xAP", "Enabled", false);
 			xapUID = ini.GetValue("xAP", "UID", "4375");
@@ -5406,14 +5443,14 @@ namespace CumulusMX
 			ini.SetValue("Station", "EWMaxRainTipDiff", EwOptions.MaxRainTipDiff);
 			ini.SetValue("Station", "EWpressureoffset", EwOptions.PressOffset);
 
-			ini.SetValue("Station", "EWtempdiff", Spike.TempDiff);
-			ini.SetValue("Station", "EWpressurediff", Spike.PressDiff);
+			ini.SetValue("Station", "EWtempdiff", Spike.TempDiff < 999 ? ConvertUnits.UserTempToC(Spike.TempDiff) : 999.0);
+			ini.SetValue("Station", "EWpressurediff", Spike.PressDiff < 999 ? ConvertUnits.UserPressToMB(Spike.PressDiff) : 999.00);
 			ini.SetValue("Station", "EWhumiditydiff", Spike.HumidityDiff);
-			ini.SetValue("Station", "EWgustdiff", Spike.GustDiff);
-			ini.SetValue("Station", "EWwinddiff", Spike.WindDiff);
-			ini.SetValue("Station", "EWmaxHourlyRain", Spike.MaxHourlyRain);
-			ini.SetValue("Station", "EWmaxRainRate", Spike.MaxRainRate);
-			ini.SetValue("Station", "EWinTempdiff", Spike.InTempDiff);
+			ini.SetValue("Station", "EWgustdiff", Spike.GustDiff < 999 ? ConvertUnits.UserWindToMS(Spike.GustDiff) : 999.0);
+			ini.SetValue("Station", "EWwinddiff", Spike.WindDiff < 999 ? ConvertUnits.UserWindToMS(Spike.WindDiff) : 999.0);
+			ini.SetValue("Station", "EWmaxHourlyRain", Spike.MaxHourlyRain < 999 ? ConvertUnits.UserRainToMM(Spike.MaxHourlyRain) : 999.0);
+			ini.SetValue("Station", "EWmaxRainRate", Spike.MaxRainRate < 999 ? ConvertUnits.UserRainToMM(Spike.MaxRainRate) : 999.0);
+			ini.SetValue("Station", "EWinTempdiff", Spike.InTempDiff < 999 ? ConvertUnits.UserTempToC(Spike.InTempDiff) : 999.0);
 			ini.SetValue("Station", "EWinHumiditydiff", Spike.InHumDiff);
 
 			ini.SetValue("Station", "RainSeasonStart", RainSeasonStart);
@@ -6035,7 +6072,7 @@ namespace CumulusMX
 			ini.SetValue("Alarms", "UseBCC", AlarmEmailUseBcc);
 
 			// User Alarms
-			for (var i = 0; i < UserAlarms.Count(); i++)
+			for (var i = 0; i < UserAlarms.Count; i++)
 			{
 				ini.SetValue("UserAlarms", "AlarmName" + i, UserAlarms[i].Name);
 				ini.SetValue("UserAlarms", "AlarmTag" + i, UserAlarms[i].WebTag);
@@ -6049,7 +6086,7 @@ namespace CumulusMX
 				ini.SetValue("UserAlarms", "AlarmActionParams" + i, UserAlarms[i].ActionParams);
 			}
 			// remove any old alarms
-			for (var i = UserAlarms.Count(); i < 10; i++)
+			for (var i = UserAlarms.Count; i < 10; i++)
 			{
 				ini.DeleteValue("UserAlarms", "AlarmName" + i);
 				ini.DeleteValue("UserAlarms", "AlarmTag" + i);
@@ -6096,12 +6133,12 @@ namespace CumulusMX
 			ini.SetValue("Offsets", "SolarMult2", Calib.Solar.Mult2);
 			ini.SetValue("Offsets", "UVMult2", Calib.UV.Mult2);
 
-			ini.SetValue("Limits", "TempHighC", Limit.TempHigh);
-			ini.SetValue("Limits", "TempLowC", Limit.TempLow);
-			ini.SetValue("Limits", "DewHighC", Limit.DewHigh);
-			ini.SetValue("Limits", "PressHighMB", Limit.PressHigh);
-			ini.SetValue("Limits", "PressLowMB", Limit.PressLow);
-			ini.SetValue("Limits", "WindHighMS", Limit.WindHigh);
+			ini.SetValue("Limits", "TempHighC", ConvertUnits.UserTempToC(Limit.TempHigh));
+			ini.SetValue("Limits", "TempLowC", ConvertUnits.UserTempToC(Limit.TempLow));
+			ini.SetValue("Limits", "DewHighC", ConvertUnits.UserTempToC(Limit.DewHigh));
+			ini.SetValue("Limits", "PressHighMB", ConvertUnits.UserPressToMB(Limit.PressHigh));
+			ini.SetValue("Limits", "PressLowMB", ConvertUnits.UserPressToMB(Limit.PressLow));
+			ini.SetValue("Limits", "WindHighMS", ConvertUnits.UserWindToMS(Limit.WindHigh));
 
 			ini.SetValue("xAP", "Enabled", xapEnabled);
 			ini.SetValue("xAP", "UID", xapUID);
@@ -7034,10 +7071,10 @@ namespace CumulusMX
 
 		public string HTTPProxyName { get; set; }
 
-		public int[] WindDPlaceDefaults = { 1, 0, 0, 0 }; // m/s, mph, km/h, knots
-		public int[] TempDPlaceDefaults = { 1, 1 };
-		public int[] PressDPlaceDefaults = { 1, 1, 2 };
-		public int[] RainDPlaceDefaults = { 1, 2 };
+		public int[] WindDPlaceDefaults = [1, 0, 0, 0]; // m/s, mph, km/h, knots
+		public int[] TempDPlaceDefaults = [1, 1];
+		public int[] PressDPlaceDefaults = [1, 1, 2];
+		public int[] RainDPlaceDefaults = [1, 2];
 		public const int numextrafiles = 99;
 		public const int numOfSelectaChartSeries = 6;
 
@@ -7132,9 +7169,9 @@ namespace CumulusMX
 		public int WllExtraLeafTx2;
 		public int WllExtraLeafIdx2 = 2;
 
-		public int[] WllExtraTempTx = { 0, 0, 0, 0, 0, 0, 0, 0 };
+		public int[] WllExtraTempTx = [0, 0, 0, 0, 0, 0, 0, 0];
 
-		public bool[] WllExtraHumTx = { false, false, false, false, false, false, false, false };
+		public bool[] WllExtraHumTx = [false, false, false, false, false, false, false, false];
 
 		// WeatherLink Live transmitter Ids and indexes
 		public bool AirLinkIsNode;
@@ -7493,17 +7530,15 @@ namespace CumulusMX
 			{
 				try
 				{
-					using (FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read))
-					using (StreamWriter file = new StreamWriter(fs))
-					{
-						await file.WriteLineAsync(sb);
-						file.Close();
-						fs.Close();
+					using FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read);
+					using StreamWriter file = new StreamWriter(fs);
+					await file.WriteLineAsync(sb);
+					file.Close();
+					fs.Close();
 
-						success = true;
+					success = true;
 
-						LogDebugMessage($"DoCustomIntervalLog: {CustomIntvlLogSettings[idx].FileName} - Log entry for {timestamp} written");
-					}
+					LogDebugMessage($"DoCustomIntervalLog: {CustomIntvlLogSettings[idx].FileName} - Log entry for {timestamp} written");
 				}
 				catch (Exception ex)
 				{
@@ -7551,17 +7586,15 @@ namespace CumulusMX
 			{
 				try
 				{
-					using (FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read))
-					using (StreamWriter file = new StreamWriter(fs))
-					{
-						file.WriteLine(sb);
-						file.Close();
-						fs.Close();
+					using FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write, FileShare.Read);
+					using StreamWriter file = new StreamWriter(fs);
+					file.WriteLine(sb);
+					file.Close();
+					fs.Close();
 
-						success = true;
+					success = true;
 
-						LogDebugMessage($"DoCustomDailyLog: {CustomDailyLogSettings[idx].FileName} - Log entry written");
-					}
+					LogDebugMessage($"DoCustomDailyLog: {CustomDailyLogSettings[idx].FileName} - Log entry written");
 				}
 				catch (Exception ex)
 				{
@@ -8792,9 +8825,9 @@ namespace CumulusMX
 		}
 		*/
 
-		public string Beaufort(double? Bspeed) // Takes speed in current unit, returns Bft number as text
+		public static string Beaufort(double? Bspeed) // Takes speed in current unit, returns Bft number as text
 		{
-			return WeatherStation.Beaufort(Bspeed).ToString() ;
+			return ConvertUnits.Beaufort(Bspeed).ToString() ;
 		}
 
 		public string BeaufortDesc(double? Bspeed)
@@ -8802,7 +8835,7 @@ namespace CumulusMX
 			// Takes speed in current units, returns Bft description
 
 			// Convert to Force
-			var force = WeatherStation.Beaufort(Bspeed);
+			var force = ConvertUnits.Beaufort(Bspeed ?? 0);
 			return force switch
 			{
 				0 => Trans.Calm,
@@ -9029,8 +9062,10 @@ namespace CumulusMX
 
 						if (!string.IsNullOrEmpty(ExternalParams))
 						{
-							var parser = new TokenParser(TokenParserOnToken);
-							parser.InputText = ExternalParams;
+							var parser = new TokenParser(TokenParserOnToken)
+							{
+								InputText = ExternalParams
+							};
 							args = parser.ToStringFromString();
 						}
 						LogDebugMessage("Interval: Executing program " + ExternalProgram + " " + args);
@@ -9258,7 +9293,7 @@ namespace CumulusMX
 		public void DoHttpFiles(DateTime now)
 		{
 			// sanity check - is there anything to do?
-			if (HttpFilesConfig.Where(x => x.Enabled && x.Url.Length > 0 && x.Remote.Length > 0 && x.NextDownload <= now).Count() == 0)
+			if (!HttpFilesConfig.Where(x => x.Enabled && x.Url.Length > 0 && x.Remote.Length > 0 && x.NextDownload <= now).Any())
 			{
 #if DEBUG
 				LogDebugMessage("ProcessHttpFiles: No files to process at this time");
@@ -9357,7 +9392,7 @@ namespace CumulusMX
 
 							item.SetNextInterval(now);
 						}
-						catch (Exception ex) when (!(ex is TaskCanceledException))
+						catch (Exception ex) when (ex is not TaskCanceledException)
 						{
 							LogExceptionMessage(ex, $"ProcessHttpFiles: Error uploading http file {item.Url} to: {item.Remote}");
 						}
@@ -9482,7 +9517,7 @@ namespace CumulusMX
 
 							item.SetNextInterval(now);
 						}
-						catch (Exception ex) when (!(ex is TaskCanceledException))
+						catch (Exception ex) when (ex is not TaskCanceledException)
 						{
 							LogExceptionMessage(ex, $"ProcessHttpFiles: Error uploading http file {item.Url} to: {item.Remote}");
 						}
@@ -9546,7 +9581,7 @@ namespace CumulusMX
 
 							item.SetNextInterval(now);
 						}
-						catch (Exception ex) when (!(ex is TaskCanceledException))
+						catch (Exception ex) when (ex is not TaskCanceledException)
 						{
 							LogExceptionMessage(ex, $"ProcessHttpFiles: Error uploading http file {downloadfile} to: {remotefile}");
 						}
@@ -9587,7 +9622,7 @@ namespace CumulusMX
 					return;
 				}
 
-				LogDebugMessage($"ProcessHttpFiles: Upload process complete, {tasklist.Count()} files processed");
+				LogDebugMessage($"ProcessHttpFiles: Upload process complete, {tasklist.Count} files processed");
 				tasklist.Clear();
 			}
 		}
@@ -9601,7 +9636,7 @@ namespace CumulusMX
 
 			if (FtpOptions.Directory.Length > 0)
 			{
-				remotePath = (FtpOptions.Directory.EndsWith("/") ? FtpOptions.Directory : FtpOptions.Directory + "/");
+				remotePath = (FtpOptions.Directory.EndsWith('/') ? FtpOptions.Directory : FtpOptions.Directory + "/");
 			}
 
 			if (FtpOptions.FtpMode == FtpProtocols.SFTP)
@@ -10655,7 +10690,7 @@ namespace CumulusMX
 					return;
 				}
 
-				LogDebugMessage($"PHP[Int]: Upload process complete, {tasklist.Count()} files processed");
+				LogDebugMessage($"PHP[Int]: Upload process complete, {tasklist.Count} files processed");
 				tasklist.Clear();
 
 				return;
@@ -11110,132 +11145,122 @@ namespace CumulusMX
 				{
 					var encoding = new UTF8Encoding(false);
 
-					using (var request = new HttpRequestMessage(HttpMethod.Post, FtpOptions.PhpUrl))
+					using var request = new HttpRequestMessage(HttpMethod.Post, FtpOptions.PhpUrl);
+					var unixTs = Utils.ToUnixTime(DateTime.Now).ToString();
+
+					// disable expect 100 - PHP doesn't support it
+					request.Headers.ExpectContinue = false;
+					request.Headers.Add("ACTION", incremental ? "append" : "replace");
+					request.Headers.Add("FILE", remotefile);
+					if (incremental)
 					{
-						var unixTs = Utils.ToUnixTime(DateTime.Now).ToString();
+						request.Headers.Add("OLDEST", oldest);
+					}
+					var signature = Utils.GetSHA256Hash(FtpOptions.PhpSecret, unixTs + remotefile + data);
+					request.Headers.Add("SIGNATURE", signature);
 
-						// disable expect 100 - PHP doesn't support it
-						request.Headers.ExpectContinue = false;
-						request.Headers.Add("ACTION", incremental ? "append" : "replace");
-						request.Headers.Add("FILE", remotefile);
-						if (incremental)
+					request.Headers.Add("TS", unixTs);
+					request.Headers.Add("BINARY", binary ? "1" : "0");
+					request.Headers.Add("UTF8", utf8 ? "1" : "0");
+
+					int len;
+					string encData = string.Empty;
+
+					if (binary)
+					{
+						len = data.Length;
+					}
+					else
+					{
+						encData = Convert.ToBase64String(encoding.GetBytes(data));
+						len = encData.Length;
+					}
+
+					// if content < 7 KB-ish
+					if (len < 7000 && FtpOptions.PhpUseGet)
+					{
+
+						if (!binary)
 						{
-							request.Headers.Add("OLDEST", oldest);
+							data = encData;
 						}
-						var signature = Utils.GetSHA256Hash(FtpOptions.PhpSecret, unixTs + remotefile + data);
-						request.Headers.Add("SIGNATURE", signature);
+						// send data in GET headers
+						request.Method = HttpMethod.Get;
+						request.Headers.Add("DATA", data);
+					}
+					// else > 7 kB or GET is disabled
+					else
+					{
+						// send as POST
+						request.Method = HttpMethod.Post;
 
-						request.Headers.Add("TS", unixTs);
-						request.Headers.Add("BINARY", binary ? "1" : "0");
-						request.Headers.Add("UTF8", utf8 ? "1" : "0");
-
-						int len;
-						string encData = string.Empty;
-
-						if (binary)
+						// Compress? if supported and payload exceeds 500 bytes
+						if (data.Length >= 500 && (FtpOptions.PhpCompression == "gzip" || FtpOptions.PhpCompression == "deflate"))
 						{
-							len = data.Length;
+							using var ms = new MemoryStream();
+							if (FtpOptions.PhpCompression == "gzip")
+							{
+								using var zipped = new System.IO.Compression.GZipStream(ms, System.IO.Compression.CompressionMode.Compress, true);
+								var byteData = encoding.GetBytes(data);
+								zipped.Write(byteData, 0, byteData.Length);
+							}
+							else if (FtpOptions.PhpCompression == "deflate")
+							{
+								using var zipped = new System.IO.Compression.DeflateStream(ms, System.IO.Compression.CompressionMode.Compress, true);
+								var byteData = encoding.GetBytes(data);
+								zipped.Write(byteData, 0, byteData.Length);
+							}
+
+							ms.Position = 0;
+							byte[] compressed = new byte[ms.Length];
+							ms.Read(compressed, 0, compressed.Length);
+
+							outStream = new MemoryStream(compressed);
+							streamContent = new StreamContent(outStream);
+							streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
+							streamContent.Headers.Add("Content-Encoding", FtpOptions.PhpCompression);
+							streamContent.Headers.ContentLength = outStream.Length;
+
+							request.Content = streamContent;
 						}
 						else
 						{
-							encData = Convert.ToBase64String(encoding.GetBytes(data));
-							len = encData.Length;
-						}
+							request.Headers.Add("Content_Type", "text/plain");
 
-						// if content < 7 KB-ish
-						if (len < 7000 && FtpOptions.PhpUseGet)
-						{
+							outStream = new MemoryStream(Encoding.UTF8.GetBytes(data));
+							streamContent = new StreamContent(outStream);
+							streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
+							streamContent.Headers.ContentLength = outStream.Length;
 
-							if (!binary)
-							{
-								data = encData;
-							}
-							// send data in GET headers
-							request.Method = HttpMethod.Get;
-							request.Headers.Add("DATA", data);
-						}
-						// else > 7 kB or GET is disabled
-						else
-						{
-							// send as POST
-							request.Method = HttpMethod.Post;
-
-							// Compress? if supported and payload exceeds 500 bytes
-							if (data.Length >= 500 && (FtpOptions.PhpCompression == "gzip" || FtpOptions.PhpCompression == "deflate"))
-							{
-								using (var ms = new MemoryStream())
-							{
-								if (FtpOptions.PhpCompression == "gzip")
-								{
-									using (var zipped = new System.IO.Compression.GZipStream(ms, System.IO.Compression.CompressionMode.Compress, true))
-									{
-										var byteData = encoding.GetBytes(data);
-										zipped.Write(byteData, 0, byteData.Length);
-									}
-								}
-								else if (FtpOptions.PhpCompression == "deflate")
-								{
-									using (var zipped = new System.IO.Compression.DeflateStream(ms, System.IO.Compression.CompressionMode.Compress, true))
-									{
-										var byteData = encoding.GetBytes(data);
-										zipped.Write(byteData, 0, byteData.Length);
-									}
-								}
-
-								ms.Position = 0;
-								byte[] compressed = new byte[ms.Length];
-								ms.Read(compressed, 0, compressed.Length);
-
-								outStream = new MemoryStream(compressed);
-								streamContent = new StreamContent(outStream);
-								streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
-								streamContent.Headers.Add("Content-Encoding", FtpOptions.PhpCompression);
-								streamContent.Headers.ContentLength = outStream.Length;
-
-								request.Content = streamContent;
-							}
-						}
-							else
-							{
-								request.Headers.Add("Content_Type", "text/plain");
-
-								outStream = new MemoryStream(Encoding.UTF8.GetBytes(data));
-								streamContent = new StreamContent(outStream);
-								streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
-								streamContent.Headers.ContentLength = outStream.Length;
-
-								request.Content = streamContent;
-							}
-						}
-
-						LogDebugMessage($"PHP[{cycleStr}]: Sending via {request.Method}");
-
-						using (var response = await httpclient.SendAsync(request))
-						{
-							//response.EnsureSuccessStatusCode();
-							var responseBodyAsText = await response.Content.ReadAsStringAsync();
-							if (response.StatusCode != HttpStatusCode.OK)
-							{
-								LogWarningMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response code = {(int)response.StatusCode}: {response.StatusCode}");
-								LogMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response text follows:\n{responseBodyAsText}");
-							}
-							else
-							{
-								LogDebugMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response code = {(int) response.StatusCode}: {response.StatusCode}");
-								LogDataMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response text follows:\n{responseBodyAsText}");
-							}
-
-							CheckPhpMaxUploads(response.Headers);
-
-							if (outStream != null)
-								outStream.Dispose();
-
-							if (streamContent != null)
-								streamContent.Dispose();
-
-							return response.StatusCode == HttpStatusCode.OK;
+							request.Content = streamContent;
 						}
 					}
+
+					LogDebugMessage($"PHP[{cycleStr}]: Sending via {request.Method}");
+
+					using var response = await httpclient.SendAsync(request);
+					//response.EnsureSuccessStatusCode();
+					var responseBodyAsText = await response.Content.ReadAsStringAsync();
+					if (response.StatusCode != HttpStatusCode.OK)
+					{
+						LogWarningMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response code = {(int)response.StatusCode}: {response.StatusCode}");
+						LogMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response text follows:\n{responseBodyAsText}");
+					}
+					else
+					{
+						LogDebugMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response code = {(int)response.StatusCode}: {response.StatusCode}");
+						LogDataMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response text follows:\n{responseBodyAsText}");
+					}
+
+					CheckPhpMaxUploads(response.Headers);
+
+					if (outStream != null)
+						outStream.Dispose();
+
+					if (streamContent != null)
+						streamContent.Dispose();
+
+					return response.StatusCode == HttpStatusCode.OK;
 				}
 				catch (System.Net.Http.HttpRequestException ex)
 				{
@@ -11639,9 +11664,11 @@ namespace CumulusMX
 
 			if (File.Exists(templatefile))
 			{
-				var parser = new TokenParser(TokenParserOnToken);
-				parser.Encoding = utf8 ? new UTF8Encoding(false) : Encoding.GetEncoding("iso-8859-1");
-				parser.SourceFile = templatefile;
+				var parser = new TokenParser(TokenParserOnToken)
+				{
+					Encoding = utf8 ? new UTF8Encoding(false) : Encoding.GetEncoding("iso-8859-1"),
+					SourceFile = templatefile
+				};
 				return parser.ToString();
 			}
 			else
@@ -11873,12 +11900,13 @@ namespace CumulusMX
 				RealtimeFTP.Dispose();
 			}
 
-			RealtimeFTP = new FtpClient();
-
-			//RealtimeTimer.Enabled = false;
-			RealtimeFTP.Host = FtpOptions.Hostname;
-			RealtimeFTP.Port = FtpOptions.Port;
-			RealtimeFTP.Credentials = new NetworkCredential(FtpOptions.Username, FtpOptions.Password);
+			RealtimeFTP = new FtpClient
+			{
+				//RealtimeTimer.Enabled = false;
+				Host = FtpOptions.Hostname,
+				Port = FtpOptions.Port,
+				Credentials = new NetworkCredential(FtpOptions.Username, FtpOptions.Password)
+			};
 			RealtimeFTP.Config.SocketPollInterval = 20000; // increase beyond the timeout values
 			RealtimeFTP.Config.LogPassword = false;
 
@@ -12059,8 +12087,10 @@ namespace CumulusMX
 					{
 						if (!string.IsNullOrEmpty(CustomHttpSecondsStrings[i]))
 						{
-							var parser = new TokenParser(TokenParserOnToken);
-							parser.InputText = CustomHttpSecondsStrings[i];
+							var parser = new TokenParser(TokenParserOnToken)
+							{
+								InputText = CustomHttpSecondsStrings[i]
+							};
 							var processedString = parser.ToStringFromString();
 							LogDebugMessage($"CustomHttpSeconds[{i}]: Querying - {processedString}");
 
@@ -12097,8 +12127,10 @@ namespace CumulusMX
 					{
 						if (!string.IsNullOrEmpty(CustomHttpMinutesStrings[i]))
 						{
-							var parser = new TokenParser(TokenParserOnToken);
-							parser.InputText = CustomHttpMinutesStrings[i];
+							var parser = new TokenParser(TokenParserOnToken)
+							{
+								InputText = CustomHttpMinutesStrings[i]
+							};
 							var processedString = parser.ToStringFromString();
 							LogDebugMessage($"CustomHttpMinutes[{i}]: Querying - {processedString}");
 
@@ -12130,8 +12162,10 @@ namespace CumulusMX
 					{
 						if (!string.IsNullOrEmpty(CustomHttpRolloverStrings[i]))
 						{
-							var parser = new TokenParser(TokenParserOnToken);
-							parser.InputText = CustomHttpRolloverStrings[i];
+							var parser = new TokenParser(TokenParserOnToken)
+							{
+								InputText = CustomHttpRolloverStrings[i]
+							};
 							var processedString = parser.ToStringFromString();
 							LogDebugMessage($"CustomHttpRollover[{i}]: Querying - {processedString}");
 
@@ -12381,11 +12415,11 @@ namespace CumulusMX
 						logBuilder.Append(loglevel);
 						logBuilder.Append("\t[");
 						logBuilder.Append(msg.LogName);
-						logBuilder.Append("]");
+						logBuilder.Append(']');
 						//logBuilder.Append("\t[");
 						//logBuilder.Append(ms.EventId.Id);
 						//logBuilder.Append("]\t");
-						logBuilder.Append("\t");
+						logBuilder.Append('\t');
 						logBuilder.Append(msg.Message);
 					}
 					return logBuilder.ToString();

@@ -451,7 +451,7 @@ namespace CumulusMX
 				}
 				else
 				{
-					DoIndoorTemp(ConvertTempCToUser(historydata.inTemp));
+					DoIndoorTemp(ConvertUnits.TempCToUser(historydata.inTemp));
 				}
 
 				// Pressure =============================================================
@@ -463,7 +463,7 @@ namespace CumulusMX
 				}
 				else
 				{
-					DoPressure(ConvertPressMBToUser(historydata.pressure), timestamp);
+					DoPressure(ConvertUnits.PressMBToUser(historydata.pressure), timestamp);
 				}
 
 				if (historydata.SensorContactLost)
@@ -495,7 +495,7 @@ namespace CumulusMX
 					}
 					else
 					{
-						DoWind(ConvertWindMSToUser(historydata.windGust), historydata.windBearing, ConvertWindMSToUser(historydata.windSpeed), timestamp);
+						DoWind(ConvertUnits.WindMSToUser(historydata.windGust), historydata.windBearing, ConvertUnits.WindMSToUser(historydata.windSpeed), timestamp);
 					}
 
 					// Outdoor Temperature ==================================================
@@ -506,7 +506,7 @@ namespace CumulusMX
 					}
 					else
 					{
-						DoTemperature(ConvertTempCToUser(historydata.outTemp), timestamp);
+						DoTemperature(ConvertUnits.TempCToUser(historydata.outTemp), timestamp);
 						// add in 'archivePeriod' minutes worth of temperature to the temp samples
 						tempsamplestoday += historydata.interval;
 						TempTotalToday += (Temperature.Value * historydata.interval);
@@ -548,7 +548,7 @@ namespace CumulusMX
 					{
 						if (historydata.interval > 0)
 						{
-							rainrate = ConvertRainMMToUser((raindiff * 0.3) * (60.0 / historydata.interval));
+							rainrate = ConvertUnits.RainMMToUser((raindiff * 0.3) * (60.0 / historydata.interval)).Value;
 						}
 						else
 						{
@@ -556,7 +556,7 @@ namespace CumulusMX
 						}
 					}
 
-					DoRain(ConvertRainMMToUser(historydata.rainCounter*0.3), rainrate, timestamp);
+					DoRain(ConvertUnits.RainMMToUser(historydata.rainCounter*0.3), rainrate, timestamp);
 
 					prevraintotal = historydata.rainCounter;
 
@@ -1227,7 +1227,7 @@ namespace CumulusMX
 				}
 				else
 				{
-					DoIndoorTemp(ConvertTempCToUser(intemp));
+					DoIndoorTemp(ConvertUnits.TempCToUser(intemp));
 				}
 
 				// Pressure =========================================================
@@ -1241,12 +1241,12 @@ namespace CumulusMX
 				}
 				else
 				{
-					DoPressure(ConvertPressMBToUser(pressure), now);
+					DoPressure(ConvertUnits.PressMBToUser(pressure), now);
 					// Get station pressure in hPa by subtracting offset and calibrating
 					// EWpressure offset is difference between rel and abs in hPa
 					// PressOffset is user calibration in user units.
 					var offsetPress = pressure - pressureOffset;
-					StationPressure = cumulus.Calib.Press.Calibrate(ConvertPressMBToUser(offsetPress));
+					StationPressure = cumulus.Calib.Press.Calibrate(ConvertUnits.PressMBToUser(offsetPress));
 
 					UpdatePressureTrendString();
 				}
@@ -1292,7 +1292,7 @@ namespace CumulusMX
 					}
 					else
 					{
-						DoWind(ConvertWindMSToUser(gust), winddir, ConvertWindMSToUser(windspeed), now);
+						DoWind(ConvertUnits.WindMSToUser(gust), winddir, ConvertUnits.WindMSToUser(windspeed), now);
 					}
 
 					// Outdoor Temperature ==============================================
@@ -1308,18 +1308,18 @@ namespace CumulusMX
 					}
 					else
 					{
-						DoTemperature(ConvertTempCToUser(outtemp), now);
+						DoTemperature(ConvertUnits.TempCToUser(outtemp), now);
 
 						// calculate wind chill
 						// The 'global average speed will have been determined by the call of DoWind
 						// so use that in the wind chill calculation
-						var avgspeedKPH = ConvertUserWindToKPH(WindAverage);
+						var avgspeedKPH = ConvertUnits.UserWindToKPH(WindAverage);
 
 						// windinMPH = calibwind * 2.23693629;
 						// calculate wind chill from calibrated C temp and calibrated win in KPH
-						var val = MeteoLib.WindChill(ConvertUserTempToC(Temperature), avgspeedKPH);
+						var val = MeteoLib.WindChill(ConvertUnits.UserTempToC(Temperature), avgspeedKPH);
 
-						DoWindChill(ConvertTempCToUser(val), now);
+						DoWindChill(ConvertUnits.TempCToUser(val), now);
 
 						DoDewpoint(null, now);
 						DoApparentTemp(now);
@@ -1366,7 +1366,7 @@ namespace CumulusMX
 
 					if (ignoreraincount == 0)
 					{
-						DoRain(ConvertRainMMToUser(raintot * 0.3), -1, now);
+						DoRain(ConvertUnits.RainMMToUser(raintot * 0.3), -1, now);
 						prevraintotal = raintot;
 					}
 

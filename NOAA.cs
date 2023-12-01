@@ -317,16 +317,16 @@ namespace CumulusMX
 							// mean = (high + low) / 2
 							// mean > 65F = cooling = high - 65
 							// mean < 65F = heating = 65 - low
-							if (WeatherStation.ConvertUserTempToF(meantemp) > 65)
+							if (ConvertUnits.UserTempToF(meantemp) > 65)
 							{
 								dayList[daynumber].heatingdegdays = 0;
-								dayList[daynumber].coolingdegdays = dayList[daynumber].maxtemp - WeatherStation.ConvertTempFToUser(65).Value;
+								dayList[daynumber].coolingdegdays = dayList[daynumber].maxtemp - ConvertUnits.TempFToUser(65).Value;
 								totalcooling += dayList[daynumber].coolingdegdays;
 							}
 							else
 							{
 								dayList[daynumber].coolingdegdays = 0;
-								dayList[daynumber].heatingdegdays = WeatherStation.ConvertTempFToUser(65).Value - dayList[daynumber].mintemp;
+								dayList[daynumber].heatingdegdays = ConvertUnits.TempFToUser(65).Value - dayList[daynumber].mintemp;
 								totalheating += dayList[daynumber].heatingdegdays;
 							}
 						}
@@ -854,15 +854,15 @@ namespace CumulusMX
 						// mean = (high + low) / 2
 						// mean > 65F = cooling = high - 65
 						// mean < 65F = heating = 65 - low
-						if (WeatherStation.ConvertUserTempToF(meantemp) > 65)
+						if (ConvertUnits.UserTempToF(meantemp) > 65)
 						{
-							var cool = day.HighTemp - WeatherStation.ConvertTempFToUser(65);
+							var cool = day.HighTemp - ConvertUnits.TempFToUser(65);
 							MonthList[month].coolingdegdays += cool ?? 0;
 							totalcooling += cool ?? 0;
 						}
 						else
 						{
-							var heat = WeatherStation.ConvertTempFToUser(65) - day.LowTemp;
+							var heat = ConvertUnits.TempFToUser(65) - day.LowTemp;
 							MonthList[month].heatingdegdays += heat ?? 0;
 							totalheating += heat ?? 0;
 						}

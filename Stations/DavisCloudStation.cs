@@ -579,15 +579,15 @@ namespace CumulusMX.Stations
 										DoHumidity(Convert.ToInt32(data.hum_out.Value), timestamp);
 
 									if (data.temp_out.HasValue)
-										DoOutdoorTemp(ConvertTempFToUser(data.temp_out.Value), timestamp);
+										DoOutdoorTemp(ConvertUnits.TempFToUser(data.temp_out.Value), timestamp);
 
 									if (data.dew_point.HasValue)
-										DoDewpoint(ConvertTempFToUser(data.dew_point.Value), timestamp);
+										DoDewpoint(ConvertUnits.TempFToUser(data.dew_point.Value), timestamp);
 
 									if (data.wind_chill.HasValue)
 									{
 										// use wind chill from WLL
-										DoWindChill(ConvertTempFToUser(data.wind_chill.Value), timestamp);
+										DoWindChill(ConvertUnits.TempFToUser(data.wind_chill.Value), timestamp);
 									}
 									//TODO: Wet Bulb? rec["wet_bulb"] - No, we already have humidity
 									//TODO: Heat Index? rec["heat_index"] - No, Cumulus always calculates HI
@@ -602,19 +602,19 @@ namespace CumulusMX.Stations
 								try
 								{
 									if (data.temp_extra_1.HasValue)
-										DoExtraTemp(ConvertTempFToUser(data.temp_extra_1.Value), 1);
+										DoExtraTemp(ConvertUnits.TempFToUser(data.temp_extra_1.Value), 1);
 									if (data.temp_extra_2.HasValue)
-										DoExtraTemp(ConvertTempFToUser(data.temp_extra_2.Value), 2);
+										DoExtraTemp(ConvertUnits.TempFToUser(data.temp_extra_2.Value), 2);
 									if (data.temp_extra_3.HasValue)
-										DoExtraTemp(ConvertTempFToUser(data.temp_extra_3.Value), 3);
+										DoExtraTemp(ConvertUnits.TempFToUser(data.temp_extra_3.Value), 3);
 									if (data.temp_extra_4.HasValue)
-										DoExtraTemp(ConvertTempFToUser(data.temp_extra_4.Value), 4);
+										DoExtraTemp(ConvertUnits.TempFToUser(data.temp_extra_4.Value), 4);
 									if (data.temp_extra_5.HasValue)
-										DoExtraTemp(ConvertTempFToUser(data.temp_extra_5.Value), 5);
+										DoExtraTemp(ConvertUnits.TempFToUser(data.temp_extra_5.Value), 5);
 									if (data.temp_extra_6.HasValue)
-										DoExtraTemp(ConvertTempFToUser(data.temp_extra_6.Value), 6);
+										DoExtraTemp(ConvertUnits.TempFToUser(data.temp_extra_6.Value), 6);
 									if (data.temp_extra_7.HasValue)
-										DoExtraTemp(ConvertTempFToUser(data.temp_extra_7.Value), 7);
+										DoExtraTemp(ConvertUnits.TempFToUser(data.temp_extra_7.Value), 7);
 
 									if (data.hum_extra_1.HasValue)
 										DoExtraHum(data.hum_extra_1.Value, 1);
@@ -644,9 +644,9 @@ namespace CumulusMX.Stations
 									if (timestamp == DateTime.MinValue)
 										timestamp = Utils.FromUnixTime(data.ts);
 
-									var gust = ConvertWindMPHToUser(data.wind_gust_10_min ?? 0);
-									var avg = ConvertWindMPHToUser(data.wind_speed_10_min_avg ?? 0);
-									double wind = ConvertWindMPHToUser(data.wind_speed ?? 0);
+									var gust = ConvertUnits.WindMPHToUser(data.wind_gust_10_min ?? 0);
+									var avg = ConvertUnits.WindMPHToUser(data.wind_speed_10_min_avg ?? 0);
+									double wind = ConvertUnits.WindMPHToUser(data.wind_speed ?? 0);
 									int wdir = data.wind_dir ?? 0;
 
 									DoWind(gust, wdir, avg, timestamp);
@@ -794,20 +794,20 @@ namespace CumulusMX.Stations
 											DoHumidity(Convert.ToInt32(data.hum.Value), timestamp);
 
 										if (data.temp.HasValue)
-											DoOutdoorTemp(ConvertTempFToUser(data.temp.Value), timestamp);
+											DoOutdoorTemp(ConvertUnits.TempFToUser(data.temp.Value), timestamp);
 
 										if (data.dew_point.HasValue)
-											DoDewpoint(ConvertTempFToUser(data.dew_point.Value), timestamp);
+											DoDewpoint(ConvertUnits.TempFToUser(data.dew_point.Value), timestamp);
 
 										if (data.wind_chill.HasValue)
 										{
 											// use wind chill from WLL
-											DoWindChill(ConvertTempFToUser(data.wind_chill.Value), timestamp);
+											DoWindChill(ConvertUnits.TempFToUser(data.wind_chill.Value), timestamp);
 										}
 
 										if (data.thsw_index.HasValue)
 										{
-											THSWIndex = ConvertTempFToUser(data.thsw_index.Value);
+											THSWIndex = ConvertUnits.TempFToUser(data.thsw_index.Value);
 										}
 
 										//TODO: Wet Bulb? rec["wet_bulb"] - No, we already have humidity
@@ -837,7 +837,7 @@ namespace CumulusMX.Stations
 												{
 													cumulus.LogDebugMessage($"WL current: using extra temp data from TxId {data.tx_id}");
 
-													DoExtraTemp(ConvertTempFToUser(data.temp.Value), tempTxId);
+													DoExtraTemp(ConvertUnits.TempFToUser(data.temp.Value), tempTxId);
 												}
 
 												if (cumulus.WllExtraHumTx[tempTxId] && data.hum.HasValue)
@@ -877,13 +877,13 @@ namespace CumulusMX.Stations
 										if (timestamp == DateTime.MinValue)
 											timestamp = Utils.FromUnixTime(data.ts);
 
-										var gust = ConvertWindMPHToUser(data.wind_speed_hi_last_10_min ?? 0);
-										var avg = ConvertWindMPHToUser(data.wind_speed_avg_last_10_min ?? 0);
-										var last = ConvertWindMPHToUser(data.wind_speed_last ?? 0);
+										var gust = ConvertUnits.WindMPHToUser(data.wind_speed_hi_last_10_min ?? 0);
+										var avg = ConvertUnits.WindMPHToUser(data.wind_speed_avg_last_10_min ?? 0);
+										var last = ConvertUnits.WindMPHToUser(data.wind_speed_last ?? 0);
 
 										// pesky null values from WLL when it is calm
 										int wdir = data.wind_dir_scalar_avg_last_1_min ?? 0;
-										double wind = ConvertWindMPHToUser(data.wind_speed_last ?? 0);
+										double wind = ConvertUnits.WindMPHToUser(data.wind_speed_last ?? 0);
 
 										DoWind(last, wdir, avg, timestamp);
 
@@ -893,7 +893,7 @@ namespace CumulusMX.Stations
 
 										//if (cumulus.StationOptions.PeakGustMinutes >= 2)
 										//{
-										//	var gust = ConvertWindMPHToUser(data.wind_speed_hi_last_2_min ?? 0);
+										//	var gust = ConvertUnits.WindMPHToUser(data.wind_speed_hi_last_2_min ?? 0);
 										//	var gustCal = cumulus.Calib.WindGust.Calibrate(gust);
 										//	var gustDir = data.wind_dir_at_hi_speed_last_2_min ?? 0;
 										//	var gustDirCal = gustDir == 0 ? 0 : (int) cumulus.Calib.WindDir.Calibrate(gustDir);
@@ -1087,15 +1087,15 @@ namespace CumulusMX.Stations
 
 										if (data3.bar_sea_level.HasValue)
 										{
-											DoPressure(ConvertPressINHGToUser(data3.bar_sea_level.Value), Utils.FromUnixTime(data3.ts));
+											DoPressure(ConvertUnits.PressINHGToUser(data3.bar_sea_level.Value), Utils.FromUnixTime(data3.ts));
 										}
 										// Altimeter from absolute
 										if (data3.bar_absolute.HasValue)
 										{
-											StationPressure = ConvertPressINHGToUser(data3.bar_absolute.Value);
+											StationPressure = ConvertUnits.PressINHGToUser(data3.bar_absolute.Value);
 											// Or do we use calibration? The VP2 code doesn't?
-											//StationPressure = ConvertPressINHGToUser(rec.Value<double>("bar_absolute")) * cumulus.Calib.Press.Mult + cumulus.Calib.Press.Offset;
-											AltimeterPressure = ConvertPressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure), AltitudeM(cumulus.Altitude)));
+											//StationPressure = ConvertUnits.PressINHGToUser(rec.Value<double>("bar_absolute")) * cumulus.Calib.Press.Mult + cumulus.Calib.Press.Offset;
+											AltimeterPressure = ConvertUnits.PressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure), AltitudeM(cumulus.Altitude)));
 										}
 									}
 									catch (Exception ex)
@@ -1116,7 +1116,7 @@ namespace CumulusMX.Stations
 									try
 									{
 										if (data4.temp_in.HasValue)
-											DoIndoorTemp(ConvertTempFToUser(data4.temp_in.Value));
+											DoIndoorTemp(ConvertUnits.TempFToUser(data4.temp_in.Value));
 									}
 									catch (Exception ex)
 									{
@@ -1270,7 +1270,7 @@ namespace CumulusMX.Stations
 										{
 											var val = (double?) data[idx];
 											if (val.HasValue)
-												DoSoilTemp(ConvertTempFToUser(val.Value), 1);
+												DoSoilTemp(ConvertUnits.TempFToUser(val.Value), 1);
 										}
 										catch (Exception ex)
 										{
@@ -1285,7 +1285,7 @@ namespace CumulusMX.Stations
 										{
 											var val = (double?) data[idx];
 											if (val.HasValue)
-												DoSoilTemp(ConvertTempFToUser(val.Value), 2);
+												DoSoilTemp(ConvertUnits.TempFToUser(val.Value), 2);
 										}
 										catch (Exception ex)
 										{
@@ -1300,7 +1300,7 @@ namespace CumulusMX.Stations
 										{
 											var val = (double?) data[idx];
 											if (val.HasValue)
-												DoSoilTemp(ConvertTempFToUser(val.Value), 3);
+												DoSoilTemp(ConvertUnits.TempFToUser(val.Value), 3);
 										}
 										catch (Exception ex)
 										{
@@ -1315,7 +1315,7 @@ namespace CumulusMX.Stations
 										{
 											var val = (double?) data[idx];
 											if (val.HasValue)
-												DoSoilTemp(ConvertTempFToUser(val.Value), 4);
+												DoSoilTemp(ConvertUnits.TempFToUser(val.Value), 4);
 										}
 										catch (Exception ex)
 										{
@@ -1363,7 +1363,7 @@ namespace CumulusMX.Stations
 				// Now we have the primary data, calculate the derived data
 				if (cumulus.StationOptions.CalculatedWC)
 				{
-					if (ConvertUserWindToMS(WindAverage) < 1.5)
+					if (ConvertUnits.UserWindToMS(WindAverage) < 1.5)
 					{
 						// wind speed too low, use the temperature
 						DoWindChill(Temperature, timestamp);
@@ -1371,7 +1371,7 @@ namespace CumulusMX.Stations
 					else
 					{
 						// calculate wind chill from calibrated C temp and calibrated wind in KPH
-						DoWindChill(ConvertTempCToUser(MeteoLib.WindChill(ConvertUserTempToC(Temperature), ConvertUserWindToKPH(WindAverage))), timestamp);
+						DoWindChill(ConvertUnits.TempCToUser(MeteoLib.WindChill(ConvertUnits.UserTempToC(Temperature), ConvertUnits.UserWindToKPH(WindAverage))), timestamp);
 					}
 				}
 
@@ -1419,13 +1419,13 @@ namespace CumulusMX.Stations
 			switch (size)
 			{
 				case 1:
-					return ConvertRainINToUser(clicks * 0.01);
+					return ConvertUnits.RainINToUser(clicks * 0.01).Value;
 				case 2:
-					return ConvertRainMMToUser(clicks * 0.2);
+					return ConvertUnits.RainMMToUser(clicks * 0.2).Value;
 				case 3:
-					return ConvertRainMMToUser(clicks * 0.1);
+					return ConvertUnits.RainMMToUser(clicks * 0.1).Value;
 				case 4:
-					return ConvertRainINToUser(clicks * 0.001);
+					return ConvertUnits.RainINToUser(clicks * 0.001).Value;
 				default:
 					switch (cumulus.DavisOptions.RainGaugeType)
 					{
@@ -1439,9 +1439,9 @@ namespace CumulusMX.Stations
 							return clicks * 0.01;
 						// Rain gauge is metric, convert to user unit
 						case 0:
-							return ConvertRainMMToUser(clicks * 0.2);
+							return ConvertUnits.RainMMToUser(clicks * 0.2).Value;
 						default:
-							return ConvertRainINToUser(clicks * 0.01);
+							return ConvertUnits.RainINToUser(clicks * 0.01).Value;
 					}
 			}
 		}
@@ -1942,7 +1942,7 @@ namespace CumulusMX.Stations
 									// do high temp
 									if (data.temp_out_hi.HasValue)
 									{
-										DoTemperature(ConvertTempFToUser(data.temp_out_hi.Value), lastRecordTime);
+										DoTemperature(ConvertUnits.TempFToUser(data.temp_out_hi.Value), lastRecordTime);
 									}
 									else
 									{
@@ -1952,7 +1952,7 @@ namespace CumulusMX.Stations
 									// do low temp
 									if (data.temp_out_lo.HasValue)
 									{
-										DoTemperature(ConvertTempFToUser(data.temp_out_lo.Value), lastRecordTime);
+										DoTemperature(ConvertUnits.TempFToUser(data.temp_out_lo.Value), lastRecordTime);
 									}
 									else
 									{
@@ -1962,13 +1962,13 @@ namespace CumulusMX.Stations
 									// do last temp
 									if (data.temp_out.HasValue)
 									{
-										DoTemperature(ConvertTempFToUser(data.temp_out.Value), lastRecordTime);
+										DoTemperature(ConvertUnits.TempFToUser(data.temp_out.Value), lastRecordTime);
 
 										if (!current)
 										{
 											// set the values for daily average, arch_int is in seconds, but always whole minutes
 											tempsamplestoday += data.arch_int / 60;
-											TempTotalToday += ConvertTempFToUser(data.temp_out.Value).Value * data.arch_int / 60;
+											TempTotalToday += ConvertUnits.TempFToUser(data.temp_out.Value).Value * data.arch_int / 60;
 
 											// update chill hours
 											if (Temperature < cumulus.ChillHourThreshold)
@@ -2001,7 +2001,7 @@ namespace CumulusMX.Stations
 								// do last DP
 								if (data.dew_point_out.HasValue)
 								{
-									DoDewpoint(ConvertTempFToUser(data.dew_point_out.Value), lastRecordTime);
+									DoDewpoint(ConvertUnits.TempFToUser(data.dew_point_out.Value), lastRecordTime);
 								}
 								else
 								{
@@ -2021,7 +2021,7 @@ namespace CumulusMX.Stations
 									// do last WC
 									if (data.wind_chill.HasValue)
 									{
-										DoWindChill(ConvertTempFToUser(data.wind_chill.Value), lastRecordTime);
+										DoWindChill(ConvertUnits.TempFToUser(data.wind_chill.Value), lastRecordTime);
 									}
 									else
 									{
@@ -2051,8 +2051,8 @@ namespace CumulusMX.Stations
 							{
 								if (data.wind_speed_hi.HasValue && data.wind_dir_of_hi.HasValue && data.wind_speed_avg.HasValue)
 								{
-									var gust = ConvertWindMPHToUser(data.wind_speed_hi.Value);
-									var spd = ConvertWindMPHToUser(data.wind_speed_avg.Value);
+									var gust = ConvertUnits.WindMPHToUser(data.wind_speed_hi.Value);
+									var spd = ConvertUnits.WindMPHToUser(data.wind_speed_avg.Value);
 									// dir is a direction code: 0=N, 1=NNE, ... 14=NW, 15=NNW - convert to degress
 									var dir = (int) ((data.wind_dir_of_hi ?? 0) * 22.5);
 									cumulus.LogDebugMessage($"WL.com historic: using wind data from TxId {data.tx_id}");
@@ -2067,7 +2067,7 @@ namespace CumulusMX.Stations
 
 								if (data.wind_speed_avg.HasValue)
 								{
-									WindAverage = cumulus.Calib.WindSpeed.Calibrate(ConvertWindMPHToUser(data.wind_speed_avg.Value));
+									WindAverage = cumulus.Calib.WindSpeed.Calibrate(ConvertUnits.WindMPHToUser(data.wind_speed_avg.Value));
 
 									if (!current)
 									{
@@ -2153,7 +2153,7 @@ namespace CumulusMX.Stations
 								if (data.bar != null)
 								{
 									// leave it at current value
-									DoPressure(ConvertPressINHGToUser((double) data.bar), lastRecordTime);
+									DoPressure(ConvertUnits.PressINHGToUser((double) data.bar), lastRecordTime);
 								}
 								else
 								{
@@ -2163,10 +2163,10 @@ namespace CumulusMX.Stations
 								// Altimeter from absolute
 								if (data.abs_press != null)
 								{
-									StationPressure = ConvertPressINHGToUser((double) data.abs_press);
+									StationPressure = ConvertUnits.PressINHGToUser((double) data.abs_press);
 									// Or do we use calibration? The VP2 code doesn't?
-									//StationPressure = ConvertPressINHGToUser(data.Value<double>("bar_absolute")) * cumulus.Calib.Press.Mult + cumulus.Calib.Press.Offset;
-									AltimeterPressure = ConvertPressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure), AltitudeM(cumulus.Altitude)));
+									//StationPressure = ConvertUnits.PressINHGToUser(data.Value<double>("bar_absolute")) * cumulus.Calib.Press.Mult + cumulus.Calib.Press.Offset;
+									AltimeterPressure = ConvertUnits.PressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure), AltitudeM(cumulus.Altitude)));
 								}
 							}
 							catch (Exception ex)
@@ -2235,8 +2235,8 @@ namespace CumulusMX.Stations
 									// The number is the total for the one hour period.
 									// This is unlike the existing VP2 when the ET is an annual running total
 									// So we try and mimic the VP behaviour
-									var newET = AnnualETTotal + ConvertRainINToUser(data.et.Value);
-									cumulus.LogDebugMessage($"WLL DecodeHistoric: Adding {ConvertRainINToUser(data.et.Value):F3} to ET");
+									var newET = AnnualETTotal + ConvertUnits.RainINToUser(data.et.Value).Value;
+									cumulus.LogDebugMessage($"WLL DecodeHistoric: Adding {ConvertUnits.RainINToUser(data.et.Value):F3} to ET");
 									DoET(newET, lastRecordTime);
 								}
 							}
@@ -2437,7 +2437,7 @@ namespace CumulusMX.Stations
 										if (data.temp_hi_at != 0 && data.temp_hi != null)
 										{
 											ts = Utils.FromUnixTime(data.temp_hi_at);
-											DoTemperature(ConvertTempFToUser((double) data.temp_hi), ts);
+											DoTemperature(ConvertUnits.TempFToUser((double) data.temp_hi), ts);
 										}
 										else
 										{
@@ -2448,7 +2448,7 @@ namespace CumulusMX.Stations
 										if (data.temp_lo_at != 0 && data.temp_lo != null)
 										{
 											ts = Utils.FromUnixTime(data.temp_lo_at);
-											DoTemperature(ConvertTempFToUser((double) data.temp_lo), ts);
+											DoTemperature(ConvertUnits.TempFToUser((double) data.temp_lo), ts);
 										}
 										else
 										{
@@ -2458,13 +2458,13 @@ namespace CumulusMX.Stations
 										// do last temp
 										if (data.temp_last != null)
 										{
-											DoTemperature(ConvertTempFToUser((double) data.temp_last), lastRecordTime);
+											DoTemperature(ConvertUnits.TempFToUser((double) data.temp_last), lastRecordTime);
 
 											if (!current)
 											{
 												// set the values for daily average, arch_int is in seconds, but always whole minutes
 												tempsamplestoday += data.arch_int / 60;
-												TempTotalToday += ConvertTempFToUser(data.temp_avg).Value * data.arch_int / 60;
+												TempTotalToday += ConvertUnits.TempFToUser(data.temp_avg).Value * data.arch_int / 60;
 
 												// update chill hours
 												if (Temperature < cumulus.ChillHourThreshold)
@@ -2495,7 +2495,7 @@ namespace CumulusMX.Stations
 									if (data.dew_point_hi_at != 0 && data.dew_point_hi != null)
 									{
 										ts = Utils.FromUnixTime(data.dew_point_hi_at);
-										DoDewpoint(ConvertTempFToUser((double) data.dew_point_hi), ts);
+										DoDewpoint(ConvertUnits.TempFToUser((double) data.dew_point_hi), ts);
 									}
 									else
 									{
@@ -2506,7 +2506,7 @@ namespace CumulusMX.Stations
 									if (data.dew_point_lo_at != 0 && data.dew_point_lo != null)
 									{
 										ts = Utils.FromUnixTime(data.dew_point_lo_at);
-										DoDewpoint(ConvertTempFToUser((double) data.dew_point_lo), ts);
+										DoDewpoint(ConvertUnits.TempFToUser((double) data.dew_point_lo), ts);
 									}
 									else
 									{
@@ -2516,7 +2516,7 @@ namespace CumulusMX.Stations
 									// do last DP
 									if (data.dew_point_last != null)
 									{
-										DoDewpoint(ConvertTempFToUser((double) data.dew_point_last), lastRecordTime);
+										DoDewpoint(ConvertUnits.TempFToUser((double) data.dew_point_last), lastRecordTime);
 									}
 									else
 									{
@@ -2537,7 +2537,7 @@ namespace CumulusMX.Stations
 										if (data.wind_chill_lo_at != 0 && data.wind_chill_lo != null)
 										{
 											ts = Utils.FromUnixTime(data.wind_chill_lo_at);
-											DoWindChill(ConvertTempFToUser((double) data.wind_chill_lo), ts);
+											DoWindChill(ConvertUnits.TempFToUser((double) data.wind_chill_lo), ts);
 										}
 										else
 										{
@@ -2547,7 +2547,7 @@ namespace CumulusMX.Stations
 										// do last WC
 										if (data.wind_chill_last != null)
 										{
-											DoWindChill(ConvertTempFToUser((double) data.wind_chill_last), lastRecordTime);
+											DoWindChill(ConvertUnits.TempFToUser((double) data.wind_chill_last), lastRecordTime);
 										}
 										else
 										{
@@ -2576,7 +2576,7 @@ namespace CumulusMX.Stations
 										{
 											cumulus.LogDebugMessage($"WL.com historic: using extra temp data from TxId {data.tx_id}");
 
-											DoExtraTemp(ConvertTempFToUser((double) data.temp_last), tempTxId);
+											DoExtraTemp(ConvertUnits.TempFToUser((double) data.temp_last), tempTxId);
 										}
 									}
 									catch (Exception ex)
@@ -2618,8 +2618,8 @@ namespace CumulusMX.Stations
 								{
 									if (data.wind_speed_hi != null && data.wind_speed_hi_dir != null && data.wind_speed_avg != null)
 									{
-										var gust = (double) ConvertWindMPHToUser(data.wind_speed_hi);
-										var spd = (double) ConvertWindMPHToUser(data.wind_speed_avg);
+										var gust = (double) ConvertUnits.WindMPHToUser(data.wind_speed_hi);
+										var spd = (double) ConvertUnits.WindMPHToUser(data.wind_speed_avg);
 										var dir = data.wind_speed_hi_dir ?? 0;
 										cumulus.LogDebugMessage($"WL.com historic: using wind data from TxId {data.tx_id}");
 										DoWind(gust, dir, spd, lastRecordTime);
@@ -2632,7 +2632,7 @@ namespace CumulusMX.Stations
 
 									if (data.wind_speed_avg != null)
 									{
-										WindAverage = cumulus.Calib.WindSpeed.Calibrate(ConvertWindMPHToUser(data.wind_speed_avg));
+										WindAverage = cumulus.Calib.WindSpeed.Calibrate(ConvertUnits.WindMPHToUser(data.wind_speed_avg));
 
 										if (!current)
 										{
@@ -2782,8 +2782,8 @@ namespace CumulusMX.Stations
 										// The number is the total for the one hour period.
 										// This is unlike the existing VP2 when the ET is an annual running total
 										// So we try and mimic the VP behaviour
-										var newET = AnnualETTotal + ConvertRainINToUser((double) data.et);
-										cumulus.LogDebugMessage($"WLL DecodeHistoric: Adding {ConvertRainINToUser((double) data.et):F3} to ET");
+										var newET = AnnualETTotal + ConvertUnits.RainINToUser((double) data.et).Value;
+										cumulus.LogDebugMessage($"WLL DecodeHistoric: Adding {ConvertUnits.RainINToUser((double) data.et):F3} to ET");
 										DoET(newET, lastRecordTime);
 									}
 								}
@@ -2969,7 +2969,7 @@ namespace CumulusMX.Stations
 										}
 										else
 										{
-											DoSoilTemp(ConvertTempFToUser((double) data[idx]), 1);
+											DoSoilTemp(ConvertUnits.TempFToUser((double) data[idx]), 1);
 										}
 									}
 									if (cumulus.WllExtraSoilTempTx2 == data.tx_id)
@@ -2981,7 +2981,7 @@ namespace CumulusMX.Stations
 										}
 										else
 										{
-											DoSoilTemp(ConvertTempFToUser((double) data[idx]), 2);
+											DoSoilTemp(ConvertUnits.TempFToUser((double) data[idx]), 2);
 										}
 									}
 									if (cumulus.WllExtraSoilTempTx3 == data.tx_id)
@@ -2993,7 +2993,7 @@ namespace CumulusMX.Stations
 										}
 										else
 										{
-											DoSoilTemp(ConvertTempFToUser((double) data[idx]), 3);
+											DoSoilTemp(ConvertUnits.TempFToUser((double) data[idx]), 3);
 										}
 									}
 									if (cumulus.WllExtraSoilTempTx4 == data.tx_id)
@@ -3005,7 +3005,7 @@ namespace CumulusMX.Stations
 										}
 										else
 										{
-											DoSoilTemp(ConvertTempFToUser((double) data[idx]), 4);
+											DoSoilTemp(ConvertUnits.TempFToUser((double) data[idx]), 4);
 										}
 									}
 								}
@@ -3037,7 +3037,7 @@ namespace CumulusMX.Stations
 									if (data13baro.bar_hi_at != 0 && data13baro.bar_hi != null)
 									{
 										ts = Utils.FromUnixTime(data13baro.bar_hi_at);
-										DoPressure(ConvertPressINHGToUser((double) data13baro.bar_hi), ts);
+										DoPressure(ConvertUnits.PressINHGToUser((double) data13baro.bar_hi), ts);
 									}
 									else
 									{
@@ -3047,7 +3047,7 @@ namespace CumulusMX.Stations
 									if (data13baro.bar_lo_at != 0 && data13baro.bar_lo != null)
 									{
 										ts = Utils.FromUnixTime(data13baro.bar_lo_at);
-										DoPressure(ConvertPressINHGToUser((double) data13baro.bar_lo), ts);
+										DoPressure(ConvertUnits.PressINHGToUser((double) data13baro.bar_lo), ts);
 									}
 									else
 									{
@@ -3058,7 +3058,7 @@ namespace CumulusMX.Stations
 									{
 										// leave it at current value
 										ts = Utils.FromUnixTime(data13baro.ts);
-										DoPressure(ConvertPressINHGToUser((double) data13baro.bar_sea_level), ts);
+										DoPressure(ConvertUnits.PressINHGToUser((double) data13baro.bar_sea_level), ts);
 									}
 									else
 									{
@@ -3068,10 +3068,10 @@ namespace CumulusMX.Stations
 									// Altimeter from absolute
 									if (data13baro.bar_absolute != null)
 									{
-										StationPressure = ConvertPressINHGToUser((double) data13baro.bar_absolute);
+										StationPressure = ConvertUnits.PressINHGToUser((double) data13baro.bar_absolute);
 										// Or do we use calibration? The VP2 code doesn't?
-										//StationPressure = ConvertPressINHGToUser(data.Value<double>("bar_absolute")) * cumulus.Calib.Press.Mult + cumulus.Calib.Press.Offset;
-										AltimeterPressure = ConvertPressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure), AltitudeM(cumulus.Altitude)));
+										//StationPressure = ConvertUnits.PressINHGToUser(data.Value<double>("bar_absolute")) * cumulus.Calib.Press.Mult + cumulus.Calib.Press.Offset;
+										AltimeterPressure = ConvertUnits.PressMBToUser(StationToAltimeter(ConvertUserPressureToHPa(StationPressure), AltitudeM(cumulus.Altitude)));
 									}
 								}
 								catch (Exception ex)
@@ -3103,7 +3103,7 @@ namespace CumulusMX.Stations
 								{
 									if (data13temp.temp_in_last != null)
 									{
-										DoIndoorTemp(ConvertTempFToUser((double) data13temp.temp_in_last));
+										DoIndoorTemp(ConvertUnits.TempFToUser((double) data13temp.temp_in_last));
 									}
 									else
 									{
@@ -3328,8 +3328,8 @@ namespace CumulusMX.Stations
 					// The number is the total for the one hour period.
 					// This is unlike the existing VP2 when the ET is an annual running total
 					// So we try and mimic the VP behaviour
-					var newET = AnnualETTotal + ConvertRainINToUser((double) data.et);
-					cumulus.LogDebugMessage($"XMTR Health: Adding {ConvertRainINToUser((double) data.et):F3} to ET");
+					var newET = AnnualETTotal + ConvertUnits.RainINToUser((double) data.et).Value;
+					cumulus.LogDebugMessage($"XMTR Health: Adding {ConvertUnits.RainINToUser((double) data.et):F3} to ET");
 					DoET(newET, DateTime.Now);
 				}
 			}

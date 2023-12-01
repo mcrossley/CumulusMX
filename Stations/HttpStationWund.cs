@@ -110,9 +110,9 @@ namespace CumulusMX.Stations
 						cumulus.LogWarningMessage($"ProcessData: Error, missing wind data");
 					}
 
-					var gustVal = gust == null || gust == "-9999" ? null : ConvertWindMPHToUser(Convert.ToDouble(gust, invNum));
+					var gustVal = gust == null || gust == "-9999" ? null : ConvertUnits.WindMPHToUser(Convert.ToDouble(gust, invNum));
 					int? dirVal = dir == null || dir == "-9999" ? null : Convert.ToInt32(dir, invNum);
-					var avgVal = avg == null || avg == "-9999" ? null : ConvertWindMPHToUser(Convert.ToDouble(avg, invNum));
+					var avgVal = avg == null || avg == "-9999" ? null : ConvertUnits.WindMPHToUser(Convert.ToDouble(avg, invNum));
 					DoWind(gustVal, dirVal, avgVal, recDate);
 				}
 				catch (Exception ex)
@@ -156,7 +156,7 @@ namespace CumulusMX.Stations
 					// baromin - [barometric pressure inches]
 
 					var press = data["baromin"];
-					double? val = press == null || press == "-9999" ? null : ConvertPressINHGToUser(Convert.ToDouble(press, invNum));
+					double? val = press == null || press == "-9999" ? null : ConvertUnits.PressINHGToUser(Convert.ToDouble(press, invNum));
 					DoPressure(val, recDate);
 					if (val == null)
 						cumulus.LogWarningMessage($"ProcessData: Error, missing baro pressure");
@@ -177,7 +177,7 @@ namespace CumulusMX.Stations
 					// indoortempf - [F indoor temperature F]
 
 					var temp = data["indoortempf"];
-					double? val = temp == null || temp == "-9999" ? null : ConvertTempFToUser(Convert.ToDouble(temp, invNum));
+					double? val = temp == null || temp == "-9999" ? null : ConvertUnits.TempFToUser(Convert.ToDouble(temp, invNum));
 					DoIndoorTemp(val);
 					if (val == null)
 						cumulus.LogWarningMessage($"ProcessData: Error, missing indoor temp");
@@ -196,7 +196,7 @@ namespace CumulusMX.Stations
 					// tempf - [F outdoor temperature]
 
 					var temp = data["tempf"];
-					double? val = temp == null || temp == "-9999" ? null : ConvertTempFToUser(Convert.ToDouble(temp, invNum));
+					double? val = temp == null || temp == "-9999" ? null : ConvertUnits.TempFToUser(Convert.ToDouble(temp, invNum));
 					DoTemperature(val, recDate);
 					if (val == null)
 						cumulus.LogWarningMessage($"ProcessData: Error, missing outdoor temp");
@@ -223,7 +223,7 @@ namespace CumulusMX.Stations
 					}
 					else
 					{
-						var rainVal = ConvertRainINToUser(Convert.ToDouble(rain, invNum));
+						var rainVal = ConvertUnits.RainINToUser(Convert.ToDouble(rain, invNum)).Value;
 
 						if (rainVal < previousRainCount)
 						{
@@ -250,7 +250,7 @@ namespace CumulusMX.Stations
 					// dewptf - [F outdoor dewpoint F]
 
 					var dewpnt = data["dewptf"];
-					double? dpVal = dewpnt == null || dewpnt == "-9999" ? null : ConvertTempFToUser(Convert.ToDouble(dewpnt, invNum));
+					double? dpVal = dewpnt == null || dewpnt == "-9999" ? null : ConvertUnits.TempFToUser(Convert.ToDouble(dewpnt, invNum));
 					DoDewpoint(dpVal, recDate);
 				}
 				catch (Exception ex)
@@ -303,7 +303,7 @@ namespace CumulusMX.Stations
 					{
 						var str = data["temp" + i + "f"];
 						double? temp = str != null && str != "-9999" ? Convert.ToDouble(str, invNum) : null;
-						DoExtraTemp(ConvertTempFToUser(temp), i - 1);
+						DoExtraTemp(ConvertUnits.TempFToUser(temp), i - 1);
 					}
 				}
 				catch (Exception ex)
@@ -351,13 +351,13 @@ namespace CumulusMX.Stations
 
 					var str = data["soiltempf"];
 					double? temp = str != null && str != "-9999" ? Convert.ToDouble(str, invNum) : null;
-					DoSoilTemp(ConvertTempFToUser(temp), 1);
+					DoSoilTemp(ConvertUnits.TempFToUser(temp), 1);
 
 					for (var i = 2; i <= 4; i++)
 					{
 						str = data["soiltemp" + i + "f"];
 						temp = str != null && str != "-9999" ? Convert.ToDouble(str, invNum) : null;
-						DoSoilTemp(ConvertTempFToUser(temp), i);
+						DoSoilTemp(ConvertUnits.TempFToUser(temp), i);
 					}
 				}
 				catch (Exception ex)
