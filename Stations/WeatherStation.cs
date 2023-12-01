@@ -2399,7 +2399,18 @@ namespace CumulusMX
 				return;
 			}
 
+			previousInHum = hum.Value;
 			IndoorHum = (int?) cumulus.Calib.InHum.Calibrate(hum.Value);
+
+			if (IndoorHum < 0)
+			{
+				IndoorHum = 0;
+			}
+			if (IndoorHum > 100)
+			{
+				IndoorHum = 100;
+			}
+
 			dataValuesUpdated.IndoorHum = IndoorHum.HasValue;
 			HaveReadData = true;
 		}
@@ -2413,15 +2424,20 @@ namespace CumulusMX
 			}
 
 			// Spike check
-			if ((previousInTemp != 999) && (Math.Abs(temp.Value - previousInTemp) > cumulus.Spike.InTempDiff))
+			// Spike removal is in Celsius
+			var tempC = ConvertUserTempToC(temp).Value;
+
+			if ((previousInTemp != 999) && (Math.Abs(tempC - previousInTemp) > cumulus.Spike.InTempDiff))
 			{
 				cumulus.LogSpikeRemoval("Indoor temperature difference greater than specified; reading ignored");
-				cumulus.LogSpikeRemoval($"NewVal={temp} OldVal={previousInTemp} SpikeDiff={cumulus.Spike.InTempDiff:F1}");
+				cumulus.LogSpikeRemoval($"NewVal={tempC} OldVal={previousInTemp} SpikeDiff={cumulus.Spike.InTempDiff:F1}");
 				lastSpikeRemoval = DateTime.Now;
-				cumulus.SpikeAlarm.LastMessage = $"Indoor temperature difference greater than spike value - NewVal={temp} OldVal={previousInTemp}";
+				cumulus.SpikeAlarm.LastMessage = $"Indoor temperature difference greater than spike value - NewVal={tempC} OldVal={previousInTemp}";
 				cumulus.SpikeAlarm.Triggered = true;
 				return;
 			}
+
+			previousInTemp = tempC;
 
 			IndoorTemp = cumulus.Calib.InTemp.Calibrate(temp);
 			dataValuesUpdated.IndoorTemp = IndoorTemp.HasValue;
@@ -2540,6 +2556,7 @@ namespace CumulusMX
 
 			// Spike removal is in Celsius
 			var tempC = ConvertUserTempToC(temp).Value;
+
 			if (((Math.Abs(tempC - previousTemp) > cumulus.Spike.TempDiff) && (previousTemp != 999)) ||
 				tempC >= cumulus.Limit.TempHigh || tempC <= cumulus.Limit.TempLow)
 			{
