@@ -1895,8 +1895,6 @@ namespace CumulusMX
 				}
 
 				cumulus.DoHttpFiles(now);
-
-				CheckUserAlarms();
 			}
 			else
 			{
@@ -1908,6 +1906,15 @@ namespace CumulusMX
 			{
 				cumulus.LogMessage("Checking for latest Cumulus MX version...");
 				_ = cumulus.GetLatestVersion();
+			}
+		}
+
+
+		private void MinutePlus12Changed(DateTime now)
+		{
+			if (!DataStopped)
+			{
+				CheckUserAlarms();
 			}
 
 			// If not on windows, check for CPU temp
@@ -1933,7 +1940,7 @@ namespace CumulusMX
 			}
 		}
 
-		//private void TenMinuteChanged(DateTime now)
+
 		private static void TenMinuteChanged()
 		{
 			cumulus.DoMoonPhase();
