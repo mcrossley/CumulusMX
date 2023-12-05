@@ -122,13 +122,6 @@ namespace CumulusMX
 			EcowittCO2 = 6
 		}
 
-		public enum LogLevel
-		{
-			Info = 0,
-			Warning = 1,
-			Error = 2,
-			Critical = 3
-		}
 
 		private readonly string[] sshAuthenticationVals = ["password", "psk", "password_psk"];
 
@@ -11295,7 +11288,7 @@ namespace CumulusMX
 			return false;
 		}
 
-		public void LogMessage(string message, LogLevel level = LogLevel.Info)
+		public void LogMessage(string message, LogLevel level = LogLevel.Information)
 		{
 			Trace.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + message);
 
@@ -11398,7 +11391,7 @@ namespace CumulusMX
 				FtpLoggerMX.LogCritical($"{preamble} - {ex.Message}");
 			}
 
-			LogMessage(Utils.ExceptionToString(ex, out message), LogLevel.Info);
+			LogMessage(Utils.ExceptionToString(ex, out message));
 			LogErrorMessage(preamble + " - " + message);
 		}
 
@@ -12381,7 +12374,7 @@ namespace CumulusMX
 				Append = true,
 				FileSizeLimitBytes = 5242880,
 				MaxRollingFiles = 3,
-				MinLevel = (Microsoft.Extensions.Logging.LogLevel) FtpOptions.LoggingLevel,
+				MinLevel = (LogLevel) FtpOptions.LoggingLevel,
 				FormatLogEntry = (msg) =>
 				{
 					var logBuilder = new StringBuilder();
@@ -12390,22 +12383,22 @@ namespace CumulusMX
 						var loglevel = "";
 						switch (msg.LogLevel)
 						{
-							case Microsoft.Extensions.Logging.LogLevel.Trace:
+							case LogLevel.Trace:
 								loglevel = "TRCE";
 								break;
-							case Microsoft.Extensions.Logging.LogLevel.Debug:
+							case LogLevel.Debug:
 								loglevel = "DBUG";
 								break;
-							case Microsoft.Extensions.Logging.LogLevel.Information:
+							case LogLevel.Information:
 								loglevel = "INFO";
 								break;
-							case Microsoft.Extensions.Logging.LogLevel.Warning:
+							case LogLevel.Warning:
 								loglevel = "WARN";
 								break;
-							case Microsoft.Extensions.Logging.LogLevel.Error:
+							case LogLevel.Error:
 								loglevel = "FAIL";
 								break;
-							case Microsoft.Extensions.Logging.LogLevel.Critical:
+							case LogLevel.Critical:
 								loglevel = "CRIT";
 								break;
 						}
