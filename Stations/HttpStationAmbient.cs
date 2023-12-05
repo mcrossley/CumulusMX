@@ -14,7 +14,7 @@ namespace CumulusMX.Stations
 		private bool stopping = false;
 		private readonly NumberFormatInfo invNum = CultureInfo.InvariantCulture.NumberFormat;
 
-		public HttpStationAmbient(Cumulus cumulus, WeatherStation station = null) : base(cumulus)
+		public HttpStationAmbient(Cumulus cumulus, WeatherStation station = null) : base(cumulus, station != null)
 		{
 			this.station = station;
 

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Globalization;
@@ -25,7 +24,7 @@ namespace CumulusMX.Stations
 		private EcowittApi ecowittApi;
 		private int maxArchiveRuns = 1;
 
-		public HttpStationEcowitt(Cumulus cumulus, WeatherStation station = null) : base(cumulus)
+		public HttpStationEcowitt(Cumulus cumulus, WeatherStation station = null) : base(cumulus, station != null)
 		{
 			this.station = station;
 

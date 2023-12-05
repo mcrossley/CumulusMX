@@ -261,10 +261,16 @@ namespace CumulusMX
 			return string.Empty;
 		}
 
-		public WeatherStation(Cumulus cumuls)
+		public WeatherStation(Cumulus cumuls, bool extraStation = false)
 		{
 			// save the reference to the owner
 			cumulus = cumuls;
+
+			// if we are an extra station, then don't do any of the "normal" intialisation
+			if (extraStation)
+			{
+				return;
+			}
 
 			// initialise the monthly array of records - element zero is not used
 			for (var i = 1; i <= 12; i++)
