@@ -7413,7 +7413,7 @@ namespace CumulusMX
 					RainRate = station.RainRate,
 					RainToday = station.RainToday,
 					Pressure = station.Pressure,
-					RainCounter = station.Raincounter,
+					RainCounter = station.RainCounter,
 					InsideTemp = station.IndoorTemp,
 					InsideHumidity = station.IndoorHum,
 					WindLatest = station.WindLatest,

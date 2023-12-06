@@ -1850,7 +1850,7 @@ namespace CumulusMX.Stations
 					}
 
 					AddRecentDataWithAq(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex,
-						Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate);
+						Humidity, Pressure, RainToday, SolarRad, UV, RainCounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate);
 					DoTrendValues(timestamp);
 
 					if (cumulus.StationOptions.CalculatedET && timestamp.Minute == 0)
@@ -2120,7 +2120,7 @@ namespace CumulusMX.Stations
 									{
 										cumulus.LogDebugMessage($"WL.com historic: Adding rain {rain.ToString(cumulus.RainFormat)}");
 									}
-									rain += Raincounter;
+									rain += RainCounter;
 
 									if (rainrate < 0)
 									{
@@ -2690,7 +2690,7 @@ namespace CumulusMX.Stations
 										{
 											cumulus.LogDebugMessage($"WL.com historic: Adding rain {rain.ToString(cumulus.RainFormat)}");
 										}
-										rain += Raincounter;
+										rain += RainCounter;
 
 										if (rainrate < 0)
 										{

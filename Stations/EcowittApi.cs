@@ -1385,7 +1385,7 @@ namespace CumulusMX
 				//    OutdoorHumidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex);
 
 				station.AddRecentDataWithAq(rec.Key, station.WindAverage, station.RecentMaxGust, station.WindLatest, station.Bearing, station.AvgBearing, station.Temperature, station.WindChill, station.Dewpoint, station.HeatIndex,
-					station.Humidity, station.Pressure, station.RainToday, station.SolarRad, station.UV, station.Raincounter, station.FeelsLike, station.Humidex, station.ApparentTemp, station.IndoorTemp, station.IndoorHum, station.CurrentSolarMax, station.RainRate);
+					station.Humidity, station.Pressure, station.RainToday, station.SolarRad, station.UV, station.RainCounter, station.FeelsLike, station.Humidex, station.ApparentTemp, station.IndoorTemp, station.IndoorHum, station.CurrentSolarMax, station.RainRate);
 
 				if (cumulus.StationOptions.CalculatedET && rec.Key.Minute == 0)
 				{

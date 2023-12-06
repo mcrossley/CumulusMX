@@ -510,7 +510,7 @@ namespace CumulusMX
 			values.Append((station.RainRate.HasValue ? station.RainRate.Value.ToString(cumulus.RainFormat, invNum) : "null") + ",");
 			values.Append((station.RainToday.HasValue ? station.RainToday.Value.ToString(cumulus.RainFormat, invNum) : "null") + ",");
 			values.Append((station.Pressure.HasValue ? station.Pressure.Value.ToString(cumulus.PressFormat, invNum) : "null") + ",");
-			values.Append(station.Raincounter.ToString(cumulus.RainFormat, invNum) + ",");
+			values.Append(station.RainCounter.ToString(cumulus.RainFormat, invNum) + ",");
 			values.Append((station.IndoorTemp.HasValue ? station.IndoorTemp.Value.ToString(cumulus.TempFormat, invNum) : "null") + ",");
 			values.Append((station.IndoorHum.HasValue ? station.IndoorHum.Value : "null") + ",");
 			values.Append((station.WindLatest.HasValue ? station.WindLatest.Value.ToString(cumulus.WindFormat, invNum) : "null") + ",");

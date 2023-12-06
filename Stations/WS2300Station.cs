@@ -394,7 +394,7 @@ namespace CumulusMX
 				_ = cumulus.DoExtraLogFile(timestamp);
 				cumulus.MySqlFunction.DoRealtimeData(999, false, timestamp);
 
-				AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex, Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, rainrate, -1, -1);
+				AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex, Humidity, Pressure, RainToday, SolarRad, UV, RainCounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, rainrate, -1, -1);
 				UpdatePressureTrendString();
 				UpdateStatusPanel(timestamp);
 				cumulus.AddToWebServiceLists(timestamp);

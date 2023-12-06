@@ -1606,7 +1606,7 @@ namespace CumulusMX
 			_ = cumulus.DoExtraLogFile(timestamp);
 
 			AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex, Humidity,
-							Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate, -1, -1);
+							Pressure, RainToday, SolarRad, UV, RainCounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate, -1, -1);
 			DoTrendValues(timestamp);
 			UpdatePressureTrendString();
 			UpdateStatusPanel(timestamp);

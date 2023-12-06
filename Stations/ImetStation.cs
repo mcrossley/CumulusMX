@@ -804,7 +804,7 @@ namespace CumulusMX.Stations
 							cumulus.MySqlFunction.DoRealtimeData(999, false, timestamp);
 
 							AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex,
-								Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate, -1, -1);
+								Humidity, Pressure, RainToday, SolarRad, UV, RainCounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate, -1, -1);
 							DoTrendValues(timestamp);
 
 							if (cumulus.StationOptions.CalculatedET && timestamp.Minute == 0)

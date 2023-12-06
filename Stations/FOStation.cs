@@ -624,7 +624,7 @@ namespace CumulusMX
 				cumulus.MySqlFunction.DoRealtimeData(999, false, timestamp);
 
 				AddRecentDataWithAq(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex,
-					Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate);
+					Humidity, Pressure, RainToday, SolarRad, UV, RainCounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate);
 				DoTrendValues(timestamp);
 
 				if (cumulus.StationOptions.CalculatedET && timestamp.Minute == 0)
@@ -1348,10 +1348,10 @@ namespace CumulusMX
 						if (ignoreraincount == 6)
 						{
 							cumulus.LogMessage("Six consecutive rain readings; accepting value. Adjusting start of day figure to compensate");
-							raindaystart += (raindiff * 0.3);
+							RainCounterDayStart += (raindiff * 0.3);
 							// adjust current rain total counter
-							Raincounter += (raindiff * 0.3);
-							cumulus.LogMessage("Setting raindaystart to " + raindaystart);
+							RainCounter += (raindiff * 0.3);
+							cumulus.LogMessage("Setting raindaystart to " + RainCounterDayStart);
 							ignoreraincount = 0;
 						}
 						else

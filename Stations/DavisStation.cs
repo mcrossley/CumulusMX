@@ -2463,7 +2463,7 @@ namespace CumulusMX
 
 							CheckForWindrunHighLow(windruncheckTS);
 
-							double rain = ConvertRainClicksToUser(archiveData.Rainfall) + Raincounter;
+							double rain = ConvertRainClicksToUser(archiveData.Rainfall) + RainCounter;
 							double rainrate = ConvertRainClicksToUser(archiveData.HiRainRate);
 
 							if (rainrate < 0)
@@ -2612,7 +2612,7 @@ namespace CumulusMX
 							_ = cumulus.DoCustomIntervalLogs(timestamp);
 
 							AddRecentDataEntry(timestamp, WindAverage, RecentMaxGust, WindLatest, Bearing, AvgBearing, Temperature, WindChill, Dewpoint, HeatIndex,
-								Humidity, Pressure, RainToday, SolarRad, UV, Raincounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate, -1, -1);
+								Humidity, Pressure, RainToday, SolarRad, UV, RainCounter, FeelsLike, Humidex, ApparentTemp, IndoorTemp, IndoorHum, CurrentSolarMax, RainRate, -1, -1);
 							DoTrendValues(timestamp);
 
 							if (cumulus.StationOptions.CalculatedET && timestamp.Minute == 0)
