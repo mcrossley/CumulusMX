@@ -583,7 +583,6 @@ namespace CumulusMX
 				{
 					cumulus.LogExceptionMessage(ex, "Error finding current rainfall counter");
 				}
-
 			}
 
 			// If we do not have a rain counter value from Today.ini
