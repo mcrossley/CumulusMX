@@ -234,11 +234,11 @@ namespace CumulusMX.Stations
 
 		public override string GetEcowittCameraUrl()
 		{
-			if (cumulus.EcowittSettings.CameraMacAddress != null)
+			if (!string.IsNullOrEmpty(cumulus.EcowittSettings.CameraMacAddress))
 			{
 				try
 				{
-					EcowittCameraUrl = ecowittApi.GetCurrentCameraImageUrl(cumulus.cancellationToken, EcowittCameraUrl);
+					EcowittCameraUrl = ecowittApi.GetCurrentCameraImageUrl(EcowittCameraUrl, cumulus.cancellationToken);
 					return EcowittCameraUrl;
 				}
 				catch (Exception ex)
@@ -249,6 +249,25 @@ namespace CumulusMX.Stations
 
 			return null;
 		}
+
+		public override string GetEcowittVideoUrl()
+		{
+			if (!string.IsNullOrEmpty(cumulus.EcowittSettings.CameraMacAddress))
+			{
+				try
+				{
+					EcowittVideoUrl = ecowittApi.GetLastCameraVideoUrl(EcowittVideoUrl, cumulus.cancellationToken);
+					return EcowittVideoUrl;
+				}
+				catch (Exception ex)
+				{
+					cumulus.LogExceptionMessage(ex, "Error running Ecowitt Video URL");
+				}
+			}
+
+			return null;
+		}
+
 
 		public string ProcessData(IHttpContext context, bool main, DateTime? ts = null)
 		{

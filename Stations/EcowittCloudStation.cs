@@ -142,7 +142,7 @@ namespace CumulusMX.Stations
 							try
 							{
 
-								var data = ecowittApi.GetCurrentData(cumulus.cancellationToken, ref delay);
+								var data = ecowittApi.GetCurrentData(ref delay, cumulus.cancellationToken);
 
 								if (data != null)
 								{
@@ -209,7 +209,7 @@ namespace CumulusMX.Stations
 			{
 				try
 				{
-					EcowittCameraUrl = ecowittApi.GetCurrentCameraImageUrl(cumulus.cancellationToken, EcowittCameraUrl);
+					EcowittCameraUrl = ecowittApi.GetCurrentCameraImageUrl(EcowittCameraUrl, cumulus.cancellationToken);
 					return EcowittCameraUrl;
 				}
 				catch (Exception ex)
@@ -221,8 +221,26 @@ namespace CumulusMX.Stations
 			return null;
 		}
 
+		public override string GetEcowittVideoUrl()
+		{
+			if ((cumulus.EcowittSettings.ExtraUseCamera || main) && !string.IsNullOrEmpty(cumulus.EcowittSettings.CameraMacAddress))
+			{
+				try
+				{
+					EcowittVideoUrl = ecowittApi.GetLastCameraVideoUrl(EcowittVideoUrl, cumulus.cancellationToken);
+					return EcowittVideoUrl;
+				}
+				catch (Exception ex)
+				{
+					cumulus.LogExceptionMessage(ex, "Error running Ecowitt Video URL");
+				}
+			}
+
+			return null;
+		}
+
 		private void GetHistoricData()
-	{
+		{
 		cumulus.LogMessage("GetHistoricData: Starting Historic Data Process");
 
 		// add one minute to avoid duplicating the last log entry

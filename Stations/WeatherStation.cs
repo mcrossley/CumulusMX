@@ -261,6 +261,11 @@ namespace CumulusMX
 			return string.Empty;
 		}
 
+		public virtual string GetEcowittVideoUrl()
+		{
+			return string.Empty;
+		}
+
 		public WeatherStation(Cumulus cumuls, bool extraStation = false)
 		{
 			// save the reference to the owner
@@ -4371,6 +4376,7 @@ namespace CumulusMX
 		public string DavisFirmwareVersion = "???";
 		public string GW1000FirmwareVersion = "???";
 		public string EcowittCameraUrl = string.Empty;
+		public string EcowittVideoUrl = string.Empty;
 
 		//private bool manualftp;
 		public static Dictionary<string, byte> SensorReception { get; set; }

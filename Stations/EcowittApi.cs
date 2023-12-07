@@ -24,6 +24,9 @@ namespace CumulusMX
 		private DateTime LastCameraImageTime = DateTime.MinValue;
 		private DateTime LastCameraCallTime = DateTime.MinValue;
 
+		private string LastCameraVideoTime = "";
+		private DateTime LastCameraVideoCallTime = DateTime.MinValue;
+
 		public EcowittApi(Cumulus cuml, WeatherStation stn)
 		{
 			cumulus = cuml;
@@ -1693,7 +1696,7 @@ namespace CumulusMX
 
 
 		// returns the data structure and the number of seconds to wait before the next update
-		internal CurrentDataData GetCurrentData(CancellationToken token, ref int delay)
+		internal CurrentDataData GetCurrentData(ref int delay, CancellationToken token)
 		{
 			// Doc: https://doc.ecowitt.net/web/#/apiv3en?page_id=17
 
@@ -1880,7 +1883,7 @@ namespace CumulusMX
 		}
 
 
-		internal string GetCurrentCameraImageUrl(CancellationToken token, string defaultUrl)
+		internal string GetCurrentCameraImageUrl(string defaultUrl, CancellationToken token)
 		{
 			// Doc: https://doc.ecowitt.net/web/#/apiv3en?page_id=17
 
@@ -1964,8 +1967,19 @@ namespace CumulusMX
 							if (currObj.data == null)
 							{
 								// There was no data returned.
+								cumulus.LogWarningMessage("API.GetCurrentCameraImageUrl: Ecowitt API Current Camera Data: No camera data was returned.");
 								return defaultUrl;
 							}
+
+							if (currObj.data.camera == null)
+							{
+								cumulus.LogWarningMessage("API.GetCurrentCameraImageUrl: Ecowitt API Current Camera Data: No camera data was returned.");
+								return defaultUrl;
+							}
+
+							LastCameraImageTime = Utils.FromUnixTime(currObj.data.camera.photo.time);
+							cumulus.LogDebugMessage($"API.GetCurrentCameraImageUrl: Last image update {LastCameraImageTime:s}");
+							return currObj.data.camera.photo.url;
 						}
 						else if (currObj.code == -1 || currObj.code == 45001)
 						{
@@ -1991,21 +2005,6 @@ namespace CumulusMX
 					cumulus.LogDataMessage("API.GetCurrentCameraImageUrl: Received: " + responseBody);
 					return defaultUrl;
 				}
-
-				if (!token.IsCancellationRequested)
-				{
-					if (currObj.data.camera == null)
-					{
-						cumulus.LogWarningMessage("API.GetCurrentCameraImageUrl: Ecowitt API Current Camera Data: No camera data was returned.");
-						return defaultUrl;
-					}
-
-					LastCameraImageTime = Utils.FromUnixTime(currObj.data.camera.photo.time);
-					cumulus.LogDebugMessage($"API.GetCurrentCameraImageUrl: Last image update {LastCameraImageTime:s}");
-					return currObj.data.camera.photo.url;
-				}
-
-				return defaultUrl;
 			}
 			catch (Exception ex)
 			{
@@ -2132,6 +2131,168 @@ namespace CumulusMX
 			{
 				cumulus.LogErrorMessage("API.GetStationList: Exception: " + ex.Message);
 				return false;
+			}
+		}
+
+		internal string GetLastCameraVideoUrl(string defaultUrl, CancellationToken token)
+		{
+			// Doc: https://doc.ecowitt.net/web/#/apiv3en?page_id=19
+
+			/*
+				{
+					"code": 0,
+					"msg": "success",
+					"time": "1701950253",
+					"data": {
+						"camera": {
+							"20231206": {
+								"video": "https://osswww.ecowitt.net/videos/webvideo/v0/2023_12_06/158185/29f0493644eb87ef7a0ffea30221605c.mp4"
+							}
+						}
+					}
+				}
+			*/
+			cumulus.LogMessage("API.GetLastCameraVideoUrl: Get Ecowitt Last Camera Video");
+
+			if (string.IsNullOrEmpty(cumulus.EcowittSettings.AppKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.UserApiKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.CameraMacAddress))
+			{
+				cumulus.LogWarningMessage("API.GetLastCameraVideoUrl: Missing Ecowitt API data in the configuration, aborting!");
+				return defaultUrl;
+			}
+
+			// do we already have the latest video
+			if (LastCameraVideoTime == DateTime.Now.Date.AddDays(-1).ToString("yyyyMMdd"))
+			{
+				cumulus.LogMessage("API.GetLastCameraVideoUrl: The video we have is still current");
+				return defaultUrl;
+			}
+
+			// rate limit to one call per minute
+			if (LastCameraVideoCallTime.AddMinutes(1) > DateTime.Now)
+			{
+				cumulus.LogMessage("API.GetCurrentCameraImageUrl: Last call was less than 1 minute ago, using last video URL");
+				return defaultUrl;
+			}
+
+
+			var sb = new StringBuilder(historyUrl);
+			var end = DateTime.Now.Date;
+			var start = end.AddDays(-1);
+			end = end.AddMinutes(-1);
+
+			sb.Append($"application_key={cumulus.EcowittSettings.AppKey}");
+			sb.Append($"&api_key={cumulus.EcowittSettings.UserApiKey}");
+			sb.Append($"&mac={cumulus.EcowittSettings.CameraMacAddress}");
+			sb.Append($"&start_date={start:yyyy-MM-dd'%20'HH:mm:ss}");
+			sb.Append($"&end_date={end:yyyy-MM-dd'%20'HH:mm:ss}");
+			sb.Append("&call_back=camera.video");
+
+			var url = sb.ToString();
+
+			var logUrl = url.Replace(cumulus.EcowittSettings.AppKey, "<<App-key>>").Replace(cumulus.EcowittSettings.UserApiKey, "<<User-key>>");
+			cumulus.LogDebugMessage($"Ecowitt URL = {logUrl}");
+
+
+			try
+			{
+				string responseBody;
+				int responseCode;
+
+				// we want to do this synchronously, so .Result
+				using (var response = Cumulus.MyHttpClient.GetAsync(url).Result)
+				{
+					responseBody = response.Content.ReadAsStringAsync().Result;
+					responseCode = (int)response.StatusCode;
+					cumulus.LogDebugMessage($"API.GetLastCameraVideoUrl: Ecowitt API Current Camera Response code: {responseCode}");
+					cumulus.LogDataMessage($"API.GetLastCameraVideoUrl: Ecowitt API Current Camera Response: {responseBody}");
+				}
+
+				if (responseCode != 200)
+				{
+					var currentError = responseBody.FromJson<ErrorResp>();
+					cumulus.LogWarningMessage($"API.GetLastCameraVideoUrl: Ecowitt API Current Camera Error: {currentError.code}, {currentError.msg}");
+					Cumulus.LogConsoleMessage($" - Error {currentError.code}: {currentError.msg}", ConsoleColor.Red);
+					return defaultUrl;
+				}
+
+
+				dynamic vidObj = null;
+
+				if (responseBody == "{}")
+				{
+					cumulus.LogWarningMessage("API.GetLastCameraVideoUrl: Ecowitt API Current Camera Data: No data was returned.");
+					Cumulus.LogConsoleMessage(" - No current data available");
+					return defaultUrl;
+				}
+				else if (responseBody.StartsWith("{\"code\":")) // sanity check
+				{
+					// get the sensor data
+					vidObj = DynamicJson.Deserialize(responseBody);
+
+					if (vidObj != null)
+					{
+						// success
+						if (vidObj.code == "0")
+						{
+							if (vidObj.data == null)
+							{
+								// There was no data returned.
+								cumulus.LogWarningMessage("API.GetLastCameraVideoUrl: Ecowitt API Current Camera Data: No camera data was returned.");
+								return defaultUrl;
+							}
+
+							if (vidObj.data.camera == null)
+							{
+								cumulus.LogWarningMessage("API.GetLastCameraVideoUrl: Ecowitt API Current Camera Data: No camera data was returned.");
+								return defaultUrl;
+							}
+
+							var found = System.Text.RegularExpressions.Regex.Match(vidObj.data.camera.ToString(), "https.*mp4");
+
+							if (found.Success)
+							{
+								var link = found.Groups[0].Value.Replace("\\", "");
+
+								LastCameraVideoTime = start.ToString("yyyyMMdd");
+
+								cumulus.LogDebugMessage($"API.GetLastCameraVideoUrl: Last image update {LastCameraVideoTime:s}, link = {link}");
+								return link;
+							}
+							else
+							{
+								cumulus.LogWarningMessage("API.GetLastCameraVideoUrl: Failed to find URL");
+								return defaultUrl;
+							}
+						}
+						else if (vidObj.code == "-1" || vidObj.code == "45001")
+						{
+							// -1 = system busy, 45001 = rate limited
+
+							cumulus.LogMessage("API.GetLastCameraVideoUrl: System Busy or Rate Limited, waiting 5 secs before retry...");
+							return defaultUrl;
+						}
+						else
+						{
+							cumulus.LogMessage($"API.GetLastCameraVideoUrl: Unknown error: {vidObj.code} - {vidObj.msg}");
+							return defaultUrl;
+						}
+					}
+					else
+					{
+						return defaultUrl;
+					}
+				}
+				else // No idea what we got, dump it to the log
+				{
+					cumulus.LogErrorMessage("API.GetLastCameraVideoUrl: Invalid message received");
+					cumulus.LogDataMessage("API.GetLastCameraVideoUrl: Received: " + responseBody);
+					return defaultUrl;
+				}
+			}
+			catch (Exception ex)
+			{
+				cumulus.LogErrorMessage("API.GetLastCameraVideoUrl: Exception: " + ex.Message);
+				return defaultUrl;
 			}
 		}
 
