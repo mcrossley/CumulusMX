@@ -2013,127 +2013,6 @@ namespace CumulusMX
 			}
 		}
 
-		internal bool GetStationList(CancellationToken token)
-		{
-			cumulus.LogMessage("API.GetStationList: Get Ecowitt Station List");
-
-			if (string.IsNullOrEmpty(cumulus.EcowittSettings.AppKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.UserApiKey))
-			{
-				cumulus.LogWarningMessage("API.GetCurrentCameraImageUrl: Missing Ecowitt API data in the configuration, aborting!");
-				return false;
-			}
-
-			var sb = new StringBuilder(stationUrl);
-
-			sb.Append($"application_key={cumulus.EcowittSettings.AppKey}");
-			sb.Append($"&api_key={cumulus.EcowittSettings.UserApiKey}");
-
-			var url = sb.ToString();
-
-			var logUrl = url.Replace(cumulus.EcowittSettings.AppKey, "<<App-key>>").Replace(cumulus.EcowittSettings.UserApiKey, "<<User-key>>");
-			cumulus.LogDebugMessage($"Ecowitt URL = {logUrl}");
-
-			StationList stnObj;
-
-			try
-			{
-				string responseBody;
-				int responseCode;
-
-				// we want to do this synchronously, so .Result
-				using (var response = Cumulus.MyHttpClient.GetAsync(url).Result)
-				{
-					responseBody = response.Content.ReadAsStringAsync().Result;
-					responseCode = (int)response.StatusCode;
-					cumulus.LogDebugMessage($"API.GetStationList: Ecowitt API Station List Response code: {responseCode}");
-					cumulus.LogDataMessage($"API.GetStationList: Ecowitt API Station List Response: {responseBody}");
-				}
-
-				if (responseCode != 200)
-				{
-					var currentError = responseBody.FromJson<ErrorResp>();
-					cumulus.LogWarningMessage($"API.GetStationList: Ecowitt API Station List Error: {currentError.code}, {currentError.msg}");
-					Cumulus.LogConsoleMessage($" - Error {currentError.code}: {currentError.msg}", ConsoleColor.Red);
-					return false;
-				}
-
-				if (responseBody == "{}")
-				{
-					cumulus.LogWarningMessage("API.GetStationList: Ecowitt API Station List: No data was returned.");
-					Cumulus.LogConsoleMessage(" - No current data available");
-					return false;
-				}
-				else if (responseBody.StartsWith("{\"code\":")) // sanity check
-				{
-					// get the sensor data
-					stnObj = responseBody.FromJson<StationList>();
-
-					if (stnObj != null)
-					{
-						// success
-						if (stnObj.code == 0)
-						{
-							if (stnObj.data == null)
-							{
-								// There was no data returned.
-								return false;
-							}
-						}
-						else if (stnObj.code == -1 || stnObj.code == 45001)
-						{
-							// -1 = system busy, 45001 = rate limited
-
-							cumulus.LogMessage("API.GetStationList: System Busy or Rate Limited, waiting 5 secs before retry...");
-							return false;
-						}
-						else
-						{
-							return false;
-						}
-					}
-					else
-					{
-						return false;
-					}
-
-				}
-				else // No idea what we got, dump it to the log
-				{
-					cumulus.LogErrorMessage("API.GetStationList: Invalid message received");
-					cumulus.LogDataMessage("API.GetStationList: Received: " + responseBody);
-					return false;
-				}
-
-				if (!token.IsCancellationRequested)
-				{
-					if (stnObj.data.list == null)
-					{
-						cumulus.LogWarningMessage("API.GetStationList: Ecowitt API: No station data was returned.");
-						return false;
-					}
-
-					foreach (var stn in stnObj.data.list)
-					{
-						cumulus.LogDebugMessage($"API.GetStationList: Station: id={stn.id}, mac/imei={stn.mac ?? stn.imei}, name={stn.name}, type={stn.type}");
-						if (stn.type == 2)
-						{
-							// we have a camera
-							cumulus.EcowittSettings.CameraMacAddress = stn.mac;
-						}
-					}
-
-					return cumulus.EcowittSettings.CameraMacAddress != null;
-				}
-
-				return false;
-			}
-			catch (Exception ex)
-			{
-				cumulus.LogErrorMessage("API.GetStationList: Exception: " + ex.Message);
-				return false;
-			}
-		}
-
 		internal string GetLastCameraVideoUrl(string defaultUrl, CancellationToken token)
 		{
 			// Doc: https://doc.ecowitt.net/web/#/apiv3en?page_id=19
@@ -2293,6 +2172,127 @@ namespace CumulusMX
 			{
 				cumulus.LogErrorMessage("API.GetLastCameraVideoUrl: Exception: " + ex.Message);
 				return defaultUrl;
+			}
+		}
+
+		internal bool GetStationList(CancellationToken token)
+		{
+			cumulus.LogMessage("API.GetStationList: Get Ecowitt Station List");
+
+			if (string.IsNullOrEmpty(cumulus.EcowittSettings.AppKey) || string.IsNullOrEmpty(cumulus.EcowittSettings.UserApiKey))
+			{
+				cumulus.LogWarningMessage("API.GetCurrentCameraImageUrl: Missing Ecowitt API data in the configuration, aborting!");
+				return false;
+			}
+
+			var sb = new StringBuilder(stationUrl);
+
+			sb.Append($"application_key={cumulus.EcowittSettings.AppKey}");
+			sb.Append($"&api_key={cumulus.EcowittSettings.UserApiKey}");
+
+			var url = sb.ToString();
+
+			var logUrl = url.Replace(cumulus.EcowittSettings.AppKey, "<<App-key>>").Replace(cumulus.EcowittSettings.UserApiKey, "<<User-key>>");
+			cumulus.LogDebugMessage($"Ecowitt URL = {logUrl}");
+
+			StationList stnObj;
+
+			try
+			{
+				string responseBody;
+				int responseCode;
+
+				// we want to do this synchronously, so .Result
+				using (var response = Cumulus.MyHttpClient.GetAsync(url).Result)
+				{
+					responseBody = response.Content.ReadAsStringAsync().Result;
+					responseCode = (int)response.StatusCode;
+					cumulus.LogDebugMessage($"API.GetStationList: Ecowitt API Station List Response code: {responseCode}");
+					cumulus.LogDataMessage($"API.GetStationList: Ecowitt API Station List Response: {responseBody}");
+				}
+
+				if (responseCode != 200)
+				{
+					var currentError = responseBody.FromJson<ErrorResp>();
+					cumulus.LogWarningMessage($"API.GetStationList: Ecowitt API Station List Error: {currentError.code}, {currentError.msg}");
+					Cumulus.LogConsoleMessage($" - Error {currentError.code}: {currentError.msg}", ConsoleColor.Red);
+					return false;
+				}
+
+				if (responseBody == "{}")
+				{
+					cumulus.LogWarningMessage("API.GetStationList: Ecowitt API Station List: No data was returned.");
+					Cumulus.LogConsoleMessage(" - No current data available");
+					return false;
+				}
+				else if (responseBody.StartsWith("{\"code\":")) // sanity check
+				{
+					// get the sensor data
+					stnObj = responseBody.FromJson<StationList>();
+
+					if (stnObj != null)
+					{
+						// success
+						if (stnObj.code == 0)
+						{
+							if (stnObj.data == null)
+							{
+								// There was no data returned.
+								return false;
+							}
+						}
+						else if (stnObj.code == -1 || stnObj.code == 45001)
+						{
+							// -1 = system busy, 45001 = rate limited
+
+							cumulus.LogMessage("API.GetStationList: System Busy or Rate Limited, waiting 5 secs before retry...");
+							return false;
+						}
+						else
+						{
+							return false;
+						}
+					}
+					else
+					{
+						return false;
+					}
+
+				}
+				else // No idea what we got, dump it to the log
+				{
+					cumulus.LogErrorMessage("API.GetStationList: Invalid message received");
+					cumulus.LogDataMessage("API.GetStationList: Received: " + responseBody);
+					return false;
+				}
+
+				if (!token.IsCancellationRequested)
+				{
+					if (stnObj.data.list == null)
+					{
+						cumulus.LogWarningMessage("API.GetStationList: Ecowitt API: No station data was returned.");
+						return false;
+					}
+
+					foreach (var stn in stnObj.data.list)
+					{
+						cumulus.LogDebugMessage($"API.GetStationList: Station: id={stn.id}, mac/imei={stn.mac ?? stn.imei}, name={stn.name}, type={stn.type}");
+						if (stn.type == 2)
+						{
+							// we have a camera
+							cumulus.EcowittSettings.CameraMacAddress = stn.mac;
+						}
+					}
+
+					return cumulus.EcowittSettings.CameraMacAddress != null;
+				}
+
+				return false;
+			}
+			catch (Exception ex)
+			{
+				cumulus.LogErrorMessage("API.GetStationList: Exception: " + ex.Message);
+				return false;
 			}
 		}
 
