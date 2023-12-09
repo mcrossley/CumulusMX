@@ -3961,7 +3961,7 @@ namespace CumulusMX
 			EcowittSettings.ExtraGatewayAddr = ini.GetValue("GW1000", "EcowittExtraGwAddr", "0.0.0.0");
 			EcowittSettings.ExtraLocalAddr = ini.GetValue("GW1000", "EcowittExtraLocalAddr", localIp.ToString());
 			EcowittSettings.ExtraCustomInterval = ini.GetValue("GW1000", "EcowittExtraCustomInterval", 16);
-			// api
+			// ecowittApi
 			EcowittSettings.AppKey = ini.GetValue("GW1000", "EcowittAppKey", "");
 			EcowittSettings.UserApiKey = ini.GetValue("GW1000", "EcowittUserKey", "");
 			EcowittSettings.MacAddress = ini.GetValue("GW1000", "EcowittMacAddress", "");
@@ -5563,7 +5563,7 @@ namespace CumulusMX
 			ini.SetValue("GW1000", "EcowittExtraGwAddr", EcowittSettings.ExtraGatewayAddr);
 			ini.SetValue("GW1000", "EcowittExtraLocalAddr", EcowittSettings.ExtraLocalAddr);
 			ini.SetValue("GW1000", "EcowittExtraCustomInterval", EcowittSettings.ExtraCustomInterval);
-			// api
+			// ecowittApi
 			ini.SetValue("GW1000", "EcowittAppKey", Crypto.EncryptString(EcowittSettings.AppKey, Program.InstanceId, "EcowittSettings.AppKey"));
 			ini.SetValue("GW1000", "EcowittUserKey", Crypto.EncryptString(EcowittSettings.UserApiKey, Program.InstanceId, "EcowittSettings.UserApiKey"));
 			ini.SetValue("GW1000", "EcowittMacAddress", EcowittSettings.MacAddress);

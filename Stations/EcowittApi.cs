@@ -2147,7 +2147,7 @@ namespace CumulusMX
 						{
 							// -1 = system busy, 45001 = rate limited
 
-							cumulus.LogMessage("API.GetLastCameraVideoUrl: System Busy or Rate Limited, waiting 5 secs before retry...");
+							cumulus.LogMessage($"API.GetLastCameraVideoUrl: System Busy or Rate Limited - \"{vidObj.msg}\", waiting 5 secs before retry...");
 							return defaultUrl;
 						}
 						else

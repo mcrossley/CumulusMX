@@ -20,7 +20,7 @@ namespace CumulusMX
 		private int lastMinute;
 		private bool tenMinuteChanged = true;
 
-		private EcowittApi api;
+		private EcowittApi ecowittApi;
 		private readonly Stations.GW1000Api Api;
 
 		private int maxArchiveRuns = 1;
@@ -242,8 +242,7 @@ namespace CumulusMX
 
 				try
 				{
-
-					api = new EcowittApi(cumulus, this);
+					ecowittApi = new EcowittApi(cumulus, this);
 
 					do
 					{
@@ -256,6 +255,9 @@ namespace CumulusMX
 					cumulus.LogExceptionMessage(ex, "Error occurred reading archive data");
 				}
 			}
+
+			// get the station list
+			ecowittApi.GetStationList(cumulus.cancellationToken);
 
 			//cumulus.LogDebugMessage("Lock: Station releasing the lock");
 			_ = Cumulus.syncInit.Release();
@@ -284,7 +286,43 @@ namespace CumulusMX
 				maxArchiveRuns++;
 			}
 
-			api.GetHistoricData(startTime, endTime, cumulus.cancellationToken);
+			ecowittApi.GetHistoricData(startTime, endTime, cumulus.cancellationToken);
+		}
+
+		public override string GetEcowittCameraUrl()
+		{
+			if (!string.IsNullOrEmpty(cumulus.EcowittSettings.CameraMacAddress))
+			{
+				try
+				{
+					EcowittCameraUrl = ecowittApi.GetCurrentCameraImageUrl(EcowittCameraUrl, cumulus.cancellationToken);
+					return EcowittCameraUrl;
+				}
+				catch (Exception ex)
+				{
+					cumulus.LogExceptionMessage(ex, "Error runing Ecowitt Camera URL");
+				}
+			}
+
+			return null;
+		}
+
+		public override string GetEcowittVideoUrl()
+		{
+			if (!string.IsNullOrEmpty(cumulus.EcowittSettings.CameraMacAddress))
+			{
+				try
+				{
+					EcowittVideoUrl = ecowittApi.GetLastCameraVideoUrl(EcowittVideoUrl, cumulus.cancellationToken);
+					return EcowittVideoUrl;
+				}
+				catch (Exception ex)
+				{
+					cumulus.LogExceptionMessage(ex, "Error running Ecowitt Video URL");
+				}
+			}
+
+			return null;
 		}
 
 

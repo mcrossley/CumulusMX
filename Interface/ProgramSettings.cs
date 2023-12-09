@@ -150,7 +150,7 @@ namespace CumulusMX
 				cumulus.ProgramOptions.DataLogging = settings.logging.datalogging;
 				cumulus.SmtpOptions.Logging = settings.logging.emaillogging;
 				cumulus.ErrorLogSpikeRemoval = settings.logging.spikelogging;
-				cumulus.ErrorListLoggingLevel = (Cumulus.LogLevel) settings.logging.errorlistlevel;
+				cumulus.ErrorListLoggingLevel = (Microsoft.Extensions.Logging.LogLevel) settings.logging.errorlistlevel;
 
 				cumulus.ProgramOptions.WarnMultiple = settings.options.stopsecondinstance;
 				cumulus.ProgramOptions.ListWebTags = settings.options.listwebtags;
