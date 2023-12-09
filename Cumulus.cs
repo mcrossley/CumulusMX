@@ -500,7 +500,6 @@ namespace CumulusMX
 			public bool EnableDataUpdate;
 			public string UpdateTemplate;
 			public bool EnableInterval;
-			public int IntervalTime;
 			public string IntervalTemplate;
 		}
 		public MqttSettings MQTT;
@@ -1061,8 +1060,8 @@ namespace CumulusMX
 
 			DecimalSeparator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
 
-			LogMessage("Directory separator=[" + DirectorySeparator + "] Decimal separator=[" + CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator + "] List separator=[" + CultureInfo.CurrentCulture.TextInfo.ListSeparator + "]");
-			LogMessage("Date separator=[" + CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator + "] Time separator=[" + CultureInfo.CurrentCulture.DateTimeFormat.TimeSeparator + "]");
+			LogMessage("Directory verSeparator=[" + DirectorySeparator + "] Decimal verSeparator=[" + CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator + "] List verSeparator=[" + CultureInfo.CurrentCulture.TextInfo.ListSeparator + "]");
+			LogMessage("Date verSeparator=[" + CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator + "] Time verSeparator=[" + CultureInfo.CurrentCulture.DateTimeFormat.TimeSeparator + "]");
 
 			TimeZoneInfo localZone = TimeZoneInfo.Local;
 			DateTime now = DateTime.Now;
@@ -1662,11 +1661,6 @@ namespace CumulusMX
 				if (MQTT.EnableDataUpdate || MQTT.EnableInterval)
 				{
 					MqttPublisher.Setup(this);
-
-					if (MQTT.EnableInterval)
-					{
-						MQTTTimer.Elapsed += MQTTTimerTick;
-					}
 				}
 
 				InitialiseRG11();
@@ -2093,10 +2087,10 @@ namespace CumulusMX
 		}
 
 
-		public void MQTTTimerTick(object sender, ElapsedEventArgs e)
+		public void MQTTSecondChanged(DateTime now)
 		{
-			if (!station.DataStopped)
-				MqttPublisher.UpdateMQTTfeed("Interval");
+			if (MQTT.EnableInterval && !station.DataStopped)
+				MqttPublisher.UpdateMQTTfeed("Interval", now);
 		}
 
 
@@ -2675,7 +2669,7 @@ namespace CumulusMX
 				{
 					try
 					{
-						Task.WaitAll(tasklist.ToArray(), cancellationToken);
+						Task.WaitAll([.. tasklist], cancellationToken);
 					}
 					catch (Exception ex)
 					{
@@ -3465,10 +3459,10 @@ namespace CumulusMX
 			ProgramOptions.DataStoppedExit = ini.GetValue("Program", "DataStoppedExit", false);
 			ProgramOptions.DataStoppedMins = ini.GetValue("Program", "DataStoppedMins", 10);
 			ProgramOptions.Culture.RemoveSpaceFromDateSeparator = ini.GetValue("Culture", "RemoveSpaceFromDateSeparator", false);
-			// if the culture names match, then we apply the new date separator if change is enabled and it contains a space
+			// if the culture names match, then we apply the new date verSeparator if change is enabled and it contains a space
 			if (ProgramOptions.Culture.RemoveSpaceFromDateSeparator && CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(' '))
 			{
-				// change the date separator
+				// change the date verSeparator
 				var dateSep = CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Replace(" ", "");
 				var shortDate = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern.Replace(" ", "");
 
@@ -4469,7 +4463,6 @@ namespace CumulusMX
 			MQTT.EnableDataUpdate = ini.GetValue("MQTT", "EnableDataUpdate", false);
 			MQTT.UpdateTemplate = ini.GetValue("MQTT", "UpdateTemplate", "DataUpdateTemplate.txt");
 			MQTT.EnableInterval = ini.GetValue("MQTT", "EnableInterval", false);
-			MQTT.IntervalTime = ini.GetValue("MQTT", "IntervalTime", 600); // default to 10 minutes
 			MQTT.IntervalTemplate = ini.GetValue("MQTT", "IntervalTemplate", "IntervalTemplate.txt");
 
 			LowTempAlarm.Value = ini.GetValue("Alarms", "alarmlowtemp", 0.0);
@@ -5856,7 +5849,6 @@ namespace CumulusMX
 			ini.SetValue("MQTT", "EnableDataUpdate", MQTT.EnableDataUpdate);
 			ini.SetValue("MQTT", "UpdateTemplate", MQTT.UpdateTemplate);
 			ini.SetValue("MQTT", "EnableInterval", MQTT.EnableInterval);
-			ini.SetValue("MQTT", "IntervalTime", MQTT.IntervalTime);
 			ini.SetValue("MQTT", "IntervalTemplate", MQTT.IntervalTemplate);
 
 			ini.SetValue("Alarms", "alarmlowtemp", LowTempAlarm.Value);
@@ -7202,8 +7194,6 @@ namespace CumulusMX
 		public int Gw1000PrimaryRainSensor;
 
 		public Timer WebTimer = new Timer();
-		public Timer MQTTTimer = new Timer();
-		//public Timer AirLinkTimer = new Timer();
 
 		public int DAVIS = 0;
 		public int OREGON = 1;
@@ -7528,10 +7518,11 @@ namespace CumulusMX
 			sb.Append(timestamp.ToString("dd/MM/yy") + ListSeparator);
 			sb.Append(timestamp.ToString("HH:mm") + ListSeparator);
 
-			var tokenParser = new TokenParser(TokenParserOnToken);
-
-			// process the webtags in the content string
-			tokenParser.InputText = CustomIntvlLogSettings[idx].ContentString;
+			var tokenParser = new TokenParser(TokenParserOnToken)
+			{
+				// process the webtags in the content string
+				InputText = CustomIntvlLogSettings[idx].ContentString
+			};
 			sb.Append(tokenParser.ToStringFromString());
 
 			LogDataMessage("DoCustomIntervalLog: entry: " + sb);
@@ -7584,10 +7575,11 @@ namespace CumulusMX
 			var sb = new StringBuilder(300);
 			sb.Append(datestring + ListSeparator);
 
-			var tokenParser = new TokenParser(TokenParserOnToken);
-
-			// process the webtags in the content string
-			tokenParser.InputText = CustomDailyLogSettings[idx].ContentString;
+			var tokenParser = new TokenParser(TokenParserOnToken)
+			{
+				// process the webtags in the content string
+				InputText = CustomDailyLogSettings[idx].ContentString
+			};
 			sb.Append(tokenParser.ToStringFromString());
 
 			LogDataMessage("DoCustomDailyLog: entry: " + sb);
@@ -8903,11 +8895,8 @@ namespace CumulusMX
 			try { Wund.IntTimer.Stop(); } catch { }
 			try { WebTimer.Stop(); } catch { }
 			try { AWEKAS.IntTimer.Stop(); } catch { }
-			try { MQTTTimer.Stop(); } catch { }
-			//AirLinkTimer.Stop();
 			try { CustomHttpSecondsTimer.Stop(); } catch { }
 			try { MySqlFunction.CustomSecondsTimer.Stop(); } catch { }
-			try { MQTTTimer.Stop(); } catch { }
 
 			try
 			{
@@ -9625,7 +9614,7 @@ namespace CumulusMX
 				}
 
 				// wait for all the files to complete
-				Task.WaitAll(tasklist.ToArray(), cancellationToken);
+				Task.WaitAll([.. tasklist], cancellationToken);
 				//LogDebugMessage($"ProcessHttpFiles: Files upload complete, {tasklist.Count()} files processed");
 
 				if (cancellationToken.IsCancellationRequested)
@@ -10685,7 +10674,7 @@ namespace CumulusMX
 				{
 					try
 					{
-						Task.WaitAll(tasklist.ToArray(), cancellationToken);
+						Task.WaitAll([.. tasklist], cancellationToken);
 					}
 					catch (Exception ex)
 					{
@@ -11778,13 +11767,6 @@ namespace CumulusMX
 			AWEKAS.IntTimer.Enabled = AWEKAS.Enabled && !AWEKAS.SynchronisedUpdate;
 
 
-			MQTTTimer.Interval = MQTT.IntervalTime * 1000; // secs to millisecs
-			if (MQTT.EnableInterval)
-			{
-				MQTTTimer.Enabled = true;
-			}
-
-
 			Wund.CatchUpIfRequired();
 
 			Windy.CatchUpIfRequired();
@@ -12806,6 +12788,7 @@ namespace CumulusMX
 		public string data { get; set; }
 		public bool retain { get; set; }
 		public string doNotTriggerOnTags { get; set; }
+		public int? interval { get; set; }
 	}
 
 	public class MySqlGeneralSettings

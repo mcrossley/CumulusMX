@@ -1606,7 +1606,7 @@ namespace CumulusMX
 				{
 					byte[] tempConverted = Convert.FromBase64String(authorization.Replace("Basic ", "").Trim());
 					userInfo = Encoding.UTF8.GetString(tempConverted);
-					string[] usernamePassword = userInfo.Split(new char[] { ':' });
+					string[] usernamePassword = userInfo.Split([':']);
 					username = usernamePassword[0] ?? string.Empty;
 					password = usernamePassword[1] ?? string.Empty;
 

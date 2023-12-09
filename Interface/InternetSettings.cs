@@ -11,15 +11,10 @@ using ServiceStack;
 
 namespace CumulusMX
 {
-	public class InternetSettings
+	public class InternetSettings(Cumulus cumulus)
 	{
-		private readonly Cumulus cumulus;
-		private static string hidden = "*****";
-
-		public InternetSettings(Cumulus cumulus)
-		{
-			this.cumulus = cumulus;
-		}
+		private readonly Cumulus cumulus = cumulus;
+		private static readonly string hidden = "*****";
 
 		public string UpdateConfig(IHttpContext context)
 		{
@@ -242,14 +237,11 @@ namespace CumulusMX
 					{
 						cumulus.MQTT.UpdateTemplate = settings.mqtt.dataUpdate.template ?? string.Empty;
 					}
+
 					cumulus.MQTT.EnableInterval = settings.mqtt.interval.enabled;
 					if (cumulus.MQTT.EnableInterval)
 					{
-						cumulus.MQTT.IntervalTime = settings.mqtt.interval.time;
 						cumulus.MQTT.IntervalTemplate = settings.mqtt.interval.template ?? string.Empty;
-
-						cumulus.MQTTTimer.Interval = cumulus.MQTT.IntervalTime * 1000;
-						cumulus.MQTTTimer.Enabled = cumulus.MQTT.EnableInterval && !string.IsNullOrWhiteSpace(cumulus.MQTT.IntervalTemplate);
 					}
 				}
 				catch (Exception ex)
@@ -367,20 +359,6 @@ namespace CumulusMX
 					{
 						MqttPublisher.Setup(cumulus);
 					}
-					if (cumulus.MQTT.EnableInterval)
-					{
-						cumulus.MQTTTimer.Elapsed -= cumulus.MQTTTimerTick;
-						cumulus.MQTTTimer.Elapsed += cumulus.MQTTTimerTick;
-						cumulus.MQTTTimer.Start();
-					}
-					else
-					{
-						cumulus.MQTTTimer.Stop();
-					}
-				}
-				else
-				{
-					cumulus.MQTTTimer.Stop();
 				}
 			}
 			catch (Exception ex)
@@ -532,16 +510,15 @@ namespace CumulusMX
 				realtimeprogramparams = cumulus.RealtimeParams
 			};
 
-			var mqttUpdate = new MqttDataupdateJson()
+			var mqttUpdate = new MqttDataJson()
 			{
 				enabled = cumulus.MQTT.EnableDataUpdate,
 				template = cumulus.MQTT.UpdateTemplate
 			};
 
-			var mqttInterval = new MqttIntervalJson()
+			var mqttInterval = new MqttDataJson()
 			{
 				enabled = cumulus.MQTT.EnableInterval,
-				time = cumulus.MQTT.IntervalTime,
 				template = cumulus.MQTT.IntervalTemplate
 			};
 
@@ -816,23 +793,14 @@ namespace CumulusMX
 			public bool useTls { get; set; }
 			public string username { get; set; }
 			public string password { get; set; }
-			public MqttDataupdateJson dataUpdate { get; set; }
-			public MqttIntervalJson interval { get; set; }
+			public MqttDataJson dataUpdate { get; set; }
+			public MqttDataJson interval { get; set; }
 		}
 
-		private class MqttDataupdateJson
+		private class MqttDataJson
 		{
 			public bool enabled { get; set; }
 			public string template { get; set; }
-		}
-
-		private class MqttIntervalJson
-		{
-			public bool enabled { get; set; }
-			public int time { get; set; }
-			public string topic { get; set; }
-			public string template { get; set; }
-			public bool retained { get; set; }
 		}
 
 		private class MoonImageJson

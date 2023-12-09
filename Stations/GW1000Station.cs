@@ -35,7 +35,7 @@ namespace CumulusMX
 
 		private Version fwVersion;
 		private string gatewayType;
-
+		internal static readonly string[] verSeparator = ["_V"];
 
 		public GW1000Station(Cumulus cumulus) : base(cumulus)
 		{
@@ -542,7 +542,7 @@ namespace CumulusMX
 				cumulus.LogMessage($"Ecowitt firmware version: {GW1000FirmwareVersion}");
 				if (GW1000FirmwareVersion != "???")
 				{
-					var fwString = GW1000FirmwareVersion.Split(new string[] { "_V" }, StringSplitOptions.None);
+					var fwString = GW1000FirmwareVersion.Split(verSeparator, StringSplitOptions.None);
 					if (fwString.Length > 1)
 					{
 						gatewayType = fwString[0];
@@ -1681,9 +1681,9 @@ namespace CumulusMX
 
 			public Discovery()
 			{
-				IP = new List<string>();
-				Name = new List<string>();
-				Mac = new List<string>();
+				IP = [];
+				Name = [];
+				Mac = [];
 			}
 		}
 

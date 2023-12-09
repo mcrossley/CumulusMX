@@ -926,7 +926,7 @@ namespace CumulusMX.Stations
 					return;
 				}
 
-				// Parse data using decimal points rather than user's decimal separator
+				// Parse data using decimal points rather than user's decimal verSeparator
 				NumberFormatInfo provider = new NumberFormatInfo {NumberDecimalSeparator = "."};
 
 				double windspeed = -999;

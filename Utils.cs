@@ -232,7 +232,7 @@ namespace CumulusMX
 			// we know the dayfile and monthly log files start with
 			// dd/MM/yy,NN,...
 			// dd/MM/yy,hh:mm,N.N,....
-			// so we just need to find the first separator after the date before a number
+			// so we just need to find the first verSeparator after the date before a number
 
 			var reg = Regex.Match(line, @"\d{2}[^\d]+\d{2}[^\d]+\d{2}([^\d])");
 			if (reg.Success)

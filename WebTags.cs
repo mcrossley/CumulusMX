@@ -1144,7 +1144,7 @@ namespace CumulusMX
 
 					for (var i = 0; i < sl.Length; i++)
 					{
-						retVal += $"\"TX{i + 1}\":\"{sl[i].Substring(2)}\",";
+						retVal += $"\"TX{i + 1}\":\"{sl[i][2..]}\",";
 					}
 
 					return retVal.Remove(retVal.Length - 1) + "}";
@@ -1156,7 +1156,7 @@ namespace CumulusMX
 			}
 
 			// extract status for required channel
-			char[] delimiters = { ' ', '-' };
+			char[] delimiters = [' ', '-'];
 			sl = station.TxBatText.Split(delimiters);
 
 			int channel = int.Parse(channeltxt) * 2 - 1;
@@ -6629,7 +6629,7 @@ namespace CumulusMX
 
 		public string GetWebTagText(string tagString, Dictionary<string, string> tagParams)
 		{
-			return webTagDictionary.ContainsKey(tagString) ? webTagDictionary[tagString](tagParams) : string.Empty;
+			return webTagDictionary.TryGetValue(tagString, out var value) ? value(tagParams) : string.Empty;
 		}
 
 		//private static string Utf16ToUtf8(string utf16String)

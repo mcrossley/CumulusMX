@@ -37,9 +37,8 @@ namespace CumulusMX
 		private bool broadcastStopped;
 		private int weatherLinkArchiveInterval = 16 * 60; // Used to get historic Health, 16 minutes in seconds only for initial fetch after load
 		private bool wllVoltageLow;
-		private Task broadcastTask;
 		private readonly AutoResetEvent bwDoneEvent = new AutoResetEvent(false);
-		private readonly List<WlSensor> sensorList = new List<WlSensor>();
+		private readonly List<WlSensor> sensorList = [];
 		private readonly bool useWeatherLinkDotCom = true;
 		//private readonly bool checkWllGustValues;
 
@@ -275,7 +274,7 @@ namespace CumulusMX
 				}
 
 				// Create a broadcast listener
-				broadcastTask = Task.Run(async () =>
+				_ = Task.Run(async () =>
 				{
 					byte[] lastMessage = null;
 					//var endPoint = new IPEndPoint(IPAddress.Any, port);

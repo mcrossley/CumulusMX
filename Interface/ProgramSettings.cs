@@ -9,14 +9,9 @@ using ServiceStack.Text;
 
 namespace CumulusMX
 {
-	public class ProgramSettings
+	public class ProgramSettings(Cumulus cumulus)
 	{
-		private readonly Cumulus cumulus;
-
-		public ProgramSettings(Cumulus cumulus)
-		{
-			this.cumulus = cumulus;
-		}
+		private readonly Cumulus cumulus = cumulus;
 
 		public string GetAlpacaFormData()
 		{
@@ -175,7 +170,7 @@ namespace CumulusMX
 				{
 					// get the existing culture
 					var newCulture = CultureInfo.CurrentCulture;
-					// change the date separator
+					// change the date verSeparator
 					newCulture.DateTimeFormat.DateSeparator = CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Replace(" ", "");
 					// set current thread culture
 					Thread.CurrentThread.CurrentCulture = newCulture;

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using MQTTnet;
 using MQTTnet.Client;
 using ServiceStack;
+using ServiceStack.Text;
 
 namespace CumulusMX
 {
@@ -15,7 +16,7 @@ namespace CumulusMX
 		private static Cumulus cumulus;
 		private static MqttClient mqttClient;
 		private static bool configured;
-		private static Dictionary<String, String> publishedTopics = new Dictionary<string, string>();
+		private static Dictionary<String, String> publishedTopics = [];
 
 		public static bool Configured { get => configured; set => configured = value; }
 
@@ -56,7 +57,7 @@ namespace CumulusMX
 			mqttClient.DisconnectedAsync += (async e =>
 			{
 				cumulus.LogMessage("Error: MQTT disconnected from the server");
-				await Task.Delay(TimeSpan.FromSeconds(5));
+				await Task.Delay(TimeSpan.FromSeconds(30));
 
 				cumulus.LogDebugMessage("MQTT attempting to reconnect with server");
 				try
@@ -66,7 +67,7 @@ namespace CumulusMX
 				}
 				catch
 				{
-					cumulus.LogMessage("Error: MQTT reconnection to server failed");
+					cumulus.LogErrorMessage("Error: MQTT reconnection to server failed");
 				}
 			});
 
@@ -89,7 +90,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				cumulus.LogMessage("MQTT: Error - Not connected to MQTT server - message not sent");
+				cumulus.LogErrorMessage("MQTT: Error - Not connected to MQTT server - message not sent");
 			}
 		}
 
@@ -106,7 +107,7 @@ namespace CumulusMX
 		}
 
 
-		public static void UpdateMQTTfeed(string feedType)
+		public static void UpdateMQTTfeed(string feedType, DateTime now)
 		{
 			var template = "mqtt/";
 
@@ -123,7 +124,7 @@ namespace CumulusMX
 				return;
 
 			// use template file
-			cumulus.LogDebugMessage($"MQTT: Using template - {template}");
+			//cumulus.LogDebugMessage($"MQTT: Using template - {template}");
 
 			// read the file
 			var templateText = File.ReadAllText(template);
@@ -132,41 +133,50 @@ namespace CumulusMX
 			// process each of the topics in turn
 			try
 			{
-				foreach (var feed in templateObj.topics)
+				foreach (var topic in templateObj.topics)
 				{
+					if (feedType == "Interval" && now.ToUnixTime() % (topic.interval ?? 600) != 0)
+					{
+						// this topic is not ready to update
+						//cumulus.LogDebugMessage($"MQTT: Topic {topic.topic} not ready yet");
+						continue;
+					}
+
+					cumulus.LogDebugMessage($"MQTT: Processing {feedType} Topic: {topic.topic}");
+
 					bool useAltResult = false;
 
 					var mqttTokenParser = new TokenParser(cumulus.TokenParserOnToken)
 					{
 						Encoding = new System.Text.UTF8Encoding(false),
-						InputText = feed.data
+						InputText = topic.data
 					};
 
-					if ((feedType == "DataUpdate") && (feed.doNotTriggerOnTags != null))
+					if ((feedType == "DataUpdate") && (topic.doNotTriggerOnTags != null))
 					{
 						useAltResult = true;
-						mqttTokenParser.AltResultNoParseList = feed.doNotTriggerOnTags;
+						mqttTokenParser.AltResultNoParseList = topic.doNotTriggerOnTags;
 					}
 
 					string message = mqttTokenParser.ToStringFromString();
 
 					if (useAltResult)
 					{
-						if (!(publishedTopics.ContainsKey(feed.data) && (publishedTopics[feed.data] == mqttTokenParser.AltResult)))
+						if (!(publishedTopics.ContainsKey(topic.data) && (publishedTopics[topic.data] == mqttTokenParser.AltResult)))
 						{
 							// send the message
-							_ = SendMessageAsync(feed.topic, message, feed.retain);
+							_ = SendMessageAsync(topic.topic, message, topic.retain);
 
-							if (publishedTopics.ContainsKey(feed.data))
-								publishedTopics[feed.data] = mqttTokenParser.AltResult;
+							if (publishedTopics.ContainsKey(topic.data))
+								publishedTopics[topic.data] = mqttTokenParser.AltResult;
 							else
-								publishedTopics.Add(feed.data, mqttTokenParser.AltResult);
+								publishedTopics.Add(topic.data, mqttTokenParser.AltResult);
 						}
 					}
 					else
 					{
 						// send the message
-						_ = SendMessageAsync(feed.topic, message, feed.retain);
+						_ = SendMessageAsync(topic.topic, message, topic.retain);
 					}
 				}
 			}

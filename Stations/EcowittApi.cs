@@ -195,9 +195,9 @@ namespace CumulusMX
 				do
 				{
 					// we want to do this synchronously, so .Result
-					using (var response = Cumulus.MyHttpClient.GetAsync(url).Result)
+					using (var response = Cumulus.MyHttpClient.GetAsync(url, token).Result)
 					{
-						responseBody = response.Content.ReadAsStringAsync().Result;
+						responseBody = response.Content.ReadAsStringAsync(token).Result;
 						responseCode = (int) response.StatusCode;
 						cumulus.LogDebugMessage($"API.GetHistoricData: Ecowitt API Historic Response code: {responseCode}");
 						cumulus.LogDataMessage($"API.GetHistoricData: Ecowitt API Historic Response: {responseBody}");
@@ -262,7 +262,7 @@ namespace CumulusMX
 								}
 
 								cumulus.LogMessage("API.GetHistoricData: System Busy or Rate Limited, waiting 5 seconds before retry...");
-								Task.Delay(5000, token).Wait();
+								Task.Delay(5000, token).Wait(token);
 							}
 							else
 							{
@@ -339,9 +339,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || item.Value == 140 || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].IndoorTemp = item.Value;
+											value.IndoorTemp = item.Value;
 										}
 										else
 										{
@@ -363,9 +363,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].IndoorHum = item.Value;
+											value.IndoorHum = item.Value;
 										}
 										else
 										{
@@ -401,9 +401,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || item.Value == 140 || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].Temp = item.Value;
+											value.Temp = item.Value;
 										}
 										else
 										{
@@ -426,9 +426,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].Humidity = item.Value;
+											value.Humidity = item.Value;
 										}
 										else
 										{
@@ -451,9 +451,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].DewPoint = item.Value;
+											value.DewPoint = item.Value;
 										}
 										else
 										{
@@ -488,9 +488,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].WindSpd = item.Value;
+											value.WindSpd = item.Value;
 										}
 										else
 										{
@@ -513,9 +513,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].WindGust = item.Value;
+											value.WindGust = item.Value;
 										}
 										else
 										{
@@ -538,9 +538,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].WindDir = item.Value;
+											value.WindDir = item.Value;
 										}
 										else
 										{
@@ -575,9 +575,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].Pressure = item.Value;
+											value.Pressure = item.Value;
 										}
 										else
 										{
@@ -614,9 +614,9 @@ namespace CumulusMX
 											if (!item.Value.HasValue || itemDate < cumulus.LastUpdateTime)
 												continue;
 
-											if (buffer.ContainsKey(itemDate))
+											if (buffer.TryGetValue(itemDate, out var value))
 											{
-												buffer[itemDate].RainRate = item.Value;
+												value.RainRate = item.Value;
 											}
 											else
 											{
@@ -639,9 +639,9 @@ namespace CumulusMX
 											if (!item.Value.HasValue || itemDate < cumulus.LastUpdateTime)
 												continue;
 
-											if (buffer.ContainsKey(itemDate))
+											if (buffer.TryGetValue(itemDate, out var value))
 											{
-												buffer[itemDate].RainYear = item.Value;
+												value.RainYear = item.Value;
 											}
 											else
 											{
@@ -679,9 +679,9 @@ namespace CumulusMX
 											if (!item.Value.HasValue || itemDate < cumulus.LastUpdateTime)
 												continue;
 
-											if (buffer.ContainsKey(itemDate))
+											if (buffer.TryGetValue(itemDate, out var value))
 											{
-												buffer[itemDate].RainRate = item.Value;
+												value.RainRate = item.Value;
 											}
 											else
 											{
@@ -704,9 +704,9 @@ namespace CumulusMX
 											if (!item.Value.HasValue || itemDate < cumulus.LastUpdateTime)
 												continue;
 
-											if (buffer.ContainsKey(itemDate))
+											if (buffer.TryGetValue(itemDate, out var value))
 											{
-												buffer[itemDate].RainYear = item.Value;
+												value.RainYear = item.Value;
 											}
 											else
 											{
@@ -742,9 +742,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].Solar = (int)item.Value;
+											value.Solar = (int)item.Value;
 										}
 										else
 										{
@@ -767,9 +767,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].UVI = (int)item.Value;
+											value.UVI = (int)item.Value;
 										}
 										else
 										{
@@ -814,9 +814,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].ExtraTemp[chan] = item.Value;
+											value.ExtraTemp[chan] = item.Value;
 										}
 										else
 										{
@@ -837,9 +837,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].ExtraHumidity[chan] = item.Value;
+											value.ExtraHumidity[chan] = item.Value;
 										}
 										else
 										{
@@ -880,9 +880,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].SoilMoist[chan] = item.Value;
+											value.SoilMoist[chan] = item.Value;
 										}
 										else
 										{
@@ -923,9 +923,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].UserTemp[chan] = item.Value;
+											value.UserTemp[chan] = item.Value;
 										}
 										else
 										{
@@ -966,9 +966,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].LeafWetness[chan] = item.Value;
+											value.LeafWetness[chan] = item.Value;
 										}
 										else
 										{
@@ -1004,9 +1004,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].pm25[chan] = item.Value;
+											value.pm25[chan] = item.Value;
 										}
 										else
 										{
@@ -1040,9 +1040,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].IndoorCo2 = item.Value;
+											value.IndoorCo2 = item.Value;
 										}
 										else
 										{
@@ -1065,9 +1065,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].IndoorCo2hr24 = item.Value;
+											value.IndoorCo2hr24 = item.Value;
 										}
 										else
 										{
@@ -1102,9 +1102,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].CO2pm2p5 = item.Value;
+											value.CO2pm2p5 = item.Value;
 										}
 										else
 										{
@@ -1127,9 +1127,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].CO2pm2p5hr24 = item.Value;
+											value.CO2pm2p5hr24 = item.Value;
 										}
 										else
 										{
@@ -1163,9 +1163,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].AqiComboPm25 = item.Value;
+											value.AqiComboPm25 = item.Value;
 										}
 										else
 										{
@@ -1199,9 +1199,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].AqiComboPm10 = item.Value;
+											value.AqiComboPm10 = item.Value;
 										}
 										else
 										{
@@ -1236,9 +1236,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].LightningDist = item.Value;
+											value.LightningDist = item.Value;
 										}
 										else
 										{
@@ -1261,9 +1261,9 @@ namespace CumulusMX
 										if (!item.Value.HasValue || itemDate <= cumulus.LastUpdateTime)
 											continue;
 
-										if (buffer.ContainsKey(itemDate))
+										if (buffer.TryGetValue(itemDate, out var value))
 										{
-											buffer[itemDate].LightningCount = item.Value;
+											value.LightningCount = item.Value;
 										}
 										else
 										{
@@ -1718,25 +1718,18 @@ namespace CumulusMX
 			// Request the data in the correct units
 			sb.Append($"&temp_unitid={cumulus.Units.Temp + 1}"); // 1=C, 2=F
 			sb.Append($"&pressure_unitid={(cumulus.Units.Press == 2 ? "4" : "3")}"); // 3=hPa, 4=inHg, 5=mmHg
-			string windUnit;
-			switch (cumulus.Units.Wind)
+			var windUnit = cumulus.Units.Wind switch
 			{
-				case 0: // m/s
-					windUnit = "6";
-					break;
-				case 1: // mph
-					windUnit = "9";
-					break;
-				case 2: // km/h
-					windUnit = "7";
-					break;
-				case 3: // knots
-					windUnit = "8";
-					break;
-				default:
-					windUnit = "?";
-					break;
-			}
+				// m/s
+				0 => "6",
+				// mph
+				1 => "9",
+				// km/h
+				2 => "7",
+				// knots
+				3 => "8",
+				_ => "?",
+			};
 			sb.Append($"&wind_speed_unitid={windUnit}");
 			sb.Append($"&rainfall_unitid={cumulus.Units.Rain + 12}");
 
@@ -1766,9 +1759,9 @@ namespace CumulusMX
 				int responseCode;
 
 				// we want to do this synchronously, so .Result
-				using (var response = Cumulus.MyHttpClient.GetAsync(url).Result)
+				using (var response = Cumulus.MyHttpClient.GetAsync(url, token).Result)
 				{
-					responseBody = response.Content.ReadAsStringAsync().Result;
+					responseBody = response.Content.ReadAsStringAsync(token).Result;
 					responseCode = (int) response.StatusCode;
 					cumulus.LogDebugMessage($"API.GetCurrentData: Ecowitt API Current Response code: {responseCode}");
 					cumulus.LogDataMessage($"API.GetCurrentData: Ecowitt API Current Response: {responseBody}");
@@ -1931,9 +1924,9 @@ namespace CumulusMX
 				int responseCode;
 
 				// we want to do this synchronously, so .Result
-				using (var response = Cumulus.MyHttpClient.GetAsync(url).Result)
+				using (var response = Cumulus.MyHttpClient.GetAsync(url, token).Result)
 				{
-					responseBody = response.Content.ReadAsStringAsync().Result;
+					responseBody = response.Content.ReadAsStringAsync(token).Result;
 					responseCode = (int) response.StatusCode;
 					cumulus.LogDebugMessage($"API.GetCurrentCameraImageUrl: Ecowitt API Current Camera Response code: {responseCode}");
 					cumulus.LogDataMessage($"API.GetCurrentCameraImageUrl: Ecowitt API Current Camera Response: {responseBody}");
@@ -2078,9 +2071,9 @@ namespace CumulusMX
 				int responseCode;
 
 				// we want to do this synchronously, so .Result
-				using (var response = Cumulus.MyHttpClient.GetAsync(url).Result)
+				using (var response = Cumulus.MyHttpClient.GetAsync(url, token).Result)
 				{
-					responseBody = response.Content.ReadAsStringAsync().Result;
+					responseBody = response.Content.ReadAsStringAsync(token).Result;
 					responseCode = (int)response.StatusCode;
 					cumulus.LogDebugMessage($"API.GetLastCameraVideoUrl: Ecowitt API Current Camera Response code: {responseCode}");
 					cumulus.LogDataMessage($"API.GetLastCameraVideoUrl: Ecowitt API Current Camera Response: {responseBody}");
@@ -2203,9 +2196,9 @@ namespace CumulusMX
 				int responseCode;
 
 				// we want to do this synchronously, so .Result
-				using (var response = Cumulus.MyHttpClient.GetAsync(url).Result)
+				using (var response = Cumulus.MyHttpClient.GetAsync(url, token).Result)
 				{
-					responseBody = response.Content.ReadAsStringAsync().Result;
+					responseBody = response.Content.ReadAsStringAsync(token).Result;
 					responseCode = (int)response.StatusCode;
 					cumulus.LogDebugMessage($"API.GetStationList: Ecowitt API Station List Response code: {responseCode}");
 					cumulus.LogDataMessage($"API.GetStationList: Ecowitt API Station List Response: {responseBody}");

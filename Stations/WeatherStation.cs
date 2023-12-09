@@ -93,6 +93,7 @@ namespace CumulusMX
 
 		private int lastMinute;
 		private int lastHour;
+		private int lastSecond;
 
 		public bool[] WMR928ChannelPresent = [false, false, false, false];
 		public bool[] WMR928ExtraTempValueOnly = [false, false, false, false];
@@ -1590,11 +1591,19 @@ namespace CumulusMX
 				}
 			}
 
-			// send current data to web-socket every 5 seconds, unless it has already been sent within the 10 seconds
-			if (LastDataReadTimestamp.AddSeconds(5) < timeNow && (int) timeNow.TimeOfDay.TotalMilliseconds % 10000 <= 500)
+			if (timeNow.Second != lastSecond)
 			{
-				_ = sendWebSocketData();
+				lastSecond = timeNow.Second;
+
+				// send current data to web-socket every 5 seconds, unless it has already been sent within the 10 seconds
+				if (LastDataReadTimestamp.AddSeconds(5) < timeNow && (int) timeNow.TimeOfDay.TotalMilliseconds % 10000 <= 500)
+				{
+					_ = sendWebSocketData();
+				}
+
+				cumulus.MQTTSecondChanged(timeNow);
 			}
+
 		}
 
 		internal async Task sendWebSocketData(bool wait = false)
