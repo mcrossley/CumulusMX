@@ -8616,17 +8616,13 @@ namespace CumulusMX
 		{
 			if (gust == null) return false;
 
-			// Spike check is in m/s
-			var windGustMS = ConvertUnits.UserWindToMS(gust).Value;
-
-			if (Math.Abs(gust.Value - previousGust) > cumulus.Spike.GustDiff && previousGust != 999 || windGustMS >= cumulus.Limit.WindHigh)
+			if (gust >= cumulus.Limit.WindHigh)
 			{
-				cumulus.LogSpikeRemoval("Gust difference greater than specified; reading ignored");
-				cumulus.LogSpikeRemoval($"Gust: NewVal={windGustMS:F1} OldVal={previousGust:F1} SpikeGustDiff={cumulus.Spike.GustDiff:F1} HighLimit={cumulus.Limit.WindHigh:F1}");
-
-				cumulus.SpikeAlarm.LastMessage = $"Gust difference greater than spike/limit value - Gust: NewVal={windGustMS:F1}m/s OldVal={previousGust:F1}m/s";
-				cumulus.SpikeAlarm.Triggered = true;
+				cumulus.LogSpikeRemoval("Wind Gust greater than the limit; reading ignored");
+				cumulus.LogSpikeRemoval($"Gust: NewVal={gust:F1} HighLimit={cumulus.Limit.WindHigh:F1}");
 				lastSpikeRemoval = timestamp;
+				cumulus.SpikeAlarm.LastMessage = $"Wind Gust greater than limit - NewVal={gust:F1}, OldVal={cumulus.Limit.WindHigh:F1}";
+				cumulus.SpikeAlarm.Triggered = true;
 				return false;
 			}
 
