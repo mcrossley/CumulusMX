@@ -20,7 +20,7 @@ namespace CumulusMX
 		private static MqttTemplate updateTemplate;
 		private static MqttTemplate intervalTemplate;
 
-		public static bool Configured { get => configured; set => configured = value; }
+		public static bool Configured { get => configured; }
 
 		public static void Setup(Cumulus cumulus)
 		{
@@ -92,7 +92,7 @@ namespace CumulusMX
 					if (File.Exists(template))
 					{
 						// use template file
-						cumulus.LogDebugMessage($"MQTT: Using template - {template}");
+						cumulus.LogMessage($"MQTT: Reading template - {template}");
 
 						// read the file
 						var templateText = File.ReadAllText(template);
@@ -117,7 +117,7 @@ namespace CumulusMX
 					if (File.Exists(template))
 					{
 						// use template file
-						cumulus.LogDebugMessage($"MQTT: Using template - {template}");
+						cumulus.LogMessage($"MQTT: Reading template - {template}");
 
 						// read the file
 						var templateText = File.ReadAllText(template);
@@ -163,7 +163,7 @@ namespace CumulusMX
 		}
 
 
-		public static void UpdateMQTTfeed(string feedType, DateTime now)
+		public static void UpdateMQTTfeed(string feedType, DateTime? now)
 		{
 			MqttTemplate mqttTemplate;
 
@@ -188,7 +188,7 @@ namespace CumulusMX
 			{
 				foreach (var topic in mqttTemplate.topics)
 				{
-					if (feedType == "Interval" && now.ToUnixTime() % (topic.interval ?? 600) != 0)
+					if (feedType == "Interval" && now.Value.ToUnixTime() % (topic.interval ?? 600) != 0)
 					{
 						// this topic is not ready to update
 						//cumulus.LogDebugMessage($"MQTT: Topic {topic.topic} not ready yet");

@@ -26,6 +26,7 @@ namespace CumulusMX
 		internal static CalibrationSettings calibrationSettings { private get; set; }
 		internal static NOAASettings noaaSettings { private get; set; }
 		internal static MysqlSettings mySqlSettings { private get; set; }
+		internal static MqttSettings mqttSettings;
 		internal static CustomLogsSettings customLogs {private get; set; }
 
 		internal static HttpFiles httpFiles;
@@ -1230,6 +1231,9 @@ namespace CumulusMX
 						case "httpfiles.json":
 							await writer.WriteAsync(httpFiles.GetAlpacaFormData());
 							break;
+						case "mqttdata.json":
+							await writer.WriteAsync(mqttSettings.GetAlpacaFormData());
+							break;
 						default:
 							Response.StatusCode = 404;
 							throw new KeyNotFoundException("Key Not Found: " + req);
@@ -1333,6 +1337,9 @@ namespace CumulusMX
 							break;
 						case "updatehttpfiles.json":
 							await writer.WriteAsync(httpFiles.UpdateConfig(HttpContext));
+							break;
+						case "updatemqttconfig.json":
+							await writer.WriteAsync(mqttSettings.UpdateConfig(HttpContext));
 							break;
 						default:
 							Response.StatusCode = 404;
