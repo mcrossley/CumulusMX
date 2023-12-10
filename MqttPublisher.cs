@@ -16,7 +16,9 @@ namespace CumulusMX
 		private static Cumulus cumulus;
 		private static MqttClient mqttClient;
 		private static bool configured;
-		private static Dictionary<String, String> publishedTopics = [];
+		private static readonly Dictionary<String, String> publishedTopics = [];
+		private static MqttTemplate updateTemplate;
+		private static MqttTemplate intervalTemplate;
 
 		public static bool Configured { get => configured; set => configured = value; }
 
@@ -71,9 +73,63 @@ namespace CumulusMX
 				}
 			});
 
+			ReadTemplateFiles();
+
 			configured = true;
 		}
 
+		public static void ReadTemplateFiles()
+		{
+			try
+			{
+				updateTemplate = null;
+
+				if (cumulus.MQTT.EnableDataUpdate && !string.IsNullOrEmpty(cumulus.MQTT.UpdateTemplate))
+				{
+					// read the config file into memory
+					var template = "mqtt/" + cumulus.MQTT.UpdateTemplate;
+
+					if (File.Exists(template))
+					{
+						// use template file
+						cumulus.LogDebugMessage($"MQTT: Using template - {template}");
+
+						// read the file
+						var templateText = File.ReadAllText(template);
+						updateTemplate = templateText.FromJson<MqttTemplate>();
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				cumulus.LogErrorMessage($"MQTT: Error reading update template file {cumulus.MQTT.UpdateTemplate}. Message: {ex.Message}");
+			}
+
+			try
+			{
+				intervalTemplate = null;
+
+				if (cumulus.MQTT.EnableInterval && !string.IsNullOrEmpty(cumulus.MQTT.IntervalTemplate))
+				{
+					// read the config file into memory
+					var template = "mqtt/" + cumulus.MQTT.IntervalTemplate;
+
+					if (File.Exists(template))
+					{
+						// use template file
+						cumulus.LogDebugMessage($"MQTT: Using template - {template}");
+
+						// read the file
+						var templateText = File.ReadAllText(template);
+						intervalTemplate = templateText.FromJson<MqttTemplate>();
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				cumulus.LogErrorMessage($"MQTT: Error reading interval template file {cumulus.MQTT.IntervalTemplate}. Message: {ex.Message}");
+			}
+		}
 
 		private static async Task SendMessageAsync(string topic, string message, bool retain)
 		{
@@ -109,31 +165,28 @@ namespace CumulusMX
 
 		public static void UpdateMQTTfeed(string feedType, DateTime now)
 		{
-			var template = "mqtt/";
+			MqttTemplate mqttTemplate;
 
 			if (feedType == "Interval")
 			{
-				template += cumulus.MQTT.IntervalTemplate;
+				if (intervalTemplate == null)
+					return;
+
+				mqttTemplate = intervalTemplate;
 			}
 			else
 			{
-				template += cumulus.MQTT.UpdateTemplate;
+				if (updateTemplate == null)
+					return;
+
+				mqttTemplate = updateTemplate;
 			}
 
-			if (!File.Exists(template))
-				return;
-
-			// use template file
-			//cumulus.LogDebugMessage($"MQTT: Using template - {template}");
-
-			// read the file
-			var templateText = File.ReadAllText(template);
-			var templateObj = templateText.FromJson<MqttTemplate>();
 
 			// process each of the topics in turn
 			try
 			{
-				foreach (var topic in templateObj.topics)
+				foreach (var topic in mqttTemplate.topics)
 				{
 					if (feedType == "Interval" && now.ToUnixTime() % (topic.interval ?? 600) != 0)
 					{
@@ -182,7 +235,7 @@ namespace CumulusMX
 			}
 			catch (Exception ex)
 			{
-				cumulus.LogExceptionMessage(ex, $"UpdateMQTTfeed: Error process the template file [{template}], Error");
+				cumulus.LogExceptionMessage(ex, $"UpdateMQTTfeed: Error processing the template file for [{feedType}], Error");
 			}
 		}
 	}
