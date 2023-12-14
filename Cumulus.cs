@@ -3461,25 +3461,21 @@ namespace CumulusMX
 			ProgramOptions.DataStoppedMins = ini.GetValue("Program", "DataStoppedMins", 10);
 			ProgramOptions.Culture.RemoveSpaceFromDateSeparator = ini.GetValue("Culture", "RemoveSpaceFromDateSeparator", false);
 			// if the culture names match, then we apply the new date verSeparator if change is enabled and it contains a space
-			if (ProgramOptions.Culture.RemoveSpaceFromDateSeparator && CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(' '))
+			if (ProgramOptions.Culture.RemoveSpaceFromDateSeparator && CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(" "))
 			{
-				// change the date verSeparator
+				// change the date separator
 				var dateSep = CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Replace(" ", "");
 				var shortDate = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern.Replace(" ", "");
 
-				// set current thread culture
-				Thread.CurrentThread.CurrentCulture.DateTimeFormat.DateSeparator = dateSep;
-				Thread.CurrentThread.CurrentCulture.DateTimeFormat.ShortDatePattern = shortDate;
+				CultureInfo newCulture = (CultureInfo)Thread.CurrentThread.CurrentCulture.Clone();
+				newCulture.DateTimeFormat.DateSeparator = dateSep;
+				newCulture.DateTimeFormat.ShortDatePattern = shortDate;
 
-				Thread.CurrentThread.CurrentUICulture.DateTimeFormat.DateSeparator = dateSep;
-				Thread.CurrentThread.CurrentUICulture.DateTimeFormat.ShortDatePattern = shortDate;
+				// set current thread culture
+				Thread.CurrentThread.CurrentCulture = newCulture;
 
 				// set the default culture for other threads
-				CultureInfo.DefaultThreadCurrentCulture.DateTimeFormat.DateSeparator = dateSep;
-				CultureInfo.DefaultThreadCurrentCulture.DateTimeFormat.ShortDatePattern = shortDate;
-
-				CultureInfo.DefaultThreadCurrentUICulture.DateTimeFormat.DateSeparator = dateSep;
-				CultureInfo.DefaultThreadCurrentUICulture.DateTimeFormat.ShortDatePattern = shortDate;
+				CultureInfo.DefaultThreadCurrentCulture = newCulture;
 			}
 
 			ProgramOptions.TimeFormat = ini.GetValue("Program", "TimeFormat", "t");
