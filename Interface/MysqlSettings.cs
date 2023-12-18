@@ -14,16 +14,11 @@ using ServiceStack;
 
 namespace CumulusMX
 {
-	public class MysqlSettings
+	public class MysqlSettings(Cumulus cumulus)
 	{
-		private readonly Cumulus cumulus;
+		private readonly Cumulus cumulus = cumulus;
 
-		private static string hidden = "*****";
-
-		public MysqlSettings(Cumulus cumulus)
-		{
-			this.cumulus = cumulus;
-		}
+		private const string hidden = "*****";
 
 		public string GetAlpacaFormData()
 		{
@@ -127,7 +122,7 @@ namespace CumulusMX
 			var customtimed = new SettingsCustomTimedJson()
 			{
 				enabled = cumulus.MySqlFunction.Settings.CustomTimed.Enabled,
-				entries = Array.Empty<CustomTimedJson>()
+				entries = []
 			};
 
 			cmdCnt = 0;
@@ -435,12 +430,10 @@ namespace CumulusMX
 					// strip trailing comma
 					update.Length--;
 
-					using (MySqlCommand cmd = new MySqlCommand(update.ToString(), mySqlConn))
-					{
-						int aff = cmd.ExecuteNonQuery();
-						res = $"Added {cnt} columns to {table.Name} table";
-						cumulus.LogMessage($"MySQL Update Table: " + res);
-					}
+					using MySqlCommand cmd = new MySqlCommand(update.ToString(), mySqlConn);
+					int aff = cmd.ExecuteNonQuery();
+					res = $"Added {cnt} columns to {table.Name} table";
+					cumulus.LogMessage($"MySQL Update Table: " + res);
 				}
 				else
 				{
@@ -491,37 +484,34 @@ namespace CumulusMX
 		}
 
 		//public string CreateMonthlySQL(HttpListenerContext context)
-		public string CreateMonthlySQL(IHttpContext context)
+		public string CreateMonthlySQL()
 		{
-			context.Response.StatusCode = 200;
 			return "{\"result\":\"" + CreateMySQLTable(cumulus.MySqlFunction.MonthlyTable.CreateCommand) + "\"}";
 		}
 
 		//public string CreateDayfileSQL(HttpListenerContext context)
-		public string CreateDayfileSQL(IHttpContext context)
+		public string CreateDayfileSQL()
 		{
-			context.Response.StatusCode = 200;
 			return "{\"result\":\"" + CreateMySQLTable(cumulus.MySqlFunction.DayfileTable.CreateCommand) + "\"}";
 		}
 
 		//public string CreateRealtimeSQL(HttpListenerContext context)
-		public string CreateRealtimeSQL(IHttpContext context)
+		public string CreateRealtimeSQL()
 		{
-			context.Response.StatusCode = 200;
 			return "{\"result\":\"" + CreateMySQLTable(cumulus.MySqlFunction.RealtimeTable.CreateCommand) + "\"}";
 		}
 
-		public string UpdateMonthlySQL(IHttpContext context)
+		public string UpdateMonthlySQL()
 		{
 			return "{\"result\":\"" + UpdateMySQLTable(cumulus.MySqlFunction.MonthlyTable) + "\"}";
 		}
 
-		public string UpdateDayfileSQL(IHttpContext context)
+		public string UpdateDayfileSQL()
 		{
 			return "{\"result\":\"" + UpdateMySQLTable(cumulus.MySqlFunction.DayfileTable) + "\"}";
 		}
 
-		public string UpdateRealtimeSQL(IHttpContext context)
+		public string UpdateRealtimeSQL()
 		{
 			return "{\"result\":\"" + UpdateMySQLTable(cumulus.MySqlFunction.RealtimeTable) + "\"}";
 		}

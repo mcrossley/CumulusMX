@@ -393,11 +393,11 @@ namespace CumulusMX
 
 		public bool SynchronisedWebUpdate;
 
-		private List<string> WundList = [];
-		private List<string> WindyList = [];
-		private List<string> PWSList = [];
-		private List<string> WOWList = [];
-		private List<string> OWMList = [];
+		private readonly List<string> WundList = [];
+		private readonly List<string> WindyList = [];
+		private readonly List<string> PWSList = [];
+		private readonly List<string> WOWList = [];
+		private readonly List<string> OWMList = [];
 
 		internal string rawStationDataLogFile = "MXdiags/stationdata.log";
 		internal string rawExtraDataLogFile = "MXdiags/extradata.log";
@@ -3468,7 +3468,7 @@ namespace CumulusMX
 			ProgramOptions.DataStoppedMins = ini.GetValue("Program", "DataStoppedMins", 10);
 			ProgramOptions.Culture.RemoveSpaceFromDateSeparator = ini.GetValue("Culture", "RemoveSpaceFromDateSeparator", false);
 			// if the culture names match, then we apply the new date verSeparator if change is enabled and it contains a space
-			if (ProgramOptions.Culture.RemoveSpaceFromDateSeparator && CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(" "))
+			if (ProgramOptions.Culture.RemoveSpaceFromDateSeparator && CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Contains(' '))
 			{
 				// change the date separator
 				var dateSep = CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator.Replace(" ", "");
@@ -11400,7 +11400,7 @@ namespace CumulusMX
 
 			if (ftpLog && FtpOptions.Logging)
 			{
-				FtpLoggerMX.LogCritical($"{preamble} - {ex.Message}");
+				FtpLoggerMX.LogCritical("{Preamble} - {Message}", preamble, ex.Message);
 			}
 
 			LogMessage(Utils.ExceptionToString(ex, out message));

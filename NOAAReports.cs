@@ -169,7 +169,7 @@ namespace CumulusMX
 		{
 			var noaats = new DateOnly(year, 1, 1);
 			var reportName = string.Empty;
-			var report = string.Empty;
+			string report;
 			try
 			{
 				reportName = noaats.ToString(cumulus.NOAAconf.YearFile);
@@ -188,7 +188,7 @@ namespace CumulusMX
 		{
 			var noaats = new DateOnly(year, month, 1);
 			var reportName = string.Empty;
-			var report = string.Empty;
+			string report;
 			try
 			{
 				reportName = noaats.ToString(cumulus.NOAAconf.MonthFile);

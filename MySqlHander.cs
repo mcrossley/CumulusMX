@@ -12,7 +12,7 @@ namespace CumulusMX
 {
 	internal class MySqlHander
 	{
-		internal MySqlConnectionStringBuilder ConnSettings = new MySqlConnectionStringBuilder();
+		internal MySqlConnectionStringBuilder ConnSettings = [];
 
 		internal MySqlGeneralSettings Settings = new MySqlGeneralSettings();
 
@@ -475,7 +475,7 @@ namespace CumulusMX
 			values.Append(')');
 
 			string valuesString = values.ToString();
-			List<string> cmds = new List<string>() { valuesString };
+			List<string> cmds = [valuesString];
 
 			if (live)
 			{

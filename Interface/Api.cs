@@ -918,7 +918,7 @@ namespace CumulusMX
 			}
 
 			[Route(HttpVerbs.Get, "/records/thisperiod")]
-			public async Task GetThisPeriodRecordData(string req)
+			public async Task GetThisPeriodRecordData()
 			{
 				Response.ContentType = "application/json";
 
@@ -1291,22 +1291,22 @@ namespace CumulusMX
 							await writer.WriteAsync(mySqlSettings.UpdateConfig(HttpContext));
 							break;
 						case "createmonthlysql.json":
-							await writer.WriteAsync(mySqlSettings.CreateMonthlySQL(HttpContext));
+							await writer.WriteAsync(mySqlSettings.CreateMonthlySQL());
 							break;
 						case "createdayfilesql.json":
-							await writer.WriteAsync(mySqlSettings.CreateDayfileSQL(HttpContext));
+							await writer.WriteAsync(mySqlSettings.CreateDayfileSQL());
 							break;
 						case "createrealtimesql.json":
-							await writer.WriteAsync(mySqlSettings.CreateRealtimeSQL(HttpContext));
+							await writer.WriteAsync(mySqlSettings.CreateRealtimeSQL());
 							break;
 						case "updatemonthlysql.json":
-							await writer.WriteAsync(mySqlSettings.UpdateMonthlySQL(HttpContext));
+							await writer.WriteAsync(mySqlSettings.UpdateMonthlySQL());
 							break;
 						case "updatedayfilesql.json":
-							await writer.WriteAsync(mySqlSettings.UpdateDayfileSQL(HttpContext));
+							await writer.WriteAsync(mySqlSettings.UpdateDayfileSQL());
 							break;
 						case "updaterealtimesql.json":
-							await writer.WriteAsync(mySqlSettings.UpdateRealtimeSQL(HttpContext));
+							await writer.WriteAsync(mySqlSettings.UpdateRealtimeSQL());
 							break;
 						case "updatealarmconfig.json":
 							await writer.WriteAsync(alarmSettings.UpdateSettings(HttpContext));
