@@ -218,9 +218,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				TimeZoneInfo tz = TimeZoneInfo.Local;
-
-				if (cumulus.Use10amInSummer && tz.IsDaylightSavingTime(dat))
+				if (cumulus.Use10amInSummer && TimeZoneInfo.Local.IsDaylightSavingTime(dat))
 				{
 					// Locale is currently on Daylight (summer) time
 					logfiledate = dat.AddHours(-10);
@@ -252,9 +250,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				TimeZoneInfo tz = TimeZoneInfo.Local;
-
-				if (cumulus.Use10amInSummer && tz.IsDaylightSavingTime(dat))
+				if (cumulus.Use10amInSummer && TimeZoneInfo.Local.IsDaylightSavingTime(dat))
 				{
 					// Locale is currently on Daylight (summer) time
 					logfiledate = dat.AddHours(-10);
@@ -283,9 +279,7 @@ namespace CumulusMX
 			}
 			else
 			{
-				TimeZoneInfo tz = TimeZoneInfo.Local;
-
-				if (cumulus.Use10amInSummer && tz.IsDaylightSavingTime(now))
+				if (cumulus.Use10amInSummer && TimeZoneInfo.Local.IsDaylightSavingTime(now))
 				{
 					// Locale is currently on Daylight (summer) time
 					reportDate = now.AddHours(-10);

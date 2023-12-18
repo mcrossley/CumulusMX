@@ -1066,9 +1066,16 @@ namespace CumulusMX
 			TimeZoneInfo localZone = TimeZoneInfo.Local;
 			DateTime now = DateTime.Now;
 
-			LogMessage("Standard time zone name:   " + localZone.StandardName);
-			LogMessage("Daylight saving time name: " + localZone.DaylightName);
-			LogMessage("Daylight saving time? " + localZone.IsDaylightSavingTime(now));
+			LogMessage("Standard time zone name:   " + TimeZoneInfo.Local.StandardName);
+			if (TimeZoneInfo.Local.SupportsDaylightSavingTime)
+			{
+				LogMessage("Daylight saving time name: " + TimeZoneInfo.Local.DaylightName);
+				LogMessage("Daylight saving time? " + TimeZoneInfo.Local.IsDaylightSavingTime(DateTime.Now));
+			}
+			else
+			{
+				LogMessage("Daylight saving time is not available for this TimeZone");
+			}
 
 			LogMessage("Locale date/time format: " + DateTime.Now.ToString("G"));
 
