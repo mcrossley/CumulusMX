@@ -117,6 +117,8 @@ namespace CumulusMX.Stations
 			catch (Exception ex)
 			{
 				cumulus.LogExceptionMessage(ex, "Error closing TCP port");
+				if (socket != null)
+					socket.Dispose();
 			}
 			finally
 			{

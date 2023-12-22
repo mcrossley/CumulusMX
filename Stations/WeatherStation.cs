@@ -8,27 +8,20 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Runtime.Intrinsics.X86;
 using System.Runtime.Serialization.Json;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using System.Web;
 
 using EmbedIO.Utilities;
 
-using FluentFTP.Helpers;
 
 using ServiceStack.Text;
 
-using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 
 using SQLite;
 
-using static System.Collections.Specialized.BitVector32;
-using static CumulusMX.WeatherStation;
 
 using Timer = System.Timers.Timer;
 
@@ -7611,6 +7604,22 @@ namespace CumulusMX
 					cumulus.LogExceptionMessage(ex, "Error writing year.ini file");
 				}
 			}
+		}
+
+		public static string GetIncrementalLogFileData(string fileName, int prevLastLine, out int newLines)
+		{
+			string[] data;
+			if (prevLastLine == 0)
+			{
+				data = File.ReadAllLines(fileName);
+			}
+			else
+			{
+				data = File.ReadLines(fileName).Skip(prevLastLine).ToArray();
+			}
+
+			newLines = data.Length;
+			return string.Join(Environment.NewLine, data) + Environment.NewLine;
 		}
 
 		public void SetDefaultYearlyHighsAndLows()

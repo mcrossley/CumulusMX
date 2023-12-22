@@ -1094,7 +1094,7 @@ namespace CumulusMX
 			var value = double.Parse(txtValue);
 
 			var txtTime = newData[2].Split('=')[1];
-			var time = localeDateTimeStrToDate(txtTime);
+			var time = localeStrToDate(txtTime);
 
 			try
 			{
@@ -1179,7 +1179,7 @@ namespace CumulusMX
 						station.SetAlltime(station.AllTime.HighRain24Hours, value, time);
 						break;
 					case "highMonthlyRain":
-						station.SetAlltime(station.AllTime.MonthlyRain, value, localeMonthYearStrToDate(txtTime));
+						station.SetAlltime(station.AllTime.MonthlyRain, value, time);
 						break;
 					case "longestDryPeriod":
 						station.SetAlltime(station.AllTime.LongestDryPeriod, int.Parse(txtValue), time);
@@ -1219,7 +1219,7 @@ namespace CumulusMX
 			var value = double.Parse(txtValue);
 
 			var txtTime = newData[2].Split('=')[1];
-			var time = localeDateTimeStrToDate(txtTime);
+			var time = localeStrToDate(txtTime);
 
 			try
 			{
@@ -1306,7 +1306,7 @@ namespace CumulusMX
 							station.SetMonthlyAlltime(station.MonthlyRecs[month].HighRain24Hours, value, time);
 							break;
 						case "highMonthlyRain":
-							station.SetMonthlyAlltime(station.MonthlyRecs[month].MonthlyRain, value, localeMonthYearStrToDate(txtTime));
+							station.SetMonthlyAlltime(station.MonthlyRecs[month].MonthlyRain, value, time);
 							break;
 						case "longestDryPeriod":
 							station.SetMonthlyAlltime(station.MonthlyRecs[month].LongestDryPeriod, int.Parse(txtValue), time);
@@ -2515,7 +2515,7 @@ namespace CumulusMX
 			var value = double.Parse(txtValue);
 
 			var txtTime = newData[2].Split('=')[1];
-			var time = localeDateTimeStrToDate(txtTime);
+			var time = localeStrToDate(txtTime);
 
 			try
 			{
@@ -2735,7 +2735,7 @@ namespace CumulusMX
 			var value = double.Parse(txtValue);
 
 			var txtTime = newData[2].Split('=')[1];
-			var time = localeDateTimeStrToDate(txtTime);
+			var time = localeStrToDate(txtTime);
 
 			try
 			{
@@ -2847,8 +2847,7 @@ namespace CumulusMX
 						break;
 					case "highMonthlyRain":
 						station.ThisYear.MonthlyRain.Val = value;
-						// MM/yyyy
-						station.ThisYear.MonthlyRain.Ts = localeMonthYearStrToDate(txtTime);
+						station.ThisYear.MonthlyRain.Ts = time;
 						break;
 					case "longestDryPeriod":
 						station.ThisYear.LongestDryPeriod.Val = int.Parse(txtValue);
@@ -3079,21 +3078,29 @@ namespace CumulusMX
 			}
 		}
 
-		private static DateTime localeDateTimeStrToDate(string dt)
+		private static DateTime localeStrToDate(string dt)
 		{
-			dt = dt.Replace('+', ' ');
+			// formats: "dd/MM/yyyy", "dd/MM/yyyy hh:mm", "MMM yyyy" - the space will be encoded as +, so "Dec+2023"
 
-			// let this throw on invalid input
-			return DateTime.Parse(dt);
+			if (dt.Contains('+'))
+			{  // could be "dd/MM/yyyy hh:mm" or "MMM yyyy"
+				dt = dt.Replace('+', ' ');
+
+				if (dt.Contains(':'))
+				{   // full date/time - "dd/MM/yyyy hh:mm"
+					return DateTime.Parse(dt);
+				}
+				else
+				{   // short month date
+					return DateTime.Parse("01 " + dt);
+				}
+			}
+			else
+			{   // must be "dd/MM/yyyy"
+				return DateTime.Parse(dt);
+			}
 		}
 
-		private static DateTime localeMonthYearStrToDate(string dt)
-		{
-			dt = dt.Replace('+', ' ');
-
-			// let this throw on invalid input
-			return DateTime.ParseExact("01 " + dt, "dd MMM yyyy", CultureInfo.CurrentCulture);
-		}
 
 		private class DbDateTimeDouble
 		{

@@ -562,7 +562,7 @@ namespace CumulusMX
 
 					// replace the edited line
 					var orgLine = lines[lineNum];
-					var newLine = String.Join(",", newData.data[0]);
+					var newLine = string.Join(",", newData.data[0]);
 
 					lines[lineNum] = newLine;
 
@@ -594,7 +594,7 @@ namespace CumulusMX
 				{
 					// Only the monthly log file is stored in MySQL
 					var updateStr = "";
-					//var newLine = String.Join(",", newData.data[0]);
+					//var newLine = string.Join(",", newData.data[0]);
 
 					try
 					{
@@ -925,7 +925,7 @@ namespace CumulusMX
 					var orgLine = lines[lineNum];
 					var orgFields = orgLine.Split(',');
 
-					var newLine = String.Join(',', newData.data[0]) + ',' + String.Join(',', orgFields[12..]);
+					var newLine = string.Join(',', newData.data[0]) + ',' + string.Join(',', orgFields[12..]);
 
 					lines[lineNum] = newLine;
 
@@ -1021,7 +1021,7 @@ namespace CumulusMX
 						var orgLine = lines[lineNum];
 						var orgFields = orgLine.Split(',');
 
-						var newLine = String.Join(',', orgFields[0..2]) + ',' + ",,,,,,,,," + ',' + String.Join(',', orgFields[12..]);
+						var newLine = string.Join(',', orgFields[0..2]) + ',' + ",,,,,,,,," + ',' + string.Join(',', orgFields[12..]);
 
 						lines[lineNum] = newLine;
 
@@ -1217,7 +1217,7 @@ namespace CumulusMX
 					var orgLine = lines[lineNum];
 					var orgFields = orgLine.Split(',');
 
-					var newLine = String.Join(',', orgFields[0..12]) + ',' + String.Join(',', newData.data[0][2..]) + ',' + String.Join(',', orgFields[22..]);
+					var newLine = string.Join(',', orgFields[0..12]) + ',' + string.Join(',', newData.data[0][2..]) + ',' + string.Join(',', orgFields[22..]);
 
 					lines[lineNum] = newLine;
 
@@ -1312,7 +1312,7 @@ namespace CumulusMX
 						var orgFields = orgLine.Split(',');
 
 						// replace the extra hum fields (12-21) edited line
-						var newLine = String.Join(',', orgFields[0..12]) + ',' + ",,,,,,,,," + ',' + String.Join(',', orgFields[22..]);
+						var newLine = string.Join(',', orgFields[0..12]) + ',' + ",,,,,,,,," + ',' + string.Join(',', orgFields[22..]);
 
 						lines[lineNum] = newLine;
 
@@ -1508,7 +1508,7 @@ namespace CumulusMX
 					var orgLine = lines[lineNum];
 					var orgFields = orgLine.Split(',');
 
-					var newLine = String.Join(',', orgFields[0..22]) + ',' + String.Join(',', newData.data[0][2..]) + ',' + String.Join(',', orgFields[32..]);
+					var newLine = string.Join(',', orgFields[0..22]) + ',' + string.Join(',', newData.data[0][2..]) + ',' + string.Join(',', orgFields[32..]);
 
 					lines[lineNum] = newLine;
 
@@ -1600,7 +1600,7 @@ namespace CumulusMX
 						var orgLine = lines[lineNum];
 						var orgFields = orgLine.Split(',');
 
-						var newLine = String.Join(',', orgFields[0..22]) + ',' + ",,,,,,,,," + ',' + String.Join(',', orgFields[32..]);
+						var newLine = string.Join(',', orgFields[0..22]) + ',' + ",,,,,,,,," + ',' + string.Join(',', orgFields[32..]);
 
 						lines[lineNum] = newLine;
 
@@ -1797,7 +1797,7 @@ namespace CumulusMX
 					var orgLine = lines[lineNum];
 					var orgFields = orgLine.Split(',');
 
-					var newLine = String.Join(',', orgFields[0..76]) + ',' + String.Join(',', newData.data[0][2..]) + ',' + String.Join(',', orgFields[84..]);
+					var newLine = string.Join(',', orgFields[0..76]) + ',' + string.Join(',', newData.data[0][2..]) + ',' + string.Join(',', orgFields[84..]);
 
 					lines[lineNum] = newLine;
 
@@ -1889,7 +1889,7 @@ namespace CumulusMX
 						var orgLine = lines[lineNum];
 						var orgFields = orgLine.Split(',');
 
-						var newLine = String.Join(',', orgFields[0..76]) + ',' + ",,,,,,,,," + ',' + String.Join(',', orgFields[84..]);
+						var newLine = string.Join(',', orgFields[0..76]) + ',' + ",,,,,,,,," + ',' + string.Join(',', orgFields[84..]);
 
 						lines[lineNum] = newLine;
 
@@ -2087,7 +2087,7 @@ namespace CumulusMX
 					var orgLine = lines[lineNum];
 					var orgFields = orgLine.Split(',');
 
-					var newLine = String.Join(',', orgFields[0..32]) + ',' + String.Join(',', newData.data[0][2..5]) + ',' + String.Join(',', orgFields[36..44]) + ',' + String.Join(',', newData.data[0][6..]) + ',' + String.Join(',', orgFields[56..]);
+					var newLine = string.Join(',', orgFields[0..32]) + ',' + string.Join(',', newData.data[0][2..5]) + ',' + string.Join(',', orgFields[36..44]) + ',' + string.Join(',', newData.data[0][6..]) + ',' + string.Join(',', orgFields[56..]);
 
 					lines[lineNum] = newLine;
 
@@ -2179,7 +2179,7 @@ namespace CumulusMX
 						var orgLine = lines[lineNum];
 						var orgFields = orgLine.Split(',');
 
-						var newLine = String.Join(',', orgFields[0..32]) + ',' + ",,," + ',' + String.Join(',', orgFields[36..44]) + ',' + ",,,,,,,,,,," + ',' + String.Join(',', orgFields[56..]);
+						var newLine = string.Join(',', orgFields[0..32]) + ',' + ",,," + ',' + string.Join(',', orgFields[36..44]) + ',' + ",,,,,,,,,,," + ',' + string.Join(',', orgFields[56..]);
 
 						lines[lineNum] = newLine;
 
@@ -2377,7 +2377,7 @@ namespace CumulusMX
 					var orgLine = lines[lineNum];
 					var orgFields = orgLine.Split(',');
 
-					var newLine = String.Join(',', orgFields[0..36]) + ',' + String.Join(',', newData.data[0][2..5]) + ',' + String.Join(',', orgFields[40..56]) + ',' + String.Join(',', newData.data[0][6..]) + ',' + String.Join(',', orgFields[68..]);
+					var newLine = string.Join(',', orgFields[0..36]) + ',' + string.Join(',', newData.data[0][2..5]) + ',' + string.Join(',', orgFields[40..56]) + ',' + string.Join(',', newData.data[0][6..]) + ',' + string.Join(',', orgFields[68..]);
 
 					lines[lineNum] = newLine;
 
@@ -2470,7 +2470,7 @@ namespace CumulusMX
 						var orgLine = lines[lineNum];
 						var orgFields = orgLine.Split(',');
 
-						var newLine = String.Join(',', orgFields[0..36]) + ',' + ",,," + ',' + String.Join(',', orgFields[40..56]) + ',' + ",,,,,,,,,,," + ',' + String.Join(',', orgFields[68..]);
+						var newLine = string.Join(',', orgFields[0..36]) + ',' + ",,," + ',' + string.Join(',', orgFields[40..56]) + ',' + ",,,,,,,,,,," + ',' + string.Join(',', orgFields[68..]);
 
 						lines[lineNum] = newLine;
 
@@ -2667,7 +2667,7 @@ namespace CumulusMX
 					var orgLine = lines[lineNum];
 					var orgFields = orgLine.Split(',');
 
-					var newLine = String.Join(',', orgFields[0..40]) + ',' + String.Join(',', newData.data[0][2..4]) + ',' + String.Join(',', orgFields[42..]);
+					var newLine = string.Join(',', orgFields[0..40]) + ',' + string.Join(',', newData.data[0][2..4]) + ',' + string.Join(',', orgFields[42..]);
 
 					lines[lineNum] = newLine;
 
@@ -2759,7 +2759,7 @@ namespace CumulusMX
 						var orgLine = lines[lineNum];
 						var orgFields = orgLine.Split(',');
 
-						var newLine = String.Join(',', orgFields[0..40]) + ',' + "," + ',' + String.Join(',', orgFields[42..]);
+						var newLine = string.Join(',', orgFields[0..40]) + ',' + "," + ',' + string.Join(',', orgFields[42..]);
 
 						lines[lineNum] = newLine;
 
@@ -2957,7 +2957,7 @@ namespace CumulusMX
 					var orgLine = lines[lineNum];
 					var orgFields = orgLine.Split(',');
 
-					var newLine = String.Join(',', orgFields[0..42]) + ',' + String.Join(',', newData.data[0][2..3]) + ',' + String.Join(',', orgFields[44..]);
+					var newLine = string.Join(',', orgFields[0..42]) + ',' + string.Join(',', newData.data[0][2..3]) + ',' + string.Join(',', orgFields[44..]);
 
 					lines[lineNum] = newLine;
 
@@ -3049,7 +3049,7 @@ namespace CumulusMX
 						var orgLine = lines[lineNum];
 						var orgFields = orgLine.Split(',');
 
-						var newLine = String.Join(',', orgFields[0..42]) + ',' + "," + ',' + String.Join(',', orgFields[44..]);
+						var newLine = string.Join(',', orgFields[0..42]) + ',' + "," + ',' + string.Join(',', orgFields[44..]);
 
 						lines[lineNum] = newLine;
 
@@ -3252,7 +3252,7 @@ namespace CumulusMX
 					var vals = newData.data[0][2] + ',' + newData.data[0][4] + ',' + newData.data[0][6] + ',' + newData.data[0][8];
 					vals += ',' + newData.data[0][1] + ',' + newData.data[0][3] + ',' + newData.data[0][5] + ',' + newData.data[0][7];
 
-					var newLine = String.Join(',', orgFields[0..68]) + ',' + vals + ',' + String.Join(',', orgFields[76..]);
+					var newLine = string.Join(',', orgFields[0..68]) + ',' + vals + ',' + string.Join(',', orgFields[76..]);
 
 					lines[lineNum] = newLine;
 
@@ -3347,7 +3347,7 @@ namespace CumulusMX
 						var orgLine = lines[lineNum];
 						var orgFields = orgLine.Split(',');
 
-						var newLine = String.Join(',', orgFields[0..68]) + ',' + ",,,,,,," + ',' + String.Join(',', orgFields[76..]);
+						var newLine = string.Join(',', orgFields[0..68]) + ',' + ",,,,,,," + ',' + string.Join(',', orgFields[76..]);
 
 						lines[lineNum] = newLine;
 
@@ -3545,7 +3545,7 @@ namespace CumulusMX
 					var orgLine = lines[lineNum];
 					var orgFields = orgLine.Split(',');
 
-					var newLine = String.Join(',', orgFields[0..84]) + ',' + String.Join(',', newData.data[0][2..]);
+					var newLine = string.Join(',', orgFields[0..84]) + ',' + string.Join(',', newData.data[0][2..]);
 
 					lines[lineNum] = newLine;
 
@@ -3637,7 +3637,7 @@ namespace CumulusMX
 						var orgLine = lines[lineNum];
 						var orgFields = orgLine.Split(',');
 
-						var newLine = String.Join(',', orgFields[0..84]) + ',' + ",,,,,,,";
+						var newLine = string.Join(',', orgFields[0..84]) + ',' + ",,,,,,,";
 
 						lines[lineNum] = newLine;
 

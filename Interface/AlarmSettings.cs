@@ -289,7 +289,7 @@ namespace CumulusMX
 			var email = new EmailJson()
 			{
 				fromEmail = cumulus.AlarmFromEmail,
-				destEmail = cumulus.AlarmDestEmail.Join(";"),
+				destEmail = string.Join(";", cumulus.AlarmDestEmail),
 				useHtml = cumulus.AlarmEmailHtml,
 				useBcc = cumulus.AlarmEmailUseBcc
 			};

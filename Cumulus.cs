@@ -189,7 +189,7 @@ namespace CumulusMX
 		}
 		*/
 
-		public struct TExtraFiles
+		public class CExtraFiles
 		{
 			public string local;
 			public string remote;
@@ -199,6 +199,9 @@ namespace CumulusMX
 			public bool endofday;
 			public bool FTP;
 			public bool UTF8;
+			public bool incrementalLogfile;
+			public int logFileLastLineNumber;
+			public string logFileLastFileName;
 		}
 
 		//public Dataunits Units;
@@ -1734,14 +1737,14 @@ namespace CumulusMX
 				{
 					return FtpOptions.PhpIgnoreCertErrors || errors == System.Net.Security.SslPolicyErrors.None;
 				},
-				MaxConnectionsPerServer = 20,
+				MaxConnectionsPerServer = Properties.Settings.Default.PhpMaxConnections,
 				AllowAutoRedirect = false
 			};
 
 			phpUploadHttpClient = new HttpClient(phpUploadHttpHandler)
 			{
 				// 5 second timeout
-				Timeout = new TimeSpan(0, 0, 5)
+				Timeout = TimeSpan.FromSeconds(5)
 			};
 		}
 
@@ -2486,7 +2489,7 @@ namespace CumulusMX
 				remotePath = FtpOptions.Directory.EndsWith('/') ? FtpOptions.Directory : FtpOptions.Directory + "/";
 			}
 
-			LogDebugMessage($"Realtime[{cycle}]: Real time files starting");
+			LogDebugMessage($"Realtime[{cycle}]: Real time upload files starting");
 
 			for (var i = 0; i < RealtimeFiles.Length; i++)
 			{
@@ -2590,78 +2593,115 @@ namespace CumulusMX
 
 			if (FtpOptions.FtpMode == FtpProtocols.PHP)
 			{
-				LogDebugMessage($"Realtime[{cycle}]: Extra Files starting");
+				LogDebugMessage($"RealtimePHP[{cycle}]: Extra Files starting");
 
-				ExtraFiles.Where(x => x.local.Length > 0 && x.remote.Length > 0 && x.realtime && x.FTP)
-					.ToList()
-					.ForEach(item =>
+				for (var i = 0; i < ActiveExtraFiles.Count; i++)
+				{
+					var item = ActiveExtraFiles[i];
+
+					if (!item.realtime)
 					{
-						var uploadfile = item.local;
-						var remotefile = item.remote;
+						continue;
+					}
 
-						uploadfile = GetUploadFilename(uploadfile, DateTime.Now);
+					var uploadfile = GetUploadFilename(item.local, DateTime.Now);
 
-						if (!File.Exists(uploadfile))
+					if (!File.Exists(uploadfile))
+					{
+						LogWarningMessage($"RealtimePHP[{cycle}]: Warning, extra web file not found! - {uploadfile}");
+						return;
+					}
+
+					bool incremental = false;
+					var linesAdded = 0;
+					var data = string.Empty;
+
+					// Is this an incremental log file upload?
+					if (item.incrementalLogfile)
+					{
+						// has the log file rolled over?
+						if (item.logFileLastFileName != uploadfile)
 						{
-							LogWarningMessage($"Realtime[{cycle}]: Warning, extra web file not found! - {uploadfile}");
-							return;
+							ActiveExtraFiles[i].logFileLastFileName = uploadfile;
+							ActiveExtraFiles[i].logFileLastLineNumber = 0;
 						}
 
+						incremental = item.logFileLastLineNumber > 0;
+
+						data = WeatherStation.GetIncrementalLogFileData(uploadfile, item.logFileLastLineNumber, out linesAdded);
+
+						if (linesAdded == 0)
+						{
+							LogDebugMessage($"RealtimePHP[{cycle}]: Extra file: {uploadfile} - No incremental data found");
+							continue;
+						}
+					}
+
+					try
+					{
+#if DEBUG
+						LogDebugMessage($"RealtimePHP[{cycle}]: Extra File {uploadfile} waiting for semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+						uploadCountLimitSemaphoreSlim.Wait(cancellationToken);
+						LogDebugMessage($"RealtimePHP[{cycle}]: Extra File {uploadfile} has a semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+#else
+						uploadCountLimitSemaphoreSlim.Wait(cancellationToken);
+#endif
+					}
+					catch (OperationCanceledException)
+					{
+						return;
+					}
+
+					var remotefile = GetRemoteFileName(item.remote, DateTime.Now);
+					var idx = i;
+
+					Interlocked.Increment(ref taskCount);
+
+					tasklist.Add(Task.Run(async () =>
+					{
 						try
 						{
-#if DEBUG
-							LogDebugMessage($"Realtime[{cycle}]: Extra File {uploadfile} waiting for semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
-							uploadCountLimitSemaphoreSlim.Wait(cancellationToken);
-							LogDebugMessage($"Realtime[{cycle}]: Extra File {uploadfile} has a semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
-#else
-							uploadCountLimitSemaphoreSlim.Wait(cancellationToken);
-#endif
-						}
-						catch (OperationCanceledException)
-						{
-							return;
-						}
+							if (cancellationToken.IsCancellationRequested)
+								return false;
 
-						Interlocked.Increment(ref taskCount);
-
-						tasklist.Add(Task.Run(async () =>
-						{
-							try
+							// all checks OK, file needs to be uploaded
+							// Is this an incremental log file upload?
+							if (item.incrementalLogfile)
 							{
-								if (cancellationToken.IsCancellationRequested)
-									return false;
-
-								remotefile = GetRemoteFileName(remotefile, DateTime.Now);
-
-								// all checks OK, file needs to be uploaded
-								LogDebugMessage($"Realtime[{cycle}]: Uploading extra web file {uploadfile} to {remotefile}");
+								LogDebugMessage($"RealtimePHP[{cycle}]: Uploading extra web incremental file {uploadfile} to {remotefile} ({(incremental ? $"Incrementally - {linesAdded} lines" : "Fully")})");
+								_ = await UploadString(phpUploadHttpClient, incremental, string.Empty, data, remotefile, cycle, item.binary, item.UTF8, true);
+								ActiveExtraFiles[idx].logFileLastLineNumber += linesAdded;
+							}
+							else
+							{
+								LogDebugMessage($"RealtimePHP[{cycle}]: Uploading extra web file {uploadfile} to {remotefile}");
 
 								if (item.process)
 								{
-									var data = await ProcessTemplateFile2StringAsync(uploadfile, false, item.UTF8);
+									var str = await ProcessTemplateFile2StringAsync(uploadfile, false, item.UTF8);
 
-									_ = await UploadString(phpUploadHttpClient, false, string.Empty, data, remotefile, cycle, item.binary, item.UTF8);
+									_ = await UploadString(phpUploadHttpClient, false, string.Empty, str, remotefile, cycle, item.binary, item.UTF8);
 								}
 								else
 								{
 									_ = await UploadFile(phpUploadHttpClient, uploadfile, remotefile, cycle, item.binary, item.UTF8);
 								}
-								// no extra files are incremental for now, so no need to update LastDataTime
 							}
-							finally
-							{
-								uploadCountLimitSemaphoreSlim.Release();
+						}
+						finally
+						{
+							uploadCountLimitSemaphoreSlim.Release();
 #if DEBUG
-								LogDebugMessage($"Realtime[{cycle}]: Extra Web File {uploadfile} released semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
+							LogDebugMessage($"RealtimePHP[{cycle}]: Extra Web File {uploadfile} released semaphore [{uploadCountLimitSemaphoreSlim.CurrentCount}]");
 #endif
-							}
+						}
 
-							// no void return which cannot be tracked
-							return true;
-						}, cancellationToken));
+						// no void return which cannot be tracked
+						return true;
+					}, cancellationToken));
 
-						Interlocked.Increment(ref runningTaskCount);
-					});
+					Interlocked.Increment(ref runningTaskCount);
+				}
 
 				// wait for all the tasks to start
 				while (runningTaskCount < taskCount)
@@ -2677,46 +2717,53 @@ namespace CumulusMX
 				{
 					try
 					{
-						Task.WaitAll([.. tasklist], cancellationToken);
+						// wait on the task to complete, but timeout after 20 seconds
+						if (Task.WaitAll([.. tasklist], TimeSpan.FromSeconds(20)))
+						{
+							LogDebugMessage($"RealtimePHP[{cycle}]: Real time files complete, {tasklist.Count} files uploaded");
+						}
+						else
+						{
+							LogDebugMessage($"RealtimePHP[{cycle}]: Real time files timed out waiting for the uploads to complete");
+						}
 					}
 					catch (Exception ex)
 					{
-						LogExceptionMessage(ex, $"Realtime[{cycle}]: Eror waiting on upload tasks");
+						LogExceptionMessage(ex, $"RealtimePHP[{cycle}]: Eror waiting on upload tasks");
 					}
 				}
-				LogDebugMessage($"Realtime[{cycle}]: Real time files complete, {tasklist.Count} files uploaded");
+
+				LogDebugMessage($"RealtimePHP[{cycle}]: Real time files process end");
 				tasklist.Clear();
+
 				RealtimeFtpInProgress = false;
 			}
 			else
 			{
-				for (int i = 0; i < numextrafiles; i++)
+				foreach (var item in ActiveExtraFiles)
 				{
-					var uploadfile = ExtraFiles[i].local;
-					var remotefile = ExtraFiles[i].remote;
-
-					if ((uploadfile.Length > 0) && (remotefile.Length > 0) && ExtraFiles[i].realtime && ExtraFiles[i].FTP)
+					if (item.realtime && item.FTP)
 					{
-						uploadfile = GetUploadFilename(uploadfile, DateTime.Now);
+						var uploadfile = GetUploadFilename(item.local, DateTime.Now);
 
 						if (File.Exists(uploadfile))
 						{
-							remotefile = GetRemoteFileName(remotefile, DateTime.Now);
+							var remotefile = GetRemoteFileName(item.remote, DateTime.Now);
 
 							// all checks OK, file needs to be uploaded
 							LogFtpMessage("");
-							LogFtpDebugMessage($"Realtime[{cycle}]: Uploading extra web file[{i}] {uploadfile} to {remotefile}");
+							LogFtpDebugMessage($"Realtime[{cycle}]: Uploading extra web file {uploadfile} to {remotefile}");
 
 							string data = string.Empty;
 
-							if (ExtraFiles[i].process)
+							if (item.process)
 							{
-								data = ProcessTemplateFile2String(uploadfile, false, ExtraFiles[i].UTF8);
+								data = ProcessTemplateFile2String(uploadfile, false, item.UTF8);
 							}
 
 							if (FtpOptions.FtpMode == FtpProtocols.SFTP)
 							{
-								if (ExtraFiles[i].process)
+								if (item.process)
 								{
 									using var strm = GenerateStreamFromString(data);
 									UploadStream(RealtimeSSH, remotefile, strm, cycle);
@@ -2730,7 +2777,7 @@ namespace CumulusMX
 
 							if (FtpOptions.FtpMode == FtpProtocols.FTP || FtpOptions.FtpMode == FtpProtocols.FTPS)
 							{
-								if (ExtraFiles[i].process)
+								if (item.process)
 								{
 									using var strm = GenerateStreamFromString(data);
 									UploadStream(RealtimeFTP, remotefile, strm, cycle);
@@ -2743,7 +2790,7 @@ namespace CumulusMX
 						}
 						else
 						{
-							LogWarningMessage($"Realtime[{cycle}]: Warning, extra web file[{i}] not found! - {uploadfile}");
+							LogWarningMessage($"Realtime[{cycle}]: Warning, extra web file not found! - {uploadfile}");
 						}
 					}
 				}
@@ -2772,47 +2819,37 @@ namespace CumulusMX
 				}
 			}
 
-			for (int i = 0; i < numextrafiles; i++)
+			foreach (var item in ActiveExtraFiles)
 			{
-				if (ExtraFiles[i].realtime)
+				if (item.realtime && !item.FTP)
 				{
-					var uploadfile = ExtraFiles[i].local;
-					var remotefile = ExtraFiles[i].remote;
+					var uploadfile = GetUploadFilename(item.local, DateTime.Now);
 
-					if ((uploadfile.Length > 0) && (remotefile.Length > 0))
+					if (File.Exists(uploadfile))
 					{
-						uploadfile = GetUploadFilename(uploadfile, DateTime.Now);
+						var remotefile = GetRemoteFileName(item.remote, DateTime.Now);
 
-						if (File.Exists(uploadfile))
+						// just copy the file
+						try
 						{
-							remotefile = GetRemoteFileName(remotefile, DateTime.Now);
-
-							if (!ExtraFiles[i].FTP)
+							LogDebugMessage($"Realtime[{cycle}]: Copying extra file {uploadfile} to {remotefile}");
+							if (item.process)
 							{
-								// just copy the file
-								try
-								{
-									LogDebugMessage($"Realtime[{cycle}]: Copying extra file[{i}] {uploadfile} to {remotefile}");
-									if (ExtraFiles[i].process)
-									{
-										await ProcessTemplateFile(uploadfile, remotefile, false);
-									}
-									else
-									{
-										await Utils.CopyFileAsync(uploadfile, remotefile);
-									}
-								}
-								catch (Exception ex)
-								{
-									LogExceptionMessage(ex, $"Realtime[{cycle}]: Error copying extra realtime file[{i}] - {uploadfile}");
-								}
+								await ProcessTemplateFile(uploadfile, remotefile, false);
+							}
+							else
+							{
+								await Utils.CopyFileAsync(uploadfile, remotefile);
 							}
 						}
-						else
+						catch (Exception ex)
 						{
-							LogWarningMessage($"Realtime[{cycle}]: Extra realtime web file[{i}] not found - {uploadfile}");
+							LogExceptionMessage(ex, $"Realtime[{cycle}]: Error copying extra realtime file - {uploadfile}");
 						}
-
+					}
+					else
+					{
+						LogWarningMessage($"Realtime[{cycle}]: Extra realtime web file not found - {uploadfile}");
 					}
 				}
 			}
@@ -3730,14 +3767,14 @@ namespace CumulusMX
 			}
 
 
-			LocationName = ini.GetValue("Station", "LocName", "");
-			LocationDesc = ini.GetValue("Station", "LocDesc", "");
+			LocationName = ini.GetValue("Station", "LocName", string.Empty);
+			LocationDesc = ini.GetValue("Station", "LocDesc", string.Empty);
 
 			YTDrain = ini.GetValue("Station", "YTDrain", 0.0);
 			YTDrainyear = ini.GetValue("Station", "YTDrainyear", 0);
 
 			EwOptions.Interval = ini.GetValue("Station", "EWInterval", 1.0);
-			EwOptions.Filename = ini.GetValue("Station", "EWFile", "");
+			EwOptions.Filename = ini.GetValue("Station", "EWFile", string.Empty);
 			//EWallowFF = ini.GetValue("Station", "EWFF", false);
 			//EWdisablecheckinit = ini.GetValue("Station", "EWdisablecheckinit", false);
 			//EWduplicatecheck = ini.GetValue("Station", "EWduplicatecheck", true);
@@ -4010,8 +4047,8 @@ namespace CumulusMX
 				AirLinkIsNode = ini.GetValue("AirLink", "In-IsNode", false) || ini.GetValue("AirLink", "Out-IsNode", false);
 				recreateRequired = true;
 			}
-			AirLinkApiKey = ini.GetValue("AirLink", "WLv2ApiKey", "");
-			AirLinkApiSecret = ini.GetValue("AirLink", "WLv2ApiSecret", "");
+			AirLinkApiKey = ini.GetValue("AirLink", "WLv2ApiKey", string.Empty);
+			AirLinkApiSecret = ini.GetValue("AirLink", "WLv2ApiSecret", string.Empty);
 			AirLinkAutoUpdateIpAddress = ini.GetValue("AirLink", "AutoUpdateIpAddress", true);
 			AirLinkInEnabled = ini.GetValue("AirLink", "In-Enabled", false);
 			AirLinkInIPAddr = ini.GetValue("AirLink", "In-IPAddress", "0.0.0.0");
@@ -4021,7 +4058,7 @@ namespace CumulusMX
 				AirLinkInStationId = WllStationId;
 				rewriteRequired = true;
 			}
-			AirLinkInHostName = ini.GetValue("AirLink", "In-Hostname", "");
+			AirLinkInHostName = ini.GetValue("AirLink", "In-Hostname", string.Empty);
 
 			AirLinkOutEnabled = ini.GetValue("AirLink", "Out-Enabled", false);
 			AirLinkOutIPAddr = ini.GetValue("AirLink", "Out-IPAddress", "0.0.0.0");
@@ -4031,16 +4068,16 @@ namespace CumulusMX
 				AirLinkOutStationId = WllStationId;
 				rewriteRequired = true;
 			}
-			AirLinkOutHostName = ini.GetValue("AirLink", "Out-Hostname", "");
+			AirLinkOutHostName = ini.GetValue("AirLink", "Out-Hostname", string.Empty);
 
 			airQualityIndex = ini.GetValue("AirLink", "AQIformula", 0);
 
 			FtpOptions.Enabled = ini.GetValue("FTP site", "Enabled", true);
-			FtpOptions.Hostname = ini.GetValue("FTP site", "Host", "");
+			FtpOptions.Hostname = ini.GetValue("FTP site", "Host", string.Empty);
 			FtpOptions.Port = ini.GetValue("FTP site", "Port", 21);
-			FtpOptions.Username = ini.GetValue("FTP site", "Username", "");
-			FtpOptions.Password = ini.GetValue("FTP site", "Password", "");
-			FtpOptions.Directory = ini.GetValue("FTP site", "Directory", "");
+			FtpOptions.Username = ini.GetValue("FTP site", "Username", string.Empty);
+			FtpOptions.Password = ini.GetValue("FTP site", "Password", string.Empty);
+			FtpOptions.Directory = ini.GetValue("FTP site", "Directory", string.Empty);
 			FtpOptions.FtpMode = (FtpProtocols)ini.GetValue("FTP site", "Sslftp", 0);
 			if (FtpOptions.Enabled && FtpOptions.Hostname == "" && FtpOptions.FtpMode != FtpProtocols.PHP)
 			{
@@ -4060,7 +4097,7 @@ namespace CumulusMX
 				LogWarningMessage($"Error, invalid SshFtpAuthentication value in Cumulus.ini [{FtpOptions.SshAuthen}], defaulting to Password.");
 				rewriteRequired = true;
 			}
-			FtpOptions.SshPskFile = ini.GetValue("FTP site", "SshFtpPskFile", "");
+			FtpOptions.SshPskFile = ini.GetValue("FTP site", "SshFtpPskFile", string.Empty);
 			if ((FtpOptions.SshAuthen == "psk" || FtpOptions.SshAuthen == "password_psk") && (string.IsNullOrEmpty(FtpOptions.SshPskFile) || !File.Exists(FtpOptions.SshPskFile)))
 			{
 				LogErrorMessage($"Error, file name specified by SshFtpPskFile value in Cumulus.ini does not exist [{FtpOptions.SshPskFile}].");
@@ -4076,7 +4113,7 @@ namespace CumulusMX
 			// Local Copy Options
 			FtpOptions.LocalCopyEnabled = ini.GetValue("FTP site", "EnableLocalCopy", false);
 			//FtpOptions.LocalCopyRealtimeEnabled = ini.GetValue("FTP site", "EnableRealtimeLocalCopy", false);
-			FtpOptions.LocalCopyFolder = ini.GetValue("FTP site", "LocalCopyFolder", "");
+			FtpOptions.LocalCopyFolder = ini.GetValue("FTP site", "LocalCopyFolder", string.Empty);
 			var sep1 = Path.DirectorySeparatorChar.ToString();
 			var sep2 = Path.AltDirectorySeparatorChar.ToString();
 			if (FtpOptions.LocalCopyFolder.Length > 1 && !(FtpOptions.LocalCopyFolder.EndsWith(sep1) || FtpOptions.LocalCopyFolder.EndsWith(sep2)))
@@ -4086,8 +4123,8 @@ namespace CumulusMX
 			}
 
 			// PHP upload options
-			FtpOptions.PhpUrl = ini.GetValue("FTP site", "PHP-URL", "");
-			FtpOptions.PhpSecret = ini.GetValue("FTP site", "PHP-Secret", "");
+			FtpOptions.PhpUrl = ini.GetValue("FTP site", "PHP-URL", string.Empty);
+			FtpOptions.PhpSecret = ini.GetValue("FTP site", "PHP-Secret", string.Empty);
 			if (FtpOptions.PhpSecret == string.Empty)
 			{
 				FtpOptions.PhpSecret = Guid.NewGuid().ToString();
@@ -4186,22 +4223,42 @@ namespace CumulusMX
 
 			for (int i = 0; i < numextrafiles; i++)
 			{
-				ExtraFiles[i].local = ini.GetValue("FTP site", "ExtraLocal" + i, "");
-				ExtraFiles[i].remote = ini.GetValue("FTP site", "ExtraRemote" + i, "");
+				ExtraFiles[i] = new CExtraFiles();
+				ExtraFiles[i].local = ini.GetValue("FTP site", "ExtraLocal" + i, string.Empty);
+				ExtraFiles[i].remote = ini.GetValue("FTP site", "ExtraRemote" + i, string.Empty);
 				ExtraFiles[i].process = ini.GetValue("FTP site", "ExtraProcess" + i, false);
 				ExtraFiles[i].binary = ini.GetValue("FTP site", "ExtraBinary" + i, false);
 				ExtraFiles[i].realtime = ini.GetValue("FTP site", "ExtraRealtime" + i, false);
 				ExtraFiles[i].FTP = ini.GetValue("FTP site", "ExtraFTP" + i, false);
 				ExtraFiles[i].UTF8 = ini.GetValue("FTP site", "ExtraUTF" + i, false);
 				ExtraFiles[i].endofday = ini.GetValue("FTP site", "ExtraEOD" + i, false);
+				ExtraFiles[i].incrementalLogfile = ini.GetValue("FTP site", "ExtraIncLogFile" + i, false);
+
+				if (ExtraFiles[i].local != string.Empty && ExtraFiles[i].remote != string.Empty)
+				{
+					ActiveExtraFiles.Add(new CExtraFiles
+					{
+						local = ExtraFiles[i].local,
+						remote = ExtraFiles[i].remote,
+						process = ExtraFiles[i].process,
+						binary = ExtraFiles[i].binary,
+						realtime = ExtraFiles[i].realtime,
+						FTP = ExtraFiles[i].FTP,
+						UTF8 = ExtraFiles[i].UTF8,
+						endofday = ExtraFiles[i].endofday,
+						incrementalLogfile = ExtraFiles[i].incrementalLogfile,
+						logFileLastFileName = string.Empty,
+						logFileLastLineNumber = 0
+					});
+				}
 			}
 
-			ExternalProgram = ini.GetValue("FTP site", "ExternalProgram", "");
-			RealtimeProgram = ini.GetValue("FTP site", "RealtimeProgram", "");
-			DailyProgram = ini.GetValue("FTP site", "DailyProgram", "");
-			ExternalParams = ini.GetValue("FTP site", "ExternalParams", "");
-			RealtimeParams = ini.GetValue("FTP site", "RealtimeParams", "");
-			DailyParams = ini.GetValue("FTP site", "DailyParams", "");
+			ExternalProgram = ini.GetValue("FTP site", "ExternalProgram", string.Empty);
+			RealtimeProgram = ini.GetValue("FTP site", "RealtimeProgram", string.Empty);
+			DailyProgram = ini.GetValue("FTP site", "DailyProgram", string.Empty);
+			ExternalParams = ini.GetValue("FTP site", "ExternalParams", string.Empty);
+			RealtimeParams = ini.GetValue("FTP site", "RealtimeParams", string.Empty);
+			DailyParams = ini.GetValue("FTP site", "DailyParams", string.Empty);
 
 			ForumURL = ini.GetValue("Web Site", "ForumURL", ForumDefault);
 			WebcamURL = ini.GetValue("Web Site", "WebcamURL", WebcamDefault);
@@ -5704,7 +5761,7 @@ namespace CumulusMX
 					ini.DeleteValue("FTP site", "ExtraFTP" + i);
 					ini.DeleteValue("FTP site", "ExtraUTF" + i);
 					ini.DeleteValue("FTP site", "ExtraEOD" + i);
-
+					ini.DeleteValue("FTP site", "ExtraIncLogFile" + i);
 				}
 				else
 				{
@@ -5716,6 +5773,7 @@ namespace CumulusMX
 					ini.SetValue("FTP site", "ExtraFTP" + i, ExtraFiles[i].FTP);
 					ini.SetValue("FTP site", "ExtraUTF" + i, ExtraFiles[i].UTF8);
 					ini.SetValue("FTP site", "ExtraEOD" + i, ExtraFiles[i].endofday);
+					ini.SetValue("FTP site", "ExtraIncLogFile" + i, ExtraFiles[i].incrementalLogfile);
 				}
 			}
 
@@ -6073,7 +6131,7 @@ namespace CumulusMX
 			ini.SetValue("Alarms", "FtpAlarmActionParams", FtpAlarm.ActionParams);
 
 			ini.SetValue("Alarms", "FromEmail", AlarmFromEmail);
-			ini.SetValue("Alarms", "DestEmail", AlarmDestEmail.Join(";"));
+			ini.SetValue("Alarms", "DestEmail", string.Join(";", AlarmDestEmail));
 			ini.SetValue("Alarms", "UseHTML", AlarmEmailHtml);
 			ini.SetValue("Alarms", "UseBCC", AlarmEmailUseBcc);
 
@@ -6947,7 +7005,8 @@ namespace CumulusMX
 
 		public string ExternalProgram { get; set; }
 
-		public TExtraFiles[] ExtraFiles = new TExtraFiles[numextrafiles];
+		public CExtraFiles[] ExtraFiles = new CExtraFiles[numextrafiles];
+		public List<CExtraFiles> ActiveExtraFiles = new List<CExtraFiles>();
 
 		public HttpFileProps[] HttpFilesConfig = new HttpFileProps[10];
 
@@ -9013,46 +9072,41 @@ namespace CumulusMX
 				LogDebugMessage("Interval: Done creating graph data files");
 
 				LogDebugMessage("Interval: Creating extra files");
+
 				// handle any extra files
-				for (int i = 0; i < numextrafiles; i++)
+				foreach (var item in ActiveExtraFiles)
 				{
-					if (!ExtraFiles[i].realtime && !ExtraFiles[i].endofday)
+					if (item.realtime && !item.endofday && !item.FTP)
 					{
-						var uploadfile = ExtraFiles[i].local;
-						var remotefile = ExtraFiles[i].remote;
+						var uploadfile = GetUploadFilename(item.local, DateTime.Now);
 
-						if ((uploadfile.Length > 0) && (remotefile.Length > 0) && !ExtraFiles[i].FTP)
+						if (File.Exists(uploadfile))
 						{
-							uploadfile = GetUploadFilename(uploadfile, DateTime.Now);
+							var remotefile = GetRemoteFileName(item.remote, DateTime.Now);
 
-							if (File.Exists(uploadfile))
+							LogDebugMessage($"Interval: Copying extra file {uploadfile} to {remotefile}");
+							try
 							{
-								remotefile = GetRemoteFileName(remotefile, DateTime.Now);
-
-								LogDebugMessage($"Interval: Copying extra file[{i}] {uploadfile} to {remotefile}");
-								try
+								if (item.process)
 								{
-									if (ExtraFiles[i].process)
-									{
-										var data = ProcessTemplateFile2String(uploadfile, false, ExtraFiles[i].UTF8);
-										File.WriteAllText(remotefile, data);
-									}
-									else
-									{
-										// just copy the file
-										File.Copy(uploadfile, remotefile, true);
-									}
+									var data = ProcessTemplateFile2String(uploadfile, false, item.UTF8);
+									File.WriteAllText(remotefile, data);
 								}
-								catch (Exception ex)
+								else
 								{
-									LogWarningMessage($"Interval: Error copying extra file[{i}]: " + ex.Message);
+									// just copy the file
+									File.Copy(uploadfile, remotefile, true);
 								}
-								//LogDebugMessage("Finished copying extra file " + uploadfile);
 							}
-							else
+							catch (Exception ex)
 							{
-								LogWarningMessage($"Interval: Warning, extra web file[{i}] not found - {uploadfile}");
+								LogWarningMessage($"Interval: Error copying extra file: " + ex.Message);
 							}
+							//LogDebugMessage("Finished copying extra file " + uploadfile);
+						}
+						else
+						{
+							LogWarningMessage($"Interval: Warning, extra web file not found - {uploadfile}");
 						}
 					}
 				}
@@ -9776,30 +9830,24 @@ namespace CumulusMX
 						}
 
 						// Extra files
-						for (int i = 0; i < numextrafiles; i++)
+						foreach (var item in ActiveExtraFiles)
 						{
-							var uploadfile = ExtraFiles[i].local;
-							var remotefile = ExtraFiles[i].remote;
-
-							if ((uploadfile.Length > 0) &&
-								(remotefile.Length > 0) &&
-								!ExtraFiles[i].realtime &&
-								(!ExtraFiles[i].endofday || EODfilesNeedFTP == ExtraFiles[i].endofday) && // Either, it's not flagged as an EOD file, OR: It is flagged as EOD and EOD FTP is required
-								ExtraFiles[i].FTP)
+							if (!item.realtime && item.FTP &&
+								(!item.endofday || EODfilesNeedFTP == item.endofday) // Either: It's not flagged as an EOD file, OR: It is flagged as EOD and EOD FTP is required
+							)
 							{
 								// For EOD files, we want the previous days log files since it is now just past the day roll-over time. Makes a difference on month roll-over
-								var logDay = ExtraFiles[i].endofday ? DateTime.Now.AddDays(-1) : DateTime.Now;
-
-								uploadfile = GetUploadFilename(uploadfile, logDay);
+								var logDay = item.endofday ? DateTime.Now.AddDays(-1) : DateTime.Now;
+								var uploadfile = GetUploadFilename(item.local, logDay);
 
 								if (File.Exists(uploadfile))
 								{
 									LogFtpDebugMessage("FTP[Int]: Uploading Extra file: " + uploadfile);
 
-									remotefile = GetRemoteFileName(remotefile, logDay);
+									var remotefile = GetRemoteFileName(item.remote, logDay);
 
 									// all checks OK, file needs to be uploaded
-									if (ExtraFiles[i].process)
+									if (item.process)
 									{
 										// we've already processed the file
 										uploadfile += "tmp";
@@ -9811,12 +9859,12 @@ namespace CumulusMX
 									}
 									catch (Exception e)
 									{
-										LogExceptionMessage(e, $"SFTP[Int]: Error uploading Extra web file #{i} [{uploadfile}]", true);
+										LogExceptionMessage(e, $"SFTP[Int]: Error uploading Extra web file [{uploadfile}]", true);
 									}
 								}
 								else
 								{
-									LogFtpMessage($"SFTP[Int]: Extra web file #{i} [{uploadfile}] not found!");
+									LogFtpMessage($"SFTP[Int]: Extra web file [{uploadfile}] not found!");
 								}
 							}
 						}
@@ -10030,30 +10078,24 @@ namespace CumulusMX
 						}
 
 						// Extra files
-						for (int i = 0; i < numextrafiles; i++)
+						foreach (var item in ActiveExtraFiles)
 						{
-							var uploadfile = ExtraFiles[i].local;
-							var remotefile = ExtraFiles[i].remote;
-
-							if ((uploadfile.Length > 0) &&
-								(remotefile.Length > 0) &&
-								!ExtraFiles[i].realtime &&
-								(EODfilesNeedFTP || (EODfilesNeedFTP == ExtraFiles[i].endofday)) &&
-								ExtraFiles[i].FTP)
+							if (!item.realtime && item.FTP &&
+								(EODfilesNeedFTP || (EODfilesNeedFTP == item.endofday))
+							)
 							{
 								// For EOD files, we want the previous days log files since it is now just past the day roll-over time. Makes a difference on month roll-over
-								var logDay = ExtraFiles[i].endofday ? DateTime.Now.AddDays(-1) : DateTime.Now;
-
-								uploadfile = GetUploadFilename(uploadfile, logDay);
+								var logDay = item.endofday ? DateTime.Now.AddDays(-1) : DateTime.Now;
+								var uploadfile = GetUploadFilename(item.local, logDay);
 
 								if (File.Exists(uploadfile))
 								{
-									remotefile = GetRemoteFileName(remotefile, logDay);
+									var remotefile = GetRemoteFileName(item.remote, logDay);
 
 									LogFtpDebugMessage("FTP[Int]: Uploading Extra files");
 
 									// all checks OK, file needs to be uploaded
-									if (ExtraFiles[i].process)
+									if (item.process)
 									{
 										// we've already processed the file
 										uploadfile += "tmp";
@@ -10070,7 +10112,7 @@ namespace CumulusMX
 								}
 								else
 								{
-									LogFtpMessage("FTP[Int]: Extra web file #" + i + " [" + uploadfile + "] not found!");
+									LogFtpMessage("FTP[Int]: Extra web file [" + uploadfile + "] not found!");
 								}
 							}
 						}
@@ -10263,24 +10305,55 @@ namespace CumulusMX
 				// Extra files
 				LogDebugMessage("PHP[Int]: Extra Files upload starting");
 
-				ExtraFiles
-				.Where(x =>
-					x.local.Length > 0 &&
-					x.remote.Length > 0 &&
-					!x.realtime &&
-					(EODfilesNeedFTP || (EODfilesNeedFTP == x.endofday)) &&
-					x.FTP)
-				.ToList()
-				.ForEach(item =>
+				for (var i = 0; i < ActiveExtraFiles.Count; i++)
 				{
+					var item = ExtraFiles[i];
+
+					if (!item.FTP || item.realtime || (item.endofday && !EODfilesNeedFTP))
+					{
+						continue;
+					}
+
 					Interlocked.Increment(ref taskCount);
-					var uploadfile = item.local;
-					var remotefile = item.remote;
+
+					var data = string.Empty;
+					bool incremental = false;
+					var linesAdded = 0;
+					var idx = i;
+
+					// For EOD files, we want the previous days log files since it is now just past the day roll-over time. Makes a difference on month roll-over
+					var logDay = item.endofday ? DateTime.Now.AddDays(-1) : DateTime.Now;
+
+					var uploadfile = GetUploadFilename(item.local, logDay);
+					var remotefile = GetRemoteFileName(item.remote, logDay);
+
 					if (!File.Exists(uploadfile))
 					{
 						LogWarningMessage($"PHP[Int]: Extra web file - {uploadfile} - not found!");
 						return;
 					}
+
+					// Is this an incremental log file upload?
+					if (item.incrementalLogfile)
+					{
+						// has the log file rolled over?
+						if (item.logFileLastFileName != uploadfile)
+						{
+							ActiveExtraFiles[i].logFileLastFileName = uploadfile;
+							ActiveExtraFiles[i].logFileLastLineNumber = 0;
+						}
+
+						incremental = item.logFileLastLineNumber > 0;
+
+						data = WeatherStation.GetIncrementalLogFileData(uploadfile, item.logFileLastLineNumber, out linesAdded);
+
+						if (linesAdded == 0)
+						{
+							LogDebugMessage($"PHP[Int]: Extra file: {uploadfile} - No incremental data found");
+							continue;
+						}
+					}
+
 					try
 					{
 #if DEBUG
@@ -10295,29 +10368,37 @@ namespace CumulusMX
 					{
 						return;
 					}
+
 					tasklist.Add(Task.Run(async () =>
 					{
 						try
 						{
 							if (cancellationToken.IsCancellationRequested)
 								return false;
-							// For EOD files, we want the previous days log files since it is now just past the day roll-over time. Makes a difference on month roll-over
-							var logDay = item.endofday ? DateTime.Now.AddDays(-1) : DateTime.Now;
-							uploadfile = GetUploadFilename(uploadfile, logDay);
-							remotefile = GetRemoteFileName(remotefile, logDay);
-							// all checks OK, file needs to be uploaded
-							if (item.process)
-							{
-								LogDebugMessage($"PHP[Int]: Uploading Extra file: {uploadfile} to: {remotefile} (Processed)");
 
-								var data = await ProcessTemplateFile2StringAsync(uploadfile, false, item.UTF8);
-								_ = await UploadString(phpUploadHttpClient, false, string.Empty, data, remotefile, -1, false, item.UTF8);
+							// all checks OK, file needs to be uploaded
+							// Is this an incremental log file upload?
+							if (item.incrementalLogfile)
+							{
+								LogDebugMessage($"PHP[Int]: Uploading extra web incremental file {uploadfile} to {remotefile} ({(incremental ? $"Incrementally - {linesAdded} lines" : "Fully")})");
+								_ = await UploadString(phpUploadHttpClient, incremental, string.Empty, data, remotefile, -1, item.binary, item.UTF8, true);
+								ActiveExtraFiles[idx].logFileLastLineNumber += linesAdded;
 							}
 							else
 							{
-								LogDebugMessage($"PHP[Int]: Uploading Extra file: {uploadfile} to: {remotefile}");
+								if (item.process)
+								{
+									LogDebugMessage($"PHP[Int]: Uploading Extra file: {uploadfile} to: {remotefile} (Processed)");
 
-								_ = await UploadFile(phpUploadHttpClient, uploadfile, remotefile, -1, false, item.UTF8);
+									var str = await ProcessTemplateFile2StringAsync(uploadfile, false, item.UTF8);
+									_ = await UploadString(phpUploadHttpClient, false, string.Empty, str, remotefile, -1, false, item.UTF8);
+								}
+								else
+								{
+									LogDebugMessage($"PHP[Int]: Uploading Extra file: {uploadfile} to: {remotefile}");
+
+									_ = await UploadFile(phpUploadHttpClient, uploadfile, remotefile, -1, false, item.UTF8);
+								}
 							}
 						}
 						catch (Exception ex) when (ex is not TaskCanceledException)
@@ -10339,7 +10420,7 @@ namespace CumulusMX
 					}, cancellationToken));
 
 					Interlocked.Increment(ref runningTaskCount);
-				});
+				}
 
 				// wait for all the extra files to start
 				//while (runningTaskCount < taskCount)
@@ -10678,7 +10759,15 @@ namespace CumulusMX
 				{
 					try
 					{
-						Task.WaitAll([.. tasklist], cancellationToken);
+						// wait for all the tasks to complete, or timeout
+						if (Task.WaitAll(tasklist.ToArray(), TimeSpan.FromSeconds(30)))
+						{
+							LogDebugMessage($"PHP[Int]: Upload process complete, {tasklist.Count} files processed");
+						}
+						else
+						{
+							LogErrorMessage("PHP[Int]: Upload process complete timed out waiting for tasks to complete");
+						}
 					}
 					catch (Exception ex)
 					{
@@ -10695,18 +10784,16 @@ namespace CumulusMX
 					return;
 				}
 
-				LogDebugMessage($"PHP[Int]: Upload process complete, {tasklist.Count} files processed");
+				LogDebugMessage($"PHP[Int]: Upload process complete");
 				tasklist.Clear();
 
 				return;
 			}
+		}
 
-			LogDebugMessage("PHP[Int]: Upload process complete");
-	}
-
-	// Return True if the connection still exists
-	// Return False if the connection is disposed, null, or not connected
-	private bool UploadFile(FtpClient conn, string localfile, string remotefile, int cycle = -1)
+		// Return True if the connection still exists
+		// Return False if the connection is disposed, null, or not connected
+		private bool UploadFile(FtpClient conn, string localfile, string remotefile, int cycle = -1)
 		{
 			string cycleStr = cycle >= 0 ? cycle.ToString() : "Int";
 
@@ -11084,62 +11171,78 @@ namespace CumulusMX
 		// Return False if the upload failed
 		private async Task<bool> UploadFile(HttpClient httpclient, string localfile, string remotefile, int cycle = -1, bool binary = false, bool utf8 = true)
 		{
-			string cycleStr = cycle >= 0 ? cycle.ToString() : "Int";
+			var prefix = cycle >= 0 ? $"RealtimePHP[{cycle}]" : "PHP[Int]";
 
-			//return true;
-
-			try
+			if (!File.Exists(localfile))
 			{
-				if (!File.Exists(localfile))
-				{
-					LogMessage($"PHP[{cycleStr}]: Error! Local file not found, aborting upload: {localfile}");
+				LogWarningMessage($"{prefix}: Error! Local file not found, aborting upload: {localfile}");
 
-					FtpAlarm.LastMessage = $"Error! Local file not found, aborting upload: {localfile}";
-					FtpAlarm.Triggered = true;
-
-					return false;
-				}
-
-				var encoding = utf8 ? new UTF8Encoding(false) : Encoding.GetEncoding("iso-8859-1");
-
-				string data;
-				if (binary)
-				{
-					// change binary files to base64 string
-					data = Convert.ToBase64String(await Utils.ReadAllBytesAsync(localfile));
-				}
-				else
-				{
-					data = await Utils.ReadAllTextAsync(localfile, encoding);
-				}
-
-				return await UploadString(httpclient, false, string.Empty, data, remotefile, cycle, binary, utf8);
-			}
-			catch (Exception ex)
-			{
-				LogDebugMessage($"PHP[{cycleStr}]: Error - {ex.Message}");
-
-				FtpAlarm.LastMessage = $" Error - {ex.Message}";
+				FtpAlarm.LastMessage = $"Error! Local file not found, aborting upload: {localfile}";
 				FtpAlarm.Triggered = true;
 
 				return false;
 			}
+
+
+			// we will try this twice in case the first attempt fails
+			var retry = 0;
+			do
+			{
+				try
+				{
+					string data;
+					if (binary)
+					{
+						// change binary files to base64 string
+						data = Convert.ToBase64String(await Utils.ReadAllBytesAsync(localfile));
+					}
+					else
+					{
+						var encoding = utf8 ? new UTF8Encoding(false) : Encoding.GetEncoding("iso-8859-1");
+						data = await Utils.ReadAllTextAsync(localfile, encoding);
+					}
+
+					return await UploadString(httpclient, false, string.Empty, data, remotefile, cycle, binary, utf8);
+				}
+				catch (Exception ex)
+				{
+					LogExceptionMessage(ex, $"{prefix}: Error uploading to {remotefile}", false, false);
+
+					retry++;
+
+					if (retry < 2)
+					{
+						LogDebugMessage($"{prefix}: Error uploading to {remotefile} - {ex.Message}");
+						LogMessage($"{prefix}: Retrying upload to {remotefile}");
+					}
+					else
+					{
+						LogErrorMessage($"{prefix}: Error uploading to {remotefile} - {ex.Message}");
+						FtpAlarm.LastMessage = $"{prefix}: Error uploading to {remotefile} - {ex.Message}";
+						FtpAlarm.Triggered = true;
+
+						return false;
+					}
+				}
+			} while (retry < 2);
+
+			return false;
 		}
 
-		private async Task<bool> UploadString(HttpClient httpclient, bool incremental, string oldest, string data, string remotefile, int cycle = -1, bool binary = false, bool utf8 = true)
+		private async Task<bool> UploadString(HttpClient httpclient, bool incremental, string oldest, string data, string remotefile, int cycle = -1, bool binary = false, bool utf8 = true, bool logfile = false)
 		{
-			string cycleStr = cycle >= 0 ? cycle.ToString() : "Int";
+			var prefix = cycle >= 0 ? $"RealtimePHP[{cycle}]" : "PHP[Int]";
 
 			if (string.IsNullOrEmpty(data))
 			{
-				LogMessage($"PHP[{cycleStr}]: Uploading to {remotefile}. Error: The data string is empty, ignoring this upload");
+				LogWarningMessage($"{prefix}: Uploading to {remotefile}. Error: The data string is empty, ignoring this upload");
 
 				return false;
 			}
 
-			LogDebugMessage($"PHP[{cycleStr}]: Uploading to {remotefile}");
+			LogDebugMessage($"{prefix}: Uploading to {remotefile}");
 
-			// we will try this twice incase the first attempt fails with a closed connection
+			// we will try this twice in case the first attempt fails
 			var retry = 0;
 			do
 			{
@@ -11160,7 +11263,13 @@ namespace CumulusMX
 					if (incremental)
 					{
 						request.Headers.Add("OLDEST", oldest);
+						request.Headers.Add("FILETYPE", logfile ? "logfile" : "json");
 					}
+					else
+					{
+						request.Headers.Add("FILETYPE", "other");
+					}
+
 					var signature = Utils.GetSHA256Hash(FtpOptions.PhpSecret, unixTs + remotefile + data);
 					request.Headers.Add("SIGNATURE", signature);
 
@@ -11241,20 +11350,20 @@ namespace CumulusMX
 						}
 					}
 
-					LogDebugMessage($"PHP[{cycleStr}]: Sending via {request.Method}");
+					LogDebugMessage($"{prefix}: Sending via {request.Method}");
 
 					using var response = await httpclient.SendAsync(request);
 					//response.EnsureSuccessStatusCode();
 					var responseBodyAsText = await response.Content.ReadAsStringAsync();
 					if (response.StatusCode != HttpStatusCode.OK)
 					{
-						LogWarningMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response code = {(int)response.StatusCode}: {response.StatusCode}");
-						LogMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response text follows:\n{responseBodyAsText}");
+						LogWarningMessage($"{prefix}: Upload to {remotefile}: Response code = {(int)response.StatusCode}: {response.StatusCode}");
+						LogMessage($"{prefix}: Upload to {remotefile}: Response text follows:\n{responseBodyAsText}");
 					}
 					else
 					{
-						LogDebugMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response code = {(int)response.StatusCode}: {response.StatusCode}");
-						LogDataMessage($"PHP[{cycleStr}]: Upload to {remotefile}: Response text follows:\n{responseBodyAsText}");
+						LogDebugMessage($"{prefix}: Upload to {remotefile}: Response code = {(int)response.StatusCode}: {response.StatusCode}");
+						LogDataMessage($"{prefix}: Upload to {remotefile}: Response text follows:\n{responseBodyAsText}");
 					}
 
 					CheckPhpMaxUploads(response.Headers);
@@ -11269,7 +11378,7 @@ namespace CumulusMX
 				}
 				catch (System.Net.Http.HttpRequestException ex)
 				{
-					LogExceptionMessage(ex, $"PHP[{cycleStr}]: Error uploading to {remotefile}");
+					LogExceptionMessage(ex, $"{prefix}: HTTP Error uploading to {remotefile}", false, false);
 
 					FtpAlarm.LastMessage = $" Error uploading to {remotefile} - {ex.Message}";
 					FtpAlarm.Triggered = true;
@@ -11277,15 +11386,32 @@ namespace CumulusMX
 					retry++;
 					if (retry < 2)
 					{
-						LogMessage($"PHP[{cycleStr}] Retrying upload to {remotefile}");
+						LogDebugMessage($"{prefix}: HTTP Error uploading to {remotefile} - " + ex.Message);
+						LogMessage($"{prefix}: Retrying upload to {remotefile}");
+					}
+					else
+					{
+						LogErrorMessage($"{prefix}: HTTP Error uploading to {remotefile} - " + ex.Message);
+						FtpAlarm.LastMessage = $"HTTP Error uploading to {remotefile} - {ex.Message}";
+						FtpAlarm.Triggered = true;
 					}
 				}
 				catch (Exception ex)
 				{
-					LogExceptionMessage(ex, $"PHP[{cycleStr}]: Error uploading to {remotefile}");
-					FtpAlarm.LastMessage = $" Error uploading to {remotefile} - {ex.Message}";
-					FtpAlarm.Triggered = true;
-					retry = 99;
+					LogExceptionMessage(ex, $"{prefix}: General error uploading to {remotefile}", false, false);
+
+					retry++;
+					if (retry < 2)
+					{
+						LogDebugMessage($"{prefix}: General Error uploading to {remotefile} - " + ex.Message);
+						LogMessage($"{prefix}: Retrying upload to {remotefile}");
+					}
+					else
+					{
+						LogErrorMessage($"{prefix}]: General Error uploading to {remotefile} - " + ex.Message);
+						FtpAlarm.LastMessage = $"General Error uploading to {remotefile} - {ex.Message}";
+						FtpAlarm.Triggered = true;
+					}
 				}
 				finally
 				{
@@ -11376,7 +11502,7 @@ namespace CumulusMX
 			Program.svcTextListener.Flush();
 		}
 
-		public void LogExceptionMessage(Exception ex, string preamble, bool ftpLog=false)
+		public void LogExceptionMessage(Exception ex, string preamble, bool ftpLog=false, bool LatestError = true)
 		{
 			/*
 			LogMessage($"{preamble} - {ex.Message}");
@@ -11404,7 +11530,14 @@ namespace CumulusMX
 			}
 
 			LogMessage(Utils.ExceptionToString(ex, out message));
-			LogErrorMessage(preamble + " - " + message);
+			if (LatestError)
+			{
+				while (ErrorList.Count >= 50)
+				{
+					_ = ErrorList.Dequeue();
+				}
+				ErrorList.Enqueue((DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss - ") + preamble + " - " + ex.Message));
+			}
 		}
 
 
@@ -11808,55 +11941,46 @@ namespace CumulusMX
 
 		public async Task DoExtraEndOfDayFiles()
 		{
-			int i;
-
 			// handle any extra files that only require EOD processing
-			for (i = 0; i < numextrafiles; i++)
+			foreach (var item in ActiveExtraFiles)
 			{
-				if (ExtraFiles[i].endofday)
+				if (item.endofday)
 				{
-					var uploadfile = ExtraFiles[i].local;
-					var remotefile = ExtraFiles[i].remote;
+					// For EOD files, we want the previous days log files since it is now just past the day roll-over time. Makes a difference on month roll-over
+					var logDay = DateTime.Now.AddDays(-1);
+					var uploadfile = GetUploadFilename(item.local, logDay);
 
-					if ((uploadfile.Length > 0) && (remotefile.Length > 0))
+					if (File.Exists(uploadfile))
 					{
-						// For EOD files, we want the previous days log files since it is now just past the day roll-over time. Makes a difference on month roll-over
-						var logDay = DateTime.Now.AddDays(-1);
+						var remotefile = GetRemoteFileName(item.remote, logDay);
 
-						uploadfile = GetUploadFilename(uploadfile, logDay);
-
-						if (File.Exists(uploadfile))
+						if (item.process)
 						{
-							remotefile = GetRemoteFileName(remotefile, logDay);
-
-							if (ExtraFiles[i].FTP)
+							// FTP the file at the next interval
+							EODfilesNeedFTP = true;
+						}
+						else
+						{
+							// just copy the file
+							LogDebugMessage($"EOD: Copying extra file {uploadfile} to {remotefile}");
+							try
 							{
-								// FTP the file at the next interval
-								EODfilesNeedFTP = true;
+								if (item.process)
+								{
+									var data = ProcessTemplateFile2String(uploadfile, false, item.UTF8);
+									await File.WriteAllTextAsync(remotefile, data);
+								}
+								else
+								{
+									// just copy the file
+									await Utils.CopyFileAsync(uploadfile, remotefile);
+								}
 							}
-							else
+							catch (Exception ex)
 							{
-								// just copy the file
-								LogDebugMessage($"EOD: Copying extra file {uploadfile} to {remotefile}");
-								try
-								{
-									if (ExtraFiles[i].process)
-									{
-										var data = ProcessTemplateFile2String(uploadfile, false, ExtraFiles[i].UTF8);
-										await File.WriteAllTextAsync(remotefile, data);
-									}
-									else
-									{
-										// just copy the file
-										await Utils.CopyFileAsync(uploadfile, remotefile);
-									}
-								}
-								catch (Exception ex)
-								{
-									LogExceptionMessage(ex, "EOD: Error copying extra file: ");
-								}
-								//LogDebugMessage("Finished copying extra file " + uploadfile);
+								LogExceptionMessage(ex, "EOD: Error copying extra file: ");
 							}
+							//LogDebugMessage("Finished copying extra file " + uploadfile);
 						}
 					}
 				}
