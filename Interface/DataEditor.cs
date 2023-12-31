@@ -1146,10 +1146,10 @@ namespace CumulusMX
 						station.SetAlltime(station.AllTime.LowDailyTempRange, value, time);
 						break;
 					case "highHumidity":
-						station.SetAlltime(station.AllTime.HighHumidity, int.Parse(txtValue), time);
+						station.SetAlltime(station.AllTime.HighHumidity, value, time);
 						break;
 					case "lowHumidity":
-						station.SetAlltime(station.AllTime.LowHumidity, int.Parse(txtValue), time);
+						station.SetAlltime(station.AllTime.LowHumidity, value, time);
 						break;
 					case "highBarometer":
 						station.SetAlltime(station.AllTime.HighPress, value, time);
@@ -1182,10 +1182,10 @@ namespace CumulusMX
 						station.SetAlltime(station.AllTime.MonthlyRain, value, time);
 						break;
 					case "longestDryPeriod":
-						station.SetAlltime(station.AllTime.LongestDryPeriod, int.Parse(txtValue), time);
+						station.SetAlltime(station.AllTime.LongestDryPeriod, value, time);
 						break;
 					case "longestWetPeriod":
-						station.SetAlltime(station.AllTime.LongestWetPeriod, int.Parse(txtValue), time);
+						station.SetAlltime(station.AllTime.LongestWetPeriod, value, time);
 						break;
 					default:
 						return "Data index not recognised";
@@ -1309,10 +1309,10 @@ namespace CumulusMX
 							station.SetMonthlyAlltime(station.MonthlyRecs[month].MonthlyRain, value, time);
 							break;
 						case "longestDryPeriod":
-							station.SetMonthlyAlltime(station.MonthlyRecs[month].LongestDryPeriod, int.Parse(txtValue), time);
+							station.SetMonthlyAlltime(station.MonthlyRecs[month].LongestDryPeriod, value, time);
 							break;
 						case "longestWetPeriod":
-							station.SetMonthlyAlltime(station.MonthlyRecs[month].LongestWetPeriod, int.Parse(txtValue), time);
+							station.SetMonthlyAlltime(station.MonthlyRecs[month].LongestWetPeriod, value, time);
 							break;
 						default:
 							return "Data index not recognised";
