@@ -5206,7 +5206,14 @@ namespace CumulusMX
 
 		private static string TagOsVersion(Dictionary<string, string> tagParams)
 		{
-			return Environment.OSVersion.ToString();
+			try
+			{
+				return RuntimeInformation.OSDescription;
+			}
+			catch
+			{
+				return Environment.OSVersion.ToString();
+			}
 		}
 
 		private static string TagOsLanguage(Dictionary<string, string> tagParams)

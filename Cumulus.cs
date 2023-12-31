@@ -9855,6 +9855,8 @@ namespace CumulusMX
 
 					if (conn.IsConnected)
 					{
+						LogFtpDebugMessage($"SFTP[Int]: CumulusMX Connected to {FtpOptions.Hostname} OK");
+
 						if (NOAAconf.NeedFtp)
 						{
 							try
@@ -11212,7 +11214,7 @@ namespace CumulusMX
 					LogFtpDebugMessage($"SFTP[{cycleStr}]: Uploading {remotefilename}");
 
 					conn.OperationTimeout = TimeSpan.FromSeconds(15);
-					conn.UploadFile(dataStream, remotefilename, true);
+					conn.UploadFile(dataStream, remotefilename); // defaults to CreateNewOrOpen
 					dataStream.Close();
 
 					LogFtpDebugMessage($"SFTP[{cycleStr}]: Uploaded {remotefilename}");
