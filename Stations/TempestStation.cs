@@ -349,6 +349,8 @@ namespace CumulusMX.Tempest
 	{
 		private readonly Task _listenTask;
 		private readonly CancellationTokenSource tokenSource;
+		// Track whether Dispose has been called.
+		private bool disposed = false;
 
 		public EventClient(int port)
 		{
@@ -364,6 +366,27 @@ namespace CumulusMX.Tempest
 		public void StartListening()
 		{
 			_listenTask.Start();
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			// Check to see if Dispose has already been called.
+			if (!this.disposed)
+			{
+				// If disposing equals true, dispose all managed
+				// and unmanaged resources.
+				if (disposing)
+				{
+					// Dispose managed resources.
+					tokenSource.Dispose();
+				}
+
+				// Note disposing has been done.
+				disposed = true;
+
+				// Call base class implementation.
+				base.Dispose(disposing);
+			}
 		}
 
 		private async void ListenForPackets(CancellationToken token)
@@ -429,6 +452,7 @@ namespace CumulusMX.Tempest
 		public static void Stop()
 		{
 			_udpListener?.StopListening();
+			_udpListener?.Dispose();
 		}
 
 		public static void StartUdpListen()
