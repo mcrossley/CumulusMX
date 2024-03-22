@@ -287,27 +287,28 @@ namespace CumulusMX
 				broadcastTask = Task.Run(async () =>
 				{
 					byte[] lastMessage = null;
-					//var endPoint = new IPEndPoint(IPAddress.Any, port);
-					using (var udpClient = new UdpClient(port))
+					var endPoint = new IPEndPoint(IPAddress.Any, port);
+					using (var udpClient = new UdpClient())
 					{
 						udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+						udpClient.Client.Bind(endPoint);
 
 						while (!cumulus.cancellationToken.IsCancellationRequested)
 						{
 							try
 							{
-								var broadcastTask = udpClient.ReceiveAsync();
+								var bcastTask = udpClient.ReceiveAsync();
 								var timeoutTask = Task.Delay(3000, cumulus.cancellationToken); // We should get a message every 2.5 seconds
 
 								// wait for a broadcast message, a timeout, or a cancellation request
-								await Task.WhenAny(broadcastTask, timeoutTask);
+								await Task.WhenAny(bcastTask, timeoutTask);
 
 								// we get duplicate packets over IPv4 and IPv6, plus if the host has multiple interfaces to the local LAN
-								if (broadcastTask.Status == TaskStatus.RanToCompletion && !Utils.ByteArraysEqual(lastMessage, broadcastTask.Result.Buffer))
+								if (bcastTask.Status == TaskStatus.RanToCompletion && !Utils.ByteArraysEqual(lastMessage, bcastTask.Result.Buffer))
 								{
-									var jsonStr = Encoding.UTF8.GetString(broadcastTask.Result.Buffer);
-									DecodeBroadcast(jsonStr, broadcastTask.Result.RemoteEndPoint);
-									lastMessage = broadcastTask.Result.Buffer.ToArray();
+									var jsonStr = Encoding.UTF8.GetString(bcastTask.Result.Buffer);
+									DecodeBroadcast(jsonStr, bcastTask.Result.RemoteEndPoint);
+									lastMessage = bcastTask.Result.Buffer.ToArray();
 								}
 								else if (timeoutTask.Status == TaskStatus.RanToCompletion)
 								{

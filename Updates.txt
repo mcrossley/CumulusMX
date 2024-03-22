@@ -1,3 +1,8 @@
+3.28.7 - b3244
+——————————————
+- Fix WLL not binding to broadcast port in shared mode
+
+
 3.28.6 - b3283
 ——————————————
 - Fix davis Cloud station decode of VP2 sensor current data (again)
