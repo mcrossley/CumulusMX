@@ -336,8 +336,6 @@ namespace CumulusMX
 					cumulus.LogMessage($"GetCurrent: Base exception - {ex.Message}");
 				}
 			}
-
-			return;
 		}
 
 
@@ -1451,8 +1449,8 @@ namespace CumulusMX
 					int idxOfSensorWithMostRecs = 0;
 					for (var i = 0; i < histObj.sensors.Count; i++)
 					{
-						// Find the WLL baro, or internal temp/hum sensors
-						if (histObj.sensors[i].sensor_type == 242 && histObj.sensors[i].data_structure_type == 13)
+						// Find the WLL/WLC baro, oth use sensor type=242, WLL structure=13, WLC structure=20
+						if (histObj.sensors[i].sensor_type == 242 && (histObj.sensors[i].data_structure_type == 13 || histObj.sensors[i].data_structure_type == 20))
 						{
 							var recs = histObj.sensors[i].data.Count;
 							if (recs > noOfRecs)
@@ -1499,7 +1497,7 @@ namespace CumulusMX
 
 			for (int dataIndex = 0; dataIndex < noOfRecs; dataIndex++)
 			{
-				if (worker.CancellationPending == true)
+				if (worker.CancellationPending)
 					return;
 
 				try
@@ -3914,7 +3912,9 @@ namespace CumulusMX
 						break;
 
 					case 13: // WeatherLink Live Non-ISS data
-					case 26:
+					case 20: // WL console Baro
+					case 22: // WL console internal T/H
+					case 26: // WL console Soil/Leaf data
 						switch (sensorType)
 						{
 							case 56: // Soil + Leaf
